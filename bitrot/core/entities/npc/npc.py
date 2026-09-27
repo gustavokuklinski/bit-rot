@@ -190,9 +190,19 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         # 2. Handle Weapon Assignment
         if template_weapons:
-            weapon_name = random.choice(template_weapons)
+            t_ranged = [w for w in template_weapons if ITEM_TEMPLATES[w].get('type') == 'weapon_ranged']
+            t_melee = [w for w in template_weapons if ITEM_TEMPLATES[w].get('type') == 'weapon_melee']
+            if not self.is_friendly:
+                if random.random() < 0.01 and t_ranged:
+                    weapon_name = random.choice(t_ranged)
+                elif t_melee:
+                    weapon_name = random.choice(t_melee)
+                else:
+                    weapon_name = random.choice(template_weapons)
+            else:
+                weapon_name = random.choice(template_weapons)
         elif not self.is_friendly:
-            if random.random() < 0.05 and ranged_pool:
+            if random.random() < 0.01 and ranged_pool:
                 weapon_name = random.choice(ranged_pool)
             elif melee_pool:
                 weapon_name = random.choice(melee_pool)
@@ -447,11 +457,8 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         if is_aggroed:
             if attacker and not attacker.is_dead:
-                if attacker == game.player:
-                    self.aggro_timer = 0
-                else:
-                    target_entity = attacker
-                    self.state = 'chasing'
+                target_entity = attacker
+                self.state = 'chasing'
             elif game.player and not game.player.is_dead:
                 target_entity = game.player
                 self.state = 'chasing'

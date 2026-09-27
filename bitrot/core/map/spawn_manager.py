@@ -16,6 +16,7 @@ from core.entities.zombie.zombie import Zombie
 from core.placement import find_free_tile
 import pygame
 import re
+
 NPC_SPAWN_RADIUS = 70 * TILE_SIZE
 NPC_DESPAWN_RADIUS = 80 * TILE_SIZE
 NPC_MIN_SPAWN_DIST = 50 * TILE_SIZE
@@ -55,7 +56,7 @@ class AsyncSpawnManager:
     if not self.running:
       return
     req = {
-        'type': entity_type,  # 'zombie', 'animal', 'npc'
+        'type': entity_type,  # 'zombie', 'animal', 'hnpc', 'fnpc', 'npc'
         'count': count,
         'layer': layer,
         'target_pos': target_pos,
@@ -161,15 +162,22 @@ class AsyncSpawnManager:
           if hasattr(game, 'items_on_ground'):
             game.items_on_ground.append(animal)
 
-      elif e_type == 'npc':
+      # Hostile NPC (HNPC)
+      elif e_type in ('hnpc'):
         max_npc = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
         max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
         if max_npc > 0 and max_npc_chunk > 0 and len(game.npcs) < max_npc:
-          is_friendly = random.random() > getattr(
-              core.data.config, 'NPC_HOSTILE_PERCENT', 0.6
-          )
           npc = NPC(x, y, game, is_static=False, layer=layer)
-          npc.is_friendly = is_friendly
+          npc.is_friendly = False
+          game.npcs.add(npc)
+
+      # Friendly NPC (FNPC)
+      elif e_type in ('fnpc'):
+        max_npc = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
+        max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
+        if max_npc > 0 and max_npc_chunk > 0 and len(game.npcs) < max_npc:
+          npc = NPC(x, y, game, is_static=True, layer=layer)
+          npc.is_friendly = True
           game.npcs.add(npc)
 
 
@@ -344,8 +352,9 @@ def manage_dynamic_npcs(game):
     if len(game.npcs) >= max_npc_chunk:
         return
 
+    # Roaming dynamic NPCs are spawned as hostile (HNPC)
     async_spawner.request_spawn(
-        'npc',
+        'hnpc',
         count=1,
         layer=curr_layer,
         obstacles=getattr(game, 'obstacles', []),

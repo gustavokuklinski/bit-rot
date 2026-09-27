@@ -16,6 +16,7 @@
             <time_start_hr value="6.0" name="Start hour" default="6.0"/>
             <permadeath value="false" name="Delete save when die" default="false"/>
             <all_visible value="true" name="All containers are opened" default="false"/>
+            <infinite_liquid value="true" name="Liquids are infinite" default="false"/>
         </game>
         <player>
             <view_radius value="6" name="View radius tiles" default="6"/>

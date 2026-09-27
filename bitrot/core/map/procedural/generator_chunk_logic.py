@@ -123,7 +123,7 @@ class ProceduralGeneratorChunk:
         for y in range(h):
             for x in range(w):
                 sp = layers['spawn'][y][x]
-                if sp in ('SNPC', 'NPC', 'Z', 'ANM'):
+                if sp in ('HNPC', 'FNPC', 'Z', 'ANM'):
                     layers['spawn'][y][x] = ' '
 
         boat_coords = None

@@ -102,9 +102,17 @@ class NPCCombat:
             self.current_attacker = attacker
             self.aggro_timer = 10000  # 10 seconds aggro
         
-        # If attacked by player, become hostile
-        if attacker is not None and attacker == game.player:
+        # If attacked by player, become hostile and un-freeze static state to retaliate
+        if attacker is not None and (attacker == player or type(attacker).__name__ == 'RemotePlayer'):
             self.is_friendly = False
+            self.is_static = False
+            self.current_attacker = attacker
+            self.state = 'chasing'
+        elif attacker is None and player is not None:
+            self.is_friendly = False
+            self.is_static = False
+            self.current_attacker = player
+            self.aggro_timer = 10000
             self.state = 'chasing'
 
         if hasattr(game, 'blood_stains') and damage > 0:

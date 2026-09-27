@@ -449,15 +449,15 @@ def process_chat_command(game, text):
         if not npc_spawns and getattr(game, 'spawn_data', None):
             for y, row in enumerate(game.spawn_data):
                 for x, char in enumerate(row):
-                    if char.strip() in ['NPC', 'SNPC']:
+                    if char.strip() in ['HNPC', 'FNPC']:
                         npc_spawns.append((x * TILE_SIZE, y * TILE_SIZE, char.strip()))
         
         spawned_npcs = 0
         curr_layer = getattr(game, 'current_layer_index', 1)
         for spawn_data in npc_spawns:
             nx, ny = spawn_data[0], spawn_data[1]
-            npc_type = spawn_data[2] if len(spawn_data) == 3 else 'NPC'
-            is_static = (npc_type == 'SNPC')
+            npc_type = spawn_data[2] if len(spawn_data) == 3 else 'HNPC'
+            is_static = (npc_type == 'FNPC')
             npc = NPC(nx, ny, game, is_static=is_static, layer=curr_layer)
             npc.is_friendly = is_static
             free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))

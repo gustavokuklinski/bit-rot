@@ -518,8 +518,8 @@ class PlayerMovement:
                                     if len(game.npcs) >= max_npc_chunk:
                                         break
                                     nx, ny = spawn_data[0], spawn_data[1]
-                                    npc_type = spawn_data[2] if len(spawn_data) == 3 else 'NPC'
-                                    is_static = (npc_type == 'SNPC')
+                                    npc_type = spawn_data[2] if len(spawn_data) == 3 else 'HNPC'
+                                    is_static = (npc_type in ('FNPC'))
                                     npc = NPC(nx, ny, game, is_static=is_static)
                                     npc.is_friendly = is_static
                                     free_spot = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))

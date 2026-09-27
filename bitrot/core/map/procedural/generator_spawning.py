@@ -125,12 +125,12 @@ class ProceduralGeneratorSpawning:
         if num_static > 0 and safe_building:
             chosen_indoor = random.sample(safe_building, min(num_static, len(safe_building)))
             for nx, ny in chosen_indoor:
-                layers['spawn'][ny][nx] = 'SNPC'
+                layers['spawn'][ny][nx] = 'FNPC'
                 
         if num_normal > 0 and safe_outside:
             chosen_normal = random.sample(safe_outside, min(num_normal, len(safe_outside)))
             for nx, ny in chosen_normal:
-                layers['spawn'][ny][nx] = 'NPC'
+                layers['spawn'][ny][nx] = 'HNPC'
 
     def _scatter_npcs_l2(self, layers, w, h):
         npc_max_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 12)
@@ -187,7 +187,7 @@ class ProceduralGeneratorSpawning:
             num_static = int(num_static * ratio)
             num_normal = int(num_normal * ratio)
 
-        spawn_types = ['SNPC'] * num_static + ['NPC'] * num_normal
+        spawn_types = ['FNPC'] * num_static + ['HNPC'] * num_normal
         random.shuffle(spawn_types)
         
         chosen = random.sample(potential_tiles, len(spawn_types))

@@ -303,7 +303,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                     if is_valid_spawn:
                         zombie_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
                 
-                elif char.strip() in ['NPC', 'SNPC']: 
+                elif char.strip() in ['HNPC', 'FNPC']: 
                     npc_spawns.append((x * TILE_SIZE, y * TILE_SIZE, char.strip()))
                 elif char.strip() == 'S':
                     pass

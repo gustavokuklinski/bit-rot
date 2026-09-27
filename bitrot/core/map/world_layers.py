@@ -433,16 +433,16 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
                                 nx, ny, npc_type = spawn_data
                             else:
                                 nx, ny = spawn_data
-                                npc_type = 'NPC'
+                                npc_type = 'HNPC'
                                 
-                            is_static = (npc_type == 'SNPC')
+                            is_static = (npc_type in ('FNPC'))
                             npc = NPC(nx, ny, game, is_static=is_static, layer=layer_index)
-                            if npc_type == 'NPC':
+                            if npc_type in ('HNPC'):
                                 npc.is_friendly = False   
                                 npc.is_static = False     
-                            elif npc_type == 'SNPC':
+                            elif npc_type in ('FNPC'):
                                 npc.is_friendly = True    
-                                npc.is_static = True       
+                                npc.is_static = True   
                                 
                             free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
                             if free_pos:

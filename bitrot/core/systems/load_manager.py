@@ -475,9 +475,10 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             for y, row in enumerate(spawn_layer):
                 for x, char in enumerate(row):
                     if can_spawn_npcs:
-                        if char.strip() == 'NPC':
-                            game.npc_spawn_points.append((x * TILE_SIZE, y * TILE_SIZE))
-                        elif char.strip() == 'SNPC':
+                        c_str = char.strip()
+                        if c_str in ('HNPC'):
+                            game.npc_spawn_points.append((x * TILE_SIZE, y * TILE_SIZE, 'HNPC'))
+                        elif c_str in ('FNPC'):
                             px, py = x * TILE_SIZE, y * TILE_SIZE
                             npc = NPC(px, py, game, is_static=True)
                             game.npcs.add(npc)
