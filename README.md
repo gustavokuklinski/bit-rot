@@ -12,7 +12,9 @@
 </p>
 
 <p align="center">
-  <a href='https://ko-fi.com/I2I61MH19A' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi1.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+  <b>Support the game</b><br />
+  <a href='https://ko-fi.com/I2I61MH19A' target='_blank'><img src='https://shields.io/badge/ko--fi-Donate-ff5f5f?logo=ko-fi&style=flat-square' alt='Buy Me a Coffee at ko-fi.com' /></a>
+  <a href='https://etherscan.io/address/0x1c03c13e6Ea32d3Db9F9ABDeE610779D1547F92A' target='_blank'><img src='https://img.shields.io/badge/Ethereum-Donate-blue?style=flat-square&logo=ethereum' alt='Donate Ethereum' /></a>
 </p>
 
 # 🧟 Bit Rot
