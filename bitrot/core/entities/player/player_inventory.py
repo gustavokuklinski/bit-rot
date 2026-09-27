@@ -6,6 +6,7 @@ from core.ui.inventory_modal import get_inventory_slot_rect, get_belt_slot_rect_
 from core.messages import display_message
 from core.data.localization import tr
 from core.placement import find_free_tile
+from core.entities.item.item_helpers import is_infinite_liquid_source
 
 class PlayerInventory:
     def get_total_inventory_slots(self):
@@ -138,7 +139,8 @@ class PlayerInventory:
         if not item: return
 
         # --- INFINITE SOURCE LOGIC ---
-        is_infinite = container_item and getattr(container_item, 'allow_liquid', False) and getattr(item, 'liquid', False)
+        #is_infinite = container_item and getattr(container_item, 'allow_liquid', False) and getattr(item, 'liquid', False)
+        is_infinite = container_item and is_infinite_liquid_source(container_item) and getattr(item, 'liquid', False)
 
         item_to_drop = None
         if is_infinite:
@@ -223,7 +225,7 @@ class PlayerInventory:
             if not item: return
             
             is_item_liquid = getattr(item, 'liquid', False)
-            is_infinite = container_item and getattr(container_item, 'allow_liquid', False) and is_item_liquid
+            is_infinite = container_item and is_infinite_liquid_source(container_item) and is_item_liquid
             
             if is_infinite:
                 item.load = getattr(item, 'capacity', 100) # Ensure map tile stays at max capacity

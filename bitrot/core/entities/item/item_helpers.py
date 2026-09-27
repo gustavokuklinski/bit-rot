@@ -1,5 +1,6 @@
 # core/entities/item/item_helpers.py
 import pygame
+import core.data.config
 from core.entities.item.item import Item
 
 def does_allow_liquid(obj):
@@ -21,6 +22,8 @@ def does_allow_liquid(obj):
 
 def is_infinite_liquid_source(obj):
     """Checks if the object is an infinite map tile source/sink."""
+    if not getattr(core.data.config, 'INFINITE_LIQUID', True):
+        return False
     if not does_allow_liquid(obj):
         return False
     item_type = getattr(obj, 'item_type', '')
