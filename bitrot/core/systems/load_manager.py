@@ -84,6 +84,12 @@ def load_map(game, map_filename):
     game.current_zombie_spawns = zombie_spawns
     game.player_spawn = player_spawn
 
+    game.spawn_point_grid.clear()
+    grid_scale = getattr(game, 'SPAWN_GRID_SIZE', 512)
+    for sp_pos in game.current_zombie_spawns:
+        grid_cell = (int(sp_pos[0] // grid_scale), int(sp_pos[1] // grid_scale))
+        game.spawn_point_grid.setdefault(grid_cell, []).append(sp_pos)
+
     map_vehicles = [obj for obj in containers if isinstance(obj, Vehicle)]
     for v in map_vehicles:
         if v in containers: containers.remove(v)

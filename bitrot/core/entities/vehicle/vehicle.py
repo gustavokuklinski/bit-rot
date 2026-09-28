@@ -158,7 +158,6 @@ class Vehicle:
         return False
 
     @property
-    @property
     def image(self):
         if not self.images:
             if not VehicleData.VEHICLE_TEMPLATES: VehicleData.load_templates()

@@ -2,6 +2,7 @@
 
 import pygame
 import math
+import random
 import core.data.config
 from core.data.config import GAME_OFFSET_X, GAME_WIDTH, GAME_HEIGHT, TILE_SIZE
 from core.messages import display_message
@@ -95,6 +96,7 @@ def teleport_player_to_chunk(game, dest_gx, dest_gy, dest_layer=1):
 
         is_lobby = getattr(game, 'generator', None) and (dest_gx, dest_gy) == getattr(game.generator, 'lobby_chunk', None)
         if not is_lobby:
+            # 1. Spawn Zombies
             from core.map.spawn_manager import spawn_initial_zombies
             if hasattr(game, 'current_zombie_spawns') and game.current_zombie_spawns:
                 initial_zombies = spawn_initial_zombies(
@@ -106,6 +108,64 @@ def teleport_player_to_chunk(game, dest_gx, dest_gy, dest_layer=1):
                     game=game
                 )
                 game.zombies.extend(initial_zombies)
+
+            # 2. Spawn NPCs
+            max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
+            max_npc_global = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
+            can_spawn_npcs = max_npc_chunk > 0 and max_npc_global > 0 and getattr(core.data.config, 'NPC_SPAWN_CHANCE', 1.0) > 0.0
+
+            if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points and can_spawn_npcs:
+                from core.entities.npc.npc import NPC
+                for spawn_data in game.npc_spawn_points:
+                    if len(game.npcs) >= max_npc_chunk:
+                        break
+                    nx, ny = spawn_data[0], spawn_data[1]
+                    npc_type = spawn_data[2] if len(spawn_data) == 3 else 'HNPC'
+                    is_static = (npc_type in ('FNPC'))
+                    npc = NPC(nx, ny, game, is_static=is_static)
+                    npc.is_friendly = is_static
+                    free_spot = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
+                    if free_spot:
+                        npc.rect.topleft = free_spot
+                        npc.x, npc.y = free_spot
+                        game.npcs.add(npc)
+
+            # 3. Spawn Animals
+            max_anim = getattr(core.data.config, 'ANIMAL_MAX_CHUNK', 6)
+            anim_per_spawn = getattr(core.data.config, 'ANIMALS_PER_SPAWN', 3)
+            if hasattr(game, 'active_animals') and max_anim > 0 and anim_per_spawn > 0:
+                from core.entities.animal.animal import Animal
+                from core.entities.animal.animal_loader import AnimalLoader
+                AnimalLoader.load_animals()
+                curr_layer = getattr(game, 'current_layer_index', 1)
+                valid_animal_types = []
+                valid_weights = []
+                for a_name, a_def in AnimalLoader.definitions.items():
+                    allowed = a_def.get('spawn_layers', [1, 2])
+                    if curr_layer in allowed:
+                        valid_animal_types.append(a_name)
+                        valid_weights.append(max(1, int(a_def.get('spawn_weight', 10))))
+
+                if valid_animal_types:
+                    new_w = getattr(game, 'map_width_pixels', game.CHUNK_SIZE * TILE_SIZE)
+                    new_h = getattr(game, 'map_height_pixels', game.CHUNK_SIZE * TILE_SIZE)
+                    num_to_spawn = min(anim_per_spawn, max_anim)
+                    for _ in range(num_to_spawn):
+                        ax = random.randint(100, max(101, new_w - 100))
+                        ay = random.randint(100, max(101, new_h - 100))
+                        animal_type = random.choices(valid_animal_types, weights=valid_weights, k=1)[0]
+                        animal_obj = Animal(ax, ay, animal_type, game=game, layer=curr_layer)
+                        free_spot = find_free_tile(animal_obj.rect, game.obstacles, max_radius=15, initial_pos=(ax, ay))
+                        if free_spot:
+                            animal_obj.rect.topleft = free_spot
+                            animal_obj.x, animal_obj.y = free_spot
+                            game.active_animals.append(animal_obj)
+                            game.items_on_ground.append(animal_obj)
+
+            # 4. Spawn Vehicles (Surface Layer 1 only)
+            if dest_layer == 1:
+                from core.map.spawn_manager import spawn_random_vehicles
+                spawn_random_vehicles(game, count=getattr(core.data.config, 'MAX_VEH_CHUNK', 6))
 
     h = len(game.map_data) if game.map_data else 0
     w = len(game.map_data[0]) if h > 0 else 0

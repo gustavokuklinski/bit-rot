@@ -532,8 +532,7 @@ def process_chat_command(game, text):
     veh_match = re.match(r'vehicle\s+"([^"]+)"', raw_command, re.IGNORECASE)
     if veh_match:
         veh_name = veh_match.group(1).strip()
-        from core.entities.vehicle.vehicle_loader import VehicleLoader
-        from core.entities.vehicle.vehicle import Vehicle
+        
         
         loader = VehicleLoader()
         veh_def = loader.get_definition_by_name(veh_name)

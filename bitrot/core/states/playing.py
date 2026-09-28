@@ -1,4 +1,5 @@
 import pygame
+import math
 from core.data.config import BASE_PLAYER_VIEW_RADIUS, NPC_DETECTION_RADIUS, BASE_PLAYER_VIEW_RADIUS, TILE_SIZE
 from core.input import handle_input
 from core.update import update_game_state
@@ -45,9 +46,12 @@ def run_playing(game):
 
     px, py = game.player.rect.center if game.player else (0, 0)
     
-    SIMULATION_DISTANCE = 350
-    MAX_ACTIVE_ZOMBIES = 40
-    MAX_ACTIVE_ANIMALS = 20
+    view_w = int(getattr(game, 'dynamic_w', 1280) / getattr(game, 'zoom_level', 1.0))
+    view_h = int(getattr(game, 'dynamic_h', 720) / getattr(game, 'zoom_level', 1.0))
+    SIMULATION_DISTANCE = max(700, int(math.hypot(view_w, view_h) / 2) + 120)
+
+    MAX_ACTIVE_ZOMBIES = 60
+    MAX_ACTIVE_ANIMALS = 30
 
     game.active_zombies = []
     game.visible_items = []

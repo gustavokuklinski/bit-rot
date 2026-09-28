@@ -147,6 +147,12 @@ class AsyncSpawnManager:
         max_z = getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500)
         max_chunk_z = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
         if max_z > 0 and max_chunk_z > 0 and len(game.zombies) < max_z:
+          # Verify not ocean water
+          gx, gy = x // TILE_SIZE, y // TILE_SIZE
+          gd = getattr(game, 'ground_data', None)
+          if gd and 0 <= gy < len(gd) and 0 <= gx < len(gd[gy]):
+            if 'water' in str(gd[gy][gx]).lower():
+              continue
           z = Zombie.create_random(x, y)
           z.layer = layer
           game.zombies.append(z)
@@ -336,6 +342,10 @@ def manage_dynamic_npcs(game):
         if npc.layer != game.current_layer_index:
             game.layer_npcs.setdefault(npc.layer, []).append(npc)
             game.npcs.remove(npc)
+            continue
+        
+        # PRESERVE static and friendly NPCs from deletion
+        if getattr(npc, 'is_static', False) or getattr(npc, 'is_friendly', False):
             continue
 
         dist_sq = (npc.rect.centerx - px) ** 2 + (npc.rect.centery - py) ** 2
@@ -544,16 +554,42 @@ def spawn_initial_zombies(
 
 
 def get_out_of_sight_spawn_pos(game):
-  """Fast fallback that requests replacement spawns via the async worker."""
-  if not game or not getattr(game, 'player', None):
+    """Fast fallback that requests replacement spawns outside player view on walkable ground."""
+    if not game or not getattr(game, 'player', None):
+        return None
+    px, py = game.player.rect.centerx, game.player.rect.centery
+    view_r = getattr(game, 'player_view_radius', 240)
+    map_w = getattr(game, 'map_width_pixels', 3000)
+    map_h = getattr(game, 'map_height_pixels', 3000)
+    obstacles = getattr(game, 'obstacles', [])
+    ground_data = getattr(game, 'ground_data', None)
+
+    start_angle = random.uniform(0, math.pi * 2)
+    steps = 24
+    offsets = [0, TILE_SIZE, -TILE_SIZE, 2 * TILE_SIZE]
+    spawn_r = view_r + (10 * TILE_SIZE)
+
+    for r_off in offsets:
+        cur_r = max(TILE_SIZE * 5, spawn_r + r_off)
+        for i in range(steps):
+            angle = start_angle + (i * (2 * math.pi / steps))
+            tx = (int(px + math.cos(angle) * cur_r) // TILE_SIZE) * TILE_SIZE
+            ty = (int(py + math.sin(angle) * cur_r) // TILE_SIZE) * TILE_SIZE
+
+            if not (0 <= tx < map_w - TILE_SIZE and 0 <= ty < map_h - TILE_SIZE):
+                continue
+
+            # Ensure spot is not water or petrol
+            gx = tx // TILE_SIZE
+            gy = ty // TILE_SIZE
+            if ground_data and 0 <= gy < len(ground_data) and 0 <= gx < len(ground_data[gy]):
+                gt = str(ground_data[gy][gx]).lower()
+                if 'water' in gt or 'petrol' in gt:
+                    continue
+
+            test_rect = pygame.Rect(tx, ty, TILE_SIZE, TILE_SIZE)
+            if any(test_rect.colliderect(ob) for ob in obstacles):
+                continue
+
+            return (tx, ty)
     return None
-  px, py = game.player.rect.centerx, game.player.rect.centery
-  view_r = getattr(game, 'player_view_radius', 240)
-  return async_spawner._find_out_of_sight(
-      px,
-      py,
-      view_r + (10 * TILE_SIZE),
-      getattr(game, 'obstacles', []),
-      getattr(game, 'map_width_pixels', 3000),
-      getattr(game, 'map_height_pixels', 3000),
-  )

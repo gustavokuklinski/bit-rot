@@ -556,6 +556,10 @@ class PlayerMovement:
                                             animal_obj.x, animal_obj.y = free_spot
                                             game.active_animals.append(animal_obj)
                                             game.items_on_ground.append(animal_obj)
+
+                            if layer == 1:
+                                from core.map.spawn_manager import spawn_random_vehicles
+                                spawn_random_vehicles(game, count=getattr(core.data.config, 'MAX_VEH_CHUNK', 6))
                                     
                         
 
