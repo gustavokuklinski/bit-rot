@@ -58,7 +58,7 @@ body {
 .brand-icon { color: #e3b341; font-size: 1.2rem; }
 
 .btn {
-    padding: 6px 12px;
+    padding: 5px 10px;
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.75rem;
@@ -67,43 +67,35 @@ body {
     transition: all 0.2s ease;
 }
 
-.btn-primary { background: #238636; color: #fff; border-color: rgba(240, 246, 252, 0.1); }
-.btn-primary:hover { background: #2ea043; }
-
 .btn-secondary { background: var(--bg-card); color: var(--text-secondary); }
 .btn-secondary:hover { background: var(--bg-card-hover); color: var(--text-primary); }
 
-.gh-fetch-bar {
+.repo-banner {
     padding: 10px 16px;
-    background: #12161c;
+    background: #11151c;
     border-bottom: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
-.gh-fetch-bar .input-group label {
-    font-size: 0.7rem;
-    color: var(--text-secondary);
-    display: block;
-    margin-bottom: 4px;
-}
-
-.gh-fetch-bar .row {
+.repo-info {
+    font-size: 0.72rem;
     display: flex;
     gap: 6px;
 }
 
-.gh-fetch-bar input {
-    flex: 1;
-    background: var(--bg-dark);
-    border: 1px solid var(--border);
-    color: var(--text-primary);
-    padding: 5px 8px;
-    border-radius: 4px;
-    font-size: 0.78rem;
+.repo-label { color: var(--text-secondary); }
+
+.repo-link {
+    color: var(--accent);
+    text-decoration: none;
     font-family: var(--font-mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
+.repo-link:hover { text-decoration: underline; }
 
 .progress-bar-container {
     width: 100%;

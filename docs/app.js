@@ -1,7 +1,15 @@
 /**
- * BIT ROT Survival Database - GitHub Pages Realtime Directory Engine
- * Scans repository trees and fetches raw XMLs straight from static hosting.
+ * BIT ROT Survival Database - Dedicated GitHub Fetch Engine
+ * Repository: gustavokuklinski/bit-rot
+ * Path: bitrot/data.rot/lib/data
  */
+
+const CONFIG = {
+    owner: 'gustavokuklinski',
+    repo: 'bit-rot',
+    branch: 'main',
+    targetPath: 'bitrot/data.rot/lib/data'
+};
 
 class BitRotWiki {
     constructor() {
@@ -28,15 +36,15 @@ class BitRotWiki {
 
     init() {
         this.bindEvents();
-        this.autoDetectAndFetch();
+        this.loadFromGitHub();
     }
 
     bindEvents() {
         window.addEventListener('hashchange', () => this.handleRoute());
 
-        document.getElementById('btn-gh-fetch').addEventListener('click', () => {
-            const repoVal = document.getElementById('gh-repo-input').value.trim();
-            if (repoVal) this.fetchRepoFiles(repoVal);
+        document.getElementById('btn-reload').addEventListener('click', () => {
+            sessionStorage.removeItem('bitrot_cached_xmls');
+            this.loadFromGitHub();
         });
 
         document.getElementById('search-input').addEventListener('input', (e) => {
@@ -62,71 +70,53 @@ class BitRotWiki {
     }
 
     /**
-     * Inspects window.location to determine if we are hosted on a github.io domain
+     * Connects to GitHub API, resolves the file tree, and fetches raw XMLs
      */
-    autoDetectAndFetch() {
-        const host = window.location.hostname;
-        const pathSegments = window.location.pathname.split('/').filter(Boolean);
+    async loadFromGitHub() {
+        this.setConnectionStatus("Connecting...", false);
 
-        let owner = '';
-        let repo = '';
-
-        if (host.endsWith('github.io')) {
-            // e.g. username.github.io/reponame/
-            owner = host.replace('.github.io', '');
-            repo = pathSegments[0] || '';
-        }
-
-        if (owner && repo) {
-            const fullRepo = `${owner}/${repo}`;
-            document.getElementById('gh-repo-input').value = fullRepo;
-            this.fetchRepoFiles(fullRepo);
-        } else {
-            this.setConnectionStatus("Enter username/repo to load", false);
-            this.renderEmptyState();
-        }
-    }
-
-    /**
-     * Queries GitHub Git Trees API to find all files recursively in one call
-     */
-    async fetchRepoFiles(repoFull) {
-        this.setConnectionStatus(`Discovering files in ${repoFull}...`, false);
-        this.showProgress(0, "Connecting...");
-
-        const branches = ['main', 'master'];
-        let treeData = null;
-
-        for (const branch of branches) {
+        // 1. Check Session Cache to prevent hitting rate limits during navigation
+        const cached = sessionStorage.getItem('bitrot_cached_xmls');
+        if (cached) {
             try {
-                const res = await fetch(`https://api.github.com/repos/${repoFull}/git/trees/${branch}?recursive=1`);
-                if (res.ok) {
-                    treeData = await res.json();
-                    break;
-                }
-            } catch (err) {
-                console.warn(`Branch ${branch} check failed:`, err);
+                const parsed = JSON.parse(cached);
+                this.rawFiles = new Map(Object.entries(parsed));
+                this.rebuildDatabase();
+                return;
+            } catch (e) {
+                sessionStorage.removeItem('bitrot_cached_xmls');
             }
         }
 
-        if (!treeData || !treeData.tree) {
-            this.hideProgress();
-            this.setConnectionStatus("Could not read repo tree", false);
-            alert(`Unable to access repo: ${repoFull}. Verify that the repository is public.`);
+        this.showProgress(10, "Querying file tree...");
+
+        // 2. Query GitHub Git Trees API for all files in the repository
+        const treeUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/git/trees/${CONFIG.branch}?recursive=1`;
+        let treeData = null;
+
+        try {
+            const res = await fetch(treeUrl);
+            if (!res.ok) throw new Error(`GitHub API returned status ${res.status}`);
+            treeData = await res.json();
+        } catch (err) {
+            console.error("Git Tree error:", err);
+            this.setConnectionStatus("API Error", false);
+            this.showProgress(0, "Failed to load tree");
+            alert("Could not reach GitHub API: " + err.message);
             return;
         }
 
-        // Filter only XML files in your data folder
-        const xmlNodes = treeData.tree.filter(node => 
+        // 3. Filter for .xml files inside bitrot/data.rot/lib/data
+        const xmlNodes = (treeData.tree || []).filter(node => 
             node.type === 'blob' && 
-            node.path.endsWith('.xml') &&
-            node.path.includes('data')
+            node.path.startsWith(CONFIG.targetPath) && 
+            node.path.endsWith('.xml')
         );
 
         if (!xmlNodes.length) {
-            this.hideProgress();
-            this.setConnectionStatus("No XMLs found in data folder", false);
-            alert("No XML files detected matching the path pattern.");
+            this.setConnectionStatus("No XMLs Found", false);
+            this.showProgress(0, "Empty directory");
+            alert(`No XML files found matching ${CONFIG.targetPath}`);
             return;
         }
 
@@ -134,7 +124,7 @@ class BitRotWiki {
         let loaded = 0;
         const total = xmlNodes.length;
 
-        // Fetch XML file bodies concurrently via static relative path
+        // 4. Fetch the raw XML content concurrently (batches of 8)
         const concurrency = 8;
         const queue = [...xmlNodes];
 
@@ -142,17 +132,18 @@ class BitRotWiki {
             while (queue.length > 0) {
                 const node = queue.shift();
                 const fileName = node.path.split('/').pop();
+
+                // Direct raw URL on raw.githubusercontent.com
+                const rawUrl = `https://raw.githubusercontent.com/${CONFIG.owner}/${CONFIG.repo}/${CONFIG.branch}/${node.path}`;
                 
-                // Fetch directly from your GitHub Pages host
-                const relativeUrl = `./${node.path}`;
                 try {
-                    const res = await fetch(relativeUrl);
+                    const res = await fetch(rawUrl);
                     if (res.ok) {
-                        const text = await res.text();
-                        this.rawFiles.set(fileName, text);
+                        const xmlText = await res.text();
+                        this.rawFiles.set(fileName, xmlText);
                     }
                 } catch (e) {
-                    console.warn(`Failed loading ${relativeUrl}`, e);
+                    console.warn(`Failed loading: ${rawUrl}`, e);
                 }
 
                 loaded++;
@@ -161,28 +152,28 @@ class BitRotWiki {
             }
         };
 
-        const workers = Array.from({ length: concurrency }, () => worker());
-        await Promise.all(workers);
+        await Promise.all(Array.from({ length: concurrency }, () => worker()));
 
-        this.hideProgress();
+        // 5. Cache files in sessionStorage
+        try {
+            const cacheObj = Object.fromEntries(this.rawFiles);
+            sessionStorage.setItem('bitrot_cached_xmls', JSON.stringify(cacheObj));
+        } catch (e) {
+            // Ignore quota issues if dataset is massive
+        }
+
         this.rebuildDatabase();
     }
 
     showProgress(percent, label) {
-        const container = document.getElementById('load-progress-container');
         const bar = document.getElementById('load-progress-bar');
         const text = document.getElementById('load-progress-text');
-        container.style.display = 'block';
         bar.style.width = `${percent}%`;
         text.textContent = label;
     }
 
-    hideProgress() {
-        document.getElementById('load-progress-container').style.display = 'none';
-    }
-
     /**
-     * Parses the downloaded XML strings and forms cross-reference links
+     * Parses all XMLs and establishes dynamic relationships
      */
     rebuildDatabase() {
         this.items.clear();
@@ -197,10 +188,7 @@ class BitRotWiki {
         for (const [filename, xmlString] of this.rawFiles.entries()) {
             try {
                 const xmlDoc = this.domParser.parseFromString(xmlString, "application/xml");
-                if (xmlDoc.querySelector("parsererror")) {
-                    console.warn(`XML syntax error in: ${filename}`);
-                    continue;
-                }
+                if (xmlDoc.querySelector("parsererror")) continue;
                 this.parseXmlFile(filename, xmlDoc, xmlString);
             } catch (err) {
                 console.error(`Error parsing ${filename}:`, err);
@@ -208,7 +196,8 @@ class BitRotWiki {
         }
 
         this.buildCrossReferences();
-        this.setConnectionStatus(`Connected (${this.rawFiles.size} XMLs)`, true);
+        this.setConnectionStatus("Connected", true);
+        this.showProgress(100, `Ready (${this.rawFiles.size} Files)`);
         this.updateStats();
         this.renderNavList();
 
@@ -382,18 +371,6 @@ class BitRotWiki {
             `${count} Loaded (${this.items.size} Items, ${this.clothes.size} Clothes, ${this.recipes.length} Crafts)`;
     }
 
-    renderEmptyState() {
-        document.getElementById('wiki-viewport').innerHTML = `
-            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:60vh; text-align:center;">
-                <div style="font-size:3rem; margin-bottom:16px;">🌐</div>
-                <h2>Connect to GitHub Pages Repository</h2>
-                <p style="color:var(--text-secondary); max-width:480px; margin-top:8px;">
-                    Enter your repository in the format <code>username/repository</code> in the sidebar and click <b>Fetch</b> to load the files.
-                </p>
-            </div>
-        `;
-    }
-
     renderNavList() {
         const listEl = document.getElementById('nav-list');
         listEl.innerHTML = '';
@@ -449,8 +426,7 @@ class BitRotWiki {
         const activeCrumb = document.getElementById('active-crumb');
 
         if (!hash || !hash.startsWith('entity=')) {
-            if (this.rawFiles.size > 0) this.renderHome();
-            else this.renderEmptyState();
+            this.renderHome();
             activeCrumb.textContent = "Overview";
             return;
         }
@@ -486,20 +462,20 @@ class BitRotWiki {
         const container = document.getElementById('wiki-viewport');
         container.innerHTML = `
             <div class="page-header">
-                <h1 class="page-title">Bit Rot Database</h1>
-                <p style="color:var(--text-secondary); margin-top:6px;">Live repository index and cross-referencer.</p>
+                <h1 class="page-title">Bit Rot Knowledge Base</h1>
+                <p style="color:var(--text-secondary); margin-top:6px;">Direct repository cross-referencer.</p>
             </div>
             <div class="wiki-grid">
                 <div class="wiki-main">
                     <div class="section">
-                        <h2 class="section-title">📦 Database Categories</h2>
+                        <h2 class="section-title">📦 Database Sections</h2>
                         <div class="cards-container">
                             <div class="wiki-card" onclick="document.querySelector('.tab[data-filter=item]').click()">
-                                <div class="wiki-card-title">Items (${this.items.size})</div>
-                                <p style="font-size:0.8rem; color:var(--text-secondary)">Weapons, ammunition, tools, and consumables.</p>
+                                <div class="wiki-card-title">Items & Weapons (${this.items.size})</div>
+                                <p style="font-size:0.8rem; color:var(--text-secondary)">Ballistics, tools, and resource components.</p>
                             </div>
                             <div class="wiki-card" onclick="document.querySelector('.tab[data-filter=cloth]').click()">
-                                <div class="wiki-card-title">Clothes & Armor (${this.clothes.size})</div>
+                                <div class="wiki-card-title">Apparel & Armor (${this.clothes.size})</div>
                                 <p style="font-size:0.8rem; color:var(--text-secondary)">Wearable apparel, capacity, and defence properties.</p>
                             </div>
                             <div class="wiki-card" onclick="document.querySelector('.tab[data-filter=recipe]').click()">
