@@ -252,3 +252,119 @@ def update_sd_card_progression(player, game):
                             if attr['xp'] >= attr['xp_to_next_level']:
                                 player.progression._level_up(player, attr)
                         except: pass
+
+def get_container_max_liquid(container):
+    """Returns max_liquid of container if defined, else None."""
+    if not container:
+        return None
+    val = getattr(container, 'max_liquid', None)
+    if val is not None:
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            pass
+    if hasattr(container, 'properties') and isinstance(container.properties, dict):
+        if 'max_liquid' in container.properties:
+            m = container.properties['max_liquid']
+            v = m.get('value') if isinstance(m, dict) else m
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                pass
+    return None
+
+def get_container_liquid_load(container, exclude_item=None):
+    """Calculates total liquid units currently stored in container."""
+    if not container or not hasattr(container, 'inventory') or not container.inventory:
+        return 0.0
+    total = 0.0
+    for it in container.inventory:
+        if it and it is not exclude_item and getattr(it, 'liquid', False):
+            total += float(getattr(it, 'load', 0) or 0)
+    return total
+
+def get_container_available_liquid(container, target_item=None):
+    """
+    Returns how many units of liquid can be added to container.
+    Returns float('inf') if container does not restrict max_liquid.
+    """
+    max_liq = get_container_max_liquid(container)
+    if max_liq is None:
+        return float('inf')
+    current_liq = get_container_liquid_load(container, exclude_item=target_item)
+    return max(0.0, max_liq - current_liq)
+
+def add_item_to_container_inventory(container, item_to_add, target_index=-1, is_stack=False):
+    """
+    Safely adds or stacks item_to_add into container.inventory, enforcing container.max_liquid limits.
+    Returns (transferred_amount, remaining_load, success).
+    """
+    if not container or not hasattr(container, 'inventory'):
+        return 0.0, float(getattr(item_to_add, 'load', 1) or 1), False
+
+    is_liquid = getattr(item_to_add, 'liquid', False)
+    max_liq = get_container_max_liquid(container) if is_liquid else None
+    current_load = float(getattr(item_to_add, 'load', 1) or 1)
+
+    if is_stack:
+        dst = None
+        if 0 <= target_index < len(container.inventory):
+            dst = container.inventory[target_index]
+        else:
+            dst = next((it for it in container.inventory if it and it.can_stack_with(item_to_add)), None)
+
+        if not dst:
+            return 0.0, current_load, False
+
+        avail = (dst.capacity or 100) - dst.load
+        if max_liq is not None:
+            avail_liq = get_container_available_liquid(container, target_item=dst)
+            avail = min(avail, avail_liq)
+
+        trans = min(max(0.0, avail), current_load)
+        if trans <= 0:
+            return 0.0, current_load, False
+
+        dst.load += trans
+        if max_liq is not None:
+            dst.capacity = int(max_liq)
+        remaining = current_load - trans
+        if hasattr(item_to_add, 'load') and item_to_add.load is not None:
+            item_to_add.load = remaining
+        return trans, remaining, True
+
+    else:
+        avail = current_load
+        if max_liq is not None:
+            avail_liq = get_container_available_liquid(container)
+            avail = min(avail, avail_liq)
+
+        trans = min(max(0.0, avail), current_load)
+        if trans <= 0:
+            return 0.0, current_load, False
+
+        if trans < current_load:
+            new_it = Item.create_from_name(item_to_add.name)
+            if not new_it:
+                return 0.0, current_load, False
+            new_it.load = trans
+            if max_liq is not None:
+                new_it.capacity = int(max_liq)
+            if hasattr(item_to_add, 'durability'):
+                new_it.durability = item_to_add.durability
+            if target_index != -1 and target_index <= len(container.inventory):
+                container.inventory.insert(target_index, new_it)
+            else:
+                container.inventory.append(new_it)
+            remaining = current_load - trans
+            if hasattr(item_to_add, 'load') and item_to_add.load is not None:
+                item_to_add.load = remaining
+            return trans, remaining, True
+        else:
+            if max_liq is not None:
+                item_to_add.capacity = int(max_liq)
+            if target_index != -1 and target_index <= len(container.inventory):
+                container.inventory.insert(target_index, item_to_add)
+            else:
+                container.inventory.append(item_to_add)
+            return trans, 0.0, True

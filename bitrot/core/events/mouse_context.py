@@ -16,10 +16,8 @@ from core.messages import display_message
 from core.events.keyboard import toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal
 from core.data.localization import tr
 from core.placement import find_free_tile
-from core.entities.item.item_helpers import does_allow_liquid, is_infinite_liquid_source, find_item_recursive, has_app
+from core.entities.item.item_helpers import does_allow_liquid, is_infinite_liquid_source, find_item_recursive, has_app, get_container_available_liquid
 from core.ui.crafting_common import is_recipe_unlocked, has_recipe_ingredients, execute_recipe_craft, get_recipe_status_details, is_recipe_relevant_to_item
-
-# --- KEEP ONLY THIS ONE ---
 from core.systems.utils import teleport_player_to_chunk as sys_teleport
 
 
@@ -2053,6 +2051,7 @@ def handle_right_click(game, mouse_pos):
                     
                     if is_liquid and not getattr(c, 'allow_liquid', False): continue
                     if getattr(c, 'allow_liquid', False) and not is_liquid: continue
+                    if is_liquid and get_container_available_liquid(c) <= 0: continue
                     
                     c_item_load = getattr(clicked_item, 'load', 1)
                     if c_item_load is None: c_item_load = 1

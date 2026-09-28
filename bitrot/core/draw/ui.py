@@ -28,8 +28,7 @@ from core.data.localization import tr
 from core.ui.helpers.keybinds import keybind_manager
 from core.ui.notifications import draw_notifications
 from core.events.mouse_drag import check_recursive_containment
-from core.entities.item.item_helpers import does_allow_liquid
-
+from core.entities.item.item_helpers import does_allow_liquid, get_container_available_liquid
 
 # Hardcoded default English fallbacks for interaction tooltips
 DEFAULT_TOOLTIPS = {
@@ -84,6 +83,14 @@ def is_item_allowed_in_slot(item, slot_type, index_or_name, target_obj=None):
             return False
         if is_liquid and not does_allow_liquid(target_obj):
             return False
+        if is_liquid and does_allow_liquid(target_obj):
+            target_item = None
+            if isinstance(index_or_name, int) and hasattr(target_obj, 'inventory'):
+                if 0 <= index_or_name < len(target_obj.inventory):
+                    target_item = target_obj.inventory[index_or_name]
+            avail = get_container_available_liquid(target_obj, target_item=target_item)
+            if avail <= 0:
+                return False
         return True
 
     elif slot_type == 'vehicle_equipment':

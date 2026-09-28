@@ -149,6 +149,9 @@ class Item:
 
         if getattr(self, 'max_liquid', None) is not None:
             data['max_liquid'] = self.max_liquid
+        
+        if getattr(self, 'capacity', None) is not None:
+            data['capacity'] = self.capacity
 
         if getattr(self, 'is_placed', False):
             data['is_placed'] = self.is_placed
@@ -192,6 +195,9 @@ class Item:
         
         if 'max_liquid' in data:
             item.max_liquid = data['max_liquid']
+        
+        if 'capacity' in data and data['capacity'] is not None:
+            item.capacity = data['capacity']
 
         if 'color' in data: 
             item.color = tuple(data['color'])

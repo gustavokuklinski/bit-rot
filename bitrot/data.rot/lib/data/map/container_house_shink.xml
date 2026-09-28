@@ -4,6 +4,7 @@
     </visuals>
     <capacity value="1" />
     <loot>
-        <item item="Water Unit" chance="1.0" />
+        <item item="Water Unit" chance="0.5" />
+        <item item="Dirty Water Unit" chance="0.5" />
     </loot>
 </map>

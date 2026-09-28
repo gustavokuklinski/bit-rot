@@ -492,9 +492,12 @@ class PlayerActions:
         
         if is_liquid:
             found_names = set()
+            from core.entities.item.item_helpers import get_container_available_liquid
             
             def can_accept_liquid(container):
                 if not container or not getattr(container, 'allow_liquid', False):
+                    return False
+                if get_container_available_liquid(container) <= 0:
                     return False
                 if len(container.inventory) < (container.capacity or 0):
                     return True

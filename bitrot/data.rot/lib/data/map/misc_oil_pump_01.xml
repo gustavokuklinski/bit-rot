@@ -4,10 +4,10 @@
     </visuals>
     <capacity value="5" />
     <loot>
-        <item item="Fuel Unit" chance="1.0" />
-        <item item="Fuel Unit" chance="1.0" />
-        <item item="Fuel Unit" chance="1.0" />
-        <item item="Fuel Unit" chance="1.0" />
-        <item item="Fuel Unit" chance="1.0" />
+        <item item="Fuel Unit" chance="0.5" />
+        <item item="Fuel Unit" chance="0.5" />
+        <item item="Fuel Unit" chance="0.5" />
+        <item item="Fuel Unit" chance="0.5" />
+        <item item="Fuel Unit" chance="0.5" />
     </loot>
 </map>
