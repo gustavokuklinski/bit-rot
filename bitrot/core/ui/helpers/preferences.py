@@ -9,15 +9,16 @@ from core.data.localization import tr, load_language
 from core.ui.modals import draw_scrollbar
 
 def _get_friendly_value_display(key, value):
-    try: val_float = float(value)
-    except: return ""
+    try:
+        val_float = float(value)
+    except Exception:
+        return ""
 
     if 'seconds' in key or '_sec' in key: 
-        if val_float >= 60: return f"({val_float/60:.1f} {tr('ui', 'min')})"
+        if val_float >= 60:
+            return f"({val_float/60:.1f} {tr('ui', 'min')})"
         return f"({tr('ui', 'sec')})"
         
-    if 'volume' in key:
-        return f"({val_float*100:.0f}%)"
     return ""
 
 def load_preferences_data(filepath):
@@ -56,8 +57,10 @@ def save_preferences_xml(data, filepath):
             name = val_data.get('name', '')
             default_val = val_data.get('default')
             elem = ET.SubElement(block_node, key, value=str(val))
-            if name: elem.set('name', name)
-            if default_val is not None: elem.set('default', str(default_val))
+            if name:
+                elem.set('name', name)
+            if default_val is not None:
+                elem.set('default', str(default_val))
 
     try:
         raw_xml = ET.tostring(root, 'utf-8')
@@ -79,10 +82,12 @@ class PreferencesMenuUI:
         self.settings_data = {}
         self.active_setting = None
         self.item_height = int(45 * UI_SCALE)
+        self.dragging_slider = None
 
     def toggle(self):
         self.active = not self.active
         self.scroll_offset_y = 0
+        self.dragging_slider = None
         if self.active:
             path = core.data.config.get_preferences_path()
             self.settings_data = load_preferences_data(path)
@@ -113,6 +118,37 @@ class PreferencesMenuUI:
             count += len(settings)
         return count * self.item_height
 
+    def _update_volume_setting(self, game, block, key, new_val):
+        """Live updates volume in the active setting dict, core.data.config, and active audio channels."""
+        new_val = round(max(0.0, min(1.0, float(new_val))), 2)
+
+        if block in self.settings_data and key in self.settings_data[block]:
+            self.settings_data[block][key]['value'] = str(new_val)
+
+        # 1. Update config global attribute (e.g., VOLUME_MUSIC, VOLUME_ZOMBIE)
+        attr_name = key.upper()
+        if hasattr(core.data.config, attr_name):
+            setattr(core.data.config, attr_name, new_val)
+
+        # 2. Live update active music volume
+        if key == 'volume_music':
+            if pygame.mixer.get_init():
+                pygame.mixer.music.set_volume(new_val)
+
+        # 3. Live update active atmospheric & background sound channels
+        if key in ('volume_atmospheric', 'volume_background'):
+            wt = getattr(game, 'world_time', None)
+            if wt:
+                vol_atm = getattr(core.data.config, 'VOLUME_ATMOSPHERIC', new_val)
+                for ch in [
+                    getattr(wt, 'day_channel', None),
+                    getattr(wt, 'night_channel', None),
+                    getattr(wt, 'cave_channel', None),
+                    getattr(wt, 'rain_channel', None)
+                ]:
+                    if ch and ch.get_busy():
+                        ch.set_volume(0.6 * vol_atm, 0.6 * vol_atm)
+
     def get_rects(self):
         scale = UI_SCALE
         def S(val): return int(val * scale)
@@ -136,7 +172,6 @@ class PreferencesMenuUI:
         btn_height = S(45)
         spacing = S(20)
         
-        # Reorder buttons: Apply -> Reset -> Back
         total_btn_width = (btn_width * 3) + (spacing * 2)
         start_btn_x = center_x - (total_btn_width // 2)
         
@@ -147,12 +182,17 @@ class PreferencesMenuUI:
         return center_x, center_y, bg_rect, list_rect, bar_rect, apply_btn_rect, reset_btn_rect, back_btn_rect
 
     def handle_events(self, game, events):
-        if not self.active: return False
+        if not self.active: 
+            return False
+
+        scale = UI_SCALE
+        def S(val): return int(val * scale)
         
         for event in events:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.active = False
+                    self.dragging_slider = None
                     continue
 
                 if self.active_setting:
@@ -174,6 +214,18 @@ class PreferencesMenuUI:
                 
             if event.type == pygame.MOUSEMOTION:
                 mouse_pos = event.pos if hasattr(event, 'pos') else pygame.mouse.get_pos()
+                
+                # Active slider dragging
+                if self.dragging_slider:
+                    block, key = self.dragging_slider
+                    _, _, _, list_rect, _, _, _, _ = self.get_rects()
+                    input_w = S(250)
+                    slider_track_x = list_rect.right - input_w + S(8)
+                    slider_track_w = input_w - S(68)
+                    pct = max(0.0, min(1.0, (mouse_pos[0] - slider_track_x) / max(1, slider_track_w)))
+                    self._update_volume_setting(game, block, key, pct)
+                    continue
+
                 if self.is_dragging_scrollbar:
                     self._handle_scroll_drag(mouse_pos[1])
                 elif self.is_scrolling_content:
@@ -184,6 +236,11 @@ class PreferencesMenuUI:
                 continue 
 
             if event.type == pygame.MOUSEBUTTONUP and getattr(event, 'button', 1) == 1:
+                if self.dragging_slider:
+                    self.dragging_slider = None
+                    # Persist adjusted audio volume directly to disk on release
+                    save_preferences_xml(self.settings_data, core.data.config.get_preferences_path())
+
                 self.is_dragging_scrollbar = False
                 self.is_scrolling_content = False
                 continue
@@ -195,6 +252,7 @@ class PreferencesMenuUI:
 
                 if back_btn.collidepoint(mouse_pos):
                     self.active = False
+                    self.dragging_slider = None
                     continue
 
                 if apply_btn.collidepoint(mouse_pos):
@@ -212,6 +270,13 @@ class PreferencesMenuUI:
                         for key, setting_obj in settings.items():
                             if 'default' in setting_obj:
                                 setting_obj['value'] = setting_obj['default']
+                                if 'volume' in key:
+                                    try:
+                                        def_val = float(setting_obj['default'])
+                                        self._update_volume_setting(game, block, key, def_val)
+                                    except Exception:
+                                        pass
+                    save_preferences_xml(self.settings_data, core.data.config.get_preferences_path())
                     continue
 
                 if bar_rect.collidepoint(mouse_pos):
@@ -223,17 +288,26 @@ class PreferencesMenuUI:
                 if list_rect.collidepoint(mouse_pos):
                     y_off = list_rect.y - self.scroll_offset_y
                     for block, settings in self.settings_data.items():
-                        y_off += self.item_height # header
+                        y_off += self.item_height
                         for key, val_data in settings.items():
                             row_rect = pygame.Rect(list_rect.x, y_off, list_rect.width, self.item_height)
                             if row_rect.collidepoint(mouse_pos) and row_rect.bottom > list_rect.top and row_rect.top < list_rect.bottom:
-                                input_w = int(250 * UI_SCALE)
-                                input_rect = pygame.Rect(row_rect.right - input_w, row_rect.centery - int(15*UI_SCALE), input_w, int(30*UI_SCALE))
+                                input_w = S(250)
+                                input_rect = pygame.Rect(row_rect.right - input_w, row_rect.centery - S(15), input_w, S(30))
                                 
-                                if input_rect.collidepoint(mouse_pos):
+                                if 'volume' in key:
+                                    if input_rect.collidepoint(mouse_pos):
+                                        self.dragging_slider = (block, key)
+                                        slider_track_x = input_rect.x + S(8)
+                                        slider_track_w = input_w - S(68)
+                                        pct = max(0.0, min(1.0, (mouse_pos[0] - slider_track_x) / max(1, slider_track_w)))
+                                        self._update_volume_setting(game, block, key, pct)
+                                        clicked_input = True
+                                        break
+                                elif input_rect.collidepoint(mouse_pos):
                                     str_val = str(val_data.get('value')).lower()
                                     is_bool = str_val in ('true', 'false')
-                                    is_cycle = ('volume' in key) or (key in ['language', 'resolution', 'window_mode'])
+                                    is_cycle = (key in ['language', 'resolution', 'window_mode'])
 
                                     if is_bool:
                                         new_val = "false" if str_val == "true" else "true"
@@ -256,15 +330,6 @@ class PreferencesMenuUI:
                                             current_val = str(val_data['value']).lower()
                                             idx = modes.index(current_val) if current_val in modes else 0
                                             self.settings_data[block][key]['value'] = modes[(idx + 1) % len(modes)]
-                                        elif 'volume' in key:
-                                            try: comp_val = float(val_data['value'])
-                                            except: comp_val = 0.5
-                                            if comp_val < 0.25: new_val = 0.25
-                                            elif comp_val < 0.50: new_val = 0.50
-                                            elif comp_val < 0.75: new_val = 0.75
-                                            elif comp_val < 1.0: new_val = 1.0
-                                            else: new_val = 0.0
-                                            self.settings_data[block][key]['value'] = str(new_val)
                                     else:
                                         self.active_setting = (block, key)
                                     clicked_input = True
@@ -277,7 +342,8 @@ class PreferencesMenuUI:
         return True
 
     def draw(self, screen, mouse_pos):
-        if not self.active: return
+        if not self.active: 
+            return
 
         def S(val): return int(val * UI_SCALE)
         center_x, center_y, bg_rect, list_rect, bar_rect, apply_btn, reset_btn, back_btn = self.get_rects()
@@ -321,39 +387,80 @@ class PreferencesMenuUI:
                     
                     str_val = str(val).lower()
                     is_bool = str_val in ('true', 'false')
-                    is_cycle = ('volume' in key) or (key in ['language', 'resolution', 'window_mode'])
+                    is_volume = 'volume' in key
+                    is_cycle = (key in ['language', 'resolution', 'window_mode'])
 
                     friendly_text = _get_friendly_value_display(key, val)
-                    if friendly_text and not is_bool and not is_cycle:
+                    if friendly_text and not is_bool and not is_cycle and not is_volume:
                         info_surf = font_12.render(friendly_text, False, GRAY)
                         screen.blit(info_surf, (input_rect.x - info_surf.get_width() - S(15), row_rect.centery - info_surf.get_height()//2))
 
                     hovered = input_rect.collidepoint(mouse_pos)
-                    
-                    if is_bool or is_cycle:
+
+                    # --- 1. VOLUME SLIDER RENDER BLOCK ---
+                    if is_volume:
+                        try:
+                            val_float = max(0.0, min(1.0, float(val)))
+                        except Exception:
+                            val_float = 0.50
+
+                        is_active_slider = (self.dragging_slider == (block, key)) or hovered
+
+                        # Dimensions for slider track
+                        slider_track_x = input_rect.x + S(8)
+                        slider_track_w = input_w - S(68)
+                        slider_track_h = S(8)
+                        slider_track_y = input_rect.centery - slider_track_h // 2
+                        track_rect = pygame.Rect(slider_track_x, slider_track_y, slider_track_w, slider_track_h)
+
+                        # Background track
+                        pygame.draw.rect(screen, GRAY_40, track_rect, border_radius=S(4))
+                        pygame.draw.rect(screen, GRAY_60, track_rect, 1, border_radius=S(4))
+
+                        # Active fill bar
+                        fill_w = max(0, min(slider_track_w, int(val_float * slider_track_w)))
+                        if fill_w > 0:
+                            fill_rect = pygame.Rect(slider_track_x, slider_track_y, fill_w, slider_track_h)
+                            pygame.draw.rect(screen, (23, 162, 184), fill_rect, border_radius=S(4))
+
+                        # Draggable handle / thumb
+                        handle_w = S(12)
+                        handle_h = S(20)
+                        handle_x = slider_track_x + fill_w
+                        handle_rect = pygame.Rect(handle_x - handle_w // 2, input_rect.centery - handle_h // 2, handle_w, handle_h)
+                        handle_col = YELLOW if is_active_slider else WHITE
+                        pygame.draw.rect(screen, handle_col, handle_rect, border_radius=S(3))
+                        pygame.draw.rect(screen, GRAY, handle_rect, 1, border_radius=S(3))
+
+                        # Percentage text readout
+                        pct_text = f"{int(round(val_float * 100))}%"
+                        txt_surf = font_12.render(pct_text, False, YELLOW if is_active_slider else WHITE)
+                        txt_rect = txt_surf.get_rect(midleft=(track_rect.right + S(12), input_rect.centery))
+                        screen.blit(txt_surf, txt_rect)
+
+                    # --- 2. BOOLEANS AND SELECTORS ---
+                    elif is_bool or is_cycle:
                         bg_color = (70, 70, 70) if hovered else (50, 50, 50)
                         pygame.draw.rect(screen, bg_color, input_rect, border_radius=3)
                         pygame.draw.rect(screen, WHITE, input_rect, 1, border_radius=3)
                         
-                        if is_bool: label_str = tr('ui', "True") if str_val == "true" else tr('ui', "False")
-                        elif key == 'language': label_str = str(val)
-                        elif key == 'resolution' and str(val).lower() == 'max': label_str = tr('ui', "Native (Max)")
-                        elif key == 'window_mode': label_str = tr('ui', str(val).capitalize())
-                        elif 'volume' in key:
-                            try: comp = float(val)
-                            except: comp = 0.5
-                            if abs(comp - 0.0) < 0.001: label_str = tr('ui', "Muted")
-                            elif abs(comp - 0.25) < 0.001: label_str = tr('ui', "Low")
-                            elif abs(comp - 0.50) < 0.001: label_str = tr('ui', "Balanced")
-                            elif abs(comp - 0.75) < 0.001: label_str = tr('ui', "High")
-                            elif abs(comp - 1.0) < 0.001: label_str = tr('ui', "Extreme High")
-                            else: label_str = f"{tr('ui', 'Custom')} ({comp*100:.0f}%)"
-                        else: label_str = str(val)
+                        if is_bool:
+                            label_str = tr('ui', "True") if str_val == "true" else tr('ui', "False")
+                        elif key == 'language':
+                            label_str = str(val)
+                        elif key == 'resolution' and str(val).lower() == 'max':
+                            label_str = tr('ui', "Native (Max)")
+                        elif key == 'window_mode':
+                            label_str = tr('ui', str(val).capitalize())
+                        else:
+                            label_str = str(val)
 
                         txt_surf = font_12.render(label_str, False, WHITE)
                         screen.blit(txt_surf, (input_rect.centerx - txt_surf.get_width()//2, input_rect.centery - txt_surf.get_height()//2))
                         pygame.draw.polygon(screen, WHITE, [(input_rect.right - S(8), input_rect.centery), (input_rect.right - S(14), input_rect.centery - S(4)), (input_rect.right - S(14), input_rect.centery + S(4))])
                         pygame.draw.polygon(screen, WHITE, [(input_rect.x + S(8), input_rect.centery), (input_rect.x + S(14), input_rect.centery - S(4)), (input_rect.x + S(14), input_rect.centery + S(4))])
+
+                    # --- 3. TEXT INPUTS ---
                     else:
                         is_active = (self.active_setting == (block, key))
                         col = WHITE if is_active else GRAY
