@@ -11,6 +11,25 @@ from core.entities.zombie.zombie import Zombie
 from core.placement import find_free_tile
 from core.entities.vehicle.vehicle import Vehicle
 
+def _set_liquid_source_load(new_item, loot_entry):
+    """Sets liquid load: full if INFINITE_LIQUID is True, otherwise randomizes."""
+    if not getattr(new_item, 'capacity', None):
+        return
+    is_infinite = getattr(core.data.config, 'INFINITE_LIQUID', True)
+    item_cap = int(getattr(new_item, 'capacity', 100) or 100)
+    
+    if is_infinite:
+        new_item.load = item_cap
+    else:
+        entry_min = int(loot_entry.get('min', 1))
+        entry_max = int(loot_entry.get('max', item_cap))
+        if entry_max > 1:
+            min_load = max(1, min(entry_min, entry_max))
+            max_load = min(item_cap, max(entry_min, entry_max))
+        else:
+            min_load = max(1, int(item_cap * 0.15))
+            max_load = item_cap
+        new_item.load = random.randint(min_load, max_load)
 
 def _generate_container_items(tile_def, game=None):
     """
@@ -101,8 +120,8 @@ def _generate_container_items(tile_def, game=None):
                         new_item = Item.create_from_name(chosen_item)
                         
                         if new_item:
-                            if is_liquid_source and getattr(new_item, 'capacity', None) is not None:
-                                new_item.load = new_item.capacity
+                            if is_liquid_source:
+                                _set_liquid_source_load(new_item, loot_entry)
                             items.append(new_item)
                         
             elif 'item' in loot_entry and not loot_entry['item'].endswith(' on'):
@@ -116,8 +135,8 @@ def _generate_container_items(tile_def, game=None):
                         new_item = Item.create_from_name(target_name)
                         
                         if new_item:
-                            if is_liquid_source and getattr(new_item, 'capacity', None) is not None:
-                                new_item.load = new_item.capacity
+                            if is_liquid_source:
+                                _set_liquid_source_load(new_item, loot_entry)
                             items.append(new_item)
                     
     return items
