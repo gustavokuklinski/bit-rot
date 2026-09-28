@@ -470,34 +470,68 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     is_in_lobby = getattr(game, 'generator', None) and hasattr(game.generator, 'lobby_chunk') and \
                   game.generator.start_chunk == game.generator.lobby_chunk
 
-    if spawn_entities and not is_in_lobby:
-        game.npc_spawn_points = []
-        max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
-        max_npc_global = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
-        can_spawn_npcs = max_npc_chunk > 0 and max_npc_global > 0 and getattr(core.data.config, 'NPC_SPAWN_CHANCE', 1.0) > 0.0
-
-        if game.current_layer_index in game.all_spawn_layers:
-            spawn_layer = game.all_spawn_layers[game.current_layer_index]
-            for y, row in enumerate(spawn_layer):
-                for x, char in enumerate(row):
-                    if can_spawn_npcs:
-                        c_str = char.strip()
-                        if c_str in ('HNPC'):
-                            game.npc_spawn_points.append((x * TILE_SIZE, y * TILE_SIZE, 'HNPC'))
-                        elif c_str in ('FNPC'):
+    if spawn_entities:
+        if is_in_lobby:
+            # Spawn 3 friendly NPCs in the lobby
+            spawned_lobby_npcs = 0
+            if game.current_layer_index in game.all_spawn_layers:
+                spawn_layer = game.all_spawn_layers[game.current_layer_index]
+                for y, row in enumerate(spawn_layer):
+                    for x, char in enumerate(row):
+                        if char.strip() == 'FNPC' and spawned_lobby_npcs < 3:
                             px, py = x * TILE_SIZE, y * TILE_SIZE
                             npc = NPC(px, py, game, is_static=True)
+                            npc.is_friendly = True
+                            free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=4, initial_pos=(px, py))
+                            if free_pos:
+                                npc.rect.topleft = free_pos
+                                npc.x, npc.y = free_pos
                             game.npcs.add(npc)
+                            spawned_lobby_npcs += 1
 
-        if 1 in game.all_map_layers:
-            game.logger.info("Initializing Layer 1 Population (Vehicles, Animals)...")
-            spawn_random_vehicles(game, count=getattr(core.data.config, 'MAX_VEH_CHUNK', 6))
+            # Fallback to ensure 3 NPCs exist if markers were obstructed
+            while spawned_lobby_npcs < 3:
+                offset_x = random.randint(-4, 4) * TILE_SIZE
+                offset_y = random.randint(-4, 4) * TILE_SIZE
+                target_pos = (game.player.x + offset_x, game.player.y + offset_y)
+                npc = NPC(target_pos[0], target_pos[1], game, is_static=True)
+                npc.is_friendly = True
+                free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=10, initial_pos=target_pos)
+                if free_pos:
+                    npc.rect.topleft = free_pos
+                    npc.x, npc.y = free_pos
+                    game.npcs.add(npc)
+                    spawned_lobby_npcs += 1
+                else:
+                    break
+        else:
+            game.npc_spawn_points = []
+            max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
+            max_npc_global = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
+            can_spawn_npcs = max_npc_chunk > 0 and max_npc_global > 0 and getattr(core.data.config, 'NPC_SPAWN_CHANCE', 1.0) > 0.0
 
-        if 2 in game.all_map_layers:
-            game.logger.info("Initializing Layer 2 Population (Zombies, Animals)...")
-            z_l2_count = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
-            if z_l2_count > 0 and getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500) > 0:
-                spawn_l2_population(game, count=z_l2_count * 3, target_layer=2)
+            if game.current_layer_index in game.all_spawn_layers:
+                spawn_layer = game.all_spawn_layers[game.current_layer_index]
+                for y, row in enumerate(spawn_layer):
+                    for x, char in enumerate(row):
+                        if can_spawn_npcs:
+                            c_str = char.strip()
+                            if c_str in ('HNPC'):
+                                game.npc_spawn_points.append((x * TILE_SIZE, y * TILE_SIZE, 'HNPC'))
+                            elif c_str in ('FNPC'):
+                                px, py = x * TILE_SIZE, y * TILE_SIZE
+                                npc = NPC(px, py, game, is_static=True)
+                                game.npcs.add(npc)
+
+            if 1 in game.all_map_layers:
+                game.logger.info("Initializing Layer 1 Population (Vehicles, Animals)...")
+                spawn_random_vehicles(game, count=getattr(core.data.config, 'MAX_VEH_CHUNK', 6))
+
+            if 2 in game.all_map_layers:
+                game.logger.info("Initializing Layer 2 Population (Zombies, Animals)...")
+                z_l2_count = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
+                if z_l2_count > 0 and getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500) > 0:
+                    spawn_l2_population(game, count=z_l2_count * 3, target_layer=2)
 
     if hasattr(game, 'map_manager') and hasattr(game.map_manager, 'update_chunks'):
         center_x = getattr(game, 'map_width_pixels', 1000) // 2

@@ -179,6 +179,28 @@ class ProceduralGeneratorChunk:
             else:
                 layers['spawn'][ty + th // 2][tx + tw // 2] = 'P'
 
+        # Place 3 Friendly NPC (FNPC) spawn markers on walkable lobby tiles
+        fnpc_candidates = []
+        for dy in range(1, th - 1):
+            for dx in range(1, tw - 1):
+                lx = tx + dx
+                ly = ty + dy
+                if 0 <= lx < w and 0 <= ly < h:
+                    if (layers['ground'][ly][lx] != water_tile and 
+                        layers['base'][ly][lx] == ' ' and 
+                        layers['spawn'][ly][lx] == ' '):
+                        fnpc_candidates.append((lx, ly))
+
+        if fnpc_candidates:
+            random.shuffle(fnpc_candidates)
+            chosen_npcs = []
+            for cx_tile, cy_tile in fnpc_candidates:
+                if all(abs(cx_tile - ex) + abs(cy_tile - ey) >= 2 for ex, ey in chosen_npcs):
+                    chosen_npcs.append((cx_tile, cy_tile))
+                    layers['spawn'][cy_tile][cx_tile] = 'FNPC'
+                    if len(chosen_npcs) == 3:
+                        break
+
         return layers
 
     def _place_single_teleport_boat(self, layers, w, h):

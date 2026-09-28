@@ -166,6 +166,39 @@ def teleport_player_to_chunk(game, dest_gx, dest_gy, dest_layer=1):
             if dest_layer == 1:
                 from core.map.spawn_manager import spawn_random_vehicles
                 spawn_random_vehicles(game, count=getattr(core.data.config, 'MAX_VEH_CHUNK', 6))
+        else:
+            # Spawn 3 friendly NPCs in the lobby when arriving
+            spawned_lobby_npcs = 0
+            if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points:
+                from core.entities.npc.npc import NPC
+                for spawn_data in game.npc_spawn_points:
+                    npc_type = spawn_data[2] if len(spawn_data) == 3 else 'HNPC'
+                    if npc_type == 'FNPC' and spawned_lobby_npcs < 3:
+                        nx, ny = spawn_data[0], spawn_data[1]
+                        npc = NPC(nx, ny, game, is_static=True)
+                        npc.is_friendly = True
+                        free_spot = find_free_tile(npc.rect, game.obstacles, max_radius=4, initial_pos=(nx, ny))
+                        if free_spot:
+                            npc.rect.topleft = free_spot
+                            npc.x, npc.y = free_spot
+                        game.npcs.add(npc)
+                        spawned_lobby_npcs += 1
+
+            while spawned_lobby_npcs < 3:
+                from core.entities.npc.npc import NPC
+                offset_x = random.randint(-4, 4) * TILE_SIZE
+                offset_y = random.randint(-4, 4) * TILE_SIZE
+                target_pos = (game.player.x + offset_x, game.player.y + offset_y)
+                npc = NPC(target_pos[0], target_pos[1], game, is_static=True)
+                npc.is_friendly = True
+                free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=10, initial_pos=target_pos)
+                if free_pos:
+                    npc.rect.topleft = free_pos
+                    npc.x, npc.y = free_pos
+                    game.npcs.add(npc)
+                    spawned_lobby_npcs += 1
+                else:
+                    break
 
     h = len(game.map_data) if game.map_data else 0
     w = len(game.map_data[0]) if h > 0 else 0
