@@ -103,7 +103,21 @@ def draw_context_menu(surface, menu_state, mouse_pos):
             disp_name = options[active_sub_idx].get('display_names', {}).get(sub, sub)
             sub_labels.append(tr('context', disp_name))
             
-        sub_max_width = max((font_12.size(label)[0] for label in sub_labels), default=0) + (padding * 2) + 15 # Extra space for *
+        sub_icons = options[active_sub_idx].get('icons', {})
+        sub_extra_texts = options[active_sub_idx].get('extra_texts', {})
+        sub_extra_colors = options[active_sub_idx].get('extra_colors', {})
+
+        # Calculate maximum width accounting for text, icons, and quantity text
+        row_widths = []
+        for i, sub in enumerate(sub_options):
+            label_w = font_12.size(sub_labels[i])[0]
+            icon = sub_icons.get(sub)
+            icon_w = (icon.get_width() + 6) if icon else 0
+            extra_t = sub_extra_texts.get(sub, '')
+            extra_w = (font_12.size(extra_t)[0] + 6) if extra_t else 0
+            row_widths.append(label_w + icon_w + extra_w)
+
+        sub_max_width = max(row_widths, default=0) + (padding * 2) + 15  # Extra space for *
         sub_height = len(sub_options) * item_height
         
         sub_x = menu_x + max_width
@@ -147,7 +161,7 @@ def draw_context_menu(surface, menu_state, mouse_pos):
                     surface.blit(text_surf, (sub_opt_rect.x + padding + 4, sub_opt_rect.y + (item_height - text_surf.get_height()) // 2))
                     continue
 
-                # Regular clickable item (Open Craft and Recipes)
+                # Regular clickable item (Open Craft, Travel, Recipes)
                 replace_name = options[active_sub_idx].get('replacing', {}).get(raw_sub_id)
                 sub_tooltip = options[active_sub_idx].get('tooltips', {}).get(raw_sub_id) 
 
@@ -168,12 +182,29 @@ def draw_context_menu(surface, menu_state, mouse_pos):
                         active_tooltip = (sub_tooltip, sub_opt_rect, sub_rect)
                     
                 text_surf = font_12.render(sub_label, False, text_color)
-                surface.blit(text_surf, (sub_opt_rect.x + padding + 6, sub_opt_rect.y + (item_height - text_surf.get_height()) // 2))
-                
+                draw_x = sub_opt_rect.x + padding + 6
+                surface.blit(text_surf, (draw_x, sub_opt_rect.y + (item_height - text_surf.get_height()) // 2))
+                draw_x += text_surf.get_width()
+
+                # Render Icon (e.g. Fuel Unit icon)
+                sub_icon = sub_icons.get(raw_sub_id)
+                if sub_icon:
+                    icon_rect = sub_icon.get_rect(midleft=(draw_x, sub_opt_rect.centery))
+                    surface.blit(sub_icon, icon_rect)
+                    draw_x += sub_icon.get_width() + 4
+
+                # Render Extra Text (e.g. Quantity needed)
+                if raw_sub_id in sub_extra_texts:
+                    extra_text = sub_extra_texts[raw_sub_id]
+                    extra_color = sub_extra_colors.get(raw_sub_id, text_color)
+                    extra_surf = font_12.render(extra_text, False, extra_color)
+                    surface.blit(extra_surf, (draw_x, sub_opt_rect.y + (item_height - extra_surf.get_height()) // 2))
+                    draw_x += extra_surf.get_width()
+
                 if replace_name:
                     ast_surf = font_12.render("*", False, (255, 100, 100))
                     surface.blit(ast_surf, (sub_opt_rect.right - padding - ast_surf.get_width(), sub_opt_rect.y + (item_height - ast_surf.get_height()) // 2))
-
+                    
     # --- Tooltip Rendering Anchored to the Side of the Submenu ---
     if active_tooltip:
         if len(active_tooltip) == 3:

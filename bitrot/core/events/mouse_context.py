@@ -21,6 +21,146 @@ from core.ui.crafting_common import is_recipe_unlocked, has_recipe_ingredients, 
 from core.systems.utils import teleport_player_to_chunk as sys_teleport
 
 
+_fuel_icon_cache = None
+
+def get_fuel_icon():
+    global _fuel_icon_cache
+    if _fuel_icon_cache is not None:
+        return _fuel_icon_cache
+    icon_path = os.path.join(SPRITE_PATH, 'items', 'car_fuel_unit.png')
+    if not os.path.exists(icon_path):
+        icon_path = os.path.join(SPRITE_PATH, 'car_fuel_unit.png')
+    if os.path.exists(icon_path):
+        try:
+            img = pygame.image.load(icon_path).convert_alpha()
+            _fuel_icon_cache = pygame.transform.scale(img, (16, 16))
+            return _fuel_icon_cache
+        except Exception:
+            pass
+    return None
+
+def is_fuel_item(item):
+    if not item:
+        return False
+    return (
+        item.name.lower() == "fuel unit" or 
+        getattr(item, 'status_effect', None) == 'fuel' or 
+        getattr(item, 'item_type', '') == 'car_fuel'
+    )
+
+def get_player_fuel_units(player):
+    """Calculates total Fuel Units available in player inventory, belt, and worn containers."""
+    if not player:
+        return 0
+    total = 0
+    def scan(items):
+        nonlocal total
+        if not items:
+            return
+        item_iterable = items.values() if isinstance(items, dict) else items
+        for it in item_iterable:
+            if not it:
+                continue
+            if is_fuel_item(it):
+                total += int(getattr(it, 'load', 1) or 1)
+            if hasattr(it, 'inventory') and it.inventory:
+                scan(it.inventory)
+
+    scan(getattr(player, 'inventory', []))
+    scan(getattr(player, 'belt', []))
+    if hasattr(player, 'clothes'):
+        scan(player.clothes)
+    return total
+
+def consume_player_fuel_units(player, amount_needed):
+    """Consumes the specified amount of Fuel Units from player inventory/belt."""
+    if not player or amount_needed <= 0:
+        return True
+
+    remaining = amount_needed
+    items_to_modify = []
+
+    def scan(items, ctype):
+        if not items:
+            return
+        if ctype == 'dict':
+            for k in list(items.keys()):
+                it = items[k]
+                if not it:
+                    continue
+                if is_fuel_item(it):
+                    items_to_modify.append((items, k, it, 'dict'))
+                if hasattr(it, 'inventory') and it.inventory:
+                    scan(it.inventory, 'list')
+        else:
+            for idx in range(len(items) - 1, -1, -1):
+                it = items[idx]
+                if not it:
+                    continue
+                if is_fuel_item(it):
+                    items_to_modify.append((items, idx, it, 'list'))
+                if hasattr(it, 'inventory') and it.inventory:
+                    scan(it.inventory, 'list')
+
+    scan(getattr(player, 'inventory', []), 'list')
+    scan(getattr(player, 'belt', []), 'list')
+    if hasattr(player, 'clothes'):
+        scan(player.clothes, 'dict')
+
+    for container, key, it, ctype in items_to_modify:
+        if remaining <= 0:
+            break
+        current_load = int(getattr(it, 'load', 1) or 1)
+        take = min(remaining, current_load)
+        remaining -= take
+
+        if hasattr(it, 'load') and it.load is not None and it.is_stackable():
+            it.load -= take
+            if it.load <= 0:
+                if container is getattr(player, 'belt', None):
+                    container[key] = None
+                    it.in_belt = False
+                elif ctype == 'list':
+                    if it in container:
+                        container.remove(it)
+                    elif isinstance(key, int) and key < len(container):
+                        container.pop(key)
+                elif ctype == 'dict':
+                    container[key] = None
+        else:
+            if container is getattr(player, 'belt', None):
+                container[key] = None
+                it.in_belt = False
+            elif ctype == 'list':
+                if it in container:
+                    container.remove(it)
+                elif isinstance(key, int) and key < len(container):
+                    container.pop(key)
+            elif ctype == 'dict':
+                container[key] = None
+
+    return remaining <= 0
+
+def calculate_boat_fuel_cost(game, dest_gx, dest_gy):
+    """
+    Calculates fuel cost: min 5 units, distance = (chunk_x + chunk_y) * 5.
+    Going back to the lobby costs the same amount as it needed to go to the current chunk.
+    """
+    gen = getattr(game, 'generator', None)
+    lobby_chunk = getattr(gen, 'lobby_chunk', None) if gen else None
+
+    # If traveling back to Lobby, cost is based on the current chunk position
+    if lobby_chunk and (dest_gx, dest_gy) == lobby_chunk:
+        cur_map = getattr(game.map_manager, 'current_map_filename', '')
+        match = re.match(r'map_L\d+_(\d+)_(\d+)_map\.csv', cur_map)
+        if match:
+            cur_gx, cur_gy = int(match.group(1)), int(match.group(2))
+            return max(5, (abs(cur_gx) + abs(cur_gy)) * 5)
+        return 5
+
+    # Target chunk cost: (dest_gx + dest_gy) * 5, minimum 5
+    return max(5, (abs(dest_gx) + abs(dest_gy)) * 5)
+
 def _is_barricade_item(it):
     """Safely checks if an item is a valid barricade, guarding against NoneType values."""
     if not it:
@@ -331,8 +471,17 @@ def handle_context_menu_click(game, mouse_pos):
                 if target_sub_slot:
                     try:
                         dest_gx, dest_gy = map(int, target_sub_slot.split('_'))
-                        
-                        teleport_player_to_chunk(game, dest_gx, dest_gy)
+                        fuel_cost = calculate_boat_fuel_cost(game, dest_gx, dest_gy)
+                        player_fuel = get_player_fuel_units(game.player)
+
+                        if player_fuel < fuel_cost:
+                            fuel_name = tr('item', "Fuel Unit")
+                            display_message(f"{tr('msg', 'Not enough fuel! Need')} {fuel_cost}x {fuel_name} {tr('msg', 'to travel.')}")
+                        else:
+                            consume_player_fuel_units(game.player, fuel_cost)
+                            fuel_name = tr('item', "Fuel Unit")
+                            display_message(f"{tr('msg', 'Used')} {fuel_cost}x {fuel_name}.")
+                            teleport_player_to_chunk(game, dest_gx, dest_gy)
                     except Exception as e:
                         print(f"Error traveling: {e}")
                 clicked_on_menu = True
@@ -1647,12 +1796,29 @@ def handle_right_click(game, mouse_pos):
 
                 sub_opts = []
                 display_map = {}
+                icon_map = {}
+                extra_text_map = {}
+                extra_color_map = {}
+                tooltip_map = {}
+
+                player_fuel = get_player_fuel_units(game.player)
+                fuel_icon = get_fuel_icon()
 
                 # 1. Lobby Option (Always available as a safe haven fallback)
                 if lobby_chunk and (cur_gx, cur_gy) != lobby_chunk:
                     sub_key = f"{lobby_chunk[0]}_{lobby_chunk[1]}"
                     sub_opts.append(sub_key)
-                    display_map[sub_key] = tr('ui', "Lobby (Safe Haven)")
+                    fuel_cost = calculate_boat_fuel_cost(game, lobby_chunk[0], lobby_chunk[1])
+                    display_map[sub_key] = f"{tr('ui', 'Lobby (Safe Haven)')} - "
+                    if fuel_icon:
+                        icon_map[sub_key] = fuel_icon
+                    extra_text_map[sub_key] = f"{fuel_cost}"
+                    extra_color_map[sub_key] = GREEN if player_fuel >= fuel_cost else RED
+                    tooltip_map[sub_key] = (
+                        f"{tr('ui', 'Destination:')} {tr('ui', 'Lobby')}\n"
+                        f"{tr('ui', 'Fuel needed:')} {fuel_cost}\n"
+                        f"{tr('ui', 'Available fuel:')} {player_fuel}"
+                    )
 
                 # 2. Island and Mainland Chunks (Excluding military chunk)
                 for (cgx, cgy) in sorted(list(active_chunks)):
@@ -1669,17 +1835,33 @@ def handle_right_click(game, mouse_pos):
                         continue
 
                     sub_opts.append(sub_key)
-                    if (cgx, cgy) in isolated_islands:
-                        display_map[sub_key] = f"{tr('ui', 'Island')} ({cgx}, {cgy})"
-                    else:
-                        display_map[sub_key] = f"{tr('ui', 'Sector')} ({cgx}, {cgy})"
+                    fuel_cost = calculate_boat_fuel_cost(game, cgx, cgy)
+                    chunk_type_lbl = tr('ui', 'Island') if (cgx, cgy) in isolated_islands else tr('ui', 'Sector')
+                    display_map[sub_key] = f"{chunk_type_lbl} ({cgx}, {cgy}) - "
+                    if fuel_icon:
+                        icon_map[sub_key] = fuel_icon
+                    extra_text_map[sub_key] = f"{fuel_cost}"
+                    extra_color_map[sub_key] = GREEN if player_fuel >= fuel_cost else RED
+                    tooltip_map[sub_key] = (
+                        f"{tr('ui', 'Destination:')} {chunk_type_lbl} ({cgx}, {cgy})\n"
+                        f"{tr('ui', 'Fuel needed:')} {fuel_cost}\n"
+                        f"{tr('ui', 'Available fuel:')} {player_fuel}"
+                    )
 
                 if not sub_opts:
                     display_message(tr('msg', "You need Cartography maps to navigate further."))
                     game.context_menu['active'] = False
                     return
 
-                options = [{'label': 'Travel to', 'sub': sub_opts, 'display_names': display_map}]
+                options = [{
+                    'label': 'Travel to', 
+                    'sub': sub_opts, 
+                    'display_names': display_map,
+                    'icons': icon_map,
+                    'extra_texts': extra_text_map,
+                    'extra_colors': extra_color_map,
+                    'tooltips': tooltip_map
+                }]
 
             barricade = game.map_manager.get_barricade(gx, gy)
 
