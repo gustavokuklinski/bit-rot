@@ -6,8 +6,7 @@ from core.data.localization import tr
 
 APP_MODULE_NAMES = {
     'show_hostile_npc': ('Military Registry', ORANGE),
-    'show_static_hostile': ('Workers Registry', ORANGE),
-    'show_static_npc': ('Civilians Registry', GREEN),
+    'show_friendly_npc': ('Civilians Registry', ORANGE),
     'show_zombies': ('Vaccine Registry', RED),
     'show_animals': ('Next Petrol Fauna', YELLOW),
     'show_vehicles': ('Vehicle Registry', BLUE),

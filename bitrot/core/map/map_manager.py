@@ -637,8 +637,12 @@ class MapManager:
         if definition and definition.get('sound_src'):
             tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
             self.game.sound_manager.play_sound(
-                definition['sound_src'], subdir='map', game=self.game,
-                source_pos=tile_rect.center, base_volume=0.4, pitch_variance=0.15
+                definition['sound_src'], 
+                subdir='map', 
+                game=self.game,
+                source_pos=tile_rect.center, 
+                base_volume=0.4, 
+                pitch_variance=0.15
             )
 
         import time

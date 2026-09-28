@@ -1,4 +1,4 @@
-<item name="Vaccine Registry" type="sd_card" tip="Use with Mobile > Apps">
+<item name="Personel Registry" type="sd_card" tip="Next Petrol personel track\nUse with Mobile > Apps">
     <properties>
         <sprite file="sd_card.png" />
         <weight weight="0.0001" />

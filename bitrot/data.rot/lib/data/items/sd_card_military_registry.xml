@@ -1,4 +1,4 @@
-<item name="Military Registry" type="sd_card" tip="Use with Mobile > Apps">
+<item name="Military Registry" type="sd_card" tip="Military personel track\nUse with Mobile > Apps">
     <properties>
         <sprite file="sd_card.png" />
         <weight weight="0.0001" />

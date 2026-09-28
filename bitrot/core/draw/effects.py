@@ -285,7 +285,7 @@ def draw_screen_effects(game, offset_x, offset_y, zoom):
 
     # --- CRT ANXIETY EFFECT ---
     anxiety_level = getattr(game.player, 'anxiety', 0)
-    if anxiety_level > 10:
+    if anxiety_level > 30:
         try:
             if not hasattr(game, 'crt_texture') or game.crt_texture.get_width() != dyn_w + 20:
                 game.crt_texture = pygame.transform.scale(game.assets.get('crt_texture'), (dyn_w + 20, dyn_h + 20)).convert_alpha()

@@ -67,8 +67,14 @@ def trigger_explosion(game, x, y, damage, radius, owner, explosion_sound=None):
     
     if explosion_sound:
         game.sound_manager.play_sound(
-            explosion_sound, subdir='items', game=game, source_pos=(x, y), 
-            base_volume=0.5, pitch_variance=0.1, force=True, is_critical=True
+            explosion_sound, 
+            subdir='items', 
+            game=game, 
+            source_pos=(x, y), 
+            base_volume=0.5, 
+            pitch_variance=0.1, 
+            force=True, 
+            is_critical=True
         )
         
     game.splashes.append({

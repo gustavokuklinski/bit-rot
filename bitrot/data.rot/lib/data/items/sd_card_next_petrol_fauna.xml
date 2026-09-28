@@ -1,4 +1,4 @@
-<item name="Next Petrol Fauna" type="sd_card" tip="Use with Mobile > Apps">
+<item name="Next Petrol Fauna" type="sd_card" tip="Show island fauna on the map (Yellow)\nUse with Mobile > Apps">
     <properties>
         <sprite file="sd_card.png" />
         <weight weight="0.0001" />

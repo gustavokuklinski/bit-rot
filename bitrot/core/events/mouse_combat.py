@@ -50,7 +50,7 @@ def handle_attack(game, mouse_pos):
                         game=game,
                         source_pos=game.player.rect.center,
                         base_volume=0.5,
-                        pitch_variance=0.15,
+                        # pitch_variance=0.15,
                         is_critical=True
                     )
                 

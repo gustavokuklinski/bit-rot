@@ -1,4 +1,4 @@
-<item name="Personal Data" type="sd_card" allow_belt="false" tip="Insert into Mobile to track your bio-stats and quests">
+<item name="Personal Data" type="sd_card" allow_belt="false" tip="Track your bio-stats\nUse with Mobile > Apps">
     <properties>
         <weight weight="0.0001"/>
         <map value="personal_data" />

@@ -415,6 +415,29 @@ def draw_map_tab(surface, game, modal, assets, full_map=False, target_chunk=None
                 if map_area_rect.collidepoint(sx, sy):
                     pygame.draw.circle(surface, (40, 140, 255), (int(sx), int(sy)), 3)
 
+        # Civilian / Friendly NPCs Radar
+        if 'show_friendly_npc' in active_caps or 'show_static_npc' in active_caps:
+            for npc in getattr(game, 'npcs', []):
+                if getattr(npc, 'is_dead', False): continue
+                if not getattr(npc, 'is_friendly', True): continue
+                nx = (npc.rect.centerx // TILE_SIZE) + gx_offset
+                ny = (npc.rect.centery // TILE_SIZE) + gy_offset
+                sx = map_area_rect.x + (nx - src_x) * map_zoom + (map_zoom / 2)
+                sy = map_area_rect.y + (ny - src_y) * map_zoom + (map_zoom / 2)
+                if map_area_rect.collidepoint(sx, sy):
+                    pygame.draw.circle(surface, (255, 140, 0), (int(sx), int(sy)), 3)
+
+        # Military / Hostile NPCs Radar
+        if 'show_hostile_npc' in active_caps:
+            for npc in getattr(game, 'npcs', []):
+                if getattr(npc, 'is_dead', False): continue
+                if getattr(npc, 'is_friendly', True): continue
+                nx = (npc.rect.centerx // TILE_SIZE) + gx_offset
+                ny = (npc.rect.centery // TILE_SIZE) + gy_offset
+                sx = map_area_rect.x + (nx - src_x) * map_zoom + (map_zoom / 2)
+                sy = map_area_rect.y + (ny - src_y) * map_zoom + (map_zoom / 2)
+                if map_area_rect.collidepoint(sx, sy):
+                    pygame.draw.circle(surface, (255, 140, 0), (int(sx), int(sy)), 3)
 
 def draw_big_map_modal(surface, game, modal, assets):
     item = modal['item']

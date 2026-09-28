@@ -90,11 +90,21 @@ def draw_health_tab(surface, player, modal, assets, game=None):
     # --- 3. PLAYER STATS ---
     stat_icons = {}
     icon_files = {
-        "HP": SPRITE_PATH + "ui/hp.png", "STM": SPRITE_PATH + "ui/stamina.png",
-        "WTR": SPRITE_PATH + "ui/water.png", "FOD": SPRITE_PATH + "ui/food.png", "WGT": SPRITE_PATH + "ui/weight.png",
+        "HP": SPRITE_PATH + "ui/hp.png", 
+        "STM": SPRITE_PATH + "ui/stamina.png",
+        "WTR": SPRITE_PATH + "ui/water.png", 
+        "FOD": SPRITE_PATH + "ui/food.png", 
+        "WGT": SPRITE_PATH + "ui/weight.png",
         "DEF": SPRITE_PATH + "ui/defence.png"
     }
-    stat_names = { "HP": "Health", "STM": "Stamina", "WTR": "Water","FOD": "Food", "WGT": "Weight", "DEF": "Defence" }
+    stat_names = { 
+        "HP": "Health", 
+        "STM": "Stamina", 
+        "WTR": "Water",
+        "FOD": "Food", 
+        "WGT": "Weight", 
+        "DEF": "Defence" 
+    }
 
     for k, path in icon_files.items():
         try:
@@ -192,9 +202,9 @@ def draw_health_tab(surface, player, modal, assets, game=None):
             (weather_icon, "", f"{day_night_str} - {weather_label}", weather_color, None),
         ]
         status_title = font_12.render(tr('ui', "World Info"), False, WHITE)
-        surface.blit(status_title, (start_x, current_y))
+        surface.blit(status_title, (start_x, current_y - 16))
         
-        text_y = current_y + 35
+        text_y = current_y + 3
         tooltip_texts = ["Current time cycle", "Time of day and rain"]
         panel_width = content_width - 10
         
@@ -207,7 +217,7 @@ def draw_health_tab(surface, player, modal, assets, game=None):
                 try:
                     img = pygame.image.load(icon_path).convert_alpha()
                     img = pygame.transform.scale(img, (18, 18))
-                    surface.blit(img, (start_x, text_y + 1))
+                    surface.blit(img, (start_x, text_y))
                 except: pass
             
             current_x = start_x + 25 
@@ -217,7 +227,7 @@ def draw_health_tab(surface, player, modal, assets, game=None):
                 current_x += lbl_surf.get_width()
                 
             val_surf = font_12.render(val, False, val_color)
-            surface.blit(val_surf, (current_x, text_y))
+            surface.blit(val_surf, (current_x, text_y ))
             text_y += 24
             
             if bar_ratio is not None:

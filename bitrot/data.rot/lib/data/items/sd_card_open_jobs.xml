@@ -1,4 +1,4 @@
-<item name="Open Jobs" type="sd_card" allow_belt="false" tip="Insert into Mobile to track your quests">
+<item name="Open Jobs" type="sd_card" allow_belt="false" tip="Track your Quests\nUse with Mobile > Apps">
     <properties>
         <weight weight="0.0001"/>
         <map value="open_jobs" />

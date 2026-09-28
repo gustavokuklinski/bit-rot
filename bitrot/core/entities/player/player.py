@@ -296,7 +296,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                     game=game,
                     source_pos=self.rect.center,
                     base_volume=0.15,
-                    pitch_variance=0.06, # Reduced from 0.15 for a more seamless, consistent material sound
+                    # pitch_variance=0.06, # Reduced from 0.15 for a more seamless, consistent material sound
                     is_critical=True
                 )
                 
