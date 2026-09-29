@@ -198,6 +198,8 @@ def update_capsule_drops(game):
                 stacked = False
                 if new_capsule.is_stackable():
                     for it in game.items_on_ground:
+                        if getattr(it, 'type', '') == 'animal' or not hasattr(it, 'can_stack_with'):
+                            continue
                         if it.can_stack_with(new_capsule) and math.hypot(it.rect.centerx - pos_x, it.rect.centery - pos_y) < 24:
                             it.load = (getattr(it, 'load', 1) or 1) + 1  # Increment by strictly 1
                             stacked = True
