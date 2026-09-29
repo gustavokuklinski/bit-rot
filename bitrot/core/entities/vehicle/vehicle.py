@@ -84,12 +84,7 @@ class Vehicle:
         self.friction = 0.4
         self.active = False 
 
-        try:
-            self.seat_count = int(stats.get('seats', 4))
-        except (ValueError, TypeError):
-            self.seat_count = 4
-            
-        self.seats = [None] * self.seat_count
+        self.driver = None
 
         self.hit_entities = []
         self.id = str(uuid.uuid4())
@@ -110,6 +105,10 @@ class Vehicle:
         if definition and 'sounds' in definition:
             self.sounds = definition['sounds']
 
+    @property
+    def seats(self):
+        """Backwards compatibility helper: returns list containing the driver if present."""
+        return [self.driver] if self.driver else []
 
     def has_key_access(self, player):
         """
@@ -374,7 +373,7 @@ class Vehicle:
                 entities = game.zombies + (list(game.npcs) if hasattr(game.npcs, '__iter__') else []) + [game.player]
                 for entity in entities:
                     if entity == self: continue 
-                    if entity in self.seats: continue 
+                    if entity == self.driver: continue 
                     
                     if rect_check.colliderect(entity.rect):
                         if hasattr(entity, 'mask') and entity.mask:
@@ -445,9 +444,9 @@ class Vehicle:
                 display_message(tr('msg', "Cannot turn on lights: No Battery Power."))
 
     def toggle_engine(self, game=None):
-        driver_seat = self.seats[0]
+        driver_seat = self.driver
         if not driver_seat or type(driver_seat).__name__ != 'Player':
-            display_message(tr('msg', "Cannot start engine: No driver in the driver's seat."))
+            display_message(tr('msg', "Cannot start engine: No driver."))
             return
 
         if game is None and hasattr(driver_seat, 'game'):

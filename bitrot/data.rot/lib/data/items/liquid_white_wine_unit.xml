@@ -2,6 +2,7 @@
     <properties>
         <restore status="[water]" value="2" />
         <reduce status="[anxiety]" value="8" />
+        <restore status="[drugs]" value="10" />
         <load min="1" max="100" />
         <capacity value="100" />
         <weight weight="0.001" />

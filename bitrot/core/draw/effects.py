@@ -84,6 +84,26 @@ def draw_world_effects(game, surface, offset_x, offset_y, view_w, view_h):
         time_elapsed = current_time_ms - splash['time']
         if time_elapsed > splash['duration']: continue
         
+        if splash.get('type') == 'capsule_eject':
+            t = min(1.0, time_elapsed / float(splash['duration']))
+            # Subtle parabolic height arc (peaks at 6px)
+            arc_h = math.sin(t * math.pi) * 6.0
+            cur_world_x = splash['start_x'] + (splash['end_x'] - splash['start_x']) * t
+            cur_world_y = splash['start_y'] + (splash['end_y'] - splash['start_y']) * t - arc_h
+
+            screen_x = int(cur_world_x + offset_x)
+            screen_y = int(cur_world_y + offset_y)
+            spin_angle = t * 720.0
+
+            # Tiny spent brass shell particle (3x1 pixels)
+            cap_surf = pygame.Surface((3, 1), pygame.SRCALPHA)
+            cap_surf.fill((218, 165, 32))  # Brass golden rod
+
+            rot_cap = pygame.transform.rotate(cap_surf, spin_angle)
+            rot_rect = rot_cap.get_rect(center=(screen_x, screen_y))
+            surface.blit(rot_cap, rot_rect)
+            continue
+
         fade_factor = max(0.0, 1.0 - (time_elapsed / splash['duration']))
         base_opacity = int(255 * fade_factor)
         impact_x = splash['pos'][0] + offset_x
@@ -128,14 +148,14 @@ def draw_screen_effects(game, offset_x, offset_y, zoom):
     dt = getattr(game, 'dt_mult', 1.0)
 
     # --- ALCOHOL BLUR EFFECT ---
-    alcohol = getattr(game.player, 'alcohol_level', 0.0) if game.player else 0.0
-    if alcohol >= 5.0 and dyn_w > 0 and dyn_h > 0:
+    alcohol = getattr(game.player, 'drugs', 0.0) if game.player else 0.0
+    if alcohol >= 30.0 and dyn_w > 0 and dyn_h > 0:
         if not hasattr(game, 'blur_cache_surf') or game.blur_cache_surf.get_size() != (dyn_w, dyn_h):
             game.blur_cache_surf = pygame.Surface((dyn_w, dyn_h))
 
         game.blur_cache_surf.blit(game.game_screen, (0, 0), game_viewport_rect)
 
-        factor = max(5, min(10, int(5 + (alcohol - 5.0) * 0.8)))
+        factor = max(4, min(10, int(4 + (alcohol - 30.0) * 0.08)))
         small_w = max(1, dyn_w // factor)
         small_h = max(1, dyn_h // factor)
 
@@ -146,7 +166,7 @@ def draw_screen_effects(game, offset_x, offset_y, zoom):
         sway_x = int(math.sin(sway_time) * 4)
         sway_y = int(math.cos(sway_time * 0.7) * 3)
 
-        blur_alpha = min(230, int(180 + (alcohol - 5.0) * 10))
+        blur_alpha = min(230, int(140 + (alcohol - 30.0) * 1.2))
         blurred.set_alpha(blur_alpha)
 
         game.game_screen.set_clip(game_viewport_rect)

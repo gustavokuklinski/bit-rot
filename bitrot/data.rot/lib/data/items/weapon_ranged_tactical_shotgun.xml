@@ -5,6 +5,7 @@
         <weight weight="2.2"/>
         <capacity value="12" />
         <ammo type="Shotgun Shells" />
+        <ammo_drop_capsule type="Shells Capsule" />
         <damage min="65" max="150" />
         <firing pellets="6" spread_angle="6" distance="15" />
         <skill type="range" />

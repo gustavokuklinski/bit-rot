@@ -10,6 +10,9 @@ from core.messages import display_message
 from core.data.localization import tr
 
 def handle_attack(game, mouse_pos):
+    if getattr(game, 'game_state', None) != 'PLAYING':
+        return
+
     if any(modal['is_dragging'] for modal in game.modals):
         return
 
@@ -115,6 +118,33 @@ def handle_attack(game, mouse_pos):
                     ))
 
                 weapon.load -= 1
+
+                # --- FIX 3: Ranged Weapon Capsule Ejection Animation & Drop ---
+                capsule_type = getattr(weapon, 'ammo_drop_capsule', None)
+                if not capsule_type and hasattr(weapon, 'properties') and isinstance(weapon.properties, dict):
+                    capsule_type = weapon.properties.get('ammo_drop_capsule', {}).get('type')
+
+                if capsule_type:
+                    # Eject to the right side with a tighter, realistic dispersion
+                    eject_angle = base_angle + (math.pi / 2.0) + random.uniform(0.1, 0.3)
+                    eject_dist = random.uniform(8, 14)
+                    start_x = game.player.rect.centerx
+                    start_y = game.player.rect.centery
+                    end_x = start_x + math.cos(eject_angle) * eject_dist
+                    end_y = start_y + math.sin(eject_angle) * eject_dist
+
+                    game.splashes.append({
+                        'type': 'capsule_eject',
+                        'start_x': start_x,
+                        'start_y': start_y,
+                        'end_x': end_x,
+                        'end_y': end_y,
+                        'time': pygame.time.get_ticks(),
+                        'duration': 280,
+                        'item_name': capsule_type,
+                        'landed': False
+                    })
+                # -------------------------------------------------------------
 
                 dur_loss = game.player.progression.get_ranged_durability_loss(game.player)
                 weapon.durability = max(0, weapon.durability - dur_loss)

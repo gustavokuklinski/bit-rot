@@ -96,7 +96,7 @@ def save_game(game):
                 "stamina": game.player.stamina,
                 "infection": game.player.infection,
                 "anxiety": game.player.anxiety,
-                "alcohol_level": getattr(game.player, 'alcohol_level', 0.0)
+                "drugs": getattr(game.player, 'drugs', 0.0)
             },
             "attributes": attributes_base,
             "progression": progression_data,

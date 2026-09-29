@@ -1,0 +1,12 @@
+<item name="Morphine" type="consumable_drugs" allow_belt="true" consume_time="1.2">
+    <properties>
+        <restore status="[health]" value="50" />
+        <reduce status="[infection]" value="5" />
+        <restore status="[drugs]" value="90" />
+        <load value="1" />
+        <capacity value="5" />
+        <weight weight="0.02" />
+        <sprite file="consumable_drugs_vaccine.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

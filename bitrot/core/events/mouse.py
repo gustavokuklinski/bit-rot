@@ -390,14 +390,14 @@ def handle_mouse_down(game, event, mouse_pos):
                 if topmost_modal.get('type') in ['nearby', 'status', 'inventory', 'mobile', 'messages','vehicle', 'gear'] and 'tab_rects' in topmost_modal:
                     for i, tab_rect in enumerate(topmost_modal.get('tab_rects', [])):
                         if tab_rect.collidepoint(mouse_pos):
-                             tabs_data = topmost_modal.get('tabs_data', [])
+                            tabs_data = topmost_modal.get('tabs_data', [])
                              
-                             if not tabs_data and topmost_modal.get('type') == 'vehicle':
-                                 tabs_data = [{'label': 'Vehicle'}, {'label': 'Mechanics'}, {'label': 'Seats'}]
+                            if not tabs_data and topmost_modal.get('type') == 'vehicle':
+                                tabs_data = [{'label': 'Vehicle'}, {'label': 'Mechanics'}]
                                  
-                             if i < len(tabs_data):
-                                 topmost_modal['active_tab'] = tabs_data[i]['label']
-                                 return
+                            if i < len(tabs_data):
+                                topmost_modal['active_tab'] = tabs_data[i]['label']
+                                return
 
                 if hasattr(topmost_modal, 'handle_event'):
                     if topmost_modal.handle_event(event): return
@@ -462,7 +462,8 @@ def handle_mouse_down(game, event, mouse_pos):
             return
             
         if getattr(game.player, 'is_aiming', False):
-            handle_attack(game, mouse_pos)
+            if getattr(game, 'game_state', None) == 'PLAYING':
+                handle_attack(game, mouse_pos)
             return
 
     elif event.button in (4, 5):

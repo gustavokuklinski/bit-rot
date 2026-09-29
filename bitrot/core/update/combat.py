@@ -5,6 +5,7 @@ from core.data.config import TILE_SIZE
 from core.update.utils import get_nearby_obstacles
 from core.messages import display_message
 from core.data.localization import tr
+from core.entities.item.item import Item
 
 def create_blood_splatter(game, target_rect, damage, direction_vector=None):
     if not hasattr(game, 'blood_stains'):
@@ -168,6 +169,59 @@ def trigger_explosion(game, x, y, damage, radius, owner, explosion_sound=None):
                     tile_def = game.map_manager.get_tile_at(gx, gy)
                     if tile_def and tile_def.get('destructible'):
                         game.map_manager.hit_tile(gx, gy, damage, weapon=None, is_projectile=True)
+
+def update_capsule_drops(game):
+    if not hasattr(game, 'splashes'):
+        return
+    current_time = pygame.time.get_ticks()
+    for s in game.splashes:
+        if s.get('type') == 'capsule_eject' and not s.get('landed'):
+            if current_time - s['time'] >= s['duration']:
+                s['landed'] = True
+                capsule_name = s.get('item_name')
+                if not capsule_name:
+                    continue
+
+                pos_x, pos_y = s['end_x'], s['end_y']
+                test_rect = pygame.Rect(pos_x - 2, pos_y - 2, 4, 4)
+                if any(test_rect.colliderect(ob) for ob in getattr(game, 'obstacles', [])):
+                    pos_x, pos_y = s['start_x'], s['start_y']
+
+                new_capsule = Item.create_from_name(capsule_name)
+                if not new_capsule:
+                    continue
+
+                # --- FIX: Guarantee strictly 1 unit per shot ---
+                if hasattr(new_capsule, 'load'):
+                    new_capsule.load = 1
+
+                stacked = False
+                if new_capsule.is_stackable():
+                    for it in game.items_on_ground:
+                        if it.can_stack_with(new_capsule) and math.hypot(it.rect.centerx - pos_x, it.rect.centery - pos_y) < 24:
+                            it.load = (getattr(it, 'load', 1) or 1) + 1  # Increment by strictly 1
+                            stacked = True
+                            break
+
+                if not stacked:
+                    new_capsule.rect.center = (int(pos_x), int(pos_y))
+                    new_capsule.x, new_capsule.y = new_capsule.rect.topleft
+                    new_capsule.is_placed = False
+                    game.items_on_ground.append(new_capsule)
+
+                    if getattr(game, 'is_client', False) and getattr(game, 'client', None):
+                        from core.server.network import NetMsg, send_msg
+                        send_msg(game.client.socket, {
+                            'type': NetMsg.WORLD_ACTION,
+                            'action': 'drop',
+                            'item_data': new_capsule.to_dict(),
+                            'x': new_capsule.x,
+                            'y': new_capsule.y,
+                            'is_placed': False
+                        })
+
+                if hasattr(game, 'spatial_manager'):
+                    game.spatial_manager.rebuild_item_grid(force=True)
 
 def player_hit_zombie(player, zombie, game):
     progression = player.progression

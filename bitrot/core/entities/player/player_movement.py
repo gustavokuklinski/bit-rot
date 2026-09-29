@@ -14,14 +14,9 @@ from core.systems.utils import resolve_stuck_in_obstacle
 
 class PlayerMovement:
     def enter_vehicle(self, vehicle, game):
-        seat_idx = -1
-        for i, occupant in enumerate(vehicle.seats):
-            if occupant is None:
-                seat_idx = i
-                break
-        
-        if seat_idx == -1:
-            display_message(tr('msg', "Vehicle is full! No free seats."))
+        # Individual vehicle check
+        if getattr(vehicle, 'driver', None) is not None:
+            display_message(tr('msg', "Vehicle is already occupied!"))
             return
 
         self.vehicle = vehicle
@@ -29,21 +24,21 @@ class PlayerMovement:
         self.y = vehicle.y
         self.rect.topleft = (self.x, self.y)
         
-        vehicle.seats[seat_idx] = self
-        self.vehicle_seat_index = seat_idx
+        vehicle.driver = self
 
         if vehicle.rect in game.obstacles:
             game.obstacles.remove(vehicle.rect)
         
-        seat_name = "Driver's Seat" if seat_idx == 0 else f"Seat {seat_idx+1}"
-        display_message(f"{tr('msg', 'Entered')} {vehicle.name} ({tr('msg', seat_name)})")
+        display_message(f"{tr('msg', 'Entered')} {vehicle.name}")
 
     def exit_vehicle(self, game):
         if self.vehicle:
-            if hasattr(self, 'vehicle_seat_index') and self.vehicle_seat_index is not None:
-                if 0 <= self.vehicle_seat_index < len(self.vehicle.seats):
-                    if self.vehicle.seats[self.vehicle_seat_index] == self:
-                        self.vehicle.seats[self.vehicle_seat_index] = None
+            # --- AUTO TURN OFF ENGINE ON EXIT ---
+            if self.vehicle.active:
+                self.vehicle.toggle_engine(game=game)
+            # ------------------------------------
+
+            self.vehicle.driver = None
 
             if self.vehicle.rect not in game.obstacles:
                 game.obstacles.append(self.vehicle.rect)
@@ -80,7 +75,6 @@ class PlayerMovement:
                     self.rect.topleft = (int(self.x), int(self.y))
             
             self.vehicle = None
-            self.vehicle_seat_index = None
             display_message(tr('msg', "Exited vehicle"))
 
     def update_position(self, obstacles, zombies, game):

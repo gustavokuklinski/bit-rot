@@ -9,6 +9,7 @@ from core.update.combat import (
     handle_zombie_death,
     player_hit_zombie,
     trigger_explosion,
+    update_capsule_drops,
 )
 from core.update.entities import update_entities
 from core.update.projectiles import update_projectiles
@@ -54,5 +55,6 @@ def update_game_state(game):
   zombies_to_remove = []
 
   update_projectiles(game, GRID_SIZE, zombies_to_remove)
+  update_capsule_drops(game)
   update_entities(game, GRID_SIZE, zombies_to_remove)
   update_vehicles(game, zombies_to_remove)

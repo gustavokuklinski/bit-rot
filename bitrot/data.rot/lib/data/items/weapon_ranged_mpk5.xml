@@ -5,6 +5,7 @@
         <weight weight="1.2"/>
         <capacity value="30" />
         <ammo type="9mm Ammo" />
+        <ammo_drop_capsule type="9mm Capsule" />
         <damage min="25" max="65" />
         <firing pellets="1" spread_angle="3" machine_gun="true" firing_second="0.1" distance="25" />
         <skill type="range" />

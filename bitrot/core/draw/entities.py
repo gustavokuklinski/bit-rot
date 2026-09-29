@@ -64,19 +64,32 @@ def draw_entities(game, surface, offset_x, offset_y, view_w, view_h, screen_rect
         if (dx*dx + dy*dy) > view_radius_sq: continue
 
         draw_pos = item.rect.move(offset_x, offset_y)
-        # Full-size 16x16 for player corpse or placed items; small 8x8 for zombie corpses & dropped items
+        # Full-size 16x16 for player corpse or placed items; small for zombie corpses & dropped items
         if getattr(item, 'is_player_corpse', False) or getattr(item, 'is_placed', False):
             if getattr(item, 'image', None):
                 surface.blit(item.image, draw_pos)
             else:
                 pygame.draw.rect(surface, getattr(item, 'color', WHITE), draw_pos)
         else:
-            if getattr(item, 'image', None):
-                if not hasattr(item, 'ground_image_8x8'):
-                    item.ground_image_8x8 = pygame.transform.scale(item.image, (8, 8))
-                surface.blit(item.ground_image_8x8, (draw_pos.x + (draw_pos.width // 2) - 4, draw_pos.y + (draw_pos.height // 2) - 4))
+            # Check if this item is a spent cartridge/capsule
+            is_capsule = 'capsule' in getattr(item, 'name', '').lower()
+
+            if is_capsule:
+                cap_x = draw_pos.x + (draw_pos.width // 2) - 1
+                cap_y = draw_pos.y + (draw_pos.height // 2) - 1
+                if getattr(item, 'image', None):
+                    if not hasattr(item, 'ground_image_capsule'):
+                        item.ground_image_capsule = pygame.transform.scale(item.image, (3, 2))
+                    surface.blit(item.ground_image_capsule, (cap_x, cap_y))
+                else:
+                    pygame.draw.rect(surface, (218, 165, 32), (cap_x, cap_y, 3, 2))
             else:
-                pygame.draw.rect(surface, getattr(item, 'color', WHITE), (draw_pos.x + (draw_pos.width // 2) - 4, draw_pos.y + (draw_pos.height // 2) - 4, 8, 8))
+                if getattr(item, 'image', None):
+                    if not hasattr(item, 'ground_image_8x8'):
+                        item.ground_image_8x8 = pygame.transform.scale(item.image, (8, 8))
+                    surface.blit(item.ground_image_8x8, (draw_pos.x + (draw_pos.width // 2) - 4, draw_pos.y + (draw_pos.height // 2) - 4))
+                else:
+                    pygame.draw.rect(surface, getattr(item, 'color', WHITE), (draw_pos.x + (draw_pos.width // 2) - 4, draw_pos.y + (draw_pos.height // 2) - 4, 8, 8))
     for p in game.projectiles:
         if screen_rect.colliderect(p.rect): p.draw(surface, offset_x, offset_y)
 

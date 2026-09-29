@@ -5,6 +5,7 @@
         <weight weight="1.5"/>
         <capacity value="30" />
         <ammo type="556 Ammo" />
+        <ammo_drop_capsule type="556 Capsule" />
         <damage min="30" max="80" />
         <firing pellets="1" spread_angle="0" machine_gun="true" firing_second="0.1" distance="40" />
         <skill type="range" />

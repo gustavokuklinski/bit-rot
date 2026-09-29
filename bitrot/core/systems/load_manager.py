@@ -258,7 +258,7 @@ def respawn_player_in_world(game, new_player_data, save_folder_name):
     game.player.food = 100.0
     game.player.infection = 0.0
     game.player.anxiety = 0.0
-    game.player.alcohol_level = 0.0
+    game.player.drugs = 0.0
     game.player.is_dead = False
     game.player.vehicle = None
     game.player.action_timer = 0
@@ -689,7 +689,7 @@ def load_game(game, save_folder_name):
         game.player.rect.topleft = (game.player.x, game.player.y)
         
         game.player.inventory = [deserialize_item(d) for d in player_data.get('inventory', []) if deserialize_item(d)]
-        game.player.alcohol_level = float(player_data.get('stats', {}).get('alcohol_level', 0.0))
+        game.player.drugs = float(player_data.get('stats', {}).get('drugs', 0.0))
 
         game.player.belt = []
         for item_data in player_data.get('belt', [None]*5):

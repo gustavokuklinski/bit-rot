@@ -3,6 +3,7 @@
         <reduce status="[anxiety]" value="20" />
         <reduce status="[stamina]" value="5" />
         <reduce status="[water]" value="5" />
+        <restore status="[drugs]" value="1" />
         <weight weight="0.001"/>
         <load min="2" max="20" />
         <capacity value="20" />

@@ -4,6 +4,16 @@ from core.data.config import GAME_WIDTH, GAME_HEIGHT, TILE_SIZE
 from core.ui.helpers.keybinds import keybind_manager
 
 def update_camera(game):
+
+    #if getattr(game, 'game_state', None) == 'PLAYING':
+    #    is_running = (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or joy_run)
+    #    game.player.is_running = is_running
+    #    is_aiming = (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] or mouse_buttons[2] or joy_aim)
+    #    game.player.is_aiming = is_aiming 
+    #else:
+    #    game.player.is_running = False
+    #    game.player.is_aiming = False
+
     zoom = getattr(game, 'zoom_level', 1.0)
     
     left_encroachment = 0

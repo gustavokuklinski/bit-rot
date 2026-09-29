@@ -210,10 +210,6 @@ def get_targeted_slot_info(game, mouse_pos, dynamic_h=GAME_HEIGHT):
                 for slot_name, slot in top_modal.get('equipment_rects', {}).items():
                     if slot.collidepoint(mouse_pos):
                         return slot, 'vehicle_equipment', slot_name, top_modal.get('vehicle')
-            elif active_tab == 'Seats':
-                for seat_idx, slot in top_modal.get('seat_rects', {}).items():
-                    if slot.collidepoint(mouse_pos):
-                        return slot, 'vehicle_seat', seat_idx, top_modal.get('vehicle')
 
         elif m_type == 'npc_dialog':
             if top_modal.get('active_tab_index') == 2:  # Trade Tab

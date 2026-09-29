@@ -443,31 +443,48 @@ class PlayerInventory:
                     return 
 
     def find_water_to_auto_drink(self):
+        WATER_ITEM_NAME = 'Water Unit'
+
+        def is_valid_water(item):
+            return (
+                item is not None
+                and item.name == WATER_ITEM_NAME
+                and (getattr(item, 'load', 0) or 0) > 0
+            )
+
         def search_recursive(container_item):
-            if not hasattr(container_item, 'inventory') or not container_item.inventory: return None
+            if not hasattr(container_item, 'inventory') or not container_item.inventory:
+                return None
             for i, item in enumerate(container_item.inventory):
-                if item:
-                    if 'Water' in tr('item', item.name) and (item.load or 0) > 0: return item, 'container', i, container_item
-                    result = search_recursive(item)
-                    if result: return result
+                if is_valid_water(item):
+                    return item, 'container', i, container_item
+                result = search_recursive(item)
+                if result:
+                    return result
             return None
 
+        # 1. Search Belt
         for i, item in enumerate(self.belt):
-            if item:
-                if 'Water' in tr('item', item.name) and (item.load or 0) > 0: return item, 'belt', i, None 
-                res = search_recursive(item)
-                if res: return res
+            if is_valid_water(item):
+                return item, 'belt', i, None
+            res = search_recursive(item)
+            if res:
+                return res
 
+        # 2. Search Inventory
         for i, item in enumerate(self.inventory):
-            if item:
-                if 'Water' in tr('item', item.name) and (item.load or 0) > 0: return item, 'inventory', i, None 
-                res = search_recursive(item)
-                if res: return res
+            if is_valid_water(item):
+                return item, 'inventory', i, None
+            res = search_recursive(item)
+            if res:
+                return res
 
+        # 3. Search Equipped Clothes / Gear (Bags, Vests, etc.)
         for slot, item in self.clothes.items():
-            if item:
-                if 'Water' in tr('item', item.name) and (item.load or 0) > 0: return item, 'gear', slot, None
-                res = search_recursive(item)
-                if res: return res
+            if is_valid_water(item):
+                return item, 'gear', slot, None
+            res = search_recursive(item)
+            if res:
+                return res
 
         return None, None, None, None

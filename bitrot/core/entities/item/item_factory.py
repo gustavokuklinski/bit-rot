@@ -291,6 +291,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     color = (int(color_prop.get('r', 255)), int(color_prop.get('g', 255)), int(color_prop.get('b', 255)))
     
     ammo_type = get_prop_val(props, 'ammo', 'type', None)
+    ammo_drop_capsule = get_prop_val(props, 'ammo_drop_capsule', 'type', None)
     
     pellets_str = get_prop_val(props, 'firing', 'pellets', '1')
     pellets = int(pellets_str)
@@ -317,6 +318,8 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     defence = int(float(defence_str))
     
     speed = float(get_prop_val(props, 'speed', 'value', 0))
+
+
 
     state = template.get('state')
     if not state:
@@ -397,7 +400,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
         allow_belt=allow_belt, tip=tip, consume_time=consume_time,
         safe_radius=safe_radius, max_liquid=max_liquid, map_value=map_value,
         barricade_health=barricade_health, remove_items=remove_items, remove_time=remove_time,
-        place_items=place_items, place_time=place_time
+        place_items=place_items, place_time=place_time, ammo_drop_capsule=ammo_drop_capsule
     )
 
     # Use shared cache instead of item.image.copy()

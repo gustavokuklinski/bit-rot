@@ -157,10 +157,9 @@ def run_playing(game):
         # --- ALCOHOL VIEW RADIUS REDUCTION ---
         # More alcohol = smaller view radius (tunnel vision).
         # Gradually restores as alcohol_level decays over time.
-        alcohol = getattr(game.player, 'alcohol_level', 0.0)
-        if alcohol > 0:
-            # Each point of alcohol reduces the view radius by 7% (clamped at 20% minimum so the player can still see their immediate surroundings)
-            alcohol_factor = max(0.20, 1.0 - (alcohol * 0.07))
+        alcohol = getattr(game.player, 'drugs', 0.0)
+        if alcohol >= 30.0:
+            alcohol_factor = max(0.20, 1.0 - ((alcohol - 30.0) * 0.01))
             radius_mult *= alcohol_factor
 
         game.player_view_radius = max(TILE_SIZE * 2, base_radius * radius_mult)

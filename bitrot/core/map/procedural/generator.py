@@ -359,7 +359,7 @@ class ProceduralGenerator(
      island_start_chunk, self.military_chunk,
      self.isolated_island_chunks) = self._generate_evolving_island_path(target_chunks)
 
-    lobby_gx = self.grid_w + 1
+    lobby_gx = self.grid_w
     lobby_gy = 0
     self.lobby_chunk = (lobby_gx, lobby_gy)
     self.start_chunk = self.lobby_chunk

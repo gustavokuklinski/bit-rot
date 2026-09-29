@@ -105,20 +105,7 @@ class PlayerActions:
             status_effect_legacy = getattr(item, 'status_effect', None)
             ammo_type = getattr(item, 'ammo_type', None) 
             consumed = False
-
-            # --- DETECT ALCOHOLIC LIQUIDS ---
-            item_name_lower = getattr(item, 'name', '').lower()
-            is_wine = ('white wine' in item_name_lower or 'red wine' in item_name_lower)
-            is_whiskey = ('whiskey' in item_name_lower)
-            is_beer = ('beer' in item_name_lower)
-
-            if is_wine or is_whiskey or is_beer:
-                consumed = True
-                if hasattr(self, 'anxiety'):
-                    reduction = 5.0 if is_wine else (12.0 if is_whiskey else 3.0)
-                    self.anxiety = max(0.0, self.anxiety - reduction)
-                if hasattr(self, 'water') and (is_wine or is_beer):
-                    self.water = min(100.0, self.water + 3.0)
+            old_alcohol = getattr(self, 'drugs', 0.0)
 
             if hasattr(item, 'effects') and item.effects:
                 for effect in item.effects:
@@ -129,7 +116,6 @@ class PlayerActions:
                     for target_stat in targets:
                         if eff_type == 'restore' and target_stat == 'health':
                              if self.health >= self.max_health:
-                                 
                                  consumed = False
                              else:
                                 self.health = min(self.max_health, self.health + val)
@@ -141,19 +127,21 @@ class PlayerActions:
                             
                             if eff_type == 'restore':
                                 stat_cap = 100.0
-                                if target_stat == 'health': stat_cap = self.max_health # Fallback
+                                if target_stat == 'health': stat_cap = self.max_health
                                 elif target_stat == 'stamina': stat_cap = self.max_stamina
 
                                 new_val = min(stat_cap, current_val + val)
                                 setattr(self, target_stat, new_val)
-                                display_message(f"{tr('msg', 'Used')} {tr('item', item.name)}. {tr('msg', 'Restored')} {val} {target_stat.capitalize()}.")
+                                if target_stat != 'drugs':
+                                    display_message(f"{tr('msg', 'Used')} {tr('item', item.name)}. {tr('msg', 'Restored')} {val} {target_stat.capitalize()}.")
                                 consumed = True
 
                             elif eff_type == 'reduce':
                                 min_cap = 0.0
                                 new_val = max(min_cap, current_val - val)
                                 setattr(self, target_stat, new_val)
-                                display_message(f"{tr('msg', 'Used')} {tr('item', item.name)}. {tr('msg', 'Reduced')} {target_stat.capitalize()} {tr('msg', 'by')} {val}.")
+                                if target_stat != 'drugs':
+                                    display_message(f"{tr('msg', 'Used')} {tr('item', item.name)}. {tr('msg', 'Reduced')} {target_stat.capitalize()} {tr('msg', 'by')} {val}.")
                                 consumed = True
             
             elif status_effect_legacy and hasattr(self, status_effect_legacy):
@@ -167,15 +155,8 @@ class PlayerActions:
             if consumed:
                 item.load -= 1
 
-                old_level = getattr(self, 'alcohol_level', 0.0)
-                if is_wine:
-                    self.alcohol_level = old_level + 1.0
-                elif is_whiskey:
-                    self.alcohol_level = old_level + 2.5
-                elif is_beer:
-                    self.alcohol_level = old_level + 0.8
-
-                if old_level < 5.0 <= self.alcohol_level:
+                # Trigger dizzy notification only when reaching the 30% threshold
+                if old_alcohol < 30.0 <= getattr(self, 'drugs', 0.0):
                     display_message(tr('msg', "You feel dizzy and your vision narrows..."))
                     
                 if item.load <= 0:
