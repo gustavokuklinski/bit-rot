@@ -51,7 +51,7 @@ class ProceduralGeneratorL2:
                 if has_wall_neighbor: continue
 
                 g_char = ground_tile.lower()
-                if 'dirty' in g_char or 'asphalt' in g_char or 'path' in g_char or 'cave_l2' in g_char or 'sand' in g_char:
+                if 'dirty' in g_char or 'asphalt' in g_char or 'path' in g_char or 'cave' in g_char or 'sand' in g_char:
                     pathway_candidates.append((x, y))
 
         chunks_x = max(1, w // self.chunk_size)
@@ -66,29 +66,118 @@ class ProceduralGeneratorL2:
             chosen = random.sample(pathway_candidates, count)
             for (zx, zy) in chosen:
                 spawn[zy][zx] = 'Z'
-                
-        print(f"  > Spawning Report L2: {len(chosen)} Zombies on Pathways (Map Limit: {total_zombies}).")
 
-    def _decorate_l2_pathways(self, layers, mask):
+    def _decorate_l2_pathways(self, layers, w, h, conns_l2=None):
+        """
+        Scatters requested decorations along L2 and L3 pathways:
+        - Walkable grass: garden_grass_1, garden_grass_2, garden_grass_3, garden_tall_grass
+        - Obstacle stones: garden_stone, garden_stone_iron, garden_stone_powder
+        Ensures obstacle stones only hug cave walls and never obstruct doorways or corridors.
+        """
         ground = layers.get('ground')
         base = layers.get('base')
+        protected = layers.get('protected_mask')
+        spawn = layers.get('spawn')
         if not ground or not base: return
 
-        h = len(ground)
-        w = len(ground[0])
-        veg_options = ['garden_grass_1', 'garden_grass_2', 'garden_grass_3', 'garden_stone', 'garden_tree_11', 'garden_tall_grass', 'garden_stone_powder', 'garden_stone_iron']
+        cx, cy = w // 2, h // 2
+        defs = self.game.tile_manager.definitions if hasattr(self.game, 'tile_manager') else {}
 
-        for y in range(h):
-            for x in range(w):
-                if ground[y][x] in ['dirty_01', 'sand_01'] and base[y][x] == ' ' and mask[y][x] == 0:
-                    if random.random() < 0.15:
-                        base[y][x] = random.choice(veg_options)
+        walkable_decos = ['garden_grass_1', 'garden_grass_2', 'garden_grass_3', 'garden_tall_grass']
+        stone_decos = ['garden_stone', 'garden_stone_iron', 'garden_stone_powder']
+
+        placed_stone_coords = set()
+
+        def is_connector_or_doorway_zone(x, y):
+            # Chunk boundary connectors
+            if (y < 7 or y >= h - 7) and abs(x - cx) <= 4: return True
+            if (x < 7 or x >= w - 7) and abs(y - cy) <= 4: return True
+
+            # Distance to protected building tiles / doorways
+            if protected:
+                for dy in range(-3, 4):
+                    for dx in range(-3, 4):
+                        nx, ny = x + dx, y + dy
+                        if 0 <= nx < w and 0 <= ny < h and protected[ny][nx] == 1:
+                            return True
+            return False
+
+        for y in range(4, h - 4):
+            for x in range(4, w - 4):
+                if is_connector_or_doorway_zone(x, y):
+                    continue
+
+                if base[y][x] != ' ':
+                    continue
+
+                if spawn and spawn[y][x] != ' ':
+                    continue
+
+                g_tile = ground[y][x]
+                if g_tile in (' ', '@', '#') or 'water' in g_tile.lower():
+                    continue
+
+                # Must be a walkable pathway tile
+                if not (g_tile.startswith('dirty') or g_tile.startswith('cave') or g_tile.startswith('sand') or g_tile.startswith('asphalt')):
+                    continue
+
+                # 1. Non-obstacle Grass Decor (Safe everywhere on open paths)
+                roll = random.random()
+                if roll < 0.08:
+                    base[y][x] = random.choice(walkable_decos)
+                    continue
+
+                # 2. Obstacle Stone Decor (Strictly anti-blocking)
+                elif roll < 0.12:
+                    # Check if stone tile is defined as an obstacle
+                    chosen_stone = random.choice(stone_decos)
+                    tile_def = defs.get(chosen_stone, {})
+                    is_stone_obstacle = tile_def.get('is_obstacle', True)
+
+                    if is_stone_obstacle:
+                        # Rule A: Must be adjacent to an existing wall '@' (hugs the rock edge)
+                        has_wall_neighbor = False
+                        wall_dir = None
+                        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                            nx, ny = x + dx, y + dy
+                            if 0 <= nx < w and 0 <= ny < h and base[ny][nx] == '@':
+                                has_wall_neighbor = True
+                                wall_dir = (dx, dy)
+                                break
+
+                        if not has_wall_neighbor:
+                            continue
+
+                        # Rule B: In the opposite direction away from the wall, require at least 2 clear walkable floor tiles
+                        opp_dx, opp_dy = -wall_dir[0], -wall_dir[1]
+                        c1_x, c1_y = x + opp_dx, y + opp_dy
+                        c2_x, c2_y = x + (opp_dx * 2), y + (opp_dy * 2)
+
+                        if not (0 <= c1_x < w and 0 <= c1_y < h and 0 <= c2_x < w and 0 <= c2_y < h):
+                            continue
+
+                        if base[c1_y][c1_x] != ' ' or base[c2_y][c2_x] != ' ':
+                            continue
+
+                        if ground[c1_y][c1_x] in (' ', '@', '#') or ground[c2_y][c2_x] in (' ', '@', '#'):
+                            continue
+
+                        # Rule C: Never place adjacent to another obstacle stone (min Manhattan distance 3)
+                        too_close_stone = False
+                        for sx, sy in placed_stone_coords:
+                            if abs(x - sx) + abs(y - sy) < 3:
+                                too_close_stone = True
+                                break
+
+                        if too_close_stone:
+                            continue
+
+                        base[y][x] = chosen_stone
+                        placed_stone_coords.add((x, y))
+                    else:
+                        base[y][x] = chosen_stone
 
     def _enforce_l2_contained_borders(self, layers, w, h, conns_l2=None):
-        """
-        Enforces Layer 2 boundaries with guaranteed 4-tile wide safe passages
-        without overwriting or modifying any protected building tiles.
-        """
         ground = layers.get('ground')
         base = layers.get('base')
         protected = layers.get('protected_mask')
@@ -102,7 +191,7 @@ class ProceduralGeneratorL2:
 
         conns = conns_l2 or {}
 
-        # 1. Open 4-tile wide safe passages on boundaries where L2 connects
+        # 1. Open 4-tile wide safe passages on boundaries where connections exist
         if conns.get('top'):
             for y in range(conn_depth):
                 for x in range(max(0, cx + c_min), min(w, cx + c_max)):
@@ -134,7 +223,6 @@ class ProceduralGeneratorL2:
         # 2. Seal the outer perimeter everywhere EXCEPT in doorways and protected buildings
         for y in range(h):
             for x in range(w):
-                # Never overwrite protected building walls or floors
                 if protected and protected[y][x] == 1:
                     continue
 
@@ -155,9 +243,6 @@ class ProceduralGeneratorL2:
                             ground[y][x] = 'cave_floor_01' if 'cave_floor_01' in ground[y][x] else 'dirty_01'
 
     def _connect_l2_drunkards(self, layers, conns_l2=None):
-        """
-        Connects L2 structures to doorway exits without ever carving through buildings.
-        """
         ground = layers.get('ground')
         base = layers.get('base')
         protected = layers.get('protected_mask')
@@ -170,7 +255,6 @@ class ProceduralGeneratorL2:
         visited = set()
         components = []
 
-        # Find existing underground structures and select connection points at their perimeters
         for y in range(h):
             for x in range(w):
                 if (x, y) not in visited and ground[y][x] not in [' ', '@', '#']:
@@ -188,7 +272,6 @@ class ProceduralGeneratorL2:
                                     stack.append((nx, ny))
 
                     if island_pixels and len(island_pixels) >= 4:
-                        # Find a perimeter entrance point bordering outside space so we connect to the door
                         entrance_point = None
                         for px, py in island_pixels:
                             for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
@@ -252,9 +335,6 @@ class ProceduralGeneratorL2:
                     self._carve_drunkard_path(layers, c1, c2, path_width=4, path_tile='dirty_01')
 
     def _carve_drunkard_path(self, layers, start, end, path_width=4, path_tile='dirty_01'):
-        """
-        Carves a 4-tile wide safe pathway. Protects all building tiles from being altered.
-        """
         cx, cy = start
         tx, ty = end
         
@@ -277,7 +357,6 @@ class ProceduralGeneratorL2:
                 for dx in range(border_min, border_max):
                     nx, ny = cx + dx, cy + dy
                     if 0 <= nx < w and 0 <= ny < h:
-                        # NEVER overwrite or clear any part of an L2 building
                         if protected and protected[ny][nx] == 1:
                             continue
 
@@ -291,8 +370,8 @@ class ProceduralGeneratorL2:
                                 base[ny][nx] = ' '
                         else:
                             if ground[ny][nx] in [' ', '#']:
-                                ground[ny][nx] = path_tile  # <--- FIX: Ensure there is a floor
-                                base[ny][nx] = border_tile  # <--- FIX: Put the wall on the base layer
+                                ground[ny][nx] = path_tile
+                                base[ny][nx] = border_tile
             
             dist_x = tx - cx
             dist_y = ty - cy
@@ -321,28 +400,28 @@ class ProceduralGeneratorL2:
             if abs(cx - tx) <= 1 and abs(cy - ty) <= 1:
                 break
 
-    def _apply_l2_border(self, layers, tx, ty, tmpl_w, tmpl_h, mw, mh):
-        ground_l2 = layers.get('ground_L2')
-        base_l2 = layers.get('base_L2')
-        if not ground_l2 or not base_l2: return
+    def _apply_l2_border(self, layers, tx, ty, tmpl_w, tmpl_h, mw, mh, suffix='_L2', margin=2):
+        """Creates a 2-tile margin around Cave, Dungeon, and Bunker templates."""
+        ground_lx = layers.get('ground' + suffix)
+        base_lx = layers.get('base' + suffix)
+        if not ground_lx or not base_lx: return
         
-        padding = 4
         border_tile = '@'
         padding_tile = 'dirty_01'
         
-        x1 = max(0, tx - padding)
-        y1 = max(0, ty - padding)
-        x2 = min(mw, tx + tmpl_w + padding)
-        y2 = min(mh, ty + tmpl_h + padding)
+        x1 = max(0, tx - margin)
+        y1 = max(0, ty - margin)
+        x2 = min(mw, tx + tmpl_w + margin)
+        y2 = min(mh, ty + tmpl_h + margin)
         
         for y in range(y1, y2):
             for x in range(x1, x2):
                 if not (tx <= x < tx + tmpl_w and ty <= y < ty + tmpl_h):
-                    if ground_l2[y][x] == ' ':
+                    if ground_lx[y][x] == ' ':
                         is_border = False
                         if x == x1 or x == x2 - 1 or y == y1 or y == y2 - 1:
                             is_border = True
                         
-                        ground_l2[y][x] = padding_tile
+                        ground_lx[y][x] = padding_tile
                         if is_border:
-                            base_l2[y][x] = border_tile
+                            base_lx[y][x] = border_tile

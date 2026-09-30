@@ -31,20 +31,32 @@ class ProceduralGeneratorTemplate:
         self.categorized_l2_templates = {
             'Bunker': [],
             'Dungeon': [],
+            'Cave': []
+        }
+
+        self.categorized_l3_templates = {
+            'Bunker': [],
+            'Dungeon': [],
+            'Cave': []
         }
         
         self.forest_templates = []
         self.l2_templates = []
+        self.l3_templates = []
         self.lobby_template = None
+        self.lobby_l3_template = None
         self.port_template = None
 
         print("--- Template Discovery & Categorization ---")
         for name in self.templates.keys():
             lower_name = name.lower()
             
-            # Identify special lobby template
+            # Identify special lobby templates (Separate L1 from L3)
             if "lobby" in lower_name:
-                self.lobby_template = name
+                if "l3" in lower_name or "_l3" in lower_name:
+                    self.lobby_l3_template = name
+                else:
+                    self.lobby_template = name
                 continue
 
             # Identify port template (shore-only building)
@@ -53,18 +65,36 @@ class ProceduralGeneratorTemplate:
                 self.categorized_templates['Port'].append(name)
                 continue
 
-            # Separate L2 templates
-            if "l2" in lower_name:
-                if "cave" not in lower_name:
-                    assigned_l2 = False
-                    if "bunker" in lower_name:
-                        self.categorized_l2_templates['Bunker'].append(name)
-                        assigned_l2 = True
-                    elif "dungeon" in lower_name:
-                        self.categorized_l2_templates['Dungeon'].append(name)
-                        assigned_l2 = True
-                    if not assigned_l2:
-                        self.l2_templates.append(name)
+            # Separate L3 templates (ONLY spawn at Layer 3)
+            if "l3" in lower_name or "_l3" in lower_name:
+                assigned_l3 = False
+                if "bunker" in lower_name:
+                    self.categorized_l3_templates['Bunker'].append(name)
+                    assigned_l3 = True
+                elif "dungeon" in lower_name:
+                    self.categorized_l3_templates['Dungeon'].append(name)
+                    assigned_l3 = True
+                elif "cave" in lower_name:
+                    self.categorized_l3_templates['Cave'].append(name)
+                    assigned_l3 = True
+                if not assigned_l3:
+                    self.l3_templates.append(name)
+                continue
+
+            # Separate L2 templates (ONLY spawn at Layer 2)
+            if "l2" in lower_name or "_l2" in lower_name:
+                assigned_l2 = False
+                if "bunker" in lower_name:
+                    self.categorized_l2_templates['Bunker'].append(name)
+                    assigned_l2 = True
+                elif "dungeon" in lower_name:
+                    self.categorized_l2_templates['Dungeon'].append(name)
+                    assigned_l2 = True
+                elif "cave" in lower_name:
+                    self.categorized_l2_templates['Cave'].append(name)
+                    assigned_l2 = True
+                if not assigned_l2:
+                    self.l2_templates.append(name)
                 continue
 
             if name.startswith("Forest_"):
@@ -108,5 +138,10 @@ class ProceduralGeneratorTemplate:
             
         for cat, lst in self.categorized_l2_templates.items():
             print(f"L2 Category {cat}: Found {len(lst)} templates.")
+
+        for cat, lst in self.categorized_l3_templates.items():
+            print(f"L3 Category {cat}: Found {len(lst)} templates.")
             
-        print(f"L2 Generic Templates (Random Spawn): Found {len(self.l2_templates)} templates.")
+        print(f"L2 Generic Templates: Found {len(self.l2_templates)} templates.")
+        print(f"L3 Generic Templates: Found {len(self.l3_templates)} templates.")
+        print(f"Lobby L1: {self.lobby_template} | Lobby L3: {self.lobby_l3_template}")

@@ -335,8 +335,8 @@ class PlayerMovement:
                                         self.y = self.vehicle.y
                                         self.rect.topleft = (int(self.x), int(self.y))
                                     return
-                    elif layer == 2:
-                        # On Layer 2: allow crossing into any active neighboring room
+                    elif layer in (2, 3):
+                        # On Layer 2 & 3: allow crossing into any active neighboring room
                         if hasattr(game, 'generator') and hasattr(game.generator, 'active_chunks'):
                             if (new_gx, new_gy) not in game.generator.active_chunks:
                                 if target.rect.centerx < 0: target.x = 0
@@ -401,20 +401,16 @@ class PlayerMovement:
                         cy_px = (new_height // 2)
 
                         if dir_x == 1:
-                            # Moving East: Enter through West (left) opening, placed safely inside
                             dest_x = 2 * TILE_SIZE
-                            dest_y = cy_px if layer == 2 else (cy_px + (target.y - old_height / 2.0))
+                            dest_y = cy_px if layer in (2, 3) else (cy_px + (target.y - old_height / 2.0))
                         elif dir_x == -1:
-                            # Moving West: Enter through East (right) opening, placed safely inside
                             dest_x = new_width - (3 * TILE_SIZE)
-                            dest_y = cy_px if layer == 2 else (cy_px + (target.y - old_height / 2.0))
+                            dest_y = cy_px if layer in (2, 3) else (cy_px + (target.y - old_height / 2.0))
                         elif dir_y == 1:
-                            # Moving South: Enter through North (top) opening, placed safely inside
-                            dest_x = cx_px if layer == 2 else (cx_px + (target.x - old_width / 2.0))
+                            dest_x = cx_px if layer in (2, 3) else (cx_px + (target.x - old_width / 2.0))
                             dest_y = 2 * TILE_SIZE
                         elif dir_y == -1:
-                            # Moving North: Enter through South (bottom) opening, placed safely inside
-                            dest_x = cx_px if layer == 2 else (cx_px + (target.x - old_width / 2.0))
+                            dest_x = cx_px if layer in (2, 3) else (cx_px + (target.x - old_width / 2.0))
                             dest_y = new_height - (3 * TILE_SIZE)
                         else:
                             dest_x = cx_px

@@ -175,7 +175,7 @@ def draw_screen_effects(game, offset_x, offset_y, zoom):
 
     # --- WEATHER: FOG, RAIN, RAINING WITH FOG (SMOOTH FADE IN / FADE OUT) ---
     current_weather = getattr(game.world_time, 'weather', 'CLEAR')
-    is_cave = getattr(game, 'current_layer_index', 1) == 2
+    is_cave = getattr(game, 'current_layer_index', 1) in (2, 3)
 
     # Check roof occlusion
     is_under_roof = False

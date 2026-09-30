@@ -425,7 +425,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
         # --- Weather & Barefoot Mechanics ---
         is_under_roof = False
-        if getattr(game, 'roof_data', None) and getattr(game, 'current_layer_index', 1) != 2:
+        if getattr(game, 'roof_data', None) and getattr(game, 'current_layer_index', 1) not in (2, 3):
             px = int(self.rect.centerx // TILE_SIZE)
             py = int(self.rect.centery // TILE_SIZE)
             if 0 <= py < len(game.roof_data) and 0 <= px < len(game.roof_data[py]):
@@ -433,7 +433,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                 if r_key and r_key != ' ':
                     is_under_roof = True
 
-        is_outside = getattr(game, 'current_layer_index', 1) != 2 and not is_under_roof
+        is_outside = getattr(game, 'current_layer_index', 1) == 1 and not is_under_roof
         
         if is_outside and getattr(game.world_time, 'weather', 'CLEAR') in ['RAIN', 'RAIN_FOG'] and self.vehicle is None:
             total_defence = self.get_total_defence()

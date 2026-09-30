@@ -17,7 +17,7 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
     low_res_w = max(1, view_w // divisor)
     low_res_h = max(1, view_h // divisor)
 
-    # 1. Reusable Screen-Sized Surfaces (< 1MB each)
+    # 1. Reusable Screen-Sized Surfaces
     if not hasattr(game, 'light_mask_low_cache') or game.light_mask_low_cache.get_size() != (low_res_w, low_res_h):
         game.light_mask_low_cache = pygame.Surface((low_res_w, low_res_h)).convert()
 
@@ -35,7 +35,16 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
     expected_size = map_w * map_h
     curr_map = getattr(game.map_manager, 'current_map_filename', 'unknown')
 
-    # 2. Tile-Based Fog of War (Takes ~400KB instead of 105MB)
+    # Detect if currently on the surface Lobby Chunk (L1 only)
+    is_lobby_surface = False
+    match = re.search(r'map_L(\d+)_(\d+)_(\d+)_map\.csv', curr_map)
+    if match and getattr(game, 'generator', None) and hasattr(game.generator, 'lobby_chunk'):
+        layer_idx = int(match.group(1))
+        cgx, cgy = int(match.group(2)), int(match.group(3))
+        if (cgx, cgy) == game.generator.lobby_chunk and layer_idx == 1:
+            is_lobby_surface = True
+
+    # 2. Tile-Based Fog of War
     if (not hasattr(game, 'explored_tiles') or 
         len(game.explored_tiles) != expected_size or 
         getattr(game, 'explored_map_name', '') != curr_map):
@@ -43,20 +52,12 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
         game.explored_tiles = bytearray(expected_size)
         game.explored_map_name = curr_map
         
-        # --- [FIX] Automatically explore Lobby Chunk AND Water/Petrol tiles ---
-        is_lobby = False
-        match = re.search(r'map_L\d+_(\d+)_(\d+)_map\.csv', curr_map)
-        if match and getattr(game, 'generator', None) and hasattr(game.generator, 'lobby_chunk'):
-            cgx, cgy = int(match.group(1)), int(match.group(2))
-            if (cgx, cgy) == game.generator.lobby_chunk:
-                is_lobby = True
-
-        if is_lobby:
-            # If it's the safe haven lobby, reveal the whole chunk
+        if is_lobby_surface:
+            # Only surface Lobby_L1 is pre-revealed
             for i in range(expected_size):
                 game.explored_tiles[i] = 1
         else:
-            # Otherwise, only reveal ocean and petrol zones
+            # All underground maps (including Lobby_L3) start dark with standard fog of war
             ground_data = getattr(game, 'ground_data', [])
             base_data = getattr(game, 'map_data', [])
             for ty in range(map_h):
@@ -68,7 +69,6 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                     if (g_char and ('water_' in g_char or 'petrol_' in g_char)) or \
                        (b_char and ('water_' in b_char or 'petrol_' in b_char)):
                         game.explored_tiles[row_idx + tx] = 1
-        # ----------------------------------------------------------------------
 
     ambient = int(game.world_time.current_ambient_light)
     light_mask_low = game.light_mask_low_cache
@@ -87,7 +87,7 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                 p_screen_x = (game.player.rect.centerx + offset_x) / 2
                 p_screen_y = (game.player.rect.centery + offset_y) / 2
 
-                # Player Day Glow (Cached)
+                # Player Day Glow
                 day_glow_brightness = max(50, ambient // 2)
                 cache_key_glow = ('day_glow', radius_low, day_glow_brightness)
                 if cache_key_glow not in game.light_mask_cache:
@@ -98,7 +98,7 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                 day_glow_rect = day_glow_surf.get_rect(center=(p_screen_x, p_screen_y))
                 light_mask_low.blit(day_glow_surf, day_glow_rect, special_flags=pygame.BLEND_RGB_ADD)
 
-                # Player Aim Cone (Cached)
+                # Player Aim Cone
                 view_brightness = max(50, ambient)
                 cache_key_cone = ('soft_cone_tex', radius_low, view_brightness)
                 if cache_key_cone not in game.light_mask_cache:
@@ -154,7 +154,7 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                 pygame.transform.smoothscale(shrunk, (low_res_w, low_res_h), shadow_mask)
                 light_mask_low.blit(shadow_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
-                # --- 3. Mark Explored Tiles in bytearray ---
+                # Mark Explored Tiles as the player moves
                 if map_w > 0 and map_h > 0:
                     px = game.player.rect.centerx
                     py = game.player.rect.centery
@@ -175,11 +175,10 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                             for tx in range(min_tx, max_tx):
                                 center_x_low = int((tx * TILE_SIZE + offset_x + TILE_SIZE // 2) // divisor)
                                 if 0 <= center_x_low < low_res_w:
-                                    # Tile is illuminated if pixel brightness is above shadow threshold
                                     if light_mask_low.get_at((center_x_low, center_y_low))[0] > 20:
                                         explored[row_idx + tx] = 1
 
-                # --- 4. Render Explored Memory (Only on Screen) ---
+                # Render Explored Memory (Grey Fog of War memory)
                 if map_w > 0 and map_h > 0:
                     screen_tx_start = max(0, int(-offset_x // TILE_SIZE) - 1)
                     screen_tx_end = min(map_w, int((-offset_x + view_w) // TILE_SIZE) + 2)
@@ -191,7 +190,6 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                     exp_cache.fill((0, 0, 0))
                     
                     explored = game.explored_tiles
-                    # Horizontal run-length batching: reduces 3,600 draw calls to ~50
                     for ty in range(screen_ty_start, screen_ty_end):
                         row_idx = ty * map_w
                         ly = int((ty * TILE_SIZE + offset_y) // divisor)
@@ -218,7 +216,7 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
         except Exception as e:
             print(f"Error drawing player vision: {e}")
 
-    # Dynamic Light Sources (Torches, Flashlights, Vehicles, Campfires)
+    # Dynamic Light Sources
     for inv in [game.player.belt, game.player.inventory]:
         for item in inv:
             if getattr(item, 'state', 'off') == 'on': 
@@ -271,7 +269,6 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
             except Exception: 
                 pass
 
-        # Static Map Lights (Street Lamps)
         if getattr(game.world_time, 'state', 'DAY') != 'DAY':
             for map_light in game.map_lights:
                 if not map_light.get('active', True) or ('rect' in map_light and not screen_rect.colliderect(map_light['rect'])): 
@@ -290,7 +287,7 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                 except Exception: 
                     pass
 
-    # Upscale Low-Resolution Light Mask onto Screen Viewport
+    # Upscale and Blit Light Mask
     if not hasattr(game, 'light_upscaled_cache') or game.light_upscaled_cache.get_size() != (view_w, view_h):
         game.light_upscaled_cache = pygame.Surface((view_w, view_h)).convert()
     pygame.transform.scale(light_mask_low, (view_w, view_h), game.light_upscaled_cache)

@@ -41,7 +41,6 @@ class ProceduralGeneratorSpawning:
                    'asphalt' in ground or 'dirty' in ground or 'path' in ground:
                     valid_tiles.append((x, y))
 
-        # Dynamically read live config attribute
         total_zombies = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
         
         if not valid_tiles or total_zombies <= 0: return
@@ -132,7 +131,8 @@ class ProceduralGeneratorSpawning:
             for nx, ny in chosen_normal:
                 layers['spawn'][ny][nx] = 'HNPC'
 
-    def _scatter_npcs_l2(self, layers, w, h):
+    def _scatter_npcs_l2(self, layers, w, h, suffix='_L2'):
+        """Scatters NPCs in underground layers (L2 or L3)."""
         npc_max_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 12)
         if npc_max_chunk <= 0: return
 
@@ -146,17 +146,20 @@ class ProceduralGeneratorSpawning:
             max_npcs_global = npc_max_chunk
         
         potential_tiles = []
-        ground = layers.get('ground_L2', layers.get('ground'))
-        base = layers.get('base_L2', layers.get('base'))
-        spawn = layers.get('spawn_L2', layers.get('spawn'))
+        ground = layers.get('ground' + suffix, layers.get('ground'))
+        base = layers.get('base' + suffix, layers.get('base'))
+        spawn = layers.get('spawn' + suffix, layers.get('spawn'))
         
         if not ground or not base or not spawn: return
 
         defs = self.game.tile_manager.definitions if hasattr(self.game, 'tile_manager') else {}
 
+        cx, cy = w // 2, h // 2
         for y in range(2, h - 2):
             for x in range(2, w - 2):
-                if is_connector_zone(x, y, w, h): continue
+                if (y < 6 or y >= h - 6) and abs(x - cx) <= 3: continue
+                if (x < 6 or x >= w - 6) and abs(y - cy) <= 3: continue
+
                 b_char = base[y][x]
                 g_char = ground[y][x]
                 s_char = spawn[y][x]
@@ -228,8 +231,6 @@ class ProceduralGeneratorSpawning:
 
     def _scatter_animals(self, layers, mask, w, h, multiplier=1, is_l2=False):
         animal_count = getattr(core.data.config, 'ANIMAL_MAX_CHUNK', getattr(core.data.config, 'ANIMAL_SPAWN_COUNT', 6))
-        
-        # --- FIX: Apply biome multiplier ---
         animal_count = int(animal_count * multiplier)
         if animal_count <= 0: return
 
@@ -256,11 +257,9 @@ class ProceduralGeneratorSpawning:
                 t_name = t_def.get('name', '').lower() if t_def else g_char.lower()
                 if 'floor' in t_name or g_char == 'house_floor_01': continue
 
-                # --- FIX: Layer 2 Bypass (Paths are valid) ---
                 if is_l2:
                     valid_tiles.append((x, y))
                     continue
-                # ---------------------------------------------
 
                 is_path = 'asphalt' in g_char or 'dirty' in g_char or 'path' in g_char
                 is_border = False
@@ -286,5 +285,3 @@ class ProceduralGeneratorSpawning:
         chosen = random.sample(valid_tiles, count_to_spawn)
         for (ax, ay) in chosen:
             layers['spawn'][ay][ax] = 'ANM'
-            
-        #print(f"  > Animal Scatter: Placed {count_to_spawn} animals (Target: {ANIMAL_SPAWN_COUNT}).")

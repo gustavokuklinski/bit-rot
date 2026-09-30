@@ -69,7 +69,7 @@ class WorldTime:
 
     def update(self):
         if not self._initial_sounds_played and hasattr(self.game, 'sound_manager'):
-            if self.game.current_layer_index == 2:
+            if self.game.current_layer_index in (2, 3):
                 self.cave_channel = self.game.sound_manager.play_sound("cave.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=2000)
             else:
                 if self.state in ["DAY", "TRANSITION_TO_DAY"]:
@@ -81,7 +81,7 @@ class WorldTime:
                     self.rain_channel = self.game.sound_manager.play_sound("rain.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=2000)
             self._initial_sounds_played = True
 
-        if self.game.current_layer_index == 2:
+        if self.game.current_layer_index in (2, 3):
             if self.day_channel:
                 self.day_channel.fadeout(1000)
                 self.day_channel = None
@@ -110,7 +110,7 @@ class WorldTime:
             self._process_radio_broadcasts() 
             return
 
-        if self.cave_channel:
+        if self.cave_channel and self.game.current_layer_index not in (2, 3):
             self.cave_channel.fadeout(1000)
             self.cave_channel = None
 
@@ -133,7 +133,7 @@ class WorldTime:
         if not getattr(self.game, 'is_client', False):
             self.game_time_ms += delta_time
             
-            if self.game.current_layer_index != 2:
+            if self.game.current_layer_index not in (2, 3):
                 self.weather_timer -= delta_time
                 if self.weather_timer <= 0:
                     if self.weather == 'CLEAR':
