@@ -8,5 +8,5 @@
         <weight weight="0.1"/>
         <sprite file="consumable_food_chocolate_black.png" />
     </properties>
-    <spawn chance="0" />
+    <spawn chance="1.0" />
 </item>

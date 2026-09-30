@@ -5,5 +5,5 @@
         <capacity value="20" />
         <sprite file="resource_stone.png" />
     </properties>
-    <spawn chance="0" />
+    <spawn chance="1.0" />
 </item>

@@ -13,6 +13,7 @@
         <item name="ID" />
         <item name="Wallet" />
         <item name="Pistol 9mm" />
+        <item name="Ammo Box 9mm" />
         <item name="Cartography for [MAP_POS]" />
     </items>
 </player_build>

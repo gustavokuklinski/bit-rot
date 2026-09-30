@@ -6,5 +6,5 @@
 
         <passive_xp maintenance="1" interval="25" />
     </properties>
-    <spawn chance="0" />
+    <spawn chance="1.0" />
 </item>

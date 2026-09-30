@@ -1,8 +1,8 @@
 <item name="Wallet" type="container" allow_belt="false">
     <properties>
-        <capacity value="1" />
+        <capacity value="2" />
         <sprite file="container_wallet.png" />
-        <weight weight="0.01" reduction="15%" />
+        <weight weight="0.005" reduction="15%" />
     </properties>
     <loot>
         <item name="Money WBRL" chance="1.0" />

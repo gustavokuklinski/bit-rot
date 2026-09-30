@@ -4,5 +4,5 @@
         <map value="personal_data" />
         <sprite file="sd_card.png" />
     </properties>
-    <spawn chance="0" />
+    <spawn chance="1.0" />
 </item>

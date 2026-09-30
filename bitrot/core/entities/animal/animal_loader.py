@@ -63,9 +63,13 @@ class AnimalLoader:
                 attack_player = str(animal_node.get('attack_player', 'false')).strip().lower() == 'true'
                 
                 try:
-                    spawn_zombies = int(float(animal_node.get('spawn_zombies', '0')))
+                    mult_val = animal_node.get('spawn_zombies_multiplier')
+                    if mult_val is not None:
+                        spawn_zombies_multiplier = float(mult_val)
+                    else:
+                        spawn_zombies_multiplier = float(animal_node.get('spawn_zombies', '0'))
                 except (ValueError, TypeError):
-                    spawn_zombies = 0
+                    spawn_zombies_multiplier = 0.0
 
                 try:
                     spawn_weight = max(1, int(float(animal_node.get('spawn_weight', '10'))))
@@ -144,7 +148,7 @@ class AnimalLoader:
                     'attack_player': attack_player,
                     'spawn_weight': spawn_weight,
                     'spawn_layers': spawn_layers,
-                    'spawn_zombies': spawn_zombies,
+                    'spawn_zombies_multiplier': spawn_zombies_multiplier,
                     'stats': stats,
                     'sprite': sprite_file,
                     'loot': loot,

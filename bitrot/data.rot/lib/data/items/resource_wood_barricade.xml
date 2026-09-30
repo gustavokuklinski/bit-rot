@@ -9,5 +9,5 @@
         <weight weight="2.0"/>
         <sprite file="resource_wood_barricade.png" />
     </properties>
-    <spawn chance="0" />
+    <spawn chance="1.0" />
 </item>

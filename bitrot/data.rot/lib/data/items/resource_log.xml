@@ -5,5 +5,5 @@
         <capacity value="5" />
         <sprite file="resource_log.png" />
     </properties>
-    <spawn chance="0" />
+    <spawn chance="1.0" />
 </item>

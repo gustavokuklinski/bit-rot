@@ -145,7 +145,7 @@ class ProceduralGeneratorChunk:
         if tmpl_l3:
             self._blit_template_mapped(layers, tmpl_l3, tx, ty, w, h, suffix='_L3')
             if hasattr(self, '_apply_l2_border'):
-                self._apply_l2_border(layers, tx, ty, tmpl_l3['width'], tmpl_l3['height'], w, h, suffix='_L3')
+                self._apply_l2_border(layers, tx, ty, tmpl_l3['width'], tmpl_l3['height'], w, h, suffix='_L3', margin=4)
             for dy in range(tmpl_l3['height']):
                 for dx in range(tmpl_l3['width']):
                     if 0 <= tx + dx < w and 0 <= ty + dy < h:
@@ -938,7 +938,7 @@ class ProceduralGeneratorChunk:
                         self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
                         l2_w, l2_h = tmpl_l2['width'], tmpl_l2['height']
                         if hasattr(self, '_apply_l2_border'):
-                            self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h, suffix='_L2')
+                            self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h, suffix='_L2', margin=4)
                         pad = 4
                         for ly in range(max(0, ty - pad), min(h, ty + l2_h + pad)):
                             for lx in range(max(0, tx - pad), min(w, tx + l2_w + pad)):
@@ -948,7 +948,7 @@ class ProceduralGeneratorChunk:
                         self._blit_template_mapped(layers, tmpl_l3, tx, ty, w, h, suffix='_L3')
                         l3_w, l3_h = tmpl_l3['width'], tmpl_l3['height']
                         if hasattr(self, '_apply_l2_border'):
-                            self._apply_l2_border(layers, tx, ty, l3_w, l3_h, w, h, suffix='_L3')
+                            self._apply_l2_border(layers, tx, ty, l3_w, l3_h, w, h, suffix='_L3', margin=4)
                         pad = 4
                         for ly in range(max(0, ty - pad), min(h, ty + l3_h + pad)):
                             for lx in range(max(0, tx - pad), min(w, tx + l3_w + pad)):
@@ -992,7 +992,7 @@ class ProceduralGeneratorChunk:
                         self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
                         l2_w, l2_h = tmpl_l2.get('width', 10), tmpl_l2.get('height', 10)
                         if hasattr(self, '_apply_l2_border'):
-                            self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h, suffix='_L2')
+                            self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h, suffix='_L2', margin=4)
                         pad = 4
                         for ly in range(max(0, ty - pad), min(h, ty + l2_h + pad)):
                             for lx in range(max(0, tx - pad), min(w, tx + l2_w + pad)):
@@ -1004,7 +1004,7 @@ class ProceduralGeneratorChunk:
                         self._blit_template_mapped(layers, tmpl_l3, tx, ty, w, h, suffix='_L3')
                         l3_w, l3_h = tmpl_l3.get('width', 10), tmpl_l3.get('height', 10)
                         if hasattr(self, '_apply_l2_border'):
-                            self._apply_l2_border(layers, tx, ty, l3_w, l3_h, w, h, suffix='_L3')
+                            self._apply_l2_border(layers, tx, ty, l3_w, l3_h, w, h, suffix='_L3', margin=4)
                         pad = 4
                         for ly in range(max(0, ty - pad), min(h, ty + l3_h + pad)):
                             for lx in range(max(0, tx - pad), min(w, tx + l3_w + pad)):
@@ -1133,13 +1133,13 @@ class ProceduralGeneratorChunk:
                             # Blit Cave_L2_02 to Layer 2 with 2-tile margin
                             self._blit_template_mapped(layers, tmpl_c2, tx, ty, w, h, suffix='_L2')
                             if hasattr(self, '_apply_l2_border'):
-                                self._apply_l2_border(layers, tx, ty, c2_w, c2_h, w, h, suffix='_L2', margin=2)
+                                self._apply_l2_border(layers, tx, ty, c2_w, c2_h, w, h, suffix='_L2', margin=4)
 
                             # Blit Cave_L3_02 to Layer 3 with 2-tile margin at matching (tx, ty)
                             if tmpl_c3:
                                 self._blit_template_mapped(layers, tmpl_c3, tx, ty, w, h, suffix='_L3')
                                 if hasattr(self, '_apply_l2_border'):
-                                    self._apply_l2_border(layers, tx, ty, c3_w, c3_h, w, h, suffix='_L3', margin=2)
+                                    self._apply_l2_border(layers, tx, ty, c3_w, c3_h, w, h, suffix='_L3', margin=4)
 
                             for ly in range(max(0, ty - pad_val), min(h, ty + fit_ch + pad_val)):
                                 for lx in range(max(0, tx - pad_val), min(w, tx + fit_cw + pad_val)):
@@ -1157,7 +1157,7 @@ class ProceduralGeneratorChunk:
                 l2_w, l2_h = l2_tmpl['width'], l2_tmpl['height']
                 
                 placed_l2 = False
-                pad = 2  # 2-tile margin
+                pad = 4  # 2-tile margin
                 for _ in range(40): 
                     tx = random.randint(pad, max(pad, w - l2_w - pad))
                     ty = random.randint(pad, max(pad, h - l2_h - pad))
@@ -1173,7 +1173,7 @@ class ProceduralGeneratorChunk:
                     if not collision:
                         self._blit_template_mapped(layers, l2_tmpl, tx, ty, w, h, suffix='_L2')
                         if hasattr(self, '_apply_l2_border'):
-                            self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h, suffix='_L2', margin=2)
+                            self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h, suffix='_L2', margin=4)
                             
                         for ly in range(max(0, ty - pad), min(h, ty + l2_h + pad)):
                             for lx in range(max(0, tx - pad), min(w, tx + l2_w + pad)):
@@ -1188,7 +1188,7 @@ class ProceduralGeneratorChunk:
                 l3_w, l3_h = l3_tmpl['width'], l3_tmpl['height']
                 
                 placed_l3 = False
-                pad = 2  # 2-tile margin
+                pad = 4  # 2-tile margin
                 for _ in range(40): 
                     tx = random.randint(pad, max(pad, w - l3_w - pad))
                     ty = random.randint(pad, max(pad, h - l3_h - pad))
@@ -1204,7 +1204,7 @@ class ProceduralGeneratorChunk:
                     if not collision:
                         self._blit_template_mapped(layers, l3_tmpl, tx, ty, w, h, suffix='_L3')
                         if hasattr(self, '_apply_l2_border'):
-                            self._apply_l2_border(layers, tx, ty, l3_w, l3_h, w, h, suffix='_L3', margin=2)
+                            self._apply_l2_border(layers, tx, ty, l3_w, l3_h, w, h, suffix='_L3', margin=4)
                             
                         for ly in range(max(0, ty - pad), min(h, ty + l3_h + pad)):
                             for lx in range(max(0, tx - pad), min(w, tx + l3_w + pad)):

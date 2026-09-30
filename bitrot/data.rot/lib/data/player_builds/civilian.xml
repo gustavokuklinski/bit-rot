@@ -11,11 +11,8 @@
     <items>
         <item name="ID" />
         <item name="Wallet" />
-        <item name="Survivor Kit" />
+        <item name="38 Revolver" />
+        <item name="Ammo Box 38" />
         <item name="Cartography for [MAP_POS]" />
-
-        <item name="Military Registry" />
-        <item name="Civilians Registry" />
-        <item name="Mobile off" />
     </items>
 </player_build>

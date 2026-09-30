@@ -10,5 +10,5 @@
         <require type="[Matches, Lighter on]" />
         <sprite file="consumable_cigarette.png" />
     </properties>
-    <spawn chance="0" />
+    <spawn chance="1.0" />
 </item>

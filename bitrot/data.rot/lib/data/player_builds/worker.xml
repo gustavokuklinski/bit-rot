@@ -12,6 +12,7 @@
     <items>
         <item name="ID" />
         <item name="Wallet" />
+        <item name="38 Revolver" />
         <item name="Crowbar" />
         <item name="Cartography for [MAP_POS]" />
     </items>

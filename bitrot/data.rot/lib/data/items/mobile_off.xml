@@ -6,5 +6,5 @@
         <fuel type="Powerbank" />
         <sprite file="mobile_off.png" />
     </properties>
-    <spawn chance="0" />
+    <spawn chance="1.0" />
 </item>

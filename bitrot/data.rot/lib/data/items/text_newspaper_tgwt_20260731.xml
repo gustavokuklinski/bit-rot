@@ -32,5 +32,5 @@
             This historic agreement is built on an exchange: the construction of a brand-new Next Platform. Through partnerships with Exxoil, Gethulius, and Oilmuz, this mega-project promises the development of high-speed land railways and distribution networks directly into Russia and the remains of the European Union, accelerating the rebuilding process.
         </text>
     </properties>
-    <spawn chance="0" />
+    <spawn chance="1.0" />
 </item>

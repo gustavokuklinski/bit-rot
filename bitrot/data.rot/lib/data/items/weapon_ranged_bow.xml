@@ -5,7 +5,7 @@
         <weight weight="0.2"/>
         <capacity value="1" />
         <ammo type="Arrow" />
-        <damage min="10" max="35" />
+        <damage min="8" max="25" />
         <firing pellets="1" spread_angle="0"  distance="15"/>
         <skill type="range" />
         <sprite file="weapon_ranged_bow.png" />

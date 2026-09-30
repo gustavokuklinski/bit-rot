@@ -43,7 +43,7 @@ class Animal(Zombie):
                 'sounds': {},
                 'sprite': 'rat.png',
                 'attack_player': False,
-                'spawn_zombies': 0
+                'spawn_zombies_multiplier': 0.0
             }
 
         zombie_template = {
@@ -71,7 +71,9 @@ class Animal(Zombie):
         self.mask = create_smooth_entity_mask(TILE_SIZE, TILE_SIZE, inset_x=2, inset_y=2)
         self.layer = target_layer
         self.attack_player = template.get('attack_player', False)
-        self.spawn_zombies_max = template.get('spawn_zombies', 0)
+        self.spawn_zombies_multiplier = float(
+            template.get('spawn_zombies_multiplier', template.get('spawn_zombies', 0.0))
+        )
 
         sounds = template.get('sounds', {})
         self.sound_hit = sounds.get('hit')
@@ -316,14 +318,17 @@ class Animal(Zombie):
             try: game.active_animals.remove(self)
             except ValueError: pass
 
-        # --- SPAWN ZOMBIES ON PLAYER RADIUS (Based on XML spawn_zombies flag) ---
-        max_zombies_to_spawn = int(getattr(self, 'spawn_zombies_max', 0))
-        if max_zombies_to_spawn > 0 and getattr(game, 'player', None):
+        # --- SPAWN ZOMBIES ON PLAYER RADIUS (Using spawn_zombies_multiplier) ---
+        multiplier = float(getattr(self, 'spawn_zombies_multiplier', 0.0))
+        if multiplier > 0 and getattr(game, 'player', None):
             from core.entities.zombie.zombie import Zombie
             from core.placement import find_free_tile
             
+            # Multiply base config ZOMBIES_PER_SPAWN by the animal's multiplier
+            base_spawns = getattr(core.data.config, 'ZOMBIES_PER_SPAWN', 1) or 1
+            num_z_to_spawn = max(1, int(round(base_spawns * multiplier)))
+
             max_z_global = getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500)
-            num_z_to_spawn = random.randint(1, max_zombies_to_spawn) if max_zombies_to_spawn > 1 else max_zombies_to_spawn
             p_center = game.player.rect.center
             view_radius = getattr(game, 'player_view_radius', 10 * TILE_SIZE)
 

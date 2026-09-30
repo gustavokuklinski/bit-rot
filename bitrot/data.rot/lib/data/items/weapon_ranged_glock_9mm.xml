@@ -6,7 +6,7 @@
         <capacity value="15" />
         <ammo type="9mm Ammo" />
         <ammo_drop_capsule type="9mm Capsule" />
-        <damage min="25" max="55" />
+        <damage min="16" max="40" />
         <firing pellets="1" spread_angle="0"  distance="20"/>
         <skill type="range" />
         <sprite file="weapon_ranged_glock_9mm.png" />

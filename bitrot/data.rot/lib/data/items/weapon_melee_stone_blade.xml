@@ -8,5 +8,5 @@
         <knockback value="0" />
     </properties>
 
-    <spawn chance="0" />
+    <spawn chance="1.0" />
 </item>

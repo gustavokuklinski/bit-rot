@@ -5,7 +5,7 @@
         <weight weight="0.2"/>
         <capacity value="1" />
         <ammo type="Slingshot Rock" />
-        <damage min="10" max="25" />
+        <damage min="5" max="15" />
         <firing pellets="1" spread_angle="0"  distance="10"/>
         <skill type="range" />
         <sprite file="weapon_ranged_slingshot.png" />
