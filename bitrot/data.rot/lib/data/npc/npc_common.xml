@@ -1,4 +1,4 @@
-<npc type="common" spawn_weight="55" is_friendly="false" is_static="false" spawn_zombies="1">
+<npc type="common" spawn_weight="55" is_friendly="false" is_static="false" spawn_zombies_multiplier="1">
     <name value="RANDOM" />
     <sex value="RANDOM" />
     
@@ -28,6 +28,7 @@
     </visuals>
     
     <loot>
+        <item item="Rot Meat" chance="1.0" />
         <item item="Kukaroach (Bit Rot publisher)" chance="0.1" />
     </loot>
 

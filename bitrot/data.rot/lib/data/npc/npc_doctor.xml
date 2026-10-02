@@ -30,13 +30,24 @@
     </visuals>
     
     <loot>
-        <item item="Zombie Meat" chance="1.0" />
+        <item item="Rot Meat" chance="1.0" />
         <item item="Vaccine" chance="1.0" />
         <item item="Medicine Vol.1" chance="1.0" />
         <item item="Sewing Kit" chance="1.0" />
         <item item="Medical Kit" chance="1.0" />
         <item item="Kukaroach (Bit Rot publisher)" chance="0.1" />
     </loot>
+
+    <trade limit="15">
+        <item type="consumable_drugs" />
+        <item type="consumable_food" />
+        <item type="consumable_ammo" />
+        <item type="consumable_medication" />
+        <item type="weapon_ranged" />
+        <item type="weapon_melee" />
+        <item type="weapon_throw" />
+        <item type="map" />
+    </trade>
 
     <sound>
         <hit src="npc_hit.ogg" />

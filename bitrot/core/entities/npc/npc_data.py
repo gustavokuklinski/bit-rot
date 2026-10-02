@@ -28,7 +28,40 @@ class NPCData:
                         
                         template['is_friendly'] = root.get('is_friendly', 'false').lower() == 'true'
                         template['is_static'] = root.get('is_static', 'false').lower() == 'true'
-                        template['spawn_zombies'] = int(root.get('spawn_zombies', 0))
+
+                        try:
+                            mult_val = root.get('spawn_zombies_multiplier')
+                            if mult_val is not None:
+                                template['spawn_zombies_multiplier'] = float(mult_val)
+                            else:
+                                template['spawn_zombies_multiplier'] = float(root.get('spawn_zombies', '0'))
+                        except (ValueError, TypeError):
+                            template['spawn_zombies_multiplier'] = 0.0
+
+                        template['spawn_zombies'] = template['spawn_zombies_multiplier']
+
+                        # --- TRADE CONFIG PARSING ---
+                        trade_node = root.find('trade')
+                        template['trade_config'] = None
+                        if trade_node is not None:
+                            try:
+                                limit = int(trade_node.get('limit', 15))
+                            except (ValueError, TypeError):
+                                limit = 15
+                            allowed_types = []
+                            allowed_items = []
+                            for it_node in trade_node.findall('item'):
+                                itype = it_node.get('type')
+                                iname = it_node.get('item') or it_node.get('name')
+                                if itype:
+                                    allowed_types.append(itype)
+                                if iname:
+                                    allowed_items.append(iname)
+                            template['trade_config'] = {
+                                'limit': limit,
+                                'types': allowed_types,
+                                'items': allowed_items
+                            }
 
                         name_node = root.find('name')
                         template['name'] = name_node.get('value') if name_node is not None else 'Survivor'

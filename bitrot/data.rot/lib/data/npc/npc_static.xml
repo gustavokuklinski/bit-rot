@@ -1,4 +1,4 @@
-<npc type="static" spawn_weight="55" is_friendly="true" is_static="true" spawn_zombies="1">
+<npc type="static" spawn_weight="55" is_friendly="true" is_static="true" spawn_zombies_multiplier="3">
     <name value="RANDOM" />
     <sex value="RANDOM" />
     
@@ -30,6 +30,17 @@
     <loot>
         <item item="Kukaroach (Bit Rot publisher)" chance="0.1" />
     </loot>
+
+    <trade limit="15">
+        <item type="consumable_drugs" />
+        <item type="consumable_food" />
+        <item type="consumable_ammo" />
+        <item type="consumable_medication" />
+        <item type="weapon_ranged" />
+        <item type="weapon_melee" />
+        <item type="weapon_throw" />
+        <item type="map" />
+    </trade>
 
     <sound>
         <hit src="npc_hit.ogg" />

@@ -73,7 +73,18 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             }
 
         Zombie.__init__(self, x, y, template)
-        self.spawn_zombies_max = template.get('spawn_zombies', 0)
+        try:
+            self.spawn_zombies_multiplier = float(
+                template.get('spawn_zombies_multiplier', template.get('spawn_zombies', 0.0))
+            )
+        except (ValueError, TypeError):
+            self.spawn_zombies_multiplier = 0.0
+        self.spawn_zombies_max = self.spawn_zombies_multiplier
+
+        self.trade_config = template.get('trade_config')
+        self.trade_stock = []
+        self.trade_stock_generated = False
+
         if hasattr(self, 'loot_table'):
             self.loot_table = [loot for loot in self.loot_table if loot.get('item') not in ["Pants", "Jacket", "Tshirt", "TShirt", "Sneakers"]]
 
@@ -782,11 +793,46 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     self.inventory.append(cloth_item)
             self.clothes = {}
 
+        if hasattr(self, 'trade_stock') and self.trade_stock:
+            for it in self.trade_stock:
+                self.inventory.append(it)
+            self.trade_stock = []
+
         super().die(game)
         try:
             self.kill()
         except:
             pass
+
+        # --- SPAWN ZOMBIES ON PLAYER RADIUS (Using spawn_zombies_multiplier) ---
+        multiplier = float(getattr(self, 'spawn_zombies_multiplier', 0.0))
+        if multiplier > 0 and getattr(game, 'player', None):
+            from core.entities.zombie.zombie import Zombie
+            from core.placement import find_free_tile
+
+            base_spawns = getattr(core.data.config, 'ZOMBIES_PER_SPAWN', 1) or 1
+            num_z_to_spawn = max(1, int(round(base_spawns * multiplier)))
+
+            max_z_global = getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500)
+            p_center = game.player.rect.center
+            view_radius = getattr(game, 'player_view_radius', 10 * TILE_SIZE)
+
+            for _ in range(num_z_to_spawn):
+                if len(game.zombies) >= max_z_global:
+                    break
+                angle = random.uniform(0, math.pi * 2)
+                dist = random.uniform(TILE_SIZE * 3, max(TILE_SIZE * 5, view_radius))
+                zx = int(p_center[0] + math.cos(angle) * dist)
+                zy = int(p_center[1] + math.sin(angle) * dist)
+
+                z = Zombie.create_random(zx, zy)
+                if z:
+                    z.layer = getattr(self, 'layer', getattr(game, 'current_layer_index', 1))
+                    free_pos = find_free_tile(z.rect, game.obstacles, initial_pos=(zx, zy), max_radius=8)
+                    if free_pos:
+                        z.rect.topleft = free_pos
+                        z.x, z.y = free_pos
+                        game.zombies.append(z)
 
         # ---------------------------------------------------------
         # Dynamic Instant Circular NPC Respawn (10 tiles from view radius)

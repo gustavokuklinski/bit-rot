@@ -165,6 +165,7 @@ def save_game(game):
 
             safe_inventory = [i.to_dict() if hasattr(i, 'to_dict') else i for i in npc.inventory]
             safe_weapon = npc.equipped_weapon.to_dict() if (npc.equipped_weapon and hasattr(npc.equipped_weapon, 'to_dict')) else npc.equipped_weapon
+            safe_trade_stock = [i.to_dict() if hasattr(i, 'to_dict') else i for i in getattr(npc, 'trade_stock', [])]
 
             npc_data.append({
                 "id": getattr(npc, 'id', None),
@@ -178,6 +179,7 @@ def save_game(game):
                 "inventory": safe_inventory,
                 "equipped_weapon": safe_weapon,
                 "clothes": safe_clothes,
+                "trade_stock": safe_trade_stock,
                 "loot_table": getattr(npc, 'loot_table', []),
                 "dialog_flags": list(getattr(npc, 'dialog_flags', []))
             })

@@ -945,7 +945,11 @@ def load_game(game, save_folder_name):
                 if 'dialog_flags' in n_data: npc.dialog_flags = set(n_data['dialog_flags'])
                 
                 npc.inventory = [Item.from_dict(i_data) if isinstance(i_data, dict) else Item.create_from_name(i_data) for i_data in n_data.get('inventory', [])]
-                
+
+                if 'trade_stock' in n_data and n_data['trade_stock']:
+                    npc.trade_stock = [Item.from_dict(i_data) if isinstance(i_data, dict) else Item.create_from_name(i_data) for i_data in n_data['trade_stock']]
+                    npc.trade_stock_generated = True
+
                 w_data = n_data.get('equipped_weapon')
                 if w_data:
                     npc.equipped_weapon = Item.from_dict(w_data) if isinstance(w_data, dict) else Item.create_from_name(w_data)

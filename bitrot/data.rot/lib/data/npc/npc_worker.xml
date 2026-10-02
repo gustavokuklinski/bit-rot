@@ -1,4 +1,4 @@
-<npc type="worker" spawn_weight="20" is_friendly="false" is_static="false" spawn_zombies="1">
+<npc type="worker" spawn_weight="20" is_friendly="false" is_static="false" spawn_zombies_multiplier="1">
     <name value="RANDOM" />
     <sex value="RANDOM" />
 
@@ -30,7 +30,7 @@
     </visuals>
     
     <loot>
-        <item item="Zombie Meat" chance="1.0" />
+        <item item="Rot Meat" chance="1.0" />
         <item item="Screwdriver" chance="1.0" />
         <item item="Toolkit" chance="1.0" />
         <item item="38 Revolver" chance="1.0" />

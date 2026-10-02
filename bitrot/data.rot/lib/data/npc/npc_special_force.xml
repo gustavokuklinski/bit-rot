@@ -1,4 +1,4 @@
-<npc type="special_force" spawn_weight="5" is_friendly="false" is_static="false" spawn_zombies="1">
+<npc type="special_force" spawn_weight="5" is_friendly="false" is_static="false" spawn_zombies_multiplier="2">
     <name value="RANDOM" />
     <sex value="RANDOM" />
 
@@ -30,7 +30,7 @@
     </visuals>
     
     <loot>
-        <item item="Zombie Meat" chance="1.0" />
+        <item item="Rot Meat" chance="1.0" />
         <item item="MPK5" chance="0.1" />
         <item item="MAC10" chance="0.1" />
         <item item="Large Backpack" chance="0.1" />
