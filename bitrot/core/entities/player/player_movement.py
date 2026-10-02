@@ -123,14 +123,19 @@ class PlayerMovement:
             vehicle_rect = self.vehicle.rect
             
             for zombie in zombies[:]:
+                if getattr(zombie, 'is_dead', False) or getattr(zombie, 'health', 0) <= 0:
+                    continue
                 if vehicle_rect.colliderect(zombie.rect):
                     self.vehicle.damage_motor(1.5)
-                    damage_to_zombie = 2
+                    damage_to_zombie = 100
                     if zombie.take_damage(damage_to_zombie, game):
                         zombie.die(game)
                         display_message(tr('msg', "Roadkill! Zombie splattered."))
                         if hasattr(game, 'zombies_killed'):
                             game.zombies_killed += 1
+                        if zombie in game.zombies:
+                            try: game.zombies.remove(zombie)
+                            except ValueError: pass
                     self.vehicle.velocity[0] *= 0.5
                     self.vehicle.velocity[1] *= 0.5
 

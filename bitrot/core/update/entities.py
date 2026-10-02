@@ -59,6 +59,8 @@ def _update_entity_batch(entity_list, player_x, player_y, lod_base_radius_sq, ma
     entities_by_dist = sorted(entity_list, key=get_min_player_dist_sq)
 
     for entity in entities_by_dist:
+        if getattr(entity, 'is_dead', False) or getattr(entity, 'health', 0) <= 0:
+            continue
         dist_sq = get_min_player_dist_sq(entity)
         is_chasing = getattr(entity, 'state', None) == 'chasing'
         is_aggroed = getattr(entity, 'aggro_timer', 0) > 0

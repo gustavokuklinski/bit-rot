@@ -18,17 +18,17 @@ class SpatialManager:
             return True
         return False
 
-    def rebuild_zombie_grid(self):
+    def rebuild_zombie_grid(self, force=False):
         g = self.game
         current_zombie_count = len(g.zombies)
         current_animal_count = sum(1 for item in g.items_on_ground if isinstance(item, Animal))
         current_total = current_zombie_count + current_animal_count
 
         tracked_total = len(g.last_zombie_grid_positions)
-        needs_rebuild = False
+        needs_rebuild = force
         if current_total != tracked_total:
             needs_rebuild = True
-        else:
+        elif not needs_rebuild:
             for z in g.zombies:
                 if self._check_significant_movement(z, g.last_zombie_grid_positions, id(z)):
                     needs_rebuild = True
@@ -42,8 +42,8 @@ class SpatialManager:
             if not needs_rebuild:
                 return 
 
-        zombie_ids = {id(z) for z in g.zombies}
-        animal_ids = {id(item) for item in g.items_on_ground if isinstance(item, Animal)}
+        zombie_ids = {id(z) for z in g.zombies if not getattr(z, 'is_dead', False) and getattr(z, 'health', 0) > 0}
+        animal_ids = {id(item) for item in g.items_on_ground if isinstance(item, Animal) and not getattr(item, 'is_dead', False) and getattr(item, 'health', 0) > 0}
         valid_ids = zombie_ids | animal_ids
         for z_id in list(g.last_zombie_grid_positions.keys()):
             if z_id not in valid_ids:
@@ -51,12 +51,16 @@ class SpatialManager:
 
         g.zombie_grid.clear()
         for z in g.zombies:
+            if getattr(z, 'is_dead', False) or getattr(z, 'health', 0) <= 0:
+                continue
             key = (int(z.rect.centerx // g.GRID_CELL_SIZE), int(z.rect.centery // g.GRID_CELL_SIZE))
             if key not in g.zombie_grid: g.zombie_grid[key] = []
             g.zombie_grid[key].append(z)
 
         for item in g.items_on_ground:
             if isinstance(item, Animal):
+                if getattr(item, 'is_dead', False) or getattr(item, 'health', 0) <= 0:
+                    continue
                 key = (int(item.rect.centerx // g.GRID_CELL_SIZE), int(item.rect.centery // g.GRID_CELL_SIZE))
                 if key not in g.zombie_grid: g.zombie_grid[key] = []
                 g.zombie_grid[key].append(item)

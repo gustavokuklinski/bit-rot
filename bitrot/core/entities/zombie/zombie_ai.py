@@ -215,6 +215,8 @@ class ZombieAI:
         return None
 
     def update_ai(self, player_rect, obstacles, nearby_entities, game):
+        if getattr(self, 'is_dead', False) or getattr(self, 'health', 0) <= 0:
+            return
         current_time = pygame.time.get_ticks()
 
         # Update noise alert timer
@@ -388,6 +390,8 @@ class ZombieAI:
             self.move_towards(target_pos, obstacles, nearby_entities, game, can_see_target=can_see_target, allow_break_obstacles=allow_break)
 
     def move_towards(self, target_pos, obstacles, nearby_entities, game, can_see_target=True, allow_break_obstacles=False):
+        if getattr(self, 'is_dead', False) or getattr(self, 'health', 0) <= 0:
+            return
         from core.systems.utils import resolve_stuck_in_obstacle
         resolve_stuck_in_obstacle(self, obstacles, game)
 

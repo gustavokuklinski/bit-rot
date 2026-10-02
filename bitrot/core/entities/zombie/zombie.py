@@ -145,6 +145,9 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
             print(f"Warning: Could not generate ID for zombie: {e}")
 
     def update(self, game):
+        if getattr(self, 'is_dead', False) or getattr(self, 'health', 0) <= 0:
+            return
+
         if self.knockback_timer > 0:
             obstacles = game.obstacles
             multiplier = 1.0

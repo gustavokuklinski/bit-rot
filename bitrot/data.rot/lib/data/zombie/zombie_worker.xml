@@ -30,6 +30,7 @@
     </visuals>
     
     <loot>
+        <item item="Money WBRL" chance="1.0" />
         <item item="Zombie Meat" chance="1.0" />
         <item item="Screwdriver" chance="1.0" />
         <item item="Toolkit" chance="1.0" />

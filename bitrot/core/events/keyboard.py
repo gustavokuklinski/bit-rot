@@ -12,6 +12,8 @@ from core.messages import display_message
 from core.systems.utils import get_targeted_interactable
 from core.map.world_layers import set_active_layer
 from core.entities.item.item_helpers import has_app
+from core.entities.vehicle.vehicle import Vehicle
+from core.entities.vehicle.vehicle_data import VehicleData
 
 def toggle_inventory_modal(game):
     inventory_modal_exists = False
@@ -529,36 +531,76 @@ def process_chat_command(game, text):
             display_message(game, f"Could not spawn cloth '{cloth_name}'.")
         return True
         
-    # --- VEHICLE SPAWN (Uses raw_command) ---
+     # --- VEHICLE SPAWN (Uses raw_command) ---
     veh_match = re.match(r'vehicle\s+"([^"]+)"', raw_command, re.IGNORECASE)
     if veh_match:
         veh_name = veh_match.group(1).strip()
-        
-        
-        loader = VehicleLoader()
-        veh_def = loader.get_definition_by_name(veh_name)
-        
+
+        if not VehicleData.VEHICLE_TEMPLATES:
+            VehicleData.load_templates()
+
+        veh_def = VehicleData.get_definition_by_name(veh_name)
+
         if veh_def and game.player:
+            images = veh_def.get('images', {})
+            facing = 'right'
+            base_img = images.get(facing) or (next(iter(images.values())) if images else None)
+            w = base_img.get_width() if base_img else TILE_SIZE * 2
+            h = base_img.get_height() if base_img else TILE_SIZE * 2
+
             directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
             dx, dy = random.choice(directions)
-            spawn_x = game.player.rect.centerx + (dx * TILE_SIZE * 2)
-            spawn_y = game.player.rect.centery + (dy * TILE_SIZE * 2)
-            
+            spawn_x = game.player.rect.centerx + (dx * TILE_SIZE * 2) - (w // 2)
+            spawn_y = game.player.rect.centery + (dy * TILE_SIZE * 2) - (h // 2)
+
+            # Avoid spawning inside walls/obstacles
+            test_rect = pygame.Rect(spawn_x, spawn_y, w, h)
+            if any(test_rect.colliderect(ob) for ob in game.obstacles):
+                placed = False
+                for r in range(1, 6):
+                    for ox in (-r, 0, r):
+                        for oy in (-r, 0, r):
+                            cand_x = game.player.rect.centerx + (ox * TILE_SIZE) - (w // 2)
+                            cand_y = game.player.rect.centery + (oy * TILE_SIZE) - (h // 2)
+                            cand_rect = pygame.Rect(cand_x, cand_y, w, h)
+                            if not any(cand_rect.colliderect(ob) for ob in game.obstacles):
+                                spawn_x, spawn_y = cand_x, cand_y
+                                placed = True
+                                break
+                        if placed:
+                            break
+
             new_vehicle = Vehicle(
                 name=veh_def['name'],
                 x=spawn_x,
                 y=spawn_y,
-                width=veh_def.get('images', {}).get('right', pygame.Surface((32,32))).get_width(),
-                height=veh_def.get('images', {}).get('right', pygame.Surface((32,32))).get_height(),
-                image=veh_def['images'],
+                width=w,
+                height=h,
+                image=images,
                 stats=veh_def.get('stats', {}),
                 capacity=veh_def.get('capacity', 20),
-                loot_table=veh_def.get('loot_table', [])
+                loot_table=veh_def.get('loot_table', []),
+                facing=facing
             )
-            
-            game.containers.append(new_vehicle)
-            if hasattr(game, 'rebuild_container_grid'):
-                game.rebuild_container_grid()
+
+            if not hasattr(game, 'vehicles'):
+                game.vehicles = []
+            if new_vehicle not in game.vehicles:
+                game.vehicles.append(new_vehicle)
+
+            if hasattr(game, 'map_manager') and hasattr(game.map_manager, 'vehicles'):
+                if new_vehicle not in game.map_manager.vehicles:
+                    game.map_manager.vehicles.append(new_vehicle)
+
+            if new_vehicle not in game.containers:
+                game.containers.append(new_vehicle)
+
+            if new_vehicle.rect not in game.obstacles:
+                game.obstacles.append(new_vehicle.rect)
+
+            if hasattr(game, 'spatial_manager'):
+                game.spatial_manager.rebuild_container_grid()
+
             display_message(game, f"Spawned vehicle '{veh_def['name']}' nearby.")
         else:
             display_message(game, f"{tr('msg', 'Could not find vehicle')} '{veh_name}'.")

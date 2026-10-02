@@ -112,10 +112,19 @@ class VehicleData:
 
     @staticmethod
     def get_definition_by_name(name):
-        """Finds a vehicle definition by its name (case-insensitive)."""
+        """Finds a vehicle definition by its name (case-insensitive and format-flexible)."""
         if not name: return None
+        if not VehicleData.VEHICLE_TEMPLATES:
+            VehicleData.load_templates()
+
         target = name.lower().strip()
+        target_norm = target.replace('_', ' ')
+        target_clean = target_norm.replace('car ', '').strip()
+
         for df in VehicleData.VEHICLE_TEMPLATES:
-            if df['name'].lower().strip() == target:
+            df_name = df['name'].lower().strip()
+            df_norm = df_name.replace('_', ' ')
+            df_clean = df_norm.replace('car ', '').strip()
+            if df_name == target or df_norm == target_norm or (target_clean and df_clean == target_clean):
                 return df
         return None
