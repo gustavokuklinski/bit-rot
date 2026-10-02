@@ -5,7 +5,9 @@ from core.ui.modals import BaseModal, draw_scrollbar
 from core.data.radio_manager import RadioManager
 
 def draw_messages_modal(surface, game, modal, assets):
-    base_modal = BaseModal(surface, modal, assets, "Messages")
+    modal_w = modal['rect'].width if 'rect' in modal else MESSAGES_MODAL_WIDTH
+    modal_h = modal['rect'].height if 'rect' in modal else MESSAGES_MODAL_HEIGHT
+    base_modal = BaseModal(surface, modal, assets, "Messages", w=modal_w, h=modal_h)
     base_modal.draw_base()
     close_button = base_modal.get_buttons()
 

@@ -47,6 +47,11 @@ class BaseModal:
         self.title = tr('modal', title)
         
         default_w, default_h = MODAL_DIMENSIONS.get(modal.get('type', ''), (256, 240))
+        if w is None and 'rect' in modal and modal['rect'].width > 0:
+            w = modal['rect'].width
+        if h is None and 'rect' in modal and modal['rect'].height > 0:
+            h = modal['rect'].height
+
         self.modal_w = w or default_w
         self.modal_h = h or default_h
         

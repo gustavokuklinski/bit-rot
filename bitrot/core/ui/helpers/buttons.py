@@ -26,7 +26,7 @@ def draw_pause_button(surface, view_left, view_right, view_bottom):
     surface.blit(_pause_img, button_rect)
     return button_rect
 
-def draw_status_button(surface, view_left, view_right, view_bottom):
+def draw_status_button(surface, view_left, view_right, view_bottom, top_y=40):
     global _status_img
     if _status_img is None:
         try:
@@ -36,12 +36,11 @@ def draw_status_button(surface, view_left, view_right, view_bottom):
             _status_img = pygame.Surface((40, 40), pygame.SRCALPHA)
             _status_img.fill(GRAY)
     
-    # Position relative to view_left
-    button_rect = pygame.Rect(view_left + 10, 40, 40, 40)
+    button_rect = pygame.Rect(view_left + 10, top_y, 40, 40)
     surface.blit(_status_img, button_rect)
     return button_rect
 
-def draw_inventory_button(surface, view_left, view_right, view_bottom):
+def draw_inventory_button(surface, view_left, view_right, view_bottom, top_y=90):
     global _inventory_img
     if _inventory_img is None:
         try:
@@ -51,12 +50,11 @@ def draw_inventory_button(surface, view_left, view_right, view_bottom):
             _inventory_img = pygame.Surface((40, 40), pygame.SRCALPHA)
             _inventory_img.fill(GRAY)
             
-    # Position relative to view_left
-    button_inventory_rect = pygame.Rect(view_left + 10, 90, 40, 40)
+    button_inventory_rect = pygame.Rect(view_left + 10, top_y, 40, 40)
     surface.blit(_inventory_img, button_inventory_rect)
     return button_inventory_rect
 
-def draw_gear_button(surface, view_left, view_right, view_bottom):
+def draw_gear_button(surface, view_left, view_right, view_bottom, top_y=140):
     global _gear_img
     if _gear_img is None:
         try:
@@ -66,12 +64,11 @@ def draw_gear_button(surface, view_left, view_right, view_bottom):
             _gear_img = pygame.Surface((40, 40), pygame.SRCALPHA)
             _gear_img.fill(GRAY)
             
-    # Position relative to view_left
-    button_gear_rect = pygame.Rect(view_left + 10, 140, 40, 40)
+    button_gear_rect = pygame.Rect(view_left + 10, top_y, 40, 40)
     surface.blit(_gear_img, button_gear_rect)
     return button_gear_rect
 
-def draw_slots_button(surface, view_left, view_right, view_bottom):
+def draw_slots_button(surface, view_left, view_right, view_bottom, top_y=190):
     global _slots_img
     if _slots_img is None:
         try:
@@ -81,12 +78,11 @@ def draw_slots_button(surface, view_left, view_right, view_bottom):
             _slots_img = pygame.Surface((40, 40), pygame.SRCALPHA)
             _slots_img.fill(GRAY)
             
-    # Position relative to view_left
-    button_slots_rect = pygame.Rect(view_left + 10, 190, 40, 40)
+    button_slots_rect = pygame.Rect(view_left + 10, top_y, 40, 40)
     surface.blit(_slots_img, button_slots_rect)
     return button_slots_rect
 
-def draw_nearby_button(surface, view_left, view_right, view_bottom):
+def draw_nearby_button(surface, view_left, view_right, view_bottom, top_y=240):
     global _nearby_img
     if _nearby_img is None:
         try:
@@ -96,12 +92,11 @@ def draw_nearby_button(surface, view_left, view_right, view_bottom):
             _nearby_img = pygame.Surface((40, 40), pygame.SRCALPHA)
             _nearby_img.fill(GRAY)
             
-    # Position relative to view_left
-    button_nearby_rect = pygame.Rect(view_left + 10, 240, 40, 40)
+    button_nearby_rect = pygame.Rect(view_left + 10, top_y, 40, 40)
     surface.blit(_nearby_img, button_nearby_rect)
     return button_nearby_rect
 
-def draw_messages_button(surface, view_left, view_right, view_bottom):
+def draw_messages_button(surface, view_left, view_right, view_bottom, top_y=290):
     global _message_img
     if _message_img is None:
         try:
@@ -112,12 +107,11 @@ def draw_messages_button(surface, view_left, view_right, view_bottom):
             _message_img = pygame.Surface((40, 40), pygame.SRCALPHA)
             _message_img.fill(GRAY)
     
-    # Position relative to view_left
-    button_messages_rect = pygame.Rect(view_left + 10, 290, 40, 40)
+    button_messages_rect = pygame.Rect(view_left + 10, top_y, 40, 40)
     surface.blit(_message_img, button_messages_rect)
     return button_messages_rect
 
-def draw_crafting_button(surface, view_left, view_right, view_bottom):
+def draw_crafting_button(surface, view_left, view_right, view_bottom, top_y=340):
     global _crafting_img
     if _crafting_img is None:
         try:
@@ -128,12 +122,11 @@ def draw_crafting_button(surface, view_left, view_right, view_bottom):
             _crafting_img.fill(GRAY)
             pygame.draw.rect(_crafting_img, (200, 200, 200), (5, 5, 30, 30), 1)
             
-    # Position relative to view_left
-    button_rect = pygame.Rect(view_left + 10, 340, 40, 40)
+    button_rect = pygame.Rect(view_left + 10, top_y, 40, 40)
     surface.blit(_crafting_img, button_rect)
     return button_rect
 
-def draw_help_button(surface, view_left, view_right, view_bottom):
+def draw_help_button(surface, view_left, view_right, view_bottom, top_y=390):
     global _help_img
     if _help_img is None:
         try:
@@ -143,7 +136,6 @@ def draw_help_button(surface, view_left, view_right, view_bottom):
             _help_img = pygame.Surface((40, 40), pygame.SRCALPHA)
             _help_img.fill(GRAY)
             
-    # Position relative to view_left
-    button_rect = pygame.Rect(view_left + 10, 390, 40, 40)
+    button_rect = pygame.Rect(view_left + 10, top_y, 40, 40)
     surface.blit(_help_img, button_rect)
     return button_rect

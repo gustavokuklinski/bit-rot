@@ -396,8 +396,162 @@ def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
     return target_world_rect
 
 def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world_rect):
+    from core.draw.camera import update_messages_modal_elastic_width
+    update_messages_modal_elastic_width(game)
+
     mouse_pos = game._get_scaled_mouse_pos()
+
+    ORANGE = (255, 165, 0)
+
+    _mini_status_icons = {}
+
+    def _get_mini_status_icon(name, filename, size=(16, 16)):
+        if name not in _mini_status_icons:
+            try:
+                path = SPRITE_PATH + filename
+                img = pygame.image.load(path).convert_alpha()
+                _mini_status_icons[name] = pygame.transform.scale(img, size)
+            except Exception:
+                surf = pygame.Surface(size, pygame.SRCALPHA)
+                surf.fill((200, 200, 200))
+                _mini_status_icons[name] = surf
+        return _mini_status_icons[name]
+
+    def draw_mini_status_hud(surface, game, view_left):
+        player = getattr(game, 'player', None)
+        if not player:
+            return [], 35
+
+        start_y = 34
+        box_x = view_left + 10
+        bar_w = 48
+        bar_h = 8
+
+        stats = [
+            ('hp', 'ui/hp.png', player.health, player.max_health, 'Health'),
+            ('stm', 'ui/stamina.png', player.stamina, player.max_stamina, 'Stamina'),
+            ('def', 'ui/defence.png', player.get_total_defence(), 100.0, 'Defence')
+        ]
+
+        hover_items = []
+        curr_y = start_y
+
+        for key, icon_file, val, max_val, label_key in stats:
+            # 1. Icon on the left
+            icon = _get_mini_status_icon(key, icon_file, (16, 16))
+            surface.blit(icon, (box_x, curr_y))
+
+            # 2. Standard pattern bar at the side of the icon
+            bar_x = box_x + 22
+            bar_y = curr_y + 4
+            border_rect = pygame.Rect(bar_x, bar_y, bar_w, bar_h)
+
+            ratio = max(0.0, min(1.0, (val / max_val))) if max_val > 0 else 0.0
+            fill_w = int(bar_w * ratio)
+
+            if key == 'hp':
+                bar_color = GRAY
+            elif key == 'stm':
+                bar_color = GRAY
+            else:
+                bar_color = GRAY
+
+            # Standard bar pattern: (30, 30, 30) background, color fill, 1px white border
+            pygame.draw.rect(surface, (30, 30, 30), border_rect)
+            if fill_w > 0:
+                fill_rect = pygame.Rect(bar_x, bar_y, fill_w, bar_h)
+                pygame.draw.rect(surface, bar_color, fill_rect)
+            pygame.draw.rect(surface, WHITE, border_rect, 1)
+
+            row_rect = pygame.Rect(box_x, curr_y, 22 + bar_w, 16)
+            if key == 'def':
+                tooltip_text = f"{tr('ui', label_key)}: {int(val)}%"
+            else:
+                tooltip_text = f"{tr('ui', label_key)}: {int(val)}/{int(max_val)}"
+            hover_items.append((row_rect, tooltip_text))
+
+            curr_y += 22
+
+        # Return hover items and the bottom Y coordinate where the HUD ends
+        return hover_items, curr_y
     
+    def draw_mini_messages_hud(surface, game, view_left, dynamic_h):
+        """Renders the last 3 messages in the bottom-left corner when Messages modal is closed."""
+        is_messages_modal_open = any(m.get('type') == 'messages' for m in getattr(game, 'modals', []))
+        if is_messages_modal_open:
+            return
+
+        active_log = game.message_logs.get('All', []) if hasattr(game, 'message_logs') else []
+        if not active_log:
+            return
+
+        recent_messages = active_log[-3:] if len(active_log) >= 3 else active_log
+
+        from core.data.radio_manager import RadioManager
+        radio_stations = list(RadioManager.STATIONS.keys()) if hasattr(RadioManager, 'STATIONS') else []
+
+        max_w = 420
+        line_h = font_12.get_height() + 3
+        wrapped_lines = []
+
+        for msg in recent_messages:
+            color = WHITE
+            if msg.startswith("[") and "]: " in msg:
+                color = YELLOW
+            else:
+                for st_name in radio_stations:
+                    if msg.startswith(st_name + ":"):
+                        if "Exxoil" in st_name:
+                            color = ORANGE
+                        elif "Military" in st_name:
+                            color = (100, 200, 255)
+                        else:
+                            color = (100, 255, 100)
+                        break
+
+            words = str(msg).split(' ')
+            curr_line = []
+            for word in words:
+                test_line = ' '.join(curr_line + [word]) if curr_line else word
+                if font_12.size(test_line)[0] <= max_w:
+                    curr_line.append(word)
+                else:
+                    if curr_line:
+                        wrapped_lines.append((' '.join(curr_line), color))
+                        curr_line = [word]
+                    else:
+                        wrapped_lines.append((word, color))
+                        curr_line = []
+            if curr_line:
+                wrapped_lines.append((' '.join(curr_line), color))
+
+        if not wrapped_lines:
+            return
+
+        if len(wrapped_lines) > 5:
+            wrapped_lines = wrapped_lines[-5:]
+
+        total_h = len(wrapped_lines) * line_h
+        start_x = view_left + 15
+        start_y = dynamic_h - total_h - 15
+
+        pad = 3
+        max_text_w = max((font_12.size(txt)[0] for txt, _ in wrapped_lines), default=100)
+        bg_rect = pygame.Rect(start_x - pad, start_y - pad, max_text_w + (pad * 2), total_h + (pad * 2))
+
+        bg_surf = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
+        bg_surf.fill((15, 15, 15, 160))
+        surface.blit(bg_surf, bg_rect.topleft)
+        pygame.draw.rect(surface, (60, 60, 60, 180), bg_rect, 1, border_radius=4)
+
+        curr_y = start_y
+        for txt, color in wrapped_lines:
+            shadow_surf = font_12.render(txt, False, BLACK)
+            text_surf = font_12.render(txt, False, color)
+            surface.blit(shadow_surf, (start_x + 1, curr_y + 1))
+            surface.blit(text_surf, (start_x, curr_y))
+            curr_y += line_h
+
     # --- LAYER 1: World Space Indicators ---
     interactables = []
     for npc in game.npcs:
@@ -494,17 +648,31 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             icon_rect = game.assets['menu_hud_icon'].get_rect(center=game.menu_hud_button_rect.center)
             game.game_screen.blit(game.assets['menu_hud_icon'], icon_rect)
             
+        # 1. Display mini status bars when the Player Status modal is closed
+        is_status_modal_open = any(m.get('type') == 'status' for m in getattr(game, 'modals', []))
+        mini_status_hover_items = []
+        mini_hud_bottom_y = 35
+
+        if not is_status_modal_open:
+            mini_status_hover_items, mini_hud_bottom_y = draw_mini_status_hud(game.game_screen, game, view_left)
+
+        # 2. Display mini messages HUD when the Messages modal is closed
+        draw_mini_messages_hud(game.game_screen, game, view_left, dynamic_h)
+
+        # 3. When menu is opened, position it below the mini HUD if active
         show_hud_menus = getattr(game, 'show_hud_menus', False)
         
         if show_hud_menus:
-            game.status_button_rect = draw_status_button(game.game_screen, view_left, view_right, dynamic_h)
-            game.inventory_button_rect = draw_inventory_button(game.game_screen, view_left, view_right, dynamic_h)
-            game.nearby_button_rect = draw_nearby_button(game.game_screen, view_left, view_right, dynamic_h)
-            game.gear_button_rect = draw_gear_button(game.game_screen, view_left, view_right, dynamic_h)
-            game.slots_button_rect = draw_slots_button(game.game_screen, view_left, view_right, dynamic_h)
-            game.messages_button_rect = draw_messages_button(game.game_screen, view_left, view_right, dynamic_h)
-            game.crafting_button_rect = draw_crafting_button(game.game_screen, view_left, view_right, dynamic_h)
-            game.help_button_rect = draw_help_button(game.game_screen, view_left, view_right, dynamic_h)
+            menu_start_y = (mini_hud_bottom_y + 10) if not is_status_modal_open else 40
+
+            game.status_button_rect = draw_status_button(game.game_screen, view_left, view_right, dynamic_h, top_y=menu_start_y)
+            game.inventory_button_rect = draw_inventory_button(game.game_screen, view_left, view_right, dynamic_h, top_y=menu_start_y + 50)
+            game.gear_button_rect = draw_gear_button(game.game_screen, view_left, view_right, dynamic_h, top_y=menu_start_y + 100)
+            game.slots_button_rect = draw_slots_button(game.game_screen, view_left, view_right, dynamic_h, top_y=menu_start_y + 150)
+            game.nearby_button_rect = draw_nearby_button(game.game_screen, view_left, view_right, dynamic_h, top_y=menu_start_y + 200)
+            game.messages_button_rect = draw_messages_button(game.game_screen, view_left, view_right, dynamic_h, top_y=menu_start_y + 250)
+            game.crafting_button_rect = draw_crafting_button(game.game_screen, view_left, view_right, dynamic_h, top_y=menu_start_y + 300)
+            game.help_button_rect = draw_help_button(game.game_screen, view_left, view_right, dynamic_h, top_y=menu_start_y + 350)
         else:
             game.status_button_rect = None
             game.inventory_button_rect = None
@@ -515,7 +683,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             game.crafting_button_rect = None
             game.help_button_rect = None
 
-        for rect, label in [
+        tooltip_targets = [
             (game.pause_button_rect, tr('ui', "Pause and Save (F2)")), 
             (game.menu_hud_button_rect, tr('ui', "Toggle UI Menus (SHIFT+M)")),
             (getattr(game, 'status_button_rect', None), f"{tr('ui', 'Player Status')} ({get_key_name('toggle_status')})"),
@@ -526,7 +694,10 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             (getattr(game, 'messages_button_rect', None), f"{tr('ui', 'Messages')} ({get_key_name('toggle_messages')})"),
             (getattr(game, 'crafting_button_rect', None), f"{tr('ui', 'Crafting')} ({get_key_name('toggle_crafting')})"),
             (getattr(game, 'help_button_rect', None), tr('ui', "Help and Tutorial (?)"))
-        ]:
+        ]
+        tooltip_targets.extend(mini_status_hover_items)
+
+        for rect, label in tooltip_targets:
             if rect and rect.collidepoint(mouse_pos):
                 text_surf = font_12.render(label, True, WHITE)
                 tip_x, tip_y = min(mouse_pos[0] + 10, GAME_WIDTH - text_surf.get_width() - 21), min(mouse_pos[1] + 10, GAME_HEIGHT - text_surf.get_height() - 21)

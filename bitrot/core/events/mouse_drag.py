@@ -180,6 +180,9 @@ def handle_mouse_up(game, event, mouse_pos):
         modal['is_dragging_map'] = False
         modal['is_scrolling_content'] = False
 
+    from core.draw.camera import update_messages_modal_elastic_width
+    update_messages_modal_elastic_width(game)
+
     if event.button == 1:
         if game.drag_origin:
             _, type_orig, *container_info = game.drag_origin

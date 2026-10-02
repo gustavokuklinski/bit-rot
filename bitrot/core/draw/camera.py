@@ -1,9 +1,68 @@
 import pygame
 import math
-from core.data.config import GAME_WIDTH, GAME_HEIGHT, TILE_SIZE
+from core.data.config import GAME_WIDTH, GAME_HEIGHT, TILE_SIZE, MESSAGES_MODAL_WIDTH
 from core.ui.helpers.keybinds import keybind_manager
 
+def update_messages_modal_elastic_width(game):
+    """Dynamically recalculates the Messages modal width based on docking and adjacent modals."""
+    msg_modal = next((m for m in getattr(game, 'modals', []) if m.get('type') == 'messages'), None)
+    if not msg_modal or 'rect' not in msg_modal:
+        return
+
+    min_w = MESSAGES_MODAL_WIDTH  # 512 default minimum
+    snap_tolerance = 25
+
+    is_at_bottom = abs(msg_modal['rect'].bottom - GAME_HEIGHT) <= snap_tolerance
+    is_at_left = abs(msg_modal['rect'].left) <= snap_tolerance
+    is_dragging = msg_modal.get('is_dragging', False)
+
+    is_snapped = is_at_bottom and is_at_left and not is_dragging
+
+    if not is_snapped:
+        # Revert to default minimum width when dragged away from the snap dock
+        if msg_modal['rect'].width != min_w:
+            msg_modal['rect'].width = min_w
+            if 'position' in msg_modal:
+                msg_modal['position'] = (msg_modal['rect'].x, msg_modal['rect'].y)
+        return
+
+    # Lock cleanly to the bottom-left dock
+    msg_modal['rect'].left = 0
+    msg_modal['rect'].bottom = GAME_HEIGHT
+    msg_modal['position'] = (0, msg_modal['rect'].y)
+
+    # Find any other modal sharing the vertical bottom band to the right
+    side_modals_left = []
+    for other in game.modals:
+        if other is msg_modal:
+            continue
+        if other.get('type') in ('belt',):
+            continue
+        if 'rect' not in other:
+            continue
+
+        o_rect = other['rect']
+        if o_rect.left <= 0:
+            continue
+
+        # Overlaps vertically with the messages modal (with 10px margin)
+        if o_rect.bottom > msg_modal['rect'].top + 10 and o_rect.top < msg_modal['rect'].bottom - 10:
+            side_modals_left.append(o_rect.left)
+
+    if side_modals_left:
+        # Stretch up to the closest modal on the right (keeping at least 512px)
+        closest_left = min(side_modals_left)
+        target_w = max(min_w, closest_left)
+    else:
+        # No modal on the side: expand to full screen width
+        target_w = GAME_WIDTH
+
+    msg_modal['rect'].width = target_w
+
+
 def update_camera(game):
+    # Recalculate message modal elastic width before camera boundaries are evaluated
+    update_messages_modal_elastic_width(game)
 
     #if getattr(game, 'game_state', None) == 'PLAYING':
     #    is_running = (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or joy_run)
@@ -27,7 +86,8 @@ def update_camera(game):
                 right_encroachment = max(right_encroachment, GAME_WIDTH - modal['rect'].left)
             if modal['rect'].right <= 256:
                 left_encroachment = max(left_encroachment, modal['rect'].right)
-            if modal['rect'].top >= GAME_HEIGHT - 256:
+            # Only the messages modal encroaches from the bottom
+            if modal.get('type') == 'messages' and modal['rect'].top >= GAME_HEIGHT - 256:
                 dynamic_h = min(dynamic_h, modal['rect'].top)
                     
     final_w = max(GAME_WIDTH // 3, GAME_WIDTH - left_encroachment - right_encroachment)
