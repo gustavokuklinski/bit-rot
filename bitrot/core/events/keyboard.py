@@ -2,6 +2,7 @@ import pygame
 import uuid
 import math
 import random 
+import core.data.config
 from core.data.config import *
 from core.events.game_actions import try_grab_item
 from core.ui.crafting_modal import CraftingModal
@@ -912,12 +913,12 @@ def handle_keyboard_events(game, event, action_triggered=None):
                                     game.modals.append(new_modal)
 
                         if is_closed_maptile:
-                            # If the SD card is active, open immediately with ZERO timer
-                            if has_app(game, 'open_container_instant'):
+                            # Instant open if ALL_VISIBLE is true or instant app is installed
+                            if getattr(core.data.config, 'ALL_VISIBLE', False) or has_app(game, 'open_container_instant'):
                                 open_and_show_modal()
                             else:
                                 agility = game.player.progression.get_level('agility')
                                 open_time = max(0.2, 1.8 - (agility * 0.2))
-                                game.player.start_action(f"{game.player.name} {tr('ui', "Opening")}", open_time, open_and_show_modal, xp_reward=1.5)
+                                game.player.start_action(f"{game.player.name} {tr('ui', 'Opening')}", open_time, open_and_show_modal, xp_reward=1.5)
                         else:
                             open_and_show_modal()

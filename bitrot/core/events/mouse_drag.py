@@ -300,11 +300,11 @@ def handle_mouse_up(game, event, mouse_pos):
                     return True
                
                 # --- Drop on BELT ---
+                is_over_modal = any(modal.get('rect') and modal['rect'].collidepoint(mouse_pos) for modal in game.modals)
                 for i_target in range(len(game.player.belt)):
-                    is_modal_slot = any(modal['type'] == 'inventory' and get_belt_slot_rect_in_modal(i_target, modal['position']).collidepoint(mouse_pos) for modal in reversed(game.modals))
-                    is_hud_slot = get_belt_hud_slot_rect(i_target, game=game).collidepoint(mouse_pos)
+                    is_hud_slot = (not is_over_modal) and get_belt_hud_slot_rect(i_target, game=game).collidepoint(mouse_pos)
 
-                    if is_modal_slot or is_hud_slot:
+                    if is_hud_slot:
                         if not getattr(game.dragged_item, 'allow_belt', False):
                             display_message(f"{tr('msg', 'Cannot place')} {game.dragged_item.name} {tr('msg', 'to belt.')}")
                             dropped_successfully = False
@@ -581,7 +581,7 @@ def handle_mouse_up(game, event, mouse_pos):
                             # Main Inventory Grid
                             if not dropped_successfully:
                                 target_index = -1
-                                for i in range(10): 
+                                for i in range(15): 
                                     if get_inventory_slot_rect(i, modal['position']).collidepoint(mouse_pos):
                                         target_index = i
                                         break
@@ -1563,9 +1563,7 @@ def handle_mouse_up(game, event, mouse_pos):
 
 
 def find_item_at_pos(game, mouse_pos):
-    for i, item in enumerate(game.player.belt):
-        if item and get_belt_hud_slot_rect(i).collidepoint(mouse_pos):
-            return item
+    is_over_modal = any(modal.get('rect') and modal['rect'].collidepoint(mouse_pos) for modal in game.modals)
 
     for modal in reversed(game.modals):
         if not modal['rect'].collidepoint(mouse_pos):
@@ -1575,9 +1573,6 @@ def find_item_at_pos(game, mouse_pos):
             if modal.get('active_tab', 'Inventory') == 'Inventory':
                 for i, item in enumerate(game.player.inventory):
                     if item and get_inventory_slot_rect(i, modal['position']).collidepoint(mouse_pos):
-                        return item
-                for i, item in enumerate(game.player.belt):
-                    if item and get_belt_slot_rect_in_modal(i, modal['position']).collidepoint(mouse_pos):
                         return item
                 
                 
@@ -1654,6 +1649,11 @@ def find_item_at_pos(game, mouse_pos):
                         if item and get_container_slot_rect(pos, i).collidepoint(mouse_pos):
                             return item
             return None
+
+    if not is_over_modal:
+        for i, item in enumerate(game.player.belt):
+            if item and get_belt_hud_slot_rect(i, game=game).collidepoint(mouse_pos):
+                return item
 
     return None
 
@@ -1956,15 +1956,6 @@ def handle_left_click_drag_candidate(game, mouse_pos):
                     slot_rect = get_inventory_slot_rect(i, modal['position'])
                     if slot_rect.collidepoint(mouse_pos):
                         game.drag_candidate = (item, (i, 'inventory'))
-                        game.drag_start_pos = mouse_pos
-                        game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
-                        return 
-
-            for i, item in enumerate(game.player.belt):
-                if item:
-                    slot_rect = get_belt_slot_rect_in_modal(i, modal['position'])
-                    if slot_rect.collidepoint(mouse_pos):
-                        game.drag_candidate = (item, (i, 'belt'))
                         game.drag_start_pos = mouse_pos
                         game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
                         return 

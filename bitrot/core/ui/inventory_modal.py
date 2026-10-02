@@ -98,7 +98,7 @@ def get_belt_hud_slot_rect(i, game=None, dynamic_h=None, **kwargs):
     return pygame.Rect(x, start_y, slot_size, slot_size)
 
 def _draw_inventory_tab(surface, game, player, modal, assets, mouse_pos, base_modal):
-    INVENTORY_SLOTS = 10 
+    INVENTORY_SLOTS = 15
 
     for i in range(INVENTORY_SLOTS):
         slot_rect = get_inventory_slot_rect(i, modal['position'])
@@ -147,57 +147,6 @@ def _draw_inventory_tab(surface, game, player, modal, assets, mouse_pos, base_mo
                     align='bottomright'
                 )
 
-    belt_y_start = modal['position'][1] + 185
-    for i in range(5):
-        # FIX: Safely access belt list
-        item = player.belt[i] if i < len(player.belt) else None
-        slot_rect = get_belt_slot_rect_in_modal(i, modal['position'])
-        pygame.draw.rect(surface, GRAY_40, slot_rect, 0, 3)
-        
-        if item and player.active_weapon and item.id == player.active_weapon.id:
-            pygame.draw.rect(surface, YELLOW, slot_rect, 2, 3)
-        else:
-            pygame.draw.rect(surface, GRAY, slot_rect, 1, 3)
-
-        num_text = font_12.render(str(i + 1), True, GRAY)
-        surface.blit(num_text, (slot_rect.x + 3, slot_rect.y + 1))
-
-        if item:
-            if item.image:
-                img_h = slot_rect.height - 8
-                img_w = int(item.image.get_width() * (img_h / item.image.get_height()))
-                scaled_sprite = pygame.transform.scale(item.image, (img_w, img_h))
-                sprite_rect = scaled_sprite.get_rect(center=slot_rect.center)
-                surface.blit(scaled_sprite, sprite_rect)
-            else:
-                pygame.draw.rect(surface, item.color, slot_rect.inflate(-8, -8))
-            
-            if item.durability is not None and item.max_durability > 0:
-                max_dur = item.max_durability
-                cur_dur = max(0, item.durability)
-                pct = cur_dur / max_dur
-                bar_w, bar_h = slot_rect.width - 10, 3
-                bar_x, bar_y = slot_rect.x + 5, slot_rect.bottom - 6
-                col = (0, 255, 0) if pct > 0.5 else (255, 255, 0) if pct > 0.2 else (255, 0, 0)
-                pygame.draw.rect(surface, (0, 0, 0), (bar_x, bar_y, bar_w, bar_h))
-                if pct > 0: pygame.draw.rect(surface, col, (bar_x, bar_y, int(bar_w * pct), bar_h))
-
-            show_count = False
-            if hasattr(item, 'is_stackable') and item.is_stackable() and item.load is not None and item.load > 1:
-                show_count = True
-            elif item.item_type in ['weapon', 'weapon_ranged', 'weapon_throw'] and item.load is not None:
-                show_count = True
-
-            if show_count:
-                draw_text_shadow(
-                    surface, 
-                    font_12, 
-                    str(int(item.load)), 
-                    WHITE, 
-                    (slot_rect.right - 3, slot_rect.bottom - 1), 
-                    align='bottomright'
-                )
-
 def get_inventory_slot_rect(i, modal_position=(GAME_WIDTH, 0)):
     modal_x, modal_y = modal_position
     slot_w = 40 
@@ -211,15 +160,15 @@ def get_inventory_slot_rect(i, modal_position=(GAME_WIDTH, 0)):
     y = start_y + row * (slot_h + gap)
     return pygame.Rect(x, y, slot_w, slot_h)
 
-def get_belt_slot_rect_in_modal(i, modal_position):
-    modal_x, modal_y = modal_position
-    slot_w = 40 
-    slot_h = 40
-    gap = 6     
-    start_x = modal_x + 10
-    start_y = modal_y + 185 
-    x = start_x + i * (slot_w + gap)
-    return pygame.Rect(x, start_y, slot_w, slot_h)
+def get_belt_slot_rect_in_modal(i, modal_position=None):
+    return pygame.Rect(-9999, -9999, 0, 0)
+    #slot_w = 40 
+    #slot_h = 40
+    #gap = 6     
+    #start_x = modal_x + 10
+    #start_y = modal_y + 185 
+    #x = start_x + i * (slot_w + gap)
+    #return pygame.Rect(x, start_y, slot_w, slot_h)
 
 def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, "Inventory")

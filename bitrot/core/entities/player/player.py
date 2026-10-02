@@ -87,7 +87,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.active_weapon = None
         self.belt = [None] * 5
         self.last_decay_time = time.time()
-        self.base_inventory_slots = 10
+        self.base_inventory_slots = 15
         
         self.clothes_slots =  ['hair', 'head','legs', 'feet', 'body','util','arms', 'hands', 'facial', 'util2', 'util3']
         self.clothes = {slot: None for slot in self.clothes_slots}

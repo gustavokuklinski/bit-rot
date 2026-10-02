@@ -310,6 +310,11 @@ class PlayerActions:
 
         new_item.is_placed = getattr(item, 'is_placed', False)
 
+        if getattr(item, 'item_type', '') == 'mobile' or 'Mobile' in getattr(item, 'name', ''):
+            target_game = getattr(self, 'game', None) or getattr(core.messages, '_game_instance', None)
+            if target_game and hasattr(target_game, 'modals'):
+                target_game.modals = [m for m in target_game.modals if m.get('type') != 'mobile']
+
         # Handle ground and nearby sources (items on ground or in VirtualGroundContainer)
         if source == 'ground':
             # Item is in game.items_on_ground, but we don't have game reference here

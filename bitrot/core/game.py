@@ -355,7 +355,14 @@ class Game:
                 if npc.is_dead or dist > MAX_DISTANCE:
                     modals_to_remove.append(modal)
 
-            elif modal['type'] in ('container', 'text', 'big_map', 'mobile'):
+            elif modal['type'] == 'mobile':
+                # Keep mobile modal open while performing actions as long as player has a mobile phone
+                from core.entities.item.item_helpers import player_has_mobile
+                if not player_has_mobile(self.player):
+                    modals_to_remove.append(modal)
+                continue
+
+            elif modal['type'] in ('container', 'text', 'big_map'):
                 container_item = modal.get('item')
                 if container_item:
                     is_equipped = False

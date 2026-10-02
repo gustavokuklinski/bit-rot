@@ -990,7 +990,10 @@ def handle_context_menu_click(game, mouse_pos):
             
             elif option == 'Get bullets': game.player.unload_weapon(game, item)
             elif option == 'Turn on' or option == 'Turn off':
+                is_mobile = (getattr(item, 'item_type', '') == 'mobile' or 'Mobile' in getattr(item, 'name', ''))
                 result = game.player.toggle_utility_item(item, source, index, container_item)
+                if is_mobile:
+                    game.modals = [m for m in game.modals if m.get('type') != 'mobile']
                 if source == 'ground' and result and hasattr(result, 'name'):
                     if index is not None and 0 <= index < len(game.items_on_ground):
                         game.items_on_ground[index] = result
@@ -1309,7 +1312,8 @@ def handle_context_menu_click(game, mouse_pos):
                                     game.modals.append(existing)
 
                     if is_closed_maptile:
-                        if has_app(game, 'open_container_instant'):
+                        # Instant open if ALL_VISIBLE is true or instant app is installed
+                        if getattr(core.data.config, 'ALL_VISIBLE', False) or has_app(game, 'open_container_instant'):
                             open_and_show_modal()
                         else:
                             agility = game.player.progression.get_level('agility')
@@ -1473,12 +1477,7 @@ def handle_right_click(game, mouse_pos):
     click_index = -1
     click_container_item = None
 
-    for i, item in enumerate(game.player.belt):
-        if item and get_belt_hud_slot_rect(i, game=game).collidepoint(mouse_pos):
-            clicked_item = item
-            click_source = 'belt'
-            click_index = i
-            break
+    is_over_any_modal = any(modal.get('rect') and modal['rect'].collidepoint(mouse_pos) for modal in game.modals)
 
     for modal in reversed(game.modals):
         if not modal['rect'].collidepoint(mouse_pos): continue
@@ -1488,10 +1487,6 @@ def handle_right_click(game, mouse_pos):
                 for i, item in enumerate(game.player.inventory):
                     if item and get_inventory_slot_rect(i, modal['position']).collidepoint(mouse_pos):
                         clicked_item, click_source, click_index = item, 'inventory', i; break
-                if not clicked_item:
-                    for i, item in enumerate(game.player.belt):
-                        if item and get_belt_slot_rect_in_modal(i, modal['position']).collidepoint(mouse_pos):
-                            clicked_item, click_source, click_index = item, 'belt', i; break
             
             elif modal.get('active_tab') in modal.get('container_mapping', {}):
                 container = modal['container_mapping'][modal['active_tab']]
@@ -1596,7 +1591,13 @@ def handle_right_click(game, mouse_pos):
         
         if clicked_item: break
 
-    is_over_any_modal = any(modal['rect'].collidepoint(mouse_pos) for modal in game.modals)
+    if not clicked_item and not is_over_any_modal:
+        for i, item in enumerate(game.player.belt):
+            if item and get_belt_hud_slot_rect(i, game=game).collidepoint(mouse_pos):
+                clicked_item = item
+                click_source = 'belt'
+                click_index = i
+                break
 
     if not clicked_item and not is_over_any_modal:
         adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])

@@ -26,12 +26,6 @@ class PlayerInventory:
                 slot_rect = get_inventory_slot_rect(i)
                 if slot_rect.collidepoint(mouse_pos):
                     return item, 'inventory', i
-
-        for i, item in enumerate(self.belt):
-            if item:
-                slot_rect = get_belt_slot_rect_in_modal(i)
-                if slot_rect.collidepoint(mouse_pos):
-                    return item, 'belt', i
         return None, None, None
 
     def find_matching_ammo(self, weapon):

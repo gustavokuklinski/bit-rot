@@ -5,7 +5,7 @@
     <xp min="1" max="15" />
     
     <stats>
-        <health min="10" max="100" />
+        <health min="10" max="20" />
         <speed min="1" max="2" />
         <attack min="1" max="15" />
         <infection min="1" max="5" />

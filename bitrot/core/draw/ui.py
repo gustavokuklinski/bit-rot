@@ -140,11 +140,7 @@ def get_targeted_slot_info(game, mouse_pos, dynamic_h=GAME_HEIGHT):
         if m_type == 'inventory':
             active_tab = top_modal.get('active_tab', 'Inventory')
             if active_tab == 'Inventory':
-                for i in range(len(game.player.belt)):
-                    slot = get_belt_slot_rect_in_modal(i, top_modal['position'])
-                    if slot.collidepoint(mouse_pos):
-                        return slot, 'belt', i, None
-                for i in range(10):
+                for i in range(15):
                     slot = get_inventory_slot_rect(i, top_modal['position'])
                     if slot.collidepoint(mouse_pos):
                         return slot, 'inventory', i, None
@@ -175,15 +171,12 @@ def get_targeted_slot_info(game, mouse_pos, dynamic_h=GAME_HEIGHT):
         elif m_type == 'container':
             c = top_modal.get('item')
             if c:
-                # If closed, do not target any slots
                 is_closed = (getattr(c, 'item_type', '') == 'maptile_container' and not getattr(c, 'is_opened', False))
                 if not is_closed:
                     for i in range(c.capacity or 0):
                         slot = get_container_slot_rect(top_modal['position'], i)
                         if slot.collidepoint(mouse_pos):
                             return slot, 'container', i, c
-            # Never let hits fall through to windows beneath
-            return None, None, None, None
 
         elif m_type == 'nearby':
             active_tab = top_modal.get('active_tab')
@@ -194,15 +187,12 @@ def get_targeted_slot_info(game, mouse_pos, dynamic_h=GAME_HEIGHT):
                     break
             content_rect = top_modal.get('content_rect')
             if c and content_rect:
-                # If closed, do not target any slots
                 is_closed = (getattr(c, 'item_type', '') == 'maptile_container' and not getattr(c, 'is_opened', False))
                 if not is_closed:
                     for i in range(c.capacity or 0):
                         slot = get_container_slot_rect(content_rect.topleft, i)
                         if slot.collidepoint(mouse_pos):
                             return slot, 'container', i, c
-            # Never let hits fall through to windows beneath
-            return None, None, None, None
 
         elif m_type == 'vehicle':
             active_tab = top_modal.get('active_tab')
@@ -213,17 +203,24 @@ def get_targeted_slot_info(game, mouse_pos, dynamic_h=GAME_HEIGHT):
 
         elif m_type == 'npc_dialog':
             if top_modal.get('active_tab_index') == 2:  # Trade Tab
-                # 1. Offer / Drop Zone slot
                 drop_zone = top_modal.get('trade_drop_zone_rect')
                 if drop_zone and drop_zone.collidepoint(mouse_pos):
                     return drop_zone, 'npc_trade_offer', 0, None
 
-                # 2. NPC stock item slots
                 content_rect = top_modal.get('content_rect')
                 if content_rect and content_rect.collidepoint(mouse_pos):
                     for slot_info in top_modal.get('trade_slot_rects', []):
                         if slot_info['rect'].collidepoint(mouse_pos):
                             return slot_info['rect'], 'npc_trade_item', slot_info['index'], slot_info['item']
+
+        elif m_type == 'mobile':
+            if top_modal.get('active_tab') == 'Apps':
+                for slot_data in top_modal.get('app_slot_rects', []):
+                    if slot_data['rect'].collidepoint(mouse_pos):
+                        return slot_data['rect'], 'app', slot_data['index'], None
+
+        # If mouse is over ANY top modal, NEVER fall through to the belt HUD underneath
+        return None, None, None, None
 
     # 2. If NO modal is under the cursor, check the Belt HUD at the bottom of the screen
     for i in range(5):
