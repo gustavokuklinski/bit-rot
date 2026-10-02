@@ -684,16 +684,16 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             game.help_button_rect = None
 
         tooltip_targets = [
-            (game.pause_button_rect, tr('ui', "Pause and Save (F2)")), 
-            (game.menu_hud_button_rect, tr('ui', "Toggle UI Menus (SHIFT+M)")),
-            (getattr(game, 'status_button_rect', None), f"{tr('ui', 'Player Status')} ({get_key_name('toggle_status')})"),
-            (getattr(game, 'inventory_button_rect', None), f"{tr('ui', 'Inventory')} ({get_key_name('toggle_inventory')})"),
-            (getattr(game, 'gear_button_rect', None), f"{tr('ui', 'Gear')} ({get_key_name('toggle_gear')})"),
-            (getattr(game, 'slots_button_rect', None), f"{tr('ui', 'Slots Overview')} ({get_key_name('toggle_slots')})"),
-            (getattr(game, 'nearby_button_rect', None), f"{tr('ui', 'Nearby')} ({get_key_name('toggle_nearby')})"),
-            (getattr(game, 'messages_button_rect', None), f"{tr('ui', 'Messages')} ({get_key_name('toggle_messages')})"),
-            (getattr(game, 'crafting_button_rect', None), f"{tr('ui', 'Crafting')} ({get_key_name('toggle_crafting')})"),
-            (getattr(game, 'help_button_rect', None), tr('ui', "Help and Tutorial (?)"))
+            (game.pause_button_rect, f"{tr('ui', 'Pause and Save')} ({get_key_name('pause') or 'F2'})"), 
+            (game.menu_hud_button_rect, f"{tr('ui', 'Toggle UI Menus')} ({get_key_name('toggle_menu') or 'F3'})"),
+            (getattr(game, 'status_button_rect', None), f"{tr('ui', 'Player Status')} ({get_key_name('toggle_status') or 'F5'})"),
+            (getattr(game, 'inventory_button_rect', None), f"{tr('ui', 'Inventory')} ({get_key_name('toggle_inventory') or 'F6'})"),
+            (getattr(game, 'gear_button_rect', None), f"{tr('ui', 'Gear')} ({get_key_name('toggle_gear') or 'F7'})"),
+            (getattr(game, 'slots_button_rect', None), f"{tr('ui', 'Slots Overview')} ({get_key_name('toggle_slots') or 'F9'})"),
+            (getattr(game, 'nearby_button_rect', None), f"{tr('ui', 'Nearby')} ({get_key_name('toggle_nearby') or 'F8'})"),
+            (getattr(game, 'messages_button_rect', None), f"{tr('ui', 'Messages')} ({get_key_name('toggle_messages') or 'F10'})"),
+            (getattr(game, 'crafting_button_rect', None), f"{tr('ui', 'Crafting')} ({get_key_name('toggle_crafting') or 'C'})"),
+            (getattr(game, 'help_button_rect', None), f"{tr('ui', 'Help and Tutorial')} ({get_key_name('help') or 'F1'})")
         ]
         tooltip_targets.extend(mini_status_hover_items)
 

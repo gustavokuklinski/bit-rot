@@ -69,20 +69,27 @@ Before diving in, ensure your system meets the following minimum specifications:
 | **Reload**           | `R`                   | `X Button`            | ✓                   |
 | **Vehicle Engine**   | `Q`                   | `Y Button`            | ✓                   |
 | **Shove**            | `Space`               | `LB (Left Bumper)`    | ✓                   |
-| **Pause**            | `F2/Esc`              | `Start`               | ✓                   |
-| **Toggle Modals**    | `Tab`                 | `RB (Right Bumper)`   | ✓                   |
-| **Reset Modals**     | `F4`                  | `Back`                | ✓                   |
 | **Shoot**            | `Left Click`          | `RT (Right Trigger)`  | ✓                   |
 | **Aim Trigger**      | `Right Click/Control` | `LT (Left Trigger)`   | ✓                   |
-| **Fullscreen**       | `F11`                 | —                     | —                   |
-| **Chat**             | `T`                   | —                     | —                   |
-| **Toggle Inventory** | `I`                   | —                     | —                   |
+
+---
+
+| Modals               | Keyboard / Mouse      | Joystick (Xbox-style) | Joystick Compatible |
+| :------------------- | :-------------------- | :-------------------- | :-----------------: |
+| **Toggle Modals**    | `Tab`                 | `RB (Right Bumper)`   | ✓                   |
+| **Open Chat**        | `T`                   | —                     | —                   |
 | **Toggle Crafting**  | `C`                   | —                     | —                   |
-| **Toggle Status**    | `H`                   | —                     | —                   |
-| **Toggle Gear**      | `G`                   | —                     | —                   |
-| **Toggle Nearby**    | `N`                   | —                     | —                   |
-| **Toggle Messages**  | `M`                   | —                     | —                   |
-| **Toggle Slots**     | `Y`                   | —                     | —                   |
+| **Toggle Help**      | `F1`                  | —                     | —                   |
+| **Pause and Save**   | `F2/Esc`              | `Start`               | ✓                   |
+| **Toggle UI Menus**  | `F3`                  | `Back`                | ✓                   |
+| **Reset Modals**     | `F4`                  | `Back`                | ✓                   |
+| **Toggle Status**    | `F5`                  | —                     | —                   |
+| **Toggle Inventory** | `F6`                  | —                     | —                   |
+| **Toggle Gear**      | `F7`                  | —                     | —                   |
+| **Toggle Nearby**    | `F8`                  | —                     | —                   |
+| **Toggle Slots**     | `F9`                  | —                     | —                   |
+| **Toggle Messages**  | `F10`                 | —                     | —                   |
+| **Fullscreen**       | `F11`                 | —                     | —                   |
 
 
 *Controllers can be edited `data.rot/save/config/keybinds.xml` XML file*

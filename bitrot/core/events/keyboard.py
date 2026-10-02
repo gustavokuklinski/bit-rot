@@ -692,6 +692,7 @@ def handle_keyboard_events(game, event, action_triggered=None):
     # --- 1. KEYBOARD-ONLY UI & CHAT HANDLING (Strictly KEYDOWN) ---
     if event.type == pygame.KEYDOWN:
         
+        # When typing in chat, all other shortcuts are completely disabled
         if getattr(game, 'chat_active', False):
             if event.key == pygame.K_RETURN:
                 if getattr(game, 'chat_input_text', '').strip():
@@ -738,16 +739,56 @@ def handle_keyboard_events(game, event, action_triggered=None):
                     game.chat_input_text += event.unicode
             return 
             
-        if event.key == pygame.K_TAB:
-            toggle_default_ui(game)
+        # Chat activation via 'T' key
+        if event.key == pygame.K_t:
+            game.chat_active = True
+            if not any(m['type'] == 'messages' for m in game.modals):
+                toggle_messages_modal(game)
+            return
+
+        # System & Modal Function Keys
+        if event.key == pygame.K_F1:
+            toggle_help_modal(game)
+            return
+
+        if event.key == pygame.K_F2 or event.key == pygame.K_ESCAPE:
+            toggle_pause(game)
+            return
+
+        if event.key == pygame.K_F3:
+            game.show_hud_menus = not getattr(game, 'show_hud_menus', False)
             return
         
         if event.key == pygame.K_F4:
             reset_modal_positions(game)
             return
 
-        if event.key == pygame.K_m and (pygame.key.get_mods() & pygame.KMOD_SHIFT):
-            game.show_hud_menus = not getattr(game, 'show_hud_menus', False)
+        if event.key == pygame.K_F5:
+            toggle_status_modal(game)
+            return
+
+        if event.key == pygame.K_F6:
+            toggle_inventory_modal(game)
+            return
+
+        if event.key == pygame.K_F7:
+            toggle_gear_modal(game)
+            return
+
+        if event.key == pygame.K_F8:
+            toggle_nearby_modal(game)
+            return
+
+        if event.key == pygame.K_F9:
+            toggle_slots_modal(game)
+            return
+
+        if event.key == pygame.K_F10:
+            toggle_messages_modal(game)
+            return
+
+        if event.key == pygame.K_TAB:
+            toggle_default_ui(game)
             return
 
         if game.modals and not getattr(game, 'hide_modals', False):
@@ -756,12 +797,9 @@ def handle_keyboard_events(game, event, action_triggered=None):
                 if top_modal['instance'].handle_event(event):
                     return
 
-        if event.key == pygame.K_F2 or event.key == pygame.K_ESCAPE:
-            toggle_pause(game)
-            return
-        
         if event.key == pygame.K_F11:
             pygame.display.toggle_fullscreen()
+            return
 
 
         # Hardcoded Hotbar & Zoom bindings
@@ -800,14 +838,20 @@ def handle_keyboard_events(game, event, action_triggered=None):
             if not any(m['type'] == 'messages' for m in game.modals):
                 toggle_messages_modal(game)
             return
-            
-        elif action_triggered == 'toggle_inventory': toggle_inventory_modal(game)
+        elif action_triggered == 'help': toggle_help_modal(game)
+        elif action_triggered == 'pause': toggle_pause(game)
+        elif action_triggered == 'toggle_menu': game.show_hud_menus = not getattr(game, 'show_hud_menus', False)
+        elif action_triggered == 'reset_modals': reset_modal_positions(game)
         elif action_triggered == 'toggle_status': toggle_status_modal(game)
+        elif action_triggered == 'toggle_inventory': toggle_inventory_modal(game)
         elif action_triggered == 'toggle_gear': toggle_gear_modal(game)
         elif action_triggered == 'toggle_nearby': toggle_nearby_modal(game)
-        elif action_triggered == 'toggle_messages': toggle_messages_modal(game)
-        elif action_triggered == 'toggle_crafting': toggle_crafting_modal(game)
         elif action_triggered == 'toggle_slots': toggle_slots_modal(game)
+        elif action_triggered == 'toggle_messages':
+            # Only F10 / action toggles messages; never let 'M' trigger it
+            if not (event.type == pygame.KEYDOWN and event.key == pygame.K_m):
+                toggle_messages_modal(game)
+        elif action_triggered == 'toggle_crafting': toggle_crafting_modal(game)
         elif action_triggered == 'reload':
             if game.player:
                 game.player.reload_active_weapon(game=game)

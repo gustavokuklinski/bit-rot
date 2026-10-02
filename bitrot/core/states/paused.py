@@ -11,7 +11,7 @@ def run_paused(game):
         pygame.mixer.music.pause()
         game.is_mixer_paused = True
 
-    allowed_modals = ['status', 'messages', 'nearby', 'inventory', 'gear', 'container', 'belt', 'slots', 'mobile']
+    allowed_modals = ['status', 'messages', 'nearby', 'inventory', 'gear', 'container', 'belt', 'slots', 'mobile', 'help']
     game.modals = [m for m in game.modals if m.get('type') in allowed_modals]
 
     draw_game(game)

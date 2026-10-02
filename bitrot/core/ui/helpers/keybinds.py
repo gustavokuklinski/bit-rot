@@ -15,26 +15,28 @@ DEFAULT_KB_MOUSE_BINDS = {
     'run': {'val': pygame.K_LSHIFT, 'name': 'Run'},
     'aim': {'val': pygame.K_LCTRL, 'name': 'Aim'},
     'interact': {'val': pygame.K_e, 'name': 'Interact'},
-    'chat': {'val': pygame.K_t, 'name': 'Chat'},
-    'toggle_inventory': {'val': pygame.K_i, 'name': 'Toggle Inventory'},
+    'chat': {'val': pygame.K_t, 'name': 'Chat (T)'},
+    
+    # --- Function Keys F1 - F10 ---
+    'help': {'val': pygame.K_F1, 'name': 'Help and Tutorial (F1)'},
+    'pause': {'val': pygame.K_F2, 'name': 'Pause and Save (F2)'},
+    'toggle_menu': {'val': pygame.K_F3, 'name': 'Toggle UI Menus (F3)'},
+    'reset_modals': {'val': pygame.K_F4, 'name': 'Reset Modals (F4)'},
+    'toggle_status': {'val': pygame.K_F5, 'name': 'Toggle Status (F5)'},
+    'toggle_inventory': {'val': pygame.K_F6, 'name': 'Toggle Inventory (F6)'},
+    'toggle_gear': {'val': pygame.K_F7, 'name': 'Toggle Gear (F7)'},
+    'toggle_nearby': {'val': pygame.K_F8, 'name': 'Toggle Nearby (F8)'},
+    'toggle_slots': {'val': pygame.K_F9, 'name': 'Toggle Slots (F9)'},
+    'toggle_messages': {'val': pygame.K_F10, 'name': 'Toggle Messages (F10)'},
+
     'toggle_crafting': {'val': pygame.K_c, 'name': 'Toggle Crafting'},
-    'toggle_status': {'val': pygame.K_h, 'name': 'Toggle Status'},
-    'toggle_gear': {'val': pygame.K_g, 'name': 'Toggle Gear'},
-    'toggle_nearby': {'val': pygame.K_n, 'name': 'Toggle Nearby'},
-    'toggle_messages': {'val': pygame.K_m, 'name': 'Toggle Messages'},
-    'toggle_slots': {'val': pygame.K_y, 'name': 'Toggle Slots'},
     'reload': {'val': pygame.K_r, 'name': 'Reload Weapon'},
     'vehicle_engine': {'val': pygame.K_q, 'name': 'Toggle Engine'},
     'action_shove': {'val': pygame.K_SPACE, 'name': 'Shove / Brake'},
+    'toggle_modals': {'val': pygame.K_TAB, 'name': 'Toggle Modals (TAB)'},
     
-    # ---> ADDED: System Controls for Keyboard <---
-    'toggle_modals': {'val': pygame.K_TAB, 'name': 'Toggle Modals'},
-    'pause': {'val': pygame.K_F2, 'name': 'Pause Game'},
-    'reset_modals': {'val': pygame.K_F4, 'name': 'Reset Modals'},
-    
-    # Fake Keyboard keys just so the UI has something to show for triggers
-    'shoot': {'val': -1, 'name': 'Shoot / Attack'}, # -1 is Left Click
-    'aim_trigger': {'val': -3, 'name': 'Aim Weapon'} # -3 is Right Click
+    'shoot': {'val': -1, 'name': 'Shoot / Attack'},
+    'aim_trigger': {'val': -3, 'name': 'Aim Weapon'}
 }
 
 # Joystick uses button integers directly (0, 1, 2, 3...)
@@ -127,6 +129,18 @@ class KeybindManager:
                     key_val = bind_node.get('key')
                     if action in self.joy_binds and key_val is not None:
                         self.joy_binds[action] = int(key_val)
+
+            # Auto-migrate legacy 'M' keybind to F9
+            needs_save = False
+            if self.kb_binds.get('toggle_messages') in (pygame.K_m, pygame.K_F9):
+                self.kb_binds['toggle_messages'] = pygame.K_F10
+                needs_save = True
+            if self.kb_binds.get('toggle_slots') in (pygame.K_y,):
+                self.kb_binds['toggle_slots'] = pygame.K_F9
+                needs_save = True
+
+            if needs_save:
+                self.save()
         except Exception as e:
             print(f"Error loading keybinds: {e}")
 
