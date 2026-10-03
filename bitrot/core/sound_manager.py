@@ -170,7 +170,6 @@ class SoundManager:
                 return None
                 
         sound = self.sounds[sound_key]
-
         
         if pitch_variance > 0:
             volume_jitter = random.uniform(1.0 - (pitch_variance * 0.4), 1.0 + (pitch_variance * 0.4))
@@ -205,8 +204,14 @@ class SoundManager:
             # Dynamic general SFX channel (8..31)
             channel = pygame.mixer.find_channel(False)
             if not channel:
-                # Steal oldest non-reserved channel so sounds are never dropped
-                channel = pygame.mixer.find_channel(True)
+                # Pygame's find_channel(True) ignores reserved channels and steals ambience.
+                # We manually rotate through safe channels 8..31
+                if not hasattr(self, 'current_sfx_idx'):
+                    self.current_sfx_idx = 8
+                channel = pygame.mixer.Channel(self.current_sfx_idx)
+                self.current_sfx_idx += 1
+                if self.current_sfx_idx > 31:
+                    self.current_sfx_idx = 8
 
         if not channel:
             return None

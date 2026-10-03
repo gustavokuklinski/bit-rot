@@ -310,6 +310,12 @@ def respawn_player_in_world(game, new_player_data, save_folder_name):
     game.logger.info(f"Respawned new character '{game.player.name}' ({new_player.player_id}) in world '{save_folder_name}'.")
 
 def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
+    # --- FIX: Nuke all lingering audio channels from previous sessions to free them up ---
+    if pygame.mixer.get_init():
+        pygame.mixer.stop()
+        if getattr(core.data.config, 'UI_BACKGROUND_MUSIC', False):
+            game.sound_manager.play_music('data.rot/lib/sfx/ui/music.ogg', volume=getattr(core.data.config, 'VOLUME_MUSIC', 0.5))
+
     game.is_giant_map = False
     
     game.all_map_layers = {}
@@ -405,7 +411,6 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             game_settings = load_config_data(default_path)
         save_config_xml(game_settings, world_xml_path)
 
-    # Load its world.xml directly from inside the save folder
     if os.path.exists(world_xml_path):
         core.data.config.load_settings(world_xml_path)
 
@@ -486,13 +491,11 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     if hasattr(game, 'map_width_pixels') and hasattr(game, 'map_height_pixels'):
         game.quadtree = Quadtree(pygame.Rect(0, 0, game.map_width_pixels, game.map_height_pixels))
     
-
     is_in_lobby = getattr(game, 'generator', None) and hasattr(game.generator, 'lobby_chunk') and \
                   game.generator.start_chunk == game.generator.lobby_chunk
 
     if spawn_entities:
         if is_in_lobby:
-            # Spawn 3 friendly NPCs in the lobby
             spawned_lobby_npcs = 0
             if game.current_layer_index in game.all_spawn_layers:
                 spawn_layer = game.all_spawn_layers[game.current_layer_index]
@@ -509,7 +512,6 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
                             game.npcs.add(npc)
                             spawned_lobby_npcs += 1
 
-            # Fallback to ensure 3 NPCs exist if markers were obstructed
             while spawned_lobby_npcs < 3:
                 offset_x = random.randint(-4, 4) * TILE_SIZE
                 offset_y = random.randint(-4, 4) * TILE_SIZE

@@ -46,10 +46,14 @@ def run_game_over(game):
                 else:
                     game.current_save_folder_name = None
                     game.game_state = 'MENU'
+                    if pygame.mixer.get_init() and getattr(core.data.config, 'UI_BACKGROUND_MUSIC', False):
+                        game.sound_manager.play_music('data.rot/lib/sfx/ui/music.ogg', volume=getattr(core.data.config, 'VOLUME_MUSIC', 0.5))
                     return
             elif event.key == pygame.K_ESCAPE:
                 game.current_save_folder_name = None
                 game.game_state = 'MENU'
+                if pygame.mixer.get_init() and getattr(core.data.config, 'UI_BACKGROUND_MUSIC', False):
+                    game.sound_manager.play_music('data.rot/lib/sfx/ui/music.ogg', volume=getattr(core.data.config, 'VOLUME_MUSIC', 0.5))
                 return
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -66,6 +70,8 @@ def run_game_over(game):
             elif menu_btn.collidepoint(mouse_pos):
                 game.current_save_folder_name = None
                 game.game_state = 'MENU'
+                if pygame.mixer.get_init() and getattr(core.data.config, 'UI_BACKGROUND_MUSIC', False):
+                    game.sound_manager.play_music('data.rot/lib/sfx/ui/music.ogg', volume=getattr(core.data.config, 'VOLUME_MUSIC', 0.5))
                 return
 
     game._update_screen()
