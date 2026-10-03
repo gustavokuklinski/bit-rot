@@ -1491,7 +1491,9 @@ def handle_mouse_up(game, event, mouse_pos):
                             )
                             game.dragged_item.x = game.dragged_item.rect.x
                             game.dragged_item.y = game.dragged_item.rect.y
-                            game.dragged_item.is_placed = False # <--- [FIX] Ensure it drops small
+                            game.dragged_item.is_placed = False
+                            game.dragged_item.layer = getattr(game, 'current_layer_index', 1)
+                            game.dragged_item.map_filename = getattr(game.map_manager, 'current_map_filename', '')
                             
                             if getattr(game, 'is_client', False) and getattr(game, 'client', None):
                                 from core.server.network import NetMsg, send_msg
@@ -1499,6 +1501,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                     'type': NetMsg.WORLD_ACTION, 'action': 'drop',
                                     'item_data': game.dragged_item.to_dict(),
                                     'x': game.dragged_item.x, 'y': game.dragged_item.y,
+                                    'layer': game.dragged_item.layer,
                                     'is_placed': False
                                 })
                             

@@ -44,31 +44,42 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
         if (cgx, cgy) == game.generator.lobby_chunk and layer_idx == 1:
             is_lobby_surface = True
 
-    # 2. Tile-Based Fog of War
+    # 2. Tile-Based Fog of War with Cross-Layer Persistence
+    if not hasattr(game, 'explored_tiles_dict'):
+        game.explored_tiles_dict = {}
+
+    # Save active exploration state for previous map before switching
+    prev_map = getattr(game, 'explored_map_name', None)
+    if prev_map and prev_map != curr_map and hasattr(game, 'explored_tiles'):
+        game.explored_tiles_dict[prev_map] = game.explored_tiles
+
     if (not hasattr(game, 'explored_tiles') or 
         len(game.explored_tiles) != expected_size or 
         getattr(game, 'explored_map_name', '') != curr_map):
-        
-        game.explored_tiles = bytearray(expected_size)
-        game.explored_map_name = curr_map
-        
-        if is_lobby_surface:
-            # Only surface Lobby_L1 is pre-revealed
-            for i in range(expected_size):
-                game.explored_tiles[i] = 1
+
+        if curr_map in game.explored_tiles_dict and len(game.explored_tiles_dict[curr_map]) == expected_size:
+            game.explored_tiles = game.explored_tiles_dict[curr_map]
+            game.explored_map_name = curr_map
         else:
-            # All underground maps (including Lobby_L3) start dark with standard fog of war
-            ground_data = getattr(game, 'ground_data', [])
-            base_data = getattr(game, 'map_data', [])
-            for ty in range(map_h):
-                row_idx = ty * map_w
-                for tx in range(map_w):
-                    g_char = ground_data[ty][tx] if ty < len(ground_data) and tx < len(ground_data[ty]) else ''
-                    b_char = base_data[ty][tx] if ty < len(base_data) and tx < len(base_data[ty]) else ''
-                    
-                    if (g_char and ('water_' in g_char or 'petrol_' in g_char)) or \
-                       (b_char and ('water_' in b_char or 'petrol_' in b_char)):
-                        game.explored_tiles[row_idx + tx] = 1
+            game.explored_tiles = bytearray(expected_size)
+            game.explored_map_name = curr_map
+
+            if is_lobby_surface:
+                for i in range(expected_size):
+                    game.explored_tiles[i] = 1
+            else:
+                ground_data = getattr(game, 'ground_data', [])
+                base_data = getattr(game, 'map_data', [])
+                for ty in range(map_h):
+                    row_idx = ty * map_w
+                    for tx in range(map_w):
+                        g_char = ground_data[ty][tx] if ty < len(ground_data) and tx < len(ground_data[ty]) else ''
+                        b_char = base_data[ty][tx] if ty < len(base_data) and tx < len(base_data[ty]) else ''
+                        if (g_char and ('water_' in g_char or 'petrol_' in g_char)) or \
+                           (b_char and ('water_' in b_char or 'petrol_' in b_char)):
+                            game.explored_tiles[row_idx + tx] = 1
+
+            game.explored_tiles_dict[curr_map] = game.explored_tiles
 
     ambient = int(game.world_time.current_ambient_light)
     light_mask_low = game.light_mask_low_cache

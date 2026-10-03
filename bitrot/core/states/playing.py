@@ -20,6 +20,15 @@ def run_playing(game):
     handle_input(game)
     game.frame_count += 1
 
+    # Update Discord Rich Presence
+    if hasattr(game, 'discord_rpc') and game.player:
+        days = getattr(game.world_time, 'day_count', 0)
+        kills = getattr(game, 'zombies_killed', 0)
+        game.discord_rpc.update_presence(
+            details=f"Surviving: Day {days} | Kills: {kills}",
+            state=f"Player: {game.player.name}"
+        )
+
     current_z_count = len(game.zombies)
     current_i_count = len(game.items_on_ground)
     current_c_count = len(game.containers)

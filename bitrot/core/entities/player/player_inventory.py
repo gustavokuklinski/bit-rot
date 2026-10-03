@@ -160,13 +160,14 @@ class PlayerInventory:
                     self.drop_item(game, source, index, container_item) 
         
         if item_to_drop:
-            # [FIX] STRICT SNAP: Same as drop_item
             snap_x = (self.rect.x // TILE_SIZE) * TILE_SIZE
             snap_y = (self.rect.y // TILE_SIZE) * TILE_SIZE
             
             item_to_drop.rect.topleft = (snap_x, snap_y)
             item_to_drop.x = snap_x
             item_to_drop.y = snap_y
+            item_to_drop.layer = getattr(game, 'current_layer_index', 1)
+            item_to_drop.map_filename = getattr(game.map_manager, 'current_map_filename', '')
 
             found_pos = find_free_tile(
                 item_to_drop.rect, 
@@ -189,6 +190,7 @@ class PlayerInventory:
                     'item_data': item_to_drop.to_dict(), 
                     'x': item_to_drop.x, 
                     'y': item_to_drop.y, 
+                    'layer': item_to_drop.layer,
                     'is_placed': False
                 })
             
@@ -365,17 +367,15 @@ class PlayerInventory:
             item_to_drop = container_item.inventory.pop(index)
 
         if item_to_drop:
-            # [FIX] SNAP TO GRID: Determine the exact top-left corner of the player's tile
             snap_x = (self.rect.x // TILE_SIZE) * TILE_SIZE
             snap_y = (self.rect.y // TILE_SIZE) * TILE_SIZE
             
-            # Set the item to that exact grid position
             item_to_drop.rect.topleft = (snap_x, snap_y)
             item_to_drop.x = snap_x
             item_to_drop.y = snap_y
+            item_to_drop.layer = getattr(game, 'current_layer_index', 1)
+            item_to_drop.map_filename = getattr(game.map_manager, 'current_map_filename', '')
             
-            # [FIX] COLLISION CHECK: Ensure it doesn't spawn inside a wall
-            # We pass items_on_ground=None to allow multiple items to stack on one tile
             found_pos = find_free_tile(
                 item_to_drop.rect, 
                 game.obstacles, 
@@ -399,9 +399,10 @@ class PlayerInventory:
                     'item_data': item_to_drop.to_dict(), 
                     'x': item_to_drop.x, 
                     'y': item_to_drop.y, 
+                    'layer': item_to_drop.layer,
                     'is_placed': False
                 })
-                
+            
             if item_to_drop not in game.items_on_ground:
                 game.items_on_ground.append(item_to_drop)
 

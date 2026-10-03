@@ -203,8 +203,8 @@ class PlayerActions:
 
         is_on_ground = (source == 'ground') or (source == 'nearby' and getattr(container_item, 'item_type', '') == 'ground')
 
-        # Prevent turning on/off campfires and lanterns if they are not explicitly placed on the ground
-        restricted_toggle_items = ["Campfire", "Lantern"]
+        # Prevent turning on/off campfires if they are not explicitly placed on the ground
+        restricted_toggle_items = ["Campfire"]
         if any(name in item.name for name in restricted_toggle_items):
             if not is_on_ground or not getattr(item, 'is_placed', False):
                 display_message(tr('msg', "This item can only be turned on/off when Placed on the ground."))
@@ -444,7 +444,7 @@ class PlayerActions:
         elif item_type in ['utility', 'mobile']:
             item_state = getattr(item, 'state', '')
             
-            is_restricted_toggle = any(name in getattr(item, 'name', '') for name in ["Campfire", "Lantern"])
+            is_restricted_toggle = any(name in getattr(item, 'name', '') for name in ["Campfire"])
             is_on_ground = (source == 'ground') or (source == 'nearby' and getattr(container_item, 'item_type', '') == 'ground')
             can_toggle = True
             

@@ -11,6 +11,9 @@ from core.ui.helpers.preferences import preferences_ui
 from core.ui.helpers.start_loading import draw_loading_screen
 
 def run_menu(game):
+    if hasattr(game, 'discord_rpc'):
+        game.discord_rpc.update_presence(state="Main Menu", details="Browsing menus")
+        
     events = game.get_events()
     mouse_pos = game._get_scaled_mouse_pos()
     save_dir = os.path.join(get_writable_dir(), "data.rot", "save", "game")

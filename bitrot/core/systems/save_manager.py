@@ -1,6 +1,7 @@
 import os
 import shutil
 import json
+import re
 import socket
 import platform
 import uuid
@@ -115,7 +116,6 @@ def save_game(game):
             "milestone_progress": getattr(game.player, 'milestone_progress', {})
         }
 
-        # Save player file to data.rot/save/game/save_<TIMESTAMP>/player/<PLAYER_ID>.rot
         player_file_path = os.path.join(player_dir, f"{player_id}.rot")
         with open(player_file_path, "w") as f:
             json.dump(player_data, f, indent=4)
@@ -129,7 +129,6 @@ def save_game(game):
             "remote": {}
         }
 
-        # Load existing players in host.rot if file exists
         if os.path.exists(host_path):
             try:
                 with open(host_path, "r") as f:
@@ -144,7 +143,6 @@ def save_game(game):
             except Exception as e:
                 game.logger.info(f"Could not read existing host.rot: {e}")
 
-        # Update or add host player entry
         host_data["host"][player_id] = {
             "name": game.player.name,
             "playerID": f"{player_id}.rot",
@@ -158,62 +156,105 @@ def save_game(game):
 
         # --- 3. SAVE NPCS ---
         npc_data = []
-        for npc in game.npcs:
+        saved_npc_ids = set()
+
+        def add_npc_to_save(npc_obj, map_fname, l_idx):
+            n_id = getattr(npc_obj, 'id', None)
+            if n_id and n_id in saved_npc_ids: return
+            if n_id: saved_npc_ids.add(n_id)
+
             safe_clothes = {}
-            for slot, item in npc.clothes.items():
+            for slot, item in npc_obj.clothes.items():
                 safe_clothes[slot] = item.to_dict() if (item and hasattr(item, 'to_dict')) else item
 
-            safe_inventory = [i.to_dict() if hasattr(i, 'to_dict') else i for i in npc.inventory]
-            safe_weapon = npc.equipped_weapon.to_dict() if (npc.equipped_weapon and hasattr(npc.equipped_weapon, 'to_dict')) else npc.equipped_weapon
-            safe_trade_stock = [i.to_dict() if hasattr(i, 'to_dict') else i for i in getattr(npc, 'trade_stock', [])]
+            safe_inventory = [i.to_dict() if hasattr(i, 'to_dict') else i for i in npc_obj.inventory]
+            safe_weapon = npc_obj.equipped_weapon.to_dict() if (npc_obj.equipped_weapon and hasattr(npc_obj.equipped_weapon, 'to_dict')) else npc_obj.equipped_weapon
+            safe_trade_stock = [i.to_dict() if hasattr(i, 'to_dict') else i for i in getattr(npc_obj, 'trade_stock', [])]
+
+            actual_layer = getattr(npc_obj, 'layer', l_idx)
+            actual_map = getattr(npc_obj, 'map_filename', map_fname)
 
             npc_data.append({
-                "id": getattr(npc, 'id', None),
-                "x": npc.rect.x,
-                "y": npc.rect.y,
-                "name": npc.name,
-                "health": npc.health,
-                "max_health": getattr(npc, 'max_health', 100),
-                "is_friendly": npc.is_friendly,
-                "is_static": getattr(npc, 'is_static', False),
+                "id": n_id,
+                "x": npc_obj.rect.x,
+                "y": npc_obj.rect.y,
+                "layer": actual_layer,
+                "map_filename": actual_map,
+                "name": npc_obj.name,
+                "health": npc_obj.health,
+                "max_health": getattr(npc_obj, 'max_health', 100),
+                "is_friendly": npc_obj.is_friendly,
+                "is_static": getattr(npc_obj, 'is_static', False),
                 "inventory": safe_inventory,
                 "equipped_weapon": safe_weapon,
                 "clothes": safe_clothes,
                 "trade_stock": safe_trade_stock,
-                "loot_table": getattr(npc, 'loot_table', []),
-                "dialog_flags": list(getattr(npc, 'dialog_flags', []))
+                "loot_table": getattr(npc_obj, 'loot_table', []),
+                "dialog_flags": list(getattr(npc_obj, 'dialog_flags', []))
             })
+
+        curr_map = getattr(game.map_manager, 'current_map_filename', '')
+        curr_layer = getattr(game, 'current_layer_index', 1)
         
+        for n in game.npcs:
+            add_npc_to_save(n, curr_map, curr_layer)
+            
+        for map_fname, m_state in getattr(game, 'map_states', {}).items():
+            if map_fname == curr_map: continue
+            m_match = re.search(r'map_L(\d+)_', map_fname)
+            l_idx = int(m_match.group(1)) if m_match else 1
+            for n in m_state.get('npcs', []):
+                add_npc_to_save(n, map_fname, l_idx)
+
         with open(os.path.join(save_path, "npc.rot"), "w") as f:
             json.dump(npc_data, f, indent=4)
 
         # --- 4. SAVE ZOMBIES ---
         zombie_data = []
-        for z in game.zombies:
-            if getattr(z, 'type', 'zombie') == 'animal': continue
-            
+        saved_zombie_ids = set()
+
+        def add_zombie_to_save(z_obj, map_fname, l_idx):
+            if getattr(z_obj, 'type', 'zombie') == 'animal': return
+            z_id = getattr(z_obj, 'id', None)
+            if z_id and z_id in saved_zombie_ids: return
+            if z_id: saved_zombie_ids.add(z_id)
+
             safe_clothes = {}
-            if hasattr(z, 'clothes') and z.clothes:
-                for slot, item in z.clothes.items():
+            if hasattr(z_obj, 'clothes') and z_obj.clothes:
+                for slot, item in z_obj.clothes.items():
                     safe_clothes[slot] = item.to_dict() if (item and hasattr(item, 'to_dict')) else item
-            
-            safe_inventory = [i.to_dict() if hasattr(i, 'to_dict') else i for i in getattr(z, 'inventory', [])]
+
+            safe_inventory = [i.to_dict() if hasattr(i, 'to_dict') else i for i in getattr(z_obj, 'inventory', [])]
+            actual_layer = getattr(z_obj, 'layer', l_idx)
+            actual_map = getattr(z_obj, 'map_filename', map_fname)
 
             zombie_data.append({
-                "id": getattr(z, 'id', None),
-                "x": z.x,
-                "y": z.y,
-                "health": z.health,
-                "max_health": getattr(z, 'max_health', 10),
-                "name": getattr(z, 'name', 'Zombie'),
-                "sex": getattr(z, 'sex', 'Male'),
-                "vaccine": getattr(z, 'vaccine', False),
-                "speed": getattr(z, 'speed', 1.0),
-                "loot_table": getattr(z, 'loot_table', []),
+                "id": z_id,
+                "x": z_obj.x,
+                "y": z_obj.y,
+                "layer": actual_layer,
+                "map_filename": actual_map,
+                "health": z_obj.health,
+                "max_health": getattr(z_obj, 'max_health', 10),
+                "name": getattr(z_obj, 'name', 'Zombie'),
+                "sex": getattr(z_obj, 'sex', 'Male'),
+                "vaccine": getattr(z_obj, 'vaccine', False),
+                "speed": getattr(z_obj, 'speed', 1.0),
+                "loot_table": getattr(z_obj, 'loot_table', []),
                 "inventory": safe_inventory,
                 "clothes": safe_clothes,
-                "sprites": getattr(z, 'sprites_data', {})
+                "sprites": getattr(z_obj, 'sprites_data', {})
             })
+
+        for z in game.zombies:
+            add_zombie_to_save(z, curr_map, curr_layer)
+            
+        for map_fname, m_state in getattr(game, 'map_states', {}).items():
+            if map_fname == curr_map: continue
+            m_match = re.search(r'map_L(\d+)_', map_fname)
+            l_idx = int(m_match.group(1)) if m_match else 1
+            for z in m_state.get('zombies', []):
+                add_zombie_to_save(z, map_fname, l_idx)
 
         with open(os.path.join(save_path, "zombies.rot"), "w") as f:
             json.dump(zombie_data, f, indent=4)
@@ -272,7 +313,7 @@ def save_game(game):
         with open(os.path.join(save_path, "vehicles.rot"), "w") as f:
             json.dump(vehicle_data, f, indent=4)
 
-        # --- 7. SAVE CONTAINERS & GROUND ITEMS (Including corpses) ---
+        # --- 7. SAVE CONTAINERS & GROUND ITEMS ACROSS ALL LAYERS ---
         container_data = []
         saved_container_keys = set()
 
@@ -294,15 +335,62 @@ def save_game(game):
                 "is_opened": True
             })
 
+        if curr_map:
+            game.map_states.setdefault(curr_map, {})
+            game.map_states[curr_map]['items_on_ground'] = [
+                it for it in game.items_on_ground if not isinstance(it, Animal) and getattr(it, 'type', '') != 'animal'
+            ]
+
         safe_ground_items = []
-        for i in game.items_on_ground:
-            if isinstance(i, Animal): continue
-            item_data = i.to_dict() if hasattr(i, 'to_dict') else i
+        seen_item_ids = set()
+
+        def add_item_to_save(it, map_fname, layer_idx):
+            if not it or isinstance(it, Animal) or getattr(it, 'type', '') == 'animal':
+                return
+            item_id = getattr(it, 'id', None)
+            if item_id and item_id in seen_item_ids:
+                return
+            if item_id:
+                seen_item_ids.add(item_id)
+
+            actual_layer = layer_idx
+            if hasattr(it, 'layer') and it.layer is not None:
+                actual_layer = it.layer
+            elif layer_idx is not None:
+                actual_layer = layer_idx
+                it.layer = layer_idx
+
+            actual_map = map_fname
+            if hasattr(it, 'map_filename') and it.map_filename:
+                actual_map = it.map_filename
+            else:
+                it.map_filename = map_fname
+
+            item_data = it.to_dict() if hasattr(it, 'to_dict') else it
+            if isinstance(item_data, dict):
+                item_data['layer'] = actual_layer
+                item_data['map_filename'] = actual_map
+                if getattr(it, 'is_placed', False):
+                    item_data['is_placed'] = True
+
             safe_ground_items.append({
                 "data": item_data,
-                "x": i.rect.x if hasattr(i, 'rect') else i.x,
-                "y": i.rect.y if hasattr(i, 'rect') else i.y
+                "x": it.rect.x if hasattr(it, 'rect') else it.x,
+                "y": it.rect.y if hasattr(it, 'rect') else it.y,
+                "layer": actual_layer,
+                "map_filename": actual_map
             })
+
+        for it in game.items_on_ground:
+            add_item_to_save(it, curr_map, curr_layer)
+
+        for map_fname, m_state in getattr(game, 'map_states', {}).items():
+            if map_fname == curr_map:
+                continue
+            m_match = re.search(r'map_L(\d+)_', map_fname)
+            l_idx = int(m_match.group(1)) if m_match else 1
+            for it in m_state.get('items_on_ground', []):
+                add_item_to_save(it, map_fname, l_idx)
 
         saved_barricades = []
         for map_name, m_state in game.map_states.items():
@@ -319,6 +407,15 @@ def save_game(game):
                         'remove_time': b['remove_time']
                     })
 
+        saved_explored_tiles = {}
+        if hasattr(game, 'explored_tiles_dict'):
+            curr_map_name = getattr(game.map_manager, 'current_map_filename', '')
+            if curr_map_name and hasattr(game, 'explored_tiles'):
+                game.explored_tiles_dict[curr_map_name] = game.explored_tiles
+            for m_name, b_arr in game.explored_tiles_dict.items():
+                if isinstance(b_arr, (bytearray, bytes)):
+                    saved_explored_tiles[m_name] = b_arr.hex()
+
         world_data = {
             "time": {
                 "game_time_ms": game.world_time.game_time_ms,
@@ -331,12 +428,13 @@ def save_game(game):
             "app_slots": [i.to_dict() if hasattr(i, 'to_dict') else i for i in getattr(game, 'app_state', {}).get('slots', [])],
             "barricades": saved_barricades,
             "radio_frequencies": getattr(game, 'radio_frequencies', {}),
-            "current_radio_freq": getattr(game, 'current_radio_freq', 110.42)
+            "current_radio_freq": getattr(game, 'current_radio_freq', 110.42),
+            "explored_tiles": saved_explored_tiles
         }
+
         with open(os.path.join(save_path, "world.rot"), "w") as f:
             json.dump(world_data, f, indent=4)
 
-        # Quests
         if NPCDialog.NPC_DIALOGS is None:
             NPCDialog.load_dialogs(game)
 

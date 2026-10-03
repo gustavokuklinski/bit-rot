@@ -4,3 +4,4 @@ faker
 pillow
 cryptography
 msgpack
+pypresence

@@ -89,6 +89,8 @@ class Item:
 
         self.place_items = place_items if place_items is not None else []
         self.place_time = place_time
+        self.layer = 1
+        self.map_filename = None
 
     def get_total_weight(self):
         """Calculates total weight including contents and reductions."""
@@ -142,6 +144,8 @@ class Item:
             'durability': self.durability,
             'load': self.load,
             'state': self.state,
+            'layer': getattr(self, 'layer', 1),
+            'map_filename': getattr(self, 'map_filename', None),
             'inventory': [i.to_dict() if hasattr(i, 'to_dict') else i for i in self.inventory] if self.inventory else []
         }
 
@@ -189,6 +193,8 @@ class Item:
         if 'state' in data: item.state = data['state']
         if 'in_belt' in data: item.in_belt = data['in_belt']
         if 'is_placed' in data: item.is_placed = data['is_placed']
+        item.layer = data.get('layer', 1)
+        item.map_filename = data.get('map_filename', None)
 
         if 'text' in data: 
             item.text = data['text']
@@ -279,7 +285,7 @@ class Item:
 
     def is_stackable(self):
         return (self.capacity is not None and self.capacity > 1 and 
-                self.durability is None and self.item_type in ['consumable','currency','resource','reciple','car_fuel','consumable_medication','consumable_drugs','consumable_drink','consumable_ammo','consumable_food', 'utility', 'liquid'])
+                self.durability is None and self.item_type in ['weapon_throw','consumable','currency','resource','reciple','car_fuel','consumable_medication','consumable_drugs','consumable_drink','consumable_ammo','consumable_food', 'utility', 'liquid'])
 
     def can_stack_with(self, other_item):
         if not self.is_stackable() or not other_item.is_stackable():

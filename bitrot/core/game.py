@@ -23,6 +23,7 @@ from core.ui.helpers.player_setup import run_player_setup
 
 # The newly refactored systems
 from core.systems.spatial_manager import SpatialManager
+from core.systems.discord_manager import DiscordManager
 from core.states.menu import run_menu
 from core.states.load_game_menu import run_load_game_menu
 from core.states.loading import run_loading
@@ -106,7 +107,7 @@ class Game:
 
         # Initializes the spatial logic that used to live in here
         self.spatial_manager = SpatialManager(self)
-
+        self.discord_rpc = DiscordManager()
         self.frame_count = 0
         self.npcs = pygame.sprite.Group()
         self.npc_spawn_timer = 0 

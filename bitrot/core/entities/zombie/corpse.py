@@ -10,7 +10,7 @@ PLAYER_CORPSE_DECAY_MS = 30 * 60 * 1000  # 30 minutes in milliseconds (1,800,000
 class Corpse(Item):
     """Lootable corpse container with automatic decay."""
 
-    def __init__(self, name="Dead corpse", capacity=15, image_path=None, pos=(0, 0), decay_ms=160000, is_permanent=False, is_player_corpse=False):
+    def __init__(self, name="Dead corpse", capacity=15, image_path=None, pos=(0, 0), decay_ms=160000, is_permanent=False, is_player_corpse=False, layer=1, map_filename=None):
         img_path = image_path or "zombie/dead.png"
         super().__init__(name, 'container', capacity=capacity, sprite_file=img_path)
         
@@ -18,6 +18,8 @@ class Corpse(Item):
         self.rect.center = pos
         self.x = self.rect.x
         self.y = self.rect.y
+        self.layer = layer
+        self.map_filename = map_filename
         
         self.spawn_time = pygame.time.get_ticks()
         self.decay_ms = decay_ms
@@ -53,6 +55,10 @@ class Corpse(Item):
         data['is_player_corpse'] = getattr(self, 'is_player_corpse', False)
         data['is_placed'] = getattr(self, 'is_placed', False)
         data['decay_ms'] = getattr(self, 'decay_ms', None)
+
+        data['decay_ms'] = getattr(self, 'decay_ms', None)
+        data['layer'] = getattr(self, 'layer', 1)
+        data['map_filename'] = getattr(self, 'map_filename', None)
 
         # Track remaining lifetime so reloading doesn't reset or prematurely delete the corpse
         now_ms = pygame.time.get_ticks()

@@ -761,6 +761,8 @@ class GameServer:
             elif action == 'player_death':
                 p_x = msg.get('x', 0)
                 p_y = msg.get('y', 0)
+                p_layer = msg.get('layer', getattr(self.game, 'current_layer_index', 1))
+                p_map = msg.get('map_filename', getattr(self.game.map_manager, 'current_map_filename', ''))
                 p_name = msg.get('name', 'Survivor')
                 corpse = Corpse(
                     name=f"Corpse of {p_name}",
@@ -768,13 +770,25 @@ class GameServer:
                     pos=(p_x, p_y),
                     image_path="player/dead.png",
                     decay_ms=1800000,
-                    is_player_corpse=True
+                    is_player_corpse=True,
+                    layer=p_layer,
+                    map_filename=p_map
                 )
                 from core.entities.item.item import Item
                 for i_data in msg.get('inventory', []):
                     it = Item.from_dict(i_data) if isinstance(i_data, dict) else Item.create_from_name(i_data)
                     if it: corpse.inventory.append(it)
-                self.game.items_on_ground.append(corpse)
+
+                active_map = getattr(self.game.map_manager, 'current_map_filename', '')
+                active_layer = getattr(self.game, 'current_layer_index', 1)
+
+                if p_map == active_map and p_layer == active_layer:
+                    self.game.items_on_ground.append(corpse)
+                else:
+                    self.game.map_states.setdefault(p_map, {})
+                    self.game.map_states[p_map].setdefault('items_on_ground', [])
+                    self.game.map_states[p_map]['items_on_ground'].append(corpse)
+
                 if c_info.get('player'):
                     c_info['player'].is_dead = True
                 save_data = c_info.get('last_data', {})

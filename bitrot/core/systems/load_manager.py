@@ -111,10 +111,12 @@ def handle_player_death(game):
 
     game.player.is_dead = True
     death_pos = (game.player.rect.centerx, game.player.rect.centery)
+    death_layer = getattr(game, 'current_layer_index', 1)
+    death_map = getattr(game.map_manager, 'current_map_filename', f"map_L{death_layer}_0_0_map.csv")
     player_id = getattr(game.player, 'player_id', None) or str(uuid.uuid4())
 
     if hasattr(game, 'logger'):
-        game.logger.info(f"Player '{game.player.name}' (ID: {player_id}) died at {death_pos}. Creating 30-minute yellow corpse...")
+        game.logger.info(f"Player '{game.player.name}' (ID: {player_id}) died at {death_pos} on Layer {death_layer} ({death_map}). Creating 30-minute yellow corpse...")
 
     # 1. Safely exit vehicle if seated
     if getattr(game.player, 'vehicle', None):
@@ -124,7 +126,7 @@ def handle_player_death(game):
             if hasattr(game, 'logger'):
                 game.logger.info(f"Error exiting vehicle on death: {e}")
 
-    # 2. Create yellow corpse with 30-minute (1,800,000 ms) decay timer
+    # 2. Create yellow corpse permanently tagged with the exact layer of death
     try:
         PLAYER_CORPSE_DECAY_MS = 30 * 60 * 1000  # 30 minutes in milliseconds
         corpse = Corpse(
@@ -134,8 +136,12 @@ def handle_player_death(game):
             image_path="player/dead.png",
             decay_ms=PLAYER_CORPSE_DECAY_MS,
             is_permanent=False,
-            is_player_corpse=True
+            is_player_corpse=True,
+            layer=death_layer,
+            map_filename=death_map
         )
+        corpse.layer = death_layer
+        corpse.map_filename = death_map
 
         # Inventory and Belt
         for it in list(getattr(game.player, 'inventory', [])):
@@ -149,9 +155,21 @@ def handle_player_death(game):
             if it and str(slot).lower() in util_slots:
                 corpse.inventory.append(it)
 
-        game.items_on_ground.append(corpse)
+        if corpse not in game.items_on_ground:
+            game.items_on_ground.append(corpse)
+
+        # Record corpse into the death map's state
+        if not hasattr(game, 'map_states'):
+            game.map_states = {}
+        game.map_states.setdefault(death_map, {})
+        if 'items_on_ground' not in game.map_states[death_map]:
+            game.map_states[death_map]['items_on_ground'] = []
+        if corpse not in game.map_states[death_map]['items_on_ground']:
+            game.map_states[death_map]['items_on_ground'].append(corpse)
+
         if hasattr(game, 'spatial_manager'):
             game.spatial_manager.rebuild_item_grid(force=True)
+
     except Exception as e:
         if hasattr(game, 'logger'):
             game.logger.info(f"Error creating corpse on death: {e}")
@@ -171,6 +189,8 @@ def handle_player_death(game):
             'action': 'player_death',
             'x': death_pos[0],
             'y': death_pos[1],
+            'layer': death_layer,
+            'map_filename': death_map,
             'name': game.player.name,
             'inventory': items_payload
         })
@@ -612,7 +632,6 @@ def load_game(game, save_folder_name):
     
     game.logger.info(f"Loading game from {save_path}...")
 
-    # Load settings directly from the save folder's world.xml
     world_xml_path = os.path.join(save_path, "world.xml")
     if os.path.exists(world_xml_path):
         core.data.config.load_settings(world_xml_path)
@@ -676,9 +695,10 @@ def load_game(game, save_folder_name):
         game.zombies_killed = player_data.get('zombies_killed', 0)
 
         target_map = player_data.get('map_filename')
-        if target_map and target_map != game.map_manager.current_map_filename:
-            game.logger.info(f"Switching to saved map: {target_map}")
-            load_map(game, target_map)
+        if not getattr(game, '_is_respawning_player', False):
+            if target_map and target_map != game.map_manager.current_map_filename:
+                game.logger.info(f"Switching to saved map: {target_map}")
+                load_map(game, target_map)
         
         game.map_manager.map_folder = map_path
         game.map_manager.refresh_maps()
@@ -799,22 +819,49 @@ def load_game(game, save_folder_name):
                 layer_int = int(layer_str)
                 game.layer_spawn_triggers[layer_int] = set(tuple(c) for c in coords_list)
             except Exception as e:
-                game.logger.info(f"Error restoring triggers for layer {layer_str}: {e}")
+                pass
         
-        # Load items on ground with corpse recreation
+        active_map = game.map_manager.current_map_filename
+        active_layer = getattr(game, 'current_layer_index', 1)
+
         game.items_on_ground = []
+        if not hasattr(game, 'map_states'):
+            game.map_states = {}
+
+        if 'explored_tiles' in world_data and isinstance(world_data['explored_tiles'], dict):
+            if not hasattr(game, 'explored_tiles_dict'):
+                game.explored_tiles_dict = {}
+            for m_name, hex_data in world_data['explored_tiles'].items():
+                try:
+                    game.explored_tiles_dict[m_name] = bytearray.fromhex(hex_data)
+                except Exception:
+                    pass
+            if active_map in game.explored_tiles_dict:
+                game.explored_tiles = game.explored_tiles_dict[active_map]
+                game.explored_map_name = active_map
+
         saved_items = world_data.get('items', [])
 
         for i_data in saved_items:
             try:
                 data = i_data.get('data', {})
+                item_layer = i_data.get('layer')
+                if item_layer is None:
+                    item_layer = data.get('layer', 1)
                 
+                item_map = i_data.get('map_filename') or data.get('map_filename')
+                if item_map:
+                    m_layer = re.search(r'map_L(\d+)_', item_map)
+                    if m_layer:
+                        item_layer = int(m_layer.group(1))
+                else:
+                    item_map = re.sub(r'map_L\d+_', f'map_L{item_layer}_', active_map)
+
                 if data.get('is_corpse') or (isinstance(data.get('name'), str) and data['name'].startswith('Corpse')):
                     name = data.get('name', 'Dead corpse')
                     image_path = data.get('image_path')
                     is_player_corpse = data.get('is_player_corpse', False) or ('of' in name.lower() and 'zombie' not in name.lower())
                     
-                    # 30 minutes default for player corpse, 10 minutes for standard corpses
                     default_decay = (30 * 60 * 1000) if is_player_corpse else 600000
                     remaining_decay = data.get('remaining_decay_ms', data.get('decay_ms', default_decay))
                     is_permanent = data.get('is_permanent', False)
@@ -822,10 +869,16 @@ def load_game(game, save_folder_name):
                     item = Corpse(
                         name=name, 
                         image_path=image_path,
+                        pos=(int(i_data.get('x', 0)), int(i_data.get('y', 0))),
                         decay_ms=remaining_decay,
                         is_permanent=is_permanent,
-                        is_player_corpse=is_player_corpse
+                        is_player_corpse=is_player_corpse,
+                        layer=item_layer,
+                        map_filename=item_map
                     )
+                    
+                    if 'id' in data: item.id = data['id']
+                    elif 'id' in i_data: item.id = i_data['id']
                     
                     if 'inventory' in data and data['inventory']:
                         item.inventory = [Item.from_dict(x) for x in data['inventory'] if x]
@@ -833,6 +886,8 @@ def load_game(game, save_folder_name):
                     item.x = int(i_data.get('x', 0))
                     item.y = int(i_data.get('y', 0))
                     item.rect.topleft = (item.x, item.y)
+                    item.layer = item_layer
+                    item.map_filename = item_map
                     
                     if is_player_corpse:
                         item.is_placed = True
@@ -841,21 +896,46 @@ def load_game(game, save_folder_name):
                     else:
                         item.is_placed = False
 
-                    game.items_on_ground.append(item)
+                    if item_map == active_map and item_layer == active_layer:
+                        game.items_on_ground.append(item)
+                    else:
+                        game.map_states.setdefault(item_map, {})
+                        game.map_states[item_map].setdefault('items_on_ground', [])
+                        game.map_states[item_map]['items_on_ground'].append(item)
+                        if hasattr(game, 'spatial_manager') and item_map == active_map:
+                            game.spatial_manager.rebuild_item_grid(force=True)
                     continue
 
-                if 'data' in i_data:
-                    item = Item.from_dict(i_data['data']) if isinstance(i_data['data'], dict) else Item.create_from_name(i_data['data'])
-                else:
+                if 'data' in i_data and isinstance(i_data['data'], dict):
+                    item = Item.from_dict(i_data['data'])
+                elif 'name' in i_data:
                     item = Item.create_from_name(i_data['name'])
+                else:
+                    item = None
                     
                 if item:
                     item.x = int(i_data.get('x', 0))
                     item.y = int(i_data.get('y', 0))
                     item.rect.topleft = (item.x, item.y)
-                    game.items_on_ground.append(item)
+                    item.layer = item_layer
+                    item.map_filename = item_map
+
+                    if 'is_placed' in data:
+                        item.is_placed = data['is_placed']
+                    elif 'is_placed' in i_data:
+                        item.is_placed = i_data['is_placed']
+
+                    if item_map == active_map and item_layer == active_layer:
+                        game.items_on_ground.append(item)
+                    else:
+                        game.map_states.setdefault(item_map, {})
+                        game.map_states[item_map].setdefault('items_on_ground', [])
+                        game.map_states[item_map]['items_on_ground'].append(item)
+                        if hasattr(game, 'spatial_manager') and item_map == active_map:
+                            game.spatial_manager.rebuild_item_grid(force=True)
+
             except Exception as e:
-                game.logger.info(f"Error loading an item on ground: {e}")
+                pass
         
         # Load Zombies
         game.zombies = [] 
@@ -885,6 +965,8 @@ def load_game(game, save_folder_name):
                 z = Zombie(z_data['x'], z_data['y'], template)
                 layer = z_data.get('layer', 1)
                 z.layer = layer
+                z_map = z_data.get('map_filename', active_map)
+                z.map_filename = z_map
                 z.health = z_data.get('health', z.max_health)
                 z.max_health = z_data.get('max_health', z.health)
                 if 'id' in z_data and z_data['id']:
@@ -898,11 +980,11 @@ def load_game(game, save_folder_name):
                 for slot, c_data in clothes_data.items():
                     z.clothes[slot] = (Item.from_dict(c_data) if isinstance(c_data, dict) else Item.create_from_name(c_data)) if c_data else None
 
-                if layer == game.current_layer_index:
+                if z_map == active_map and layer == active_layer:
                     game.zombies.append(z)
                 else:
-                    if not hasattr(game, 'layer_zombies'): game.layer_zombies = {}
-                    game.layer_zombies.setdefault(layer, []).append(z)
+                    game.map_states.setdefault(z_map, {})
+                    game.map_states[z_map].setdefault('zombies', []).append(z)
 
         # Load Animals
         animal_path = os.path.join(save_path, "animal.rot")
@@ -936,7 +1018,9 @@ def load_game(game, save_folder_name):
             for n_data in npc_list:
                 is_static = n_data.get('is_static', False)
                 layer = n_data.get('layer', 1)
+                n_map = n_data.get('map_filename', active_map)
                 npc = NPC(n_data['x'], n_data['y'], game, is_static=is_static, layer=layer)
+                npc.map_filename = n_map
                 npc.name = n_data.get('name', 'Survivor')
                 npc.health = n_data.get('health', 100)
                 npc.max_health = n_data.get('max_health', 100)
@@ -961,11 +1045,11 @@ def load_game(game, save_folder_name):
                 
                 if 'loot_table' in n_data: npc.loot_table = n_data['loot_table']
                         
-                if layer == game.current_layer_index:
+                if n_map == active_map and layer == active_layer:
                     game.npcs.add(npc)
                 else:
-                    if not hasattr(game, 'layer_npcs'): game.layer_npcs = {}
-                    game.layer_npcs.setdefault(layer, []).append(npc)
+                    game.map_states.setdefault(n_map, {})
+                    game.map_states[n_map].setdefault('npcs', []).append(npc)
         
         # Load Vehicles
         if os.path.exists(os.path.join(save_path, "vehicles.rot")):

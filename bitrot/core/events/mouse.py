@@ -65,10 +65,11 @@ def handle_mouse_down(game, event, mouse_pos):
                                 dropped_item = game.items_on_ground[-1]
                                 
                         if dropped_item:
-                            # [FIX] Set topleft exactly to the snapped grid position and register as Placed
                             dropped_item.rect.topleft = (snap_x, snap_y)
                             dropped_item.x, dropped_item.y = snap_x, snap_y
                             dropped_item.is_placed = True
+                            dropped_item.layer = getattr(game, 'current_layer_index', 1)
+                            dropped_item.map_filename = getattr(game.map_manager, 'current_map_filename', '')
                             
                             if getattr(game, 'is_client', False) and getattr(game, 'client', None):
                                 from core.server.network import NetMsg, send_msg
@@ -78,6 +79,7 @@ def handle_mouse_down(game, event, mouse_pos):
                                     'item_data': dropped_item.to_dict(), 
                                     'x': dropped_item.x, 
                                     'y': dropped_item.y, 
+                                    'layer': dropped_item.layer,
                                     'is_placed': True
                                 })
                             
