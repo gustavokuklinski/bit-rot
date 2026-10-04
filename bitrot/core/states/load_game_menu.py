@@ -5,6 +5,28 @@ def run_load_game_menu(game):
     mouse_pos = game._get_scaled_mouse_pos()
     clickable_rects = draw_load_game_screen(game, game.load_game_state, mouse_pos)
     
+    # --- BUTTON HOVER SOUND TRACKER ---
+    load_menu_buttons = [
+        clickable_rects.get('load_button'),
+        clickable_rects.get('delete_button'),
+        clickable_rects.get('back_button')
+    ]
+    for _, _, row_rect in clickable_rects.get('save_items', []):
+        load_menu_buttons.append(row_rect)
+
+    load_menu_buttons = [b for b in load_menu_buttons if b is not None]
+    hovered_idx = None
+    for idx, b_rect in enumerate(load_menu_buttons):
+        if b_rect.collidepoint(mouse_pos):
+            hovered_idx = idx
+            break
+
+    if hovered_idx is not None and hovered_idx != getattr(game, '_load_menu_hovered_btn_idx', None):
+        if hasattr(game, 'sound_manager'):
+            game.sound_manager.play_ui_hover()
+    game._load_menu_hovered_btn_idx = hovered_idx
+    # -----------------------------------
+
     if 'is_dragging_scrollbar' not in game.load_game_state:
         game.load_game_state['is_dragging_scrollbar'] = False
         game.load_game_state['scroll_drag_start_y'] = 0

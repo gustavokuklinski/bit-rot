@@ -118,6 +118,13 @@ class SoundManager:
         if name in self.sounds:
             return True
         full_path = os.path.join(SOUND_PATH, sound_path)
+        if not os.path.exists(full_path):
+            filename = os.path.basename(sound_path)
+            for candidate_subdir in ['map', 'ui', 'items', '']:
+                alt_path = os.path.join(SOUND_PATH, candidate_subdir, filename) if candidate_subdir else os.path.join(SOUND_PATH, filename)
+                if os.path.exists(alt_path):
+                    full_path = alt_path
+                    break
         try:
             self.sounds[name] = pygame.mixer.Sound(full_path)
             return True
@@ -236,6 +243,11 @@ class SoundManager:
 
         channel.play(sound, loops=loops, fade_ms=fade_ms)
         return channel
+
+
+    def play_ui_hover(self):
+        """Plays the UI button click/hover sound."""
+        self.play_sound('click.ogg', subdir='ui', base_volume=0.4, is_critical=True)
 
     def play_music(self, path, volume=1.0, loops=-1):
         if core.data.config.VOLUME_MUSIC <= 0.0 or volume <= 0.0:

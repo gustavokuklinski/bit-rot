@@ -421,9 +421,13 @@ class Container(Item):
         self.pre_loot = []
 
     def open(self, game=None):
-        """Generates loot from tile definition upon first interaction."""
+        """Generates loot from tile definition upon first interaction and plays open sound."""
         if getattr(self, 'is_opened', False):
             return
+
+        if not game:
+            import core.messages
+            game = getattr(core.messages, '_game_instance', None)
             
         if game and getattr(game, 'is_client', False):
             from core.server.network import NetMsg, send_msg
@@ -432,26 +436,39 @@ class Container(Item):
                 'action': 'open_container',
                 'x': self.rect.x, 'y': self.rect.y
             })
-            self.is_opened = False
-            
+            self.is_opened = True
+            self.is_opening = False
+
+            if hasattr(game, 'sound_manager'):
+                game.sound_manager.play_sound(
+                    'open_maptile.ogg',
+                    subdir='map',
+                    game=game,
+                    source_pos=self.rect.center,
+                    base_volume=0.5,
+                    pitch_variance=0.1,
+                    is_critical=True
+                )
             return
             
         self.is_opened = True
         self.is_opening = False
+
         if getattr(self, 'tile_def', None):
             from core.map.map_loader import _generate_container_items
-            # Pass the game object to apply player Luck and Kill modifiers!
             generated = _generate_container_items(self.tile_def, game=game)
             self.inventory = list(getattr(self, 'pre_loot', [])) + generated
-            if game and hasattr(game, 'sound_manager') and self.tile_def.get('sound_src'):
-                game.sound_manager.play_sound(
-                    self.tile_def['sound_src'],
-                    subdir='map',
-                    game=game,
-                    source_pos=self.rect.center,
-                    base_volume=0.4,
-                    pitch_variance=0.15,
-                    is_critical=True
-                )
         else:
             self.inventory = list(getattr(self, 'pre_loot', []))
+
+        # Play open_maptile.ogg once when finished opening
+        if game and hasattr(game, 'sound_manager'):
+            game.sound_manager.play_sound(
+                'open_maptile.ogg',
+                subdir='map',
+                game=game,
+                source_pos=self.rect.center,
+                base_volume=0.5,
+                pitch_variance=0.1,
+                is_critical=True
+            )

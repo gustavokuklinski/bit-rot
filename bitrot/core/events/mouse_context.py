@@ -1050,7 +1050,18 @@ def handle_context_menu_click(game, mouse_pos):
                             old_item = game.player.clothes.get(item_slot)
                             game.player.clothes[item_slot] = item_from_source
                             print(f"Equipped {item_from_source.name} to {item_slot}.")
-                            
+
+                            if game and hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound(
+                                    'equip_gear.ogg',
+                                    subdir='items',
+                                    game=game,
+                                    source_pos=game.player.rect.center,
+                                    base_volume=0.5,
+                                    pitch_variance=0.1,
+                                    is_critical=True
+                                )
+
                             if old_item:
                                 if getattr(old_item, 'liquid', False):
                                     old_item.rect.center = game.player.rect.center
@@ -1078,6 +1089,17 @@ def handle_context_menu_click(game, mouse_pos):
                                 print(f"Picked up and equipped {tr('item', item.name)} to belt slot {bi+1}.")
                                 placed = True
                                 
+                                if game and hasattr(game, 'sound_manager'):
+                                    game.sound_manager.play_sound(
+                                        'equip_belt.ogg',
+                                        subdir='items',
+                                        game=game,
+                                        source_pos=game.player.rect.center,
+                                        base_volume=0.5,
+                                        pitch_variance=0.1,
+                                        is_critical=True
+                                    )
+
                                 if old_belt_item:
                                     if len(game.player.inventory) < game.player.get_total_inventory_slots():
                                         game.player.inventory.append(old_belt_item)
@@ -1094,6 +1116,18 @@ def handle_context_menu_click(game, mouse_pos):
                                         game.items_on_ground.pop(index)
                                     print(f"Picked up and equipped {tr('item', item.name)} to belt slot {bi+1}.")
                                     placed = True
+
+                                    if game and hasattr(game, 'sound_manager'):
+                                        game.sound_manager.play_sound(
+                                            'equip_belt.ogg',
+                                            subdir='items',
+                                            game=game,
+                                            source_pos=game.player.rect.center,
+                                            base_volume=0.5,
+                                            pitch_variance=0.1,
+                                            is_critical=True
+                                        )
+
                                     break
                                     
                         if not placed:
@@ -1125,6 +1159,18 @@ def handle_context_menu_click(game, mouse_pos):
                                      old_belt_item = game.player.belt[bi]
                                      game.player.belt[bi] = item_from_source
                                      print(f"Equipped {tr('item', item_from_source.name)} to belt slot {bi+1}.")
+
+                                     if game and hasattr(game, 'sound_manager'):
+                                         game.sound_manager.play_sound(
+                                             'equip_belt.ogg',
+                                             subdir='items',
+                                             game=game,
+                                             source_pos=game.player.rect.center,
+                                             base_volume=0.5,
+                                             pitch_variance=0.1,
+                                             is_critical=True
+                                         )
+
                                      if old_belt_item:
                                          if len(game.player.inventory) < game.player.get_total_inventory_slots():
                                              game.player.inventory.append(old_belt_item)
@@ -1421,6 +1467,17 @@ def handle_context_menu_click(game, mouse_pos):
                                 item_to_grab.load -= amount
                                 target_inventory.append(new_item)
                                 game.player.stack_item_in_inventory(new_item)
+
+                                if game and hasattr(game, 'sound_manager'):
+                                    game.sound_manager.play_sound(
+                                        'grab.ogg',
+                                        subdir='items',
+                                        game=game,
+                                        source_pos=game.player.rect.center,
+                                        base_volume=0.5,
+                                        pitch_variance=0.1,
+                                        is_critical=True
+                                    )
                             return
 
                         if source == 'ground' and item in game.items_on_ground:
@@ -1436,6 +1493,17 @@ def handle_context_menu_click(game, mouse_pos):
                             item_to_grab.is_placed = False
                             target_inventory.append(item_to_grab)
                             game.player.stack_item_in_inventory(item_to_grab)
+
+                            if game and hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound(
+                                    'grab.ogg',
+                                    subdir='items',
+                                    game=game,
+                                    source_pos=game.player.rect.center,
+                                    base_volume=0.5,
+                                    pitch_variance=0.1,
+                                    is_critical=True
+                                )
 
                             # SYNC TO SERVER
                             if getattr(game, 'is_client', False) and getattr(game, 'client', None):

@@ -773,6 +773,23 @@ def draw_select_character_screen(game, state, mouse_pos):
     custom_txt = font_16.render(tr('ui', "Custom Character"), False, WHITE)
     game.game_screen.blit(custom_txt, custom_txt.get_rect(center=custom_btn_rect.center))
     clickable_rects['custom_button'] = custom_btn_rect
+    
+    # --- BUTTON HOVER SOUND TRACKER ---
+    all_char_buttons = [back_rect, rand_rect, custom_btn_rect, dice_btn, male_rect, female_rect, prev_arrow_rect, next_arrow_rect]
+    for _, b_rect in clickable_rects.get('cards', []):
+        all_char_buttons.append(b_rect)
+
+    all_char_buttons = [b for b in all_char_buttons if b is not None]
+    hovered_idx = None
+    for idx, b_rect in enumerate(all_char_buttons):
+        if b_rect.collidepoint(mouse_pos):
+            hovered_idx = idx
+            break
+
+    if hovered_idx is not None and hovered_idx != getattr(game, '_char_select_hovered_btn_idx', None):
+        if hasattr(game, 'sound_manager'):
+            game.sound_manager.play_ui_hover()
+    game._char_select_hovered_btn_idx = hovered_idx
 
     # --- 6. TOOLTIP ON HOVER (COMPACT VERTICAL LIST FORMAT) ---
     if hovered_class:

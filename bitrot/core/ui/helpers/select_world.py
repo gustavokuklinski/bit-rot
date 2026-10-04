@@ -392,6 +392,23 @@ def draw_select_world_screen(game, state, mouse_pos):
     game.game_screen.blit(sandbox_txt, sandbox_txt.get_rect(center=sandbox_rect.center))
     clickable_rects['sandbox_button'] = sandbox_rect
 
+    all_world_buttons = [back_rect, sandbox_rect, cb1_click_rect, cb2_click_rect, cb3_click_rect]
+    for _, b_rect in clickable_rects.get('cards', []):
+        all_world_buttons.append(b_rect)
+
+    all_world_buttons = [b for b in all_world_buttons if b is not None]
+    hovered_idx = None
+    for idx, b_rect in enumerate(all_world_buttons):
+        if b_rect.collidepoint(mouse_pos):
+            hovered_idx = idx
+            break
+
+    if hovered_idx is not None and hovered_idx != getattr(game, '_world_select_hovered_btn_idx', None):
+        if hasattr(game, 'sound_manager'):
+            game.sound_manager.play_ui_hover()
+    game._world_select_hovered_btn_idx = hovered_idx
+    # -----------------------------------
+
     if hovered_cb_tooltip:
         t_proxy = SimpleNamespace(
             name=hovered_cb_tooltip[0],

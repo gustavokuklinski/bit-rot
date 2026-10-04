@@ -118,6 +118,19 @@ class PlayerInventory:
                 else:
                     source_inventory.pop(item_index)
                 display_message(f"{tr('msg', 'Equipped')} {tr('item', item.name)} {tr('msg', 'to belt.')}")
+
+                target_game = getattr(self, 'game', None) or getattr(core.messages, '_game_instance', None)
+                if target_game and hasattr(target_game, 'sound_manager'):
+                    target_game.sound_manager.play_sound(
+                        'equip_belt.ogg',
+                        subdir='items',
+                        game=target_game,
+                        source_pos=self.rect.center,
+                        base_volume=0.5,
+                        pitch_variance=0.1,
+                        is_critical=True
+                    )
+                    
                 return True
         return False
     
@@ -196,6 +209,17 @@ class PlayerInventory:
             
             if item_to_drop not in game.items_on_ground:
                 game.items_on_ground.append(item_to_drop)
+
+            if game and hasattr(game, 'sound_manager'):
+                game.sound_manager.play_sound(
+                    'drop.ogg',
+                    subdir='items',
+                    game=game,
+                    source_pos=item_to_drop.rect.center,
+                    base_volume=0.5,
+                    pitch_variance=0.1,
+                    is_critical=True
+                )
 
             return item_to_drop
 

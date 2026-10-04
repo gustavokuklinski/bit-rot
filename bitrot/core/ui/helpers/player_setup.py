@@ -1240,6 +1240,47 @@ def run_player_setup(game):
         clickable_rects = _draw_player_build_screen(game, state, mouse_pos)
     else:
         clickable_rects = _draw_world_screen(game, state, mouse_pos)
+
+    # --- BUTTON HOVER SOUND TRACKER FOR SETUP SCREENS ---
+    if state['current_tab'] not in ('SelectWorld', 'SelectCharacter'):
+        setup_buttons = [player_btn, back_btn]
+        if not getattr(game, 'is_client', False):
+            setup_buttons.append(world_btn)
+
+        for k in ['start_button', 'save_button', 'delete_button', 'random_button', 'load_dropdown_button', 'next_tab']:
+            b = clickable_rects.get(k)
+            if b: setup_buttons.append(b)
+
+        if 'sex_buttons' in clickable_rects:
+            setup_buttons.extend(clickable_rects['sex_buttons'].values())
+
+        if 'gear_cycle_buttons' in clickable_rects:
+            setup_buttons.extend(clickable_rects['gear_cycle_buttons'].values())
+
+        if 'slot_color_buttons' in clickable_rects:
+            setup_buttons.extend(clickable_rects['slot_color_buttons'].values())
+
+        for item in clickable_rects.get('add_trait', []):
+            setup_buttons.append(item[1])
+        for item in clickable_rects.get('remove_trait', []):
+            setup_buttons.append(item[1])
+        for item in clickable_rects.get('world_bools', []):
+            setup_buttons.append(item[2])
+        for item in clickable_rects.get('world_cycles', []):
+            setup_buttons.append(item[2])
+
+        setup_buttons = [b for b in setup_buttons if b is not None]
+        hovered_idx = None
+        for idx, b_rect in enumerate(setup_buttons):
+            if b_rect.collidepoint(mouse_pos):
+                hovered_idx = idx
+                break
+
+        if hovered_idx is not None and hovered_idx != getattr(game, '_setup_hovered_btn_idx', None):
+            if hasattr(game, 'sound_manager'):
+                game.sound_manager.play_ui_hover()
+        game._setup_hovered_btn_idx = hovered_idx
+    # ----------------------------------------------------
     
     for event in game.get_events():
         event_pos = mouse_pos

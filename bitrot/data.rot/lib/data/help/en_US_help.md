@@ -42,38 +42,42 @@ You have three objectives. Choose wisely, because the island is listening.
 * **Gear & Armor** : Drop items into the Gear menu to equip clothing. Clothes don't just change your appearance; they act as an armor shield. Incoming damage depletes your clothing's durability first before hurting you. 
 * **Carry Weight** : Keep a close eye on your total weight! Carrying too much makes you over-encumbered. This will drastically increase your stamina drain.
 
-### [ Status ]
-
-* **Health**: Your life force. It drops from physical attacks, starvation, dehydration, severe infection, or carrying too much weight. Use medical supplies or sleep on a proper bed to recover.
-
-* **Stamina**: Depletes when running or swinging melee weapons. It recovers naturally when resting or walking. *Warning:* High Infection levels will permanently cap your maximum stamina until cured!
-
-* **Hunger & Thirst**: Scavenge for food and water to stay alive. Dropping below 20% in either stat causes starvation or dehydration, which continuously saps your health. 
-
-* **Tiredness**: Your wakefulness works naturally depletes. If your Tiredness reaches zero, you will pass out on the spot! Find a safe place to sleep to restore it.
-
-* **Infection**: A lethal, progressive condition contracted from the Rotters bites or exposure to freezing rain. Once infected, it acts like a virus—slowly worsening over time, draining your health every second, and severely limiting your stamina. Reaching 100% infection means irreversible rot.
-
-* **Anxiety**: Being surrounded by hordes of the undead will cause your character to panic. High anxiety drains your Tiredness much faster, exhausting you quickly in tense situations.
-
-* **Defence**: Use good durability clothes, they are your shield over weather, rotters and hostiles. 
-
-* **Weight**: Increase your strength chopping tress and using melee weapons to carry more items.
-
-
-
 ### [ Tips ]
-
-* **Permadeath**: This is how you Rot. If you die, you lose everything. Play carefully.
 
 * **Weather Hazards**: Rain isn't just cosmetic. Standing out in a downpour without thick clothing will cause you to catch a sickness that rapidly increases your Infection level. Layer up to increase your weather protection!
 
 * **Safe Resting**: Not all sleep is equal. Sleeping on a proper bed or bench restores your energy significantly faster than sleeping on the floor and is the only way to slowly regenerate lost health while resting. 
 
-* **Combat Tactics**: Always aim before attacking. Melee combat is exhausting; keep an eye on your stamina and tiredness, because fighting while exhausted makes your weapons less effective and drains your energy. 
+* **Combat Tactics**: Always aim before attacking. Melee combat is exhausting; keep an eye on your stamina because fighting while exhausted makes your weapons less effective and drains your energy. 
 
-* **Vehicles**: Approach a vehicle and press 'E' to enter. Remember to check the motor, and be aware that roadkills will damage the car over time!
+* **Vehicles**: Approach a vehicle and enter. Remember to check the motor, key, fuel and battery, and be aware that roadkills will damage the car over time!
 
 * **Crafting & Maintenance**: Open the Crafting menu to combine items, dismantle junk, and survive. Keep an eye on your weapon's durability, as it can break in the middle of a fight. 
 
-* **Mobile**: Turn on the Mobile in your inventory or belt to see clearly at night, but be aware that light might attract unwanted attention. Also use the minimap to see where are the quest items.
+
+### [ Credits ]
+**Streamers**
+* Spoken
+* Montray Studios
+
+**Play testers**
+Special thanks for the players:
+* Samuel Dias
+* Mel
+* Matheus Ferreira
+* dougtaekwon
+* Spoken
+* Butterfly
+* happyhappyvn (itch.io)
+* MamickaBeeGames (itch.io)
+* Reverie Requiem (itch.io)
+* Montray Studios (itch.io)
+* Gerwancik (itch.io)
+* DeepS (itch.io)
+* RicardoBocci
+* AlbertTheHandsomeMan
+
+**Assets**
+* Kenney - 1-Bit Pack
+* Pixabay.com - Sound effects
+* OpenGameArt.org - Music

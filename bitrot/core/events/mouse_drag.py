@@ -355,6 +355,10 @@ def handle_mouse_up(game, event, mouse_pos):
                                         trans = min(avail, item_ref.load)
                                         game.player.belt[i_target].load += trans
                                         item_ref.load -= trans
+                                    
+                                    if game and hasattr(game, 'sound_manager'):
+                                        game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
+
 
                                 transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
                                 game.player.start_action(tr('msg', "Looting"), transfer_time, do_belt_loot, xp_reward=0.5)
@@ -368,6 +372,10 @@ def handle_mouse_up(game, event, mouse_pos):
                             game.player.belt[i_target] = game.dragged_item
                             game.dragged_item.in_belt = True
                             dropped_successfully = True
+                            if game and hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound('equip_belt.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
+
+
                         elif item_in_slot.can_stack_with(game.dragged_item):
                             available_space = item_in_slot.capacity - item_in_slot.load
                             transfer = min(available_space, game.dragged_item.load)
@@ -375,6 +383,10 @@ def handle_mouse_up(game, event, mouse_pos):
                             game.dragged_item.load -= transfer
                             if game.dragged_item.load <= 0:
                                 dropped_successfully = True
+
+                            if game and hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound('equip_belt.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
+
                         else:
                             item_to_swap = item_in_slot
                             game.player.belt[i_target] = game.dragged_item
@@ -382,7 +394,11 @@ def handle_mouse_up(game, event, mouse_pos):
                             game.dragged_item = item_to_swap 
                             game.dragged_item.in_belt = False
                             dropped_successfully = False
-                        
+
+                            if game and hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound('equip_belt.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
+
+
                         if dropped_successfully: break
                 if dropped_successfully:
                     game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
@@ -557,6 +573,9 @@ def handle_mouse_up(game, event, mouse_pos):
                                             def do_tab_inv_loot():
                                                 _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                                 target_list.append(item_ref)
+                                            
+                                            if game and hasattr(game, 'sound_manager'):
+                                                game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
                              
                                             transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
                                             game.player.start_action(tr('msg', "Looting"), transfer_time, do_tab_inv_loot, xp_reward=0.5)
@@ -565,6 +584,8 @@ def handle_mouse_up(game, event, mouse_pos):
                                         else:
                                              target_list.append(game.dragged_item)
                                              dropped_successfully = True
+                                             if game and hasattr(game, 'sound_manager'):
+                                                 game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
                                     else:
                                         display_message(tr('msg', "Inventory is full."))
                                         dropped_successfully = False
@@ -619,6 +640,8 @@ def handle_mouse_up(game, event, mouse_pos):
                                                     trans = min(avail, item_ref.load)
                                                     item_in_slot.load += trans
                                                     item_ref.load -= trans
+                                                    if game and hasattr(game, 'sound_manager'):
+                                                        game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
 
                                                 transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
                                                 game.player.start_action(tr('msg', "Looting"), transfer_time, do_inv_stack, xp_reward=0.5)
@@ -635,11 +658,17 @@ def handle_mouse_up(game, event, mouse_pos):
                                             game.dragged_item.load -= transfer
                                             if game.dragged_item.load <= 0:
                                                 dropped_successfully = True
+                                            if game and hasattr(game, 'sound_manager'):
+                                                game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
+
                                         else:
                                             item_to_swap = game.player.inventory.pop(target_index)
                                             game.player.inventory.insert(target_index, game.dragged_item)
                                             game.dragged_item = item_to_swap
                                             dropped_successfully = False 
+                                            if game and hasattr(game, 'sound_manager'):
+                                                game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
+
                                     elif len(game.player.inventory) < game.player.get_total_inventory_slots():
 
                                         if is_external_source:
@@ -657,6 +686,9 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 _sync_source_container(game, container_obj)
 
                                                 game.player.inventory.insert(target_index, item_ref)
+
+                                                if game and hasattr(game, 'sound_manager'):
+                                                    game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
                                             
                                             transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
                                             game.player.start_action(tr('msg', "Looting"), transfer_time, do_inv_loot, xp_reward=0.5)
@@ -665,6 +697,9 @@ def handle_mouse_up(game, event, mouse_pos):
 
                                         game.player.inventory.insert(target_index, game.dragged_item)
                                         dropped_successfully = True
+
+                                        if game and hasattr(game, 'sound_manager'):
+                                            game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
                                 
                                 elif len(game.player.inventory) < game.player.get_total_inventory_slots():
                                     
@@ -685,6 +720,10 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                                     
                                                 game.player.inventory.append(item_ref)
+
+                                                if game and hasattr(game, 'sound_manager'):
+                                                    game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
+
                               
                                             transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
                                             game.player.start_action(tr('msg', "Looting"), transfer_time, do_inv_append, xp_reward=0.5)
@@ -693,6 +732,9 @@ def handle_mouse_up(game, event, mouse_pos):
 
                                         game.player.inventory.append(game.dragged_item)
                                         dropped_successfully = True
+
+                                        if game and hasattr(game, 'sound_manager'):
+                                            game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
                                 
                                 if dropped_successfully: break
                         
@@ -1052,6 +1094,9 @@ def handle_mouse_up(game, event, mouse_pos):
                                                         
                                                     game.player.clothes[slot_name] = item_ref
 
+                                                    if game and hasattr(game, 'sound_manager'):
+                                                        game.sound_manager.play_sound('equip_gear.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
+
                                                 transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
                                                 game.player.start_action("Equipping", transfer_time, do_gear_equip, xp_reward=0.5)
                                                 
@@ -1077,6 +1122,18 @@ def handle_mouse_up(game, event, mouse_pos):
                                                     game.player.inventory.append(item_in_slot)
                                             
                                             dropped_successfully = True
+
+                                            if game and hasattr(game, 'sound_manager'):
+                                                game.sound_manager.play_sound(
+                                                    'equip_gear.ogg',
+                                                    subdir='items',
+                                                    game=game,
+                                                    source_pos=game.player.rect.center,
+                                                    base_volume=0.5,
+                                                    pitch_variance=0.1,
+                                                    is_critical=True
+                                                )
+
                                         else:
                                             dropped_successfully = False 
                                         break
@@ -1325,7 +1382,17 @@ def handle_mouse_up(game, event, mouse_pos):
                                     game.dragged_item.y = game.dragged_item.rect.y
 
                                 dropped_successfully = True
-                            
+
+                            if dropped_successfully and game and hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound(
+                                    'drop.ogg',
+                                    subdir='items',
+                                    game=game,
+                                    source_pos=game.player.rect.center,
+                                    base_volume=0.5,
+                                    pitch_variance=0.1,
+                                    is_critical=True
+                                )
                             if dropped_successfully: break 
                             break
 
@@ -1476,7 +1543,20 @@ def handle_mouse_up(game, event, mouse_pos):
                                 poured_in_map = True
                                 display_message(f"{tr('msg', 'Poured')} {tr('item', game.dragged_item.name)} {tr('msg', 'into')} {tr('msg', tile_def.get('name', ''))}.")
                                 game.dragged_item.load = 0
-                                dropped_successfully = True 
+                                dropped_successfully = True
+                                
+                                if game and hasattr(game, 'sound_manager'):
+                                    game.sound_manager.play_sound(
+                                        'drop.ogg',
+                                        subdir='items',
+                                        game=game,
+                                        source_pos=game.dragged_item.rect.center,
+                                        base_volume=0.5,
+                                        pitch_variance=0.1,
+                                        is_critical=True
+                                    )
+                                dropped_successfully = True
+
                             else:
                                 display_message(f"{tr('msg', 'The')} {tr('item', game.dragged_item.name)} {tr('msg', 'spills on the ground.')}")
                                 dropped_successfully = True 
@@ -1508,6 +1588,18 @@ def handle_mouse_up(game, event, mouse_pos):
                             if game.dragged_item not in game.items_on_ground:
                                 game.items_on_ground.append(game.dragged_item)
                             dropped_successfully = True
+
+                            if game and hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound(
+                                    'drop.ogg',
+                                    subdir='items',
+                                    game=game,
+                                    source_pos=game.dragged_item.rect.center,
+                                    base_volume=0.5,
+                                    pitch_variance=0.1,
+                                    is_critical=True
+                                )
+
 
                             if type_orig in ('container', 'nearby', 'container_stack_split', 'nearby_stack_split') and container_obj:
                                 _sync_container_to_server(game, container_obj)

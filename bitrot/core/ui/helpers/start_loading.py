@@ -23,7 +23,7 @@ HELP_CACHE = {
     'content_drag_last_y': 0
 }
 
-def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_help=False):
+def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_help=False, game=None):
     global HELP_CACHE
     
     scale = UI_SCALE
@@ -47,7 +47,6 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
 
     if HELP_CACHE['lang'] != current_lang or HELP_CACHE['box_w'] != box_w:
         tabs = []
-        
         current_tab = {'title': 'Home', 'layout': [], 'curr_y': S(10), 'total_h': 0}
         tabs.append(current_tab)
         
@@ -210,6 +209,8 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
     active_tab = tabs[active_tab_idx] if (tabs and active_tab_idx < len(tabs)) else {'layout': [], 'total_h': 0}
 
     total_tabs = len(tabs)
+    hovered_elem_id = None
+
     if total_tabs > 0:
         current_x = box_rect.left + padding_y
         total_w = box_rect.width - (padding_y * 2)
@@ -224,11 +225,12 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
             tab_rects.append(tab_rect)
             current_x += tab_width
 
-        # Render Inactive Tabs & Handle Tab Clicks
         for i, tab in enumerate(tabs):
             if i != active_tab_idx:
                 tab_rect = tab_rects[i]
                 is_hovered = tab_rect.collidepoint(mouse_pos)
+                if is_hovered:
+                    hovered_elem_id = f"help_tab_{i}"
                 
                 if is_hovered and clicked:
                     HELP_CACHE['active_tab'] = i
@@ -245,9 +247,10 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
                 text_rect = tab_text.get_rect(center=tab_rect.center)
                 surface.blit(tab_text, text_rect)
 
-        # Render Active Tab on Top
         if active_tab_idx < total_tabs:
             tab_rect = tab_rects[active_tab_idx]
+            if tab_rect.collidepoint(mouse_pos):
+                hovered_elem_id = f"help_tab_{active_tab_idx}"
             pygame.draw.rect(surface, GRAY_60, tab_rect)
             pygame.draw.rect(surface, WHITE, tab_rect, 1)
             
@@ -261,7 +264,6 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
     
     clip_rect = pygame.Rect(box_rect.left, content_y_start, box_rect.width, clip_h)
     
-    # Event-based scroll handling using scaled mouse_pos
     if events is not None:
         for event in events:
             if event.type == pygame.MOUSEWHEEL:
@@ -284,7 +286,6 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
                     HELP_CACHE['content_drag_last_y'] = mouse_pos[1]
                     HELP_CACHE['scroll_y'] = max(0.0, min(HELP_CACHE['scroll_y'] - delta_y, max_scroll))
 
-    # Scrollbar drag
     mouse_buttons = pygame.mouse.get_pressed()
     if max_scroll > 0:
         if mouse_buttons[0] or clicked:
@@ -312,7 +313,6 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
     bar_rect = pygame.Rect(box_rect.right - S(14), content_y_start, 8, clip_h)
     draw_scrollbar(surface, HELP_CACHE, bar_rect, clip_h, active_tab['total_h'], HELP_CACHE['scroll_y'])
 
-    # Render tab content
     try:
         content_surface = surface.subsurface(clip_rect)
         y_offset = -actual_scroll
@@ -339,7 +339,7 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
     except ValueError:
         pass 
 
-    # --- Footer: Animated Loading or Click to Start Button ---
+    # --- Footer: Animated Loading or Click to Start / Back Button ---
     if not is_done:
         bar_w, bar_h = S(600), S(25)
         bar_bg_rect = pygame.Rect(0, 0, bar_w, bar_h)
@@ -357,6 +357,9 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
         btn_rect.center = (center_x, center_offset_y + S(640))
         
         is_hovered = btn_rect.collidepoint(mouse_pos)
+        if is_hovered:
+            hovered_elem_id = "btn_start_or_back"
+
         bg_color = (0, 150, 0) if (is_hovered and not is_main_menu_help) else ((0, 100, 0) if not is_main_menu_help else ((80, 80, 80) if is_hovered else (60, 60, 60)))
         text_color = WHITE
             
@@ -366,5 +369,11 @@ def draw_loading_screen(surface, is_done, mouse_pos, events=None, is_main_menu_h
         btn_text = font_16.render(btn_text_str, False, text_color)
         text_rect = btn_text.get_rect(center=btn_rect.center)
         surface.blit(btn_text, text_rect)
+
+        # Trigger hover sound when hovering over tabs or the Click to start / Back button
+        if hovered_elem_id is not None and hovered_elem_id != HELP_CACHE.get('last_hovered_elem'):
+            if game and hasattr(game, 'sound_manager'):
+                game.sound_manager.play_ui_hover()
+        HELP_CACHE['last_hovered_elem'] = hovered_elem_id
         
         return btn_rect

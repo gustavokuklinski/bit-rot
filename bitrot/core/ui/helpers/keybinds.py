@@ -398,7 +398,7 @@ class KeybindsMenuUI:
         
         return center_x, center_y, bg_rect, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, reset_btn_rect, back_btn_rect
 
-    def draw(self, screen, mouse_pos):
+    def draw(self, screen, mouse_pos, game=None):
         if not self.active: return
 
         center_x, center_y, bg_rect, tab_kb_rect, tab_joy_rect, list_rect, bar_rect, reset_btn_rect, back_btn_rect = self.get_rects()
@@ -435,6 +435,12 @@ class KeybindsMenuUI:
         screen.blit(kb_surf, kb_surf.get_rect(center=tab_kb_rect.center))
         screen.blit(joy_surf, joy_surf.get_rect(center=tab_joy_rect.center))
 
+        hovered_key_id = None
+        if tab_kb_rect.collidepoint(mouse_pos):
+            hovered_key_id = "tab_kb"
+        elif tab_joy_rect.collidepoint(mouse_pos):
+            hovered_key_id = "tab_joy"
+
         old_clip = screen.get_clip()
         screen.set_clip(list_rect)
 
@@ -463,7 +469,6 @@ class KeybindsMenuUI:
             row_rect = pygame.Rect(list_rect.x, y_offset, list_rect.width, self.item_height)
             
             if row_rect.bottom > list_rect.top and row_rect.top < list_rect.bottom:
-                
                 pygame.draw.line(screen, (55, 55, 55), (row_rect.left, row_rect.bottom - 1), (row_rect.right, row_rect.bottom - 1), 1)
 
                 name_surf = config.font_16.render(name, False, config.WHITE)
@@ -472,10 +477,11 @@ class KeybindsMenuUI:
                 btn_w = int(250 * config.UI_SCALE)
                 btn_h = int(35 * config.UI_SCALE)
                 key_btn_rect = pygame.Rect(row_rect.right - btn_w, row_rect.centery - btn_h//2, btn_w, btn_h)
+
+                if key_btn_rect.collidepoint(mouse_pos):
+                    hovered_key_id = f"bind_{action}"
                 
                 display_text = "PRESS ANY KEY..." if self.waiting_for_key == action else key_name
-                
-                # Use standard draw_btn (no borders)
                 draw_btn(screen, key_btn_rect, display_text, mouse_pos, enabled=True, base_color=(50, 50, 50))
                 
                 if self.waiting_for_key == action:
@@ -490,7 +496,17 @@ class KeybindsMenuUI:
         total_h = len(binds_ref) * self.item_height
         draw_scrollbar(screen, self.modal_state, bar_rect, list_rect.height, total_h, self.scroll_offset_y)
 
-        # Draw main bottom buttons without harsh white borders
+        if reset_btn_rect.collidepoint(mouse_pos):
+            hovered_key_id = "btn_reset"
+        elif back_btn_rect.collidepoint(mouse_pos):
+            hovered_key_id = "btn_back"
+
+        # Trigger hover sound across tabs, keybind rows, reset, and back buttons
+        if hovered_key_id is not None and hovered_key_id != getattr(self, '_last_hovered_id', None):
+            if game and hasattr(game, 'sound_manager'):
+                game.sound_manager.play_ui_hover()
+        self._last_hovered_id = hovered_key_id
+
         draw_btn(screen, reset_btn_rect, "Reset Default", mouse_pos, base_color=(200, 50, 50))
         draw_btn(screen, back_btn_rect, "Back", mouse_pos, base_color=(80, 80, 80))
 

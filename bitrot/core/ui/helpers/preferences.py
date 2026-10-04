@@ -341,7 +341,7 @@ class PreferencesMenuUI:
 
         return True
 
-    def draw(self, screen, mouse_pos):
+    def draw(self, screen, mouse_pos, game=None):
         if not self.active: 
             return
 
@@ -362,6 +362,7 @@ class PreferencesMenuUI:
         screen.set_clip(list_rect)
         self._clamp_scroll()
 
+        hovered_pref_id = None
         y_off = list_rect.y - self.scroll_offset_y
         for block, settings in self.settings_data.items():
             row_rect = pygame.Rect(list_rect.x, y_off, list_rect.width, self.item_height)
@@ -385,6 +386,9 @@ class PreferencesMenuUI:
                     input_w = S(250)
                     input_rect = pygame.Rect(row_rect.right - input_w, row_rect.centery - S(15), input_w, S(30))
                     
+                    if input_rect.collidepoint(mouse_pos):
+                        hovered_pref_id = f"{block}_{key}"
+
                     str_val = str(val).lower()
                     is_bool = str_val in ('true', 'false')
                     is_volume = 'volume' in key
@@ -406,24 +410,20 @@ class PreferencesMenuUI:
 
                         is_active_slider = (self.dragging_slider == (block, key)) or hovered
 
-                        # Dimensions for slider track
                         slider_track_x = input_rect.x + S(8)
                         slider_track_w = input_w - S(68)
                         slider_track_h = S(8)
                         slider_track_y = input_rect.centery - slider_track_h // 2
                         track_rect = pygame.Rect(slider_track_x, slider_track_y, slider_track_w, slider_track_h)
 
-                        # Background track
                         pygame.draw.rect(screen, GRAY_40, track_rect, border_radius=S(4))
                         pygame.draw.rect(screen, GRAY_60, track_rect, 1, border_radius=S(4))
 
-                        # Active fill bar
                         fill_w = max(0, min(slider_track_w, int(val_float * slider_track_w)))
                         if fill_w > 0:
                             fill_rect = pygame.Rect(slider_track_x, slider_track_y, fill_w, slider_track_h)
                             pygame.draw.rect(screen, (23, 162, 184), fill_rect, border_radius=S(4))
 
-                        # Draggable handle / thumb
                         handle_w = S(12)
                         handle_h = S(20)
                         handle_x = slider_track_x + fill_w
@@ -432,7 +432,6 @@ class PreferencesMenuUI:
                         pygame.draw.rect(screen, handle_col, handle_rect, border_radius=S(3))
                         pygame.draw.rect(screen, GRAY, handle_rect, 1, border_radius=S(3))
 
-                        # Percentage text readout
                         pct_text = f"{int(round(val_float * 100))}%"
                         txt_surf = font_12.render(pct_text, False, YELLOW if is_active_slider else WHITE)
                         txt_rect = txt_surf.get_rect(midleft=(track_rect.right + S(12), input_rect.centery))
@@ -473,7 +472,20 @@ class PreferencesMenuUI:
         screen.set_clip(old_clip)
         draw_scrollbar(screen, {}, bar_rect, list_rect.height, self._get_total_content_height(), self.scroll_offset_y)
 
-        # Draw Buttons with no borders
+        # Check bottom buttons hover
+        if apply_btn.collidepoint(mouse_pos):
+            hovered_pref_id = "btn_apply"
+        elif reset_btn.collidepoint(mouse_pos):
+            hovered_pref_id = "btn_reset"
+        elif back_btn.collidepoint(mouse_pos):
+            hovered_pref_id = "btn_back"
+
+        # Trigger hover sound when transitioning between options or buttons
+        if hovered_pref_id is not None and hovered_pref_id != getattr(self, '_last_hovered_id', None):
+            if game and hasattr(game, 'sound_manager'):
+                game.sound_manager.play_ui_hover()
+        self._last_hovered_id = hovered_pref_id
+
         def _draw_btn(rect, text, col):
             hovered = rect.collidepoint(mouse_pos)
             color = (min(255, col[0]+30), min(255, col[1]+30), min(255, col[2]+30)) if hovered else col

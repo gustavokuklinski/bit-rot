@@ -83,6 +83,16 @@ def handle_mouse_down(game, event, mouse_pos):
                                     'is_placed': True
                                 })
                             
+                            if game and hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound(
+                                    'place.ogg',
+                                    subdir='items',
+                                    game=game,
+                                    source_pos=dropped_item.rect.center,
+                                    base_volume=0.5,
+                                    pitch_variance=0.1,
+                                    is_critical=True
+                                )
             else:
                 display_message(tr('msg', "Too far to place item!"))
                 

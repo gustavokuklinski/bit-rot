@@ -22,22 +22,48 @@ def run_menu(game):
 
     start_btn, load_btn, settings_btn, quit_btn, flag_rects, help_rect, controls_rect = draw_menu(game.game_screen, mouse_pos, has_save)
 
+    # Check if any overlay submenu is currently active
+    is_sub_menu_open = (
+        getattr(keybinds_ui, 'active', False) or 
+        getattr(preferences_ui, 'active', False) or 
+        getattr(game, 'show_main_menu_help', False)
+    )
+
+    # --- MAIN MENU BUTTON HOVER SOUND TRACKER (ONLY WHEN NO OVERLAY IS OPEN) ---
+    if not is_sub_menu_open:
+        menu_buttons = [b for b in [start_btn, load_btn if has_save else None, settings_btn, quit_btn, help_rect, controls_rect] if b is not None]
+        for flag in flag_rects:
+            menu_buttons.append(flag['rect'])
+
+        hovered_idx = None
+        for idx, b_rect in enumerate(menu_buttons):
+            if b_rect.collidepoint(mouse_pos):
+                hovered_idx = idx
+                break
+
+        if hovered_idx is not None and hovered_idx != getattr(game, '_menu_hovered_btn_idx', None):
+            if hasattr(game, 'sound_manager'):
+                game.sound_manager.play_ui_hover()
+        game._menu_hovered_btn_idx = hovered_idx
+    else:
+        game._menu_hovered_btn_idx = None
+    # ---------------------------------------------------------------------------
+
     if getattr(keybinds_ui, 'active', False):
         keybinds_ui.handle_events(events)
-        keybinds_ui.draw(game.game_screen, mouse_pos)
+        keybinds_ui.draw(game.game_screen, mouse_pos, game=game)
         game._update_screen()
         return
 
-    # Handle the new Preferences UI
     if getattr(preferences_ui, 'active', False):
         preferences_ui.handle_events(game, events)
-        preferences_ui.draw(game.game_screen, mouse_pos)
+        preferences_ui.draw(game.game_screen, mouse_pos, game=game)
         game._update_screen()
         return
 
     back_btn = None
     if getattr(game, 'show_main_menu_help', False):
-        back_btn = draw_loading_screen(game.game_screen, True, mouse_pos, events, is_main_menu_help=True)
+        back_btn = draw_loading_screen(game.game_screen, True, mouse_pos, events, is_main_menu_help=True, game=game)
 
     for event in events:
         if getattr(game, 'joystick_handler', None):
@@ -53,6 +79,8 @@ def run_menu(game):
             if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
                 mouse_pos = game._get_scaled_mouse_pos()
                 if back_btn and back_btn.collidepoint(mouse_pos):
+                    if hasattr(game, 'sound_manager'):
+                        game.sound_manager.play_ui_hover()
                     game.show_main_menu_help = False
                     continue
             continue 
@@ -61,16 +89,22 @@ def run_menu(game):
             mouse_pos = game._get_scaled_mouse_pos()
             
             if help_rect and help_rect.collidepoint(mouse_pos):
+                if hasattr(game, 'sound_manager'):
+                    game.sound_manager.play_ui_hover()
                 game.show_main_menu_help = True
                 continue
 
             if controls_rect and controls_rect.collidepoint(mouse_pos):
+                if hasattr(game, 'sound_manager'):
+                    game.sound_manager.play_ui_hover()
                 keybinds_ui.toggle()
                 continue
 
             flag_clicked = False
             for flag_info in flag_rects:
                 if flag_info['rect'].collidepoint(mouse_pos):
+                    if hasattr(game, 'sound_manager'):
+                        game.sound_manager.play_ui_hover()
                     lang_code = flag_info['name']
                     core.data.config.save_language_to_config(lang_code)
                     core.data.localization.load_language(lang_code)
@@ -80,21 +114,28 @@ def run_menu(game):
             if flag_clicked: continue
             
             if start_btn.collidepoint(mouse_pos):
+                if hasattr(game, 'sound_manager'):
+                    game.sound_manager.play_ui_hover()
                 game.player_setup_state = {}
                 game.world_setup_state = {}
                 game.game_state = 'PLAYER_SETUP'
-                # game.player_setup_state['current_tab'] = 'World'  # Default to World
                 game.player_setup_state['current_tab'] = 'SelectWorld'
                 
             elif has_save and load_btn.collidepoint(mouse_pos):
+                if hasattr(game, 'sound_manager'):
+                    game.sound_manager.play_ui_hover()
                 game.game_state = 'LOAD_GAME_MENU'
                 if 'save_list' in game.load_game_state:
                      del game.load_game_state['save_list']
                      
             elif settings_btn.collidepoint(mouse_pos):
+                if hasattr(game, 'sound_manager'):
+                    game.sound_manager.play_ui_hover()
                 preferences_ui.toggle() 
                 
             elif quit_btn.collidepoint(mouse_pos):
+                if hasattr(game, 'sound_manager'):
+                    game.sound_manager.play_ui_hover()
                 game.running = False
                 return
                 

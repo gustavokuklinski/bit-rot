@@ -26,6 +26,20 @@ def run_game_over(game):
     
     respawn_btn, menu_btn = draw_game_over(game.game_screen, game.zombies_killed, days_survived, mouse_pos)
 
+    # --- BUTTON HOVER SOUND TRACKER ---
+    go_buttons = [b for b in [respawn_btn, menu_btn] if b is not None]
+    hovered_idx = None
+    for idx, b_rect in enumerate(go_buttons):
+        if b_rect.collidepoint(mouse_pos):
+            hovered_idx = idx
+            break
+
+    if hovered_idx is not None and hovered_idx != getattr(game, '_go_hovered_btn_idx', None):
+        if hasattr(game, 'sound_manager'):
+            game.sound_manager.play_ui_hover()
+    game._go_hovered_btn_idx = hovered_idx
+    # -----------------------------------
+
     for event in game.get_events():
         if getattr(game, 'joystick_handler', None):
             game.joystick_handler.process_event(event)

@@ -34,6 +34,7 @@ def run_loading(game):
                     game.load_game(game.loading_saved_game_folder)
                     game.loading_saved_game_folder = None
             except Exception as e:
+                import traceback
                 traceback.print_exc()
                 if hasattr(game, 'logger') and game.logger:
                     game.logger.crash("Critical error during background loading", e)
@@ -45,7 +46,7 @@ def run_loading(game):
         thread.start()
 
     # --- 2. Keep the UI alive, interactive, and responsive at 60 FPS ---
-    start_btn = draw_loading_screen(game.game_screen, getattr(game, 'loading_done', False), mouse_pos, events)
+    start_btn = draw_loading_screen(game.game_screen, getattr(game, 'loading_done', False), mouse_pos, events, game=game)
     game._update_screen()
 
     # --- 3. Handle "Click to start" once loading has finished ---
@@ -53,6 +54,8 @@ def run_loading(game):
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
                 if start_btn and start_btn.collidepoint(mouse_pos):
+                    if hasattr(game, 'sound_manager'):
+                        game.sound_manager.play_ui_hover()
                     _finalize_loading(game)
                     return
             elif event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_SPACE):

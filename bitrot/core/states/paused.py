@@ -104,6 +104,21 @@ def run_paused(game):
     btn_exit.x = current_x
     hover_exit = draw_btn_with_key(btn_exit, "Exit", WHITE, (150, 150, 150))
 
+    # --- BUTTON HOVER SOUND TRACKER ---
+    pause_buttons = [btn_continue, btn_save, btn_exit]
+    mouse_pos = game._get_scaled_mouse_pos()
+    hovered_idx = None
+    for idx, b_rect in enumerate(pause_buttons):
+        if b_rect.collidepoint(mouse_pos):
+            hovered_idx = idx
+            break
+
+    if hovered_idx is not None and hovered_idx != getattr(game, '_paused_hovered_btn_idx', None):
+        if hasattr(game, 'sound_manager'):
+            game.sound_manager.play_ui_hover()
+    game._paused_hovered_btn_idx = hovered_idx
+    # -----------------------------------
+
     # --- 4. EVENT HANDLING ---
     mouse_pos = game._get_scaled_mouse_pos()
     events = game.get_events()

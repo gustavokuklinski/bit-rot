@@ -54,6 +54,18 @@ def try_grab_item(game):
             display_message(tr('msg', "No space to grab the item."))
 
         if success:
+            
+            if hasattr(game, 'sound_manager'):
+                game.sound_manager.play_sound(
+                    'grab.ogg',
+                    subdir='items',
+                    game=game,
+                    source_pos=game.player.rect.center,
+                    base_volume=0.5,
+                    pitch_variance=0.1,
+                    is_critical=True
+                )
+
             if getattr(game, 'is_client', False) and getattr(game, 'client', None):
                 from core.server.network import NetMsg, send_msg
                 send_msg(game.client.socket, {
