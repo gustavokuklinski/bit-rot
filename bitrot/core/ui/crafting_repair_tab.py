@@ -6,7 +6,7 @@ from core.entities.item.item import Item
 from core.messages import display_message
 from core.data.localization import tr
 from core.ui.notifications import check_milestone_progress
-from core.ui.crafting_common import draw_common_ingredients_grid, draw_craft_action_footer
+from core.ui.crafting_common import draw_common_ingredients_grid, draw_craft_action_footer, player_has_at_least_one_ingredient
 
 class CraftingRepairTab:
     def __init__(self, modal):
@@ -79,6 +79,10 @@ class CraftingRepairTab:
 
     def execute_craft(self, recipe):
         if self.modal.player.action_timer > 0:
+            return
+
+        if not player_has_at_least_one_ingredient(self.modal.player, self.modal.game, recipe):
+            display_message(tr('msg', "At least one required item must be in your inventory."))
             return
 
         error = self.modal._validate_ingredients(recipe)
@@ -179,4 +183,11 @@ class CraftingRepairTab:
 
             display_message(f"{tr('msg', 'Repaired')} {target_item.name} {tr('msg', 'by')} {int(restored)} {tr('msg', 'points.')}")
 
-        self.modal.player.start_action(f"Repairing {recipe.output_name}", recipe.time_required, craft_complete)
+        self.modal.player.start_action(
+            f"Repairing {recipe.output_name}",
+            recipe.time_required,
+            craft_complete,
+            cancel_on_move=True,
+            action_sound='repair.ogg',
+            action_sound_subdir='craft'
+        )

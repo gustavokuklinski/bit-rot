@@ -133,6 +133,11 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.action_callback = None
         self.action_name = ""
         self.action_xp_reward = 0
+        self.action_allow_walk = False
+        self.action_cancel_on_move = False
+        self.action_on_cancel = None
+
+        self.action_sound_channel = None
 
         self.images = {}
         visuals_data = data.get('visuals', {})
@@ -188,6 +193,47 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.action_xp_attr = 'agility'
         self.saved_detection_radius = None
 
+
+    def cancel_action(self):
+        """Cancels an in-progress timed action, stops looping audio, and plays cancel.ogg."""
+        if self.action_timer > 0:
+            # 1. Stop any looping action audio (e.g. read.ogg)
+            if getattr(self, 'action_sound_channel', None):
+                try:
+                    self.action_sound_channel.stop()
+                except Exception:
+                    pass
+                self.action_sound_channel = None
+
+            # 2. Invoke action-specific cleanup callback (e.g. unlock container)
+            if self.action_on_cancel:
+                try:
+                    self.action_on_cancel()
+                except Exception:
+                    pass
+
+            self.action_timer = 0
+            self.action_total_time = 0
+            self.action_callback = None
+            self.action_on_cancel = None
+            self.action_name = ""
+            self.action_allow_walk = False
+            self.action_cancel_on_move = False
+
+            # 3. Play action cancellation sound
+            target_game = getattr(self, 'game', None) or getattr(core.messages, '_game_instance', None)
+            if target_game and hasattr(target_game, 'sound_manager'):
+                target_game.sound_manager.play_sound(
+                    'cancel.ogg',
+                    subdir='ui',
+                    game=target_game,
+                    source_pos=self.rect.center,
+                    base_volume=0.6,
+                    is_critical=True
+                )
+
+            display_message(tr('msg', "Action cancelled."))
+
     @property
     def current_weight(self):
         total = 0.0
@@ -212,17 +258,32 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         if self.action_timer > 0:
             multiplier = 1.0
             self.action_timer -= multiplier * game.dt_mult
-            self.vx = 0
-            self.vy = 0
-            self.is_running = False
+            if not getattr(self, 'action_allow_walk', False):
+                self.vx = 0
+                self.vy = 0
+                self.is_running = False
+            else:
+                self.is_running = False
 
             if self.action_timer <= 0:
+                # Stop looping action sound upon completion
+                if getattr(self, 'action_sound_channel', None):
+                    try:
+                        self.action_sound_channel.stop()
+                    except Exception:
+                        pass
+                    self.action_sound_channel = None
+
                 if self.action_callback:
                     self.action_callback()
                     self.action_callback = None
                     if self.action_xp_reward > 0:
                         self.progression.add_xp(self, self.action_xp_attr, self.action_xp_reward)
+
                 self.action_name = ""
+                self.action_allow_walk = False
+                self.action_cancel_on_move = False
+                self.action_on_cancel = None
 
         if self.chat_timer > 0:
             self.chat_timer -= game.dt_mult
@@ -498,6 +559,8 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             self.layer_switch_cooldown -= game.dt_mult
 
         return False
+
+
 
     def has_line_of_sight(self, target_rect, obstacles, game=None):
         start_pos = self.rect.center

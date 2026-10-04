@@ -16,7 +16,7 @@ from core.messages import display_message
 from core.events.keyboard import toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal
 from core.data.localization import tr
 from core.placement import find_free_tile
-from core.entities.item.item_helpers import does_allow_liquid, is_infinite_liquid_source, find_item_recursive, has_app, get_container_available_liquid
+from core.entities.item.item_helpers import does_allow_liquid, is_infinite_liquid_source, find_item_recursive, has_app, get_container_available_liquid, is_container_on_player
 from core.ui.crafting_common import is_recipe_unlocked, has_recipe_ingredients, execute_recipe_craft, get_recipe_status_details, is_recipe_relevant_to_item
 from core.systems.utils import teleport_player_to_chunk as sys_teleport
 
@@ -1366,7 +1366,6 @@ def handle_context_menu_click(game, mouse_pos):
                                     game.modals.append(existing)
 
                     if is_closed_maptile:
-                        # Instant open if ALL_VISIBLE is true or instant app is installed
                         if getattr(core.data.config, 'ALL_VISIBLE', False) or has_app(game, 'open_container_instant'):
                             open_and_show_modal()
                         else:
@@ -1381,8 +1380,11 @@ def handle_context_menu_click(game, mouse_pos):
                                     'action': 'lock_container', 
                                     'x': item.rect.x, 'y': item.rect.y
                                 })
-                                
-                            game.player.start_action(f"{game.player.name} {tr('ui', 'Opening')}", open_time, open_and_show_modal, xp_reward=1.5)
+                            
+                            def cancel_open():
+                                item.is_opening = False
+
+                            game.player.start_action(f"{game.player.name} {tr('ui', 'Opening')}", open_time, open_and_show_modal, xp_reward=1.5, cancel_on_move=True, on_cancel=cancel_open)
                     else:
                         open_and_show_modal()
                         
@@ -2133,7 +2135,9 @@ def handle_right_click(game, mouse_pos):
             if veh.can_equip(clicked_item, 'tire_fl'):
                 if 'Add tire to' not in options: options.append('Add tire to')
 
-        if item_type not in ['map_tile', 'maptile', 'maptile_container', 'maptile_teleport', 'vehicle'] and not isinstance(clicked_item, Corpse) and not is_maptile:
+        is_item_on_player = click_source in ('inventory', 'belt', 'gear') or (click_source == 'container' and is_container_on_player(click_container_item, game.player))
+
+        if is_item_on_player and item_type not in ['map_tile', 'maptile', 'maptile_container', 'maptile_teleport', 'vehicle'] and not isinstance(clicked_item, Corpse) and not is_maptile:
             item_name_to_check = getattr(clicked_item, 'name', '')
             if item_name_to_check:
                 if not RecipeManager.RECIPES:

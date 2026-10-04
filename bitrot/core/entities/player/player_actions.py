@@ -1,35 +1,60 @@
+# core/entities/player/player_actions.py
+
 import random
+import os
+import core.messages
 from core.messages import display_message
 from core.entities.item.item import Item
 from core.entities.zombie.corpse import Corpse
 from core.data.recipe_manager import RecipeManager
 from core.data.localization import tr
+from core.entities.item.item_helpers import is_container_on_player
 
 class PlayerActions:
-    def start_action(self, action_name, base_duration_mult, callback, xp_reward=5):
+    def start_action(self, action_name, base_duration_mult, callback, xp_reward=5, 
+                     allow_walk=False, cancel_on_move=False, on_cancel=None, 
+                     action_sound=None, action_sound_subdir='items'):
         if self.action_timer > 0:
             display_message(tr('msg', "Busy..."))
             return False
 
         UNIT_TIME = 60
-        
-        # Calculate transfer timer based on Agility
-        # Default (Level 0): 3.0 seconds
-        # Max (Level 10): 1.0 second
         agility = self.attributes.get('agility', 0.0)
         agility = max(0.0, min(10.0, agility))
-        
-        # Linear interpolation: 3.0s at 0 -> 1.0s at 10
-        # Slope = (1.0 - 3.0) / 10 = -0.2
         base_seconds = 3.0 - (0.2 * agility)
         
         total_duration = int(UNIT_TIME * base_seconds * base_duration_mult)
         
+        # Stop any previous action sound channel
+        if getattr(self, 'action_sound_channel', None):
+            try:
+                self.action_sound_channel.stop()
+            except Exception:
+                pass
+            self.action_sound_channel = None
+
         self.action_timer = total_duration
         self.action_total_time = total_duration
         self.action_name = action_name
         self.action_callback = callback
         self.action_xp_reward = xp_reward
+        self.action_allow_walk = allow_walk
+        self.action_cancel_on_move = cancel_on_move
+        self.action_on_cancel = on_cancel
+
+        # Start looping action sound if provided
+        if action_sound:
+            target_game = getattr(self, 'game', None) or getattr(core.messages, '_game_instance', None)
+            if target_game and hasattr(target_game, 'sound_manager'):
+                self.action_sound_channel = target_game.sound_manager.play_sound(
+                    action_sound,
+                    subdir=action_sound_subdir,
+                    game=target_game,
+                    source_pos=self.rect.center,
+                    base_volume=0.5,
+                    loops=-1,
+                    is_critical=True
+                )
         
         display_message(f"{action_name}...")
         return True
@@ -37,6 +62,12 @@ class PlayerActions:
     def consume_item(self, item, source_type, item_index, container_item=None, is_auto_drink=False, game=None, target_part=None):
         if self.action_timer > 0 and not is_auto_drink:
             display_message(tr('msg', "Busy..."))
+            return False
+
+        # Restrict 'Use' to items in player inventory/possession
+        is_on_player = (source_type in ('inventory', 'belt', 'gear')) or (source_type == 'container' and container_item and is_container_on_player(container_item, self))
+        if not is_on_player:
+            display_message(tr('msg', "Item must be in inventory to use."))
             return False
 
         if getattr(item, 'item_type', '').lower() == 'recipe':
@@ -62,14 +93,11 @@ class PlayerActions:
                 else:
                     candidates = [raw_req]
             
-            # Helper to find candidate
             def find_candidate(cand_name):
-                # Check Belt
                 for i, it in enumerate(self.belt):
                     if it and it.name == cand_name:
                         if hasattr(it, 'load') and it.load is not None and it.load <= 0: continue
                         return it, 'belt', i, None
-                # Check Inventory
                 for i, it in enumerate(self.inventory):
                     if it and it.name == cand_name:
                         if hasattr(it, 'load') and it.load is not None and it.load <= 0: continue
@@ -100,10 +128,17 @@ class PlayerActions:
             return False
             
         duration_mult = getattr(item, 'consume_time', 1.0)
-            
+        
+        # Check action walking vs cancel-on-move
+        item_type = getattr(item, 'item_type', '')
+        walkable_types = {'consumable_food', 'consumable_drink', 'consumable_drugs', 'consumable_medication', 'liquid'}
+        is_book = (item_type == 'consumable_book' or 'book' in item_type.lower() or item_type == 'recipe' or 'book' in getattr(item, 'name', '').lower())
+
+        allow_walk = (item_type in walkable_types) and not is_book
+        cancel_on_move = is_book
+        action_sound = 'read.ogg' if is_book else None
+
         def execute_consume():
-            status_effect_legacy = getattr(item, 'status_effect', None)
-            ammo_type = getattr(item, 'ammo_type', None) 
             consumed = False
             old_alcohol = getattr(self, 'drugs', 0.0)
 
@@ -144,18 +179,8 @@ class PlayerActions:
                                     display_message(f"{tr('msg', 'Used')} {tr('item', item.name)}. {tr('msg', 'Reduced')} {target_stat.capitalize()} {tr('msg', 'by')} {val}.")
                                 consumed = True
             
-            elif status_effect_legacy and hasattr(self, status_effect_legacy):
-                pass
-            
-            else:
-                if not consumed:
-                    display_message(f"{tr('msg', 'Cannot consume')} {tr('item', item.name)}{tr('msg', ': no valid effects found.')}")
-                    return 
-
             if consumed:
                 item.load -= 1
-
-                # Trigger dizzy notification only when reaching the 30% threshold
                 if old_alcohol < 30.0 <= getattr(self, 'drugs', 0.0):
                     display_message(tr('msg', "You feel dizzy and your vision narrows..."))
                     
@@ -171,7 +196,6 @@ class PlayerActions:
                         if item_index < len(container_item.inventory) and container_item.inventory[item_index] == item:
                             container_item.inventory.pop(item_index)
                             
-                # Consume required item (Match/Lighter)
                 if required_item_found:
                     if hasattr(required_item_found, 'load') and required_item_found.load is not None:
                         required_item_found.load -= 1
@@ -195,11 +219,20 @@ class PlayerActions:
             execute_consume()
             return True
         else:
-            return self.start_action(f"Using {tr('item', item.name)}", duration_mult, execute_consume, xp_reward=5)
-    
+            return self.start_action(
+                f"Using {tr('item', item.name)}",
+                duration_mult,
+                execute_consume,
+                xp_reward=5,
+                allow_walk=allow_walk,
+                cancel_on_move=cancel_on_move,
+                action_sound=action_sound,
+                action_sound_subdir='items'
+            )
+
     def toggle_utility_item(self, item, source, index, container_item):
         if not hasattr(item, 'state'):
-            return
+            return None
 
         is_on_ground = (source == 'ground') or (source == 'nearby' and getattr(container_item, 'item_type', '') == 'ground')
 
@@ -208,16 +241,15 @@ class PlayerActions:
         if any(name in item.name for name in restricted_toggle_items):
             if not is_on_ground or not getattr(item, 'is_placed', False):
                 display_message(tr('msg', "This item can only be turned on/off when Placed on the ground."))
-                return
+                return None
 
         new_name = ""
         if item.state == "on":
             new_name = item.name.replace(" on", " off")
         elif item.state == "off":
             if item.durability is not None and item.durability <= 0:
-                
                 display_message(f"{tr('msg', 'Cannot turn on')} {tr('item', item.name)}{tr('msg', ', it´s out of power.')}")
-                return
+                return None
 
             # Check Requirements (Lighters/Matches) for ignition
             req_consumed = False
@@ -262,7 +294,7 @@ class PlayerActions:
                 if not required_item_found:
                     req_str = " or ".join(candidates)
                     display_message(f"{tr('msg', 'Requires')} {req_str} {tr('msg', 'to turn on.')}")
-                    return
+                    return None
                 
                 if hasattr(required_item_found, 'load') and required_item_found.load is not None:
                     required_item_found.load -= 1
@@ -278,12 +310,12 @@ class PlayerActions:
                         display_message(f"{tr('item', required_item_found.name)} {tr('msg', 'used up.')}")
                 req_consumed = True
 
-            # Fallback for old code behavior
+            # Fallback for older code behavior
             if not req_consumed and getattr(item, 'fuel_type', None) == "Matches":
                 matches, m_source, m_index, m_container = self.find_fuel("Matches")
                 if not matches:
                     display_message(tr('msg', "No matches to light the lantern."))
-                    return
+                    return None
 
                 matches.load -= 1
                 if matches.load <= 0:
@@ -294,20 +326,18 @@ class PlayerActions:
             new_name = item.name.replace(" off", " on")
 
         if not new_name:
-            return
+            return None
 
         new_item = Item.create_from_name(new_name)
         if not new_item:
             print(f"Error: Could not find item template for '{new_name}'")
-            return
+            return None
 
         new_item.durability = item.durability
         new_item.load = item.load
-        # Copy position and rect for ground items
         new_item.rect.center = item.rect.center
         new_item.x = item.x
         new_item.y = item.y
-
         new_item.is_placed = getattr(item, 'is_placed', False)
 
         if getattr(item, 'item_type', '') == 'mobile' or 'Mobile' in getattr(item, 'name', ''):
@@ -315,31 +345,30 @@ class PlayerActions:
             if target_game and hasattr(target_game, 'modals'):
                 target_game.modals = [m for m in target_game.modals if m.get('type') != 'mobile']
 
-        # Handle ground and nearby sources (items on ground or in VirtualGroundContainer)
+        # Handle ground and nearby sources
         if source == 'ground':
-            # Item is in game.items_on_ground, but we don't have game reference here
-            # The replacement will be handled by the caller in mouse_context.py
             return new_item
         elif source == 'nearby' and container_item:
-            # Check if it's a VirtualGroundContainer (ground items in nearby modal)
             if getattr(container_item, 'item_type', '') == 'ground':
-                # Return new_item for caller to handle replacement in game.items_on_ground
                 return new_item
-            # For other containers (corpse on ground, etc.), modify directly
             if index is not None and 0 <= index < len(container_item.inventory):
                 container_item.inventory[index] = new_item
-                return
+                return new_item
         elif source and index is not None:
             source_inventory = self._get_source_inventory(source, container_item)
             if source_inventory and index < len(source_inventory) and source_inventory[index] == item:
                 source_inventory[index] = new_item
-                return
+                return new_item
             else:
                 print(f"Error: Could not find item {tr('item', item.name)} in {source} to toggle.")
         elif item in self.belt:
-             self.belt[self.belt.index(item)] = new_item
+            self.belt[self.belt.index(item)] = new_item
+            return new_item
         elif item in self.inventory:
-             self.inventory[self.inventory.index(item)] = new_item
+            self.inventory[self.inventory.index(item)] = new_item
+            return new_item
+
+        return new_item
 
     def read_recipe_book(self, item):
         recipes_taught = RecipeManager.get_recipes_by_magazine(item.name)
@@ -357,15 +386,18 @@ class PlayerActions:
         def finish_reading():
             if item.name not in self.known_recipes:
                 self.known_recipes.append(item.name)
-                
             else:
                 display_message(f"{tr('msg', 'You reviewed')} {tr('item', item.name)}.")
-            
-            # Add the intelligence XP here, right when the action successfully finishes
             self.progression.add_xp(self, 'intelligence', 10)
 
-        # Call start_action without the xp_attr or xp_reward parameters
-        self.start_action(f"{tr('msg', 'Reading')} {tr('item', item.name)}", 3.0, finish_reading)
+        self.start_action(
+            f"{tr('msg', 'Reading')} {tr('item', item.name)}",
+            3.0,
+            finish_reading,
+            cancel_on_move=True,
+            action_sound='read.ogg',
+            action_sound_subdir='items'
+        )
 
     def find_repair_kit(self, target_item):
         if not target_item: return None, None, None, None
@@ -405,23 +437,35 @@ class PlayerActions:
                     if source == 'belt': self.belt[index] = None
                     else: inv.pop(index)
                 display_message(f"{tr('item', kit.name)} {tr('msg', 'used up.')}")
-        self.start_action("Repairing", 2.0, execute_repair, xp_reward=10)
+
+        self.start_action(
+            "Repairing",
+            2.0,
+            execute_repair,
+            xp_reward=10,
+            cancel_on_move=True,
+            action_sound='repair.ogg',
+            action_sound_subdir='craft'
+        )
 
     def get_item_context_options(self, item, source, container_item=None):
         options = []
-        
-        # Safely get item_type using getattr to prevent AttributeError for NPCs/Animals
         item_type = getattr(item, 'item_type', '')
         
         if item_type == 'vehicle':
              options.append("Inspect"); return options
         if isinstance(item, Corpse):
             options.append('Open'); return options
+
+        is_on_player = (source in ('inventory', 'belt', 'gear')) or (source == 'container' and container_item and is_container_on_player(container_item, self))
         
         if item_type == 'text' or item_type == 'recipe' or item_type == 'map':
-            if item_type == 'recipe': options.append('Use')
-            elif item_type == 'map': options.append('Open')
-            else: options.append('Read')
+            if item_type == 'recipe':
+                if is_on_player: options.append('Use')
+            elif item_type == 'map':
+                options.append('Open')
+            else:
+                options.append('Read')
             if hasattr(item, 'is_stackable') and item.is_stackable():
                 options.append('Drop one')
                 if getattr(item, 'load', 0) > 1: options.append('Drop all')
@@ -432,18 +476,15 @@ class PlayerActions:
             item_name = getattr(item, 'name', '')
             if item_type == 'consumable_ammo' or 'Ammo' in item_name or 'Shells' in item_name:
                 pass
-            elif item_type == 'consumable_medication' or 'Medkit' in item_name or 'Bandage' in item_name:
-                options.append('Use')
-                
-            else: options.append('Use')
+            else:
+                if is_on_player:
+                    options.append('Use')
             
-            # CHECK ALLOW BELT FOR CONSUMABLES
             if getattr(item, 'allow_belt', False):
                 options.append('Equip')
                 
         elif item_type in ['utility', 'mobile']:
             item_state = getattr(item, 'state', '')
-            
             is_restricted_toggle = any(name in getattr(item, 'name', '') for name in ["Campfire"])
             is_on_ground = (source == 'ground') or (source == 'nearby' and getattr(container_item, 'item_type', '') == 'ground')
             can_toggle = True
@@ -459,7 +500,6 @@ class PlayerActions:
             if getattr(item, 'fuel_type', None): options.append('Reload')
             if item_type == 'mobile': options.append('Open')
             
-            # CHECK ALLOW BELT FOR UTILITIES
             if getattr(item, 'allow_belt', False):
                 options.append('Equip')
                 
@@ -473,7 +513,6 @@ class PlayerActions:
             options.append('Open')
             options.append('Equip')
             
-                
         is_liquid = getattr(item, 'liquid', False)
         
         if is_liquid:

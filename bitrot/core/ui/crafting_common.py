@@ -7,10 +7,99 @@ from core.entities.item.item import Item
 from core.messages import display_message
 from core.ui.notifications import check_milestone_progress
 
+def player_has_at_least_one_ingredient(player, game, recipe):
+    """Checks if the player carries at least one required ingredient/target item in their own inventory/belt/gear."""
+    locs = get_crafting_item_locations(player, game, include_nearby=False)
+    player_items = [loc[2] for loc in locs if loc[2]]
+
+    c_type = getattr(recipe, 'craft_type', 'create').lower()
+    if c_type == 'repair':
+        if any(it.name.lower() == recipe.output_name.lower() for it in player_items):
+            return True
+
+    for req in recipe.ingredients:
+        valid_names = [n.lower() for n in req['names']]
+        for it in player_items:
+            if it.name.lower() in valid_names:
+                qty = it.load if (it.load is not None and it.is_stackable()) else 1
+                if qty > 0:
+                    return True
+    return False
+
+def prioritize_locations_for_craft(locs, preferred_id=None):
+    """Prioritizes preferred items first, then nearby/ground items, then player inventory."""
+    def sort_key(loc):
+        if preferred_id and loc[2].id == preferred_id:
+            return 0
+        path = loc[4]
+        is_nearby = bool(path and (path[0] == "Nearby" or path[0] == tr('ui', "Ground")))
+        if is_nearby:
+            return 1
+        return 2
+    return sorted(locs, key=sort_key)
+
+def has_recipe_ingredients(player, game, recipe, include_nearby=True):
+    """Checks if the player (and nearby ground/containers) has all required ingredients,
+    requiring that at least one item is present in the player's inventory."""
+    if not player_has_at_least_one_ingredient(player, game, recipe):
+        return False
+
+    locs = get_crafting_item_locations(player, game, include_nearby=include_nearby)
+    search_items = [loc[2] for loc in locs]
+    
+    for req in recipe.ingredients:
+        needed = req['amount']
+        valid_names = req['names']
+        have = sum((it.load if (it.load is not None and it.is_stackable()) else 1)
+                   for it in search_items
+                   if it.name in valid_names)
+        if have < needed:
+            return False
+    return True
+
+def get_recipe_status_details(player, game, recipe):
+    knows_magazine = bool(not recipe.magazine or recipe.magazine in player.known_recipes)
+    missing_skills = []
+    if recipe.req_level:
+        for attr, lvl in recipe.req_level.items():
+            p_lvl = player.progression.get_level(attr)
+            if p_lvl < lvl:
+                missing_skills.append((attr, p_lvl, lvl))
+
+    if recipe.magazine:
+        if recipe.req_level:
+            is_unlocked = knows_magazine or (len(missing_skills) == 0)
+        else:
+            is_unlocked = knows_magazine
+    elif recipe.req_level:
+        is_unlocked = (len(missing_skills) == 0)
+    else:
+        is_unlocked = True
+
+    missing_magazine = recipe.magazine if (recipe.magazine and not knows_magazine) else None
+
+    has_on_player = player_has_at_least_one_ingredient(player, game, recipe)
+
+    locs = get_crafting_item_locations(player, game, include_nearby=True)
+    search_items = [loc[2] for loc in locs]
+    missing_ingredients = []
+
+    for req in recipe.ingredients:
+        needed = req['amount']
+        valid_names = req['names']
+        have = sum((it.load if (it.load is not None and it.is_stackable()) else 1)
+                   for it in search_items if it.name in valid_names)
+        if have < needed:
+            missing_ingredients.append({
+                'name': valid_names[0],
+                'have': int(have),
+                'needed': int(needed)
+            })
+
+    can_craft = is_unlocked and (len(missing_ingredients) == 0) and has_on_player
+    return can_craft, is_unlocked, missing_ingredients, missing_magazine, missing_skills
+
 def draw_common_ingredients_grid(modal, recipe, details_x, ing_y, details_w, mouse_pos, click, nearby_containers, player_items, nearby_items):
-    """Renders the standard 2-column ingredients grid and handles item dropdown activation.
-    Returns (can_craft, active_tooltip_ingredients, curr_y).
-    """
     surface = modal.surface
     lbl = font_12.render(tr('ui', "Required Ingredients:"), False, GRAY)
     surface.blit(lbl, (details_x, ing_y))
@@ -19,6 +108,9 @@ def draw_common_ingredients_grid(modal, recipe, details_x, ing_y, details_w, mou
     col_width = details_w // 2
     can_craft = True
     active_tooltip_ingredients = None
+
+    if not player_has_at_least_one_ingredient(modal.player, modal.game, recipe):
+        can_craft = False
 
     for r_idx, req in enumerate(recipe.ingredients):
         needed = req['amount']
@@ -171,6 +263,9 @@ def draw_craft_action_footer(modal, recipe, details_x, details_y, details_w, lis
 
     if not is_unlocked:
         btn_text = tr('ui', locked_label)
+    elif not player_has_at_least_one_ingredient(modal.player, modal.game, recipe):
+        btn_text = tr('ui', "NEED ITEM IN INVENTORY")
+        can_craft = False
     elif can_craft:
         btn_text = tr('ui', action_label)
     else:
@@ -267,23 +362,7 @@ def is_recipe_unlocked(recipe, player):
         return skills_met
     return True
 
-def has_recipe_ingredients(player, game, recipe, include_nearby=True):
-    """Checks if the player (and nearby ground/containers) has all required ingredients."""
-    locs = get_crafting_item_locations(player, game, include_nearby=include_nearby)
-    search_items = [loc[2] for loc in locs]
-    
-    for req in recipe.ingredients:
-        needed = req['amount']
-        valid_names = req['names']
-        have = sum((it.load if (it.load is not None and it.is_stackable()) else 1)
-                   for it in search_items
-                   if it.name in valid_names)
-        if have < needed:
-            return False
-    return True
-
 def execute_recipe_craft(game, recipe, player=None):
-    """Executes a craft action (timed progress bar, consumption, and result creation)."""
     if player is None:
         player = game.player
     if not player or player.action_timer > 0:
@@ -293,6 +372,10 @@ def execute_recipe_craft(game, recipe, player=None):
         display_message(tr('msg', "You haven't unlocked this recipe yet."))
         return
 
+    if not player_has_at_least_one_ingredient(player, game, recipe):
+        display_message(tr('msg', "At least one required item must be in your inventory."))
+        return
+
     nearby = game.find_nearby_containers()
     if not has_recipe_ingredients(player, game, recipe, include_nearby=True):
         display_message(tr('msg', "Missing required ingredients."))
@@ -300,6 +383,8 @@ def execute_recipe_craft(game, recipe, player=None):
 
     # Ensure items to be destroyed do not have items inside them (e.g. bags)
     locations = get_crafting_item_locations(player, game, include_nearby=True, nearby_containers=nearby)
+    locations = prioritize_locations_for_craft(locations)
+
     for req in recipe.ingredients:
         if not req['destroy']:
             continue
@@ -327,6 +412,7 @@ def execute_recipe_craft(game, recipe, player=None):
         target_repair_item = None
         if craft_type == 'repair':
             locs_now = get_crafting_item_locations(player, game, include_nearby=True, nearby_containers=nearby_now)
+            locs_now = prioritize_locations_for_craft(locs_now)
             for container, key, it, ctype, _ in locs_now:
                 if it.name == recipe.output_name and it.durability is not None and it.durability < it.max_durability:
                     target_repair_item = it
@@ -346,7 +432,10 @@ def execute_recipe_craft(game, recipe, player=None):
             valid_names = req['names']
             removed = 0
 
+            # Prioritize taking from nearby/ground first!
             locs_now = get_crafting_item_locations(player, game, include_nearby=True, nearby_containers=nearby_now)
+            locs_now = prioritize_locations_for_craft(locs_now)
+
             for container, key, it, ctype, _ in locs_now:
                 if removed >= to_remove:
                     break
@@ -415,57 +504,23 @@ def execute_recipe_craft(game, recipe, player=None):
         else:
             display_message(tr('msg', "Crafting yielded nothing."))
 
-    player.start_action(f"Crafting {recipe.output_name}", recipe.time_required, craft_complete)
-
-def get_recipe_status_details(player, game, recipe):
-    """Analyzes recipe unlock and ingredient state.
-    Returns:
-        can_craft (bool): True if fully unlocked and all ingredients present.
-        is_unlocked (bool): True if magazine and skill requirements are met.
-        missing_ingredients (list): [{'name': ..., 'have': ..., 'needed': ...}]
-        missing_magazine (str or None): Name of magazine if missing.
-        missing_skills (list): [(attr_name, current_lvl, required_lvl)]
-    """
-    # 1. Check Magazine & Skills
-    knows_magazine = bool(not recipe.magazine or recipe.magazine in player.known_recipes)
-    missing_skills = []
-    if recipe.req_level:
-        for attr, lvl in recipe.req_level.items():
-            p_lvl = player.progression.get_level(attr)
-            if p_lvl < lvl:
-                missing_skills.append((attr, p_lvl, lvl))
-
-    if recipe.magazine:
-        if recipe.req_level:
-            is_unlocked = knows_magazine or (len(missing_skills) == 0)
-        else:
-            is_unlocked = knows_magazine
-    elif recipe.req_level:
-        is_unlocked = (len(missing_skills) == 0)
+    craft_type = getattr(recipe, 'craft_type', 'create').lower()
+    if craft_type == 'dismantle':
+        action_sound = 'dismantle.ogg'
+    elif craft_type == 'repair':
+        action_sound = 'repair.ogg'
     else:
-        is_unlocked = True
+        action_sound = 'craft.ogg'
 
-    missing_magazine = recipe.magazine if (recipe.magazine and not knows_magazine) else None
+    player.start_action(
+        f"Crafting {recipe.output_name}",
+        recipe.time_required,
+        craft_complete,
+        cancel_on_move=True,
+        action_sound=action_sound,
+        action_sound_subdir='craft'
+    )
 
-    # 2. Check Ingredients (including 1-tile loose ground items)
-    locs = get_crafting_item_locations(player, game, include_nearby=True)
-    search_items = [loc[2] for loc in locs]
-    missing_ingredients = []
-
-    for req in recipe.ingredients:
-        needed = req['amount']
-        valid_names = req['names']
-        have = sum((it.load if (it.load is not None and it.is_stackable()) else 1)
-                   for it in search_items if it.name in valid_names)
-        if have < needed:
-            missing_ingredients.append({
-                'name': valid_names[0],
-                'have': int(have),
-                'needed': int(needed)
-            })
-
-    can_craft = is_unlocked and (len(missing_ingredients) == 0)
-    return can_craft, is_unlocked, missing_ingredients, missing_magazine, missing_skills
 
 def is_recipe_relevant_to_item(recipe, item_name):
     """Filters recipes relevant to the clicked item based on craft type:

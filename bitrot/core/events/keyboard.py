@@ -738,7 +738,13 @@ def handle_keyboard_events(game, event, action_triggered=None):
                 if len(getattr(game, 'chat_input_text', '')) < 50 and getattr(event, 'unicode', ''):
                     game.chat_input_text += event.unicode
             return 
-            
+
+        # --- STOP IN-PROGRESS ACTION ON SPACE ---
+        if getattr(game, 'player', None) and game.player.action_timer > 0:
+            if event.key == pygame.K_SPACE:
+                game.player.cancel_action()
+                return
+
         # Chat activation via 'T' key
         if event.key == pygame.K_t:
             game.chat_active = True
@@ -868,6 +874,10 @@ def handle_keyboard_events(game, event, action_triggered=None):
                 print("No vehicle nearby.")
                 
         elif action_triggered == 'action_shove':
+            if game.player and game.player.action_timer > 0:
+                game.player.cancel_action()
+                return
+
             if getattr(game.player, 'vehicle', None):
                 game.player.vehicle.brake(brake_force=0.6, game=game)
             
@@ -999,12 +1009,14 @@ def handle_keyboard_events(game, event, action_triggered=None):
                                     game.modals.append(new_modal)
 
                         if is_closed_maptile:
-                            # Instant open if ALL_VISIBLE is true or instant app is installed
                             if getattr(core.data.config, 'ALL_VISIBLE', False) or has_app(game, 'open_container_instant'):
                                 open_and_show_modal()
                             else:
                                 agility = game.player.progression.get_level('agility')
                                 open_time = max(0.2, 1.8 - (agility * 0.2))
-                                game.player.start_action(f"{game.player.name} {tr('ui', 'Opening')}", open_time, open_and_show_modal, xp_reward=1.5)
+                                found_container.is_opening = True
+                                def cancel_open():
+                                    found_container.is_opening = False
+                                game.player.start_action(f"{game.player.name} {tr('ui', 'Opening')}", open_time, open_and_show_modal, xp_reward=1.5, cancel_on_move=True, on_cancel=cancel_open)
                         else:
                             open_and_show_modal()

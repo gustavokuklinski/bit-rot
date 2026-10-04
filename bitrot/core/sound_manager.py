@@ -27,7 +27,9 @@ CATEGORY_TO_CONFIG_ATTR = {
     'animal': 'VOLUME_ANIMAL', 
     'animals': 'VOLUME_ANIMAL',
     'radio': 'VOLUME_ITEMS',
-    'ui': 'VOLUME_ITEMS'
+    'ui': 'VOLUME_ITEMS',
+    'craft': 'VOLUME_ITEMS',
+    'crafting': 'VOLUME_ITEMS'
 }
 
 class SoundManager:
@@ -120,7 +122,7 @@ class SoundManager:
         full_path = os.path.join(SOUND_PATH, sound_path)
         if not os.path.exists(full_path):
             filename = os.path.basename(sound_path)
-            for candidate_subdir in ['map', 'ui', 'items', '']:
+            for candidate_subdir in ['map', 'ui', 'items', 'craft','']:
                 alt_path = os.path.join(SOUND_PATH, candidate_subdir, filename) if candidate_subdir else os.path.join(SOUND_PATH, filename)
                 if os.path.exists(alt_path):
                     full_path = alt_path

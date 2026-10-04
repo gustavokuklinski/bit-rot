@@ -368,3 +368,23 @@ def add_item_to_container_inventory(container, item_to_add, target_index=-1, is_
             else:
                 container.inventory.append(item_to_add)
             return trans, 0.0, True
+
+def is_container_on_player(cont, player):
+    """Checks if a container object is equipped, worn, or in the player's inventory/belt."""
+    if not cont or not player:
+        return False
+    if cont is player or cont is getattr(player, 'inventory', None):
+        return True
+
+    def check_list(items):
+        for item in items:
+            if not item: continue
+            if item is cont: return True
+            if hasattr(item, 'inventory') and item.inventory:
+                if check_list(item.inventory): return True
+        return False
+
+    if check_list(getattr(player, 'belt', [])): return True
+    if check_list(getattr(player, 'inventory', [])): return True
+    if hasattr(player, 'clothes') and check_list(player.clothes.values()): return True
+    return False

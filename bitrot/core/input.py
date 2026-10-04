@@ -39,12 +39,37 @@ def is_action_held(game, action, keys, mouse_buttons):
     return False
 
 def handle_movement(game):
+    keys = pygame.key.get_pressed()
+    mouse_buttons = pygame.mouse.get_pressed()
+
+    # ---> 1. FETCH JOYSTICK DATA <---
+    joy_lx, joy_ly = 0, 0
+    joy_aim = False
     
+    if getattr(game, 'joystick_handler', None):
+        joy_lx, joy_ly = game.joystick_handler.get_movement_axes()
+        if hasattr(game.joystick_handler, 'is_rt_pressed'):
+            joy_aim = game.joystick_handler.is_rt_pressed()
+
+    kb_dx, kb_dy = 0, 0
+    if is_action_held(game, 'move_up', keys, mouse_buttons): kb_dy -= 1
+    if is_action_held(game, 'move_down', keys, mouse_buttons): kb_dy += 1
+    if is_action_held(game, 'move_left', keys, mouse_buttons): kb_dx -= 1
+    if is_action_held(game, 'move_right', keys, mouse_buttons): kb_dx += 1
+
+    is_trying_to_move = (kb_dx != 0 or kb_dy != 0 or abs(joy_lx) > 0.15 or abs(joy_ly) > 0.15)
+
     if game.player.action_timer > 0:
-        game.player.vx = 0
-        game.player.vy = 0
-        game.player.is_running = False
-        return
+        if getattr(game.player, 'action_allow_walk', False):
+            # Allowed to walk while using food, drink, drugs, meds, liquid
+            pass
+        elif is_trying_to_move and getattr(game.player, 'action_cancel_on_move', False):
+            game.player.cancel_action()
+        else:
+            game.player.vx = 0
+            game.player.vy = 0
+            game.player.is_running = False
+            return
     
     if getattr(game, 'chat_active', False):
         game.player.vx = 0
@@ -60,11 +85,6 @@ def handle_movement(game):
                 game.player.is_running = False
                 return
 
-    keys = pygame.key.get_pressed()
-    mouse_buttons = pygame.mouse.get_pressed()
-
-    
-    
     # --- Dynamic Speed Calculation using XML Config ---
     base_move_speed = core.data.config.PLAYER_SPEED
     speed_multiplier = 0.8
@@ -80,17 +100,11 @@ def handle_movement(game):
     final_base_speed = base_move_speed * speed_multiplier
     current_speed = 0
 
-    # ---> 1. FETCH JOYSTICK DATA <---
-    joy_lx, joy_ly = 0, 0
-    joy_aim = False
-    
-    if getattr(game, 'joystick_handler', None):
-        joy_lx, joy_ly = game.joystick_handler.get_movement_axes()
-        if hasattr(game.joystick_handler, 'is_rt_pressed'):
-            joy_aim = game.joystick_handler.is_rt_pressed()
-
     # ---> 2. APPLY RUNNING AND AIMING <---
     is_running = (is_action_held(game, 'run', keys, mouse_buttons) or keys[pygame.K_RSHIFT])
+    # Disable running while performing a walkable action
+    if game.player.action_timer > 0 and getattr(game.player, 'action_allow_walk', False):
+        is_running = False
     game.player.is_running = is_running
 
     mouse_pos = game._get_scaled_mouse_pos()
@@ -111,19 +125,6 @@ def handle_movement(game):
         current_speed = final_base_speed / 3.5
     else:
         current_speed = final_base_speed / 2
-
-    # ---------------------------------------------------------
-    # MOVEMENT LOGIC: SEPARATE KEYBOARD AND JOYSTICK MATH
-    # ---------------------------------------------------------
-    
-    # 3. Read Keyboard Input
-    kb_dx, kb_dy = 0, 0
-    if is_action_held(game, 'move_up', keys, mouse_buttons): kb_dy -= 1
-    if is_action_held(game, 'move_down', keys, mouse_buttons): kb_dy += 1
-    if is_action_held(game, 'move_left', keys, mouse_buttons): kb_dx -= 1
-    if is_action_held(game, 'move_right', keys, mouse_buttons): kb_dx += 1
-
-    dx, dy = 0, 0
 
     # 4. Apply the correct Math based on the input device
     if kb_dx != 0 or kb_dy != 0:
