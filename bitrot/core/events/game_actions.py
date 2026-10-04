@@ -52,9 +52,9 @@ def try_grab_item(game):
         else:
             print("No space to grab the item.")
             display_message(tr('msg', "No space to grab the item."))
-
+ 
         if success:
-            
+
             if hasattr(game, 'sound_manager'):
                 game.sound_manager.play_sound(
                     'grab.ogg',

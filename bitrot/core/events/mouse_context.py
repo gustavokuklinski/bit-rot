@@ -710,11 +710,15 @@ def handle_context_menu_click(game, mouse_pos):
                                 clone.is_placed = False
                                 game.player.inventory.append(clone)
                                 game.player.stack_item_in_inventory(clone)
+                                if game and hasattr(game, 'sound_manager'):
+                                    game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
                         else:
                             if remove_item_from_src(item):
                                 item.is_placed = False
                                 game.player.inventory.append(item)
                                 game.player.stack_item_in_inventory(item)
+                                if game and hasattr(game, 'sound_manager'):
+                                    game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
                         
                     transfer_time = max(0.1, item.get_total_weight() * 0.2)
                     if source in ['nearby', 'ground', 'container', 'container_map']:
@@ -813,6 +817,10 @@ def handle_context_menu_click(game, mouse_pos):
                                             if hasattr(removed_item, 'durability'): new_item.durability = removed_item.durability
                                             removed_item.load = r_load - trans_qty
                                             target_container.inventory.append(new_item)
+                                        
+                                        if game and hasattr(game, 'sound_manager'):
+                                            game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
+                                    
                                     else:
                                         if remove_item_from_src(item, is_clone=is_clone):
                                             if target_max_liq is not None:
@@ -1389,11 +1397,18 @@ def handle_context_menu_click(game, mouse_pos):
                     if getattr(item, 'liquid', False):
                         item.rect.center = game.player.rect.center
                         game.items_on_ground.append(item)
+                        if game and hasattr(game, 'sound_manager'):
+                            game.sound_manager.play_sound('drop.ogg', subdir='items', game=game, source_pos=item.rect.center)
+
                     elif len(game.player.inventory) < game.player.get_total_inventory_slots():
                         game.player.inventory.append(item)
+                        if game and hasattr(game, 'sound_manager'):
+                            game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
                     else:
                         item.rect.center = game.player.rect.center
                         game.items_on_ground.append(item)
+                        if game and hasattr(game, 'sound_manager'):
+                            game.sound_manager.play_sound('drop.ogg', subdir='items', game=game, source_pos=item.rect.center)
                 elif source == 'gear':
                     slot_name = index 
                     item_to_unequip = game.player.clothes.get(slot_name)
@@ -1402,11 +1417,17 @@ def handle_context_menu_click(game, mouse_pos):
                         if getattr(item_to_unequip, 'liquid', False):
                             item_to_unequip.rect.center = game.player.rect.center
                             game.items_on_ground.append(item_to_unequip)
+                            if game and hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound('drop.ogg', subdir='items', game=game, source_pos=item_to_unequip.rect.center)
                         elif len(game.player.inventory) < game.player.get_total_inventory_slots():
                             game.player.inventory.append(item_to_unequip)
+                            if game and hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
                         else:
                             item_to_unequip.rect.center = game.player.rect.center
                             game.items_on_ground.append(item_to_unequip)
+                            if game and hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound('drop.ogg', subdir='items', game=game, source_pos=item_to_unequip.rect.center)
                 
 
             elif source in ['ground', 'nearby', 'container'] and option in ['Grab', 'Grab One', 'Grab Half', 'Grab All']:

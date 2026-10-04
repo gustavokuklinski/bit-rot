@@ -81,3 +81,8 @@ Special thanks for the players:
 * Kenney - 1-Bit Pack
 * Pixabay.com - Sound effects
 * OpenGameArt.org - Music
+
+**Software**
+Aseprite
+Python 3.11
+
