@@ -76,6 +76,10 @@ class CraftingModal(BaseModal):
         
         self._force_click = False
 
+        self.craft_count = 1
+        if 'craft_count' not in self.modal:
+            self.modal['craft_count'] = 1
+
         self.tab_handlers = {
             tr('tab', "Known Recipes"): CraftingKnowRecipesTab(self),
             tr('tab', "Craft"): CraftingCraftTab(self),
@@ -457,6 +461,8 @@ class CraftingModal(BaseModal):
                 self.cached_recipe = self.selected_recipe
                 self.selected_ingredients = {}
                 self.selected_target = None
+                self.craft_count = 1
+                self.modal['craft_count'] = 1
 
                 if self.selected_recipe.craft_type == 'dismantle':
                     first_ing = self.selected_recipe.ingredients[0]['names'][0]
@@ -568,11 +574,12 @@ class CraftingModal(BaseModal):
         if not preferred_id: return locs
         return sorted(locs, key=lambda loc: 0 if loc[2].id == preferred_id else 1)
 
-    def _validate_ingredients(self, recipe, nearby_containers=None):
+    def _validate_ingredients(self, recipe, nearby_containers=None, count=1):
+        count = max(1, int(count))
         for r_idx, req in enumerate(recipe.ingredients):
             if not req['destroy']: continue
 
-            to_remove = req['amount']
+            to_remove = req['amount'] * count
             valid_names = req['names']
             removed_check = 0
             

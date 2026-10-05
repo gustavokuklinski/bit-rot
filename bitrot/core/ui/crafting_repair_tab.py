@@ -28,6 +28,7 @@ class CraftingRepairTab:
     def draw_details(self, details_x, details_y, details_w, list_h, mouse_pos, click, nearby_containers, player_items, nearby_items):
         r = self.modal.selected_recipe
         surface = self.modal.surface
+        count = getattr(self.modal, 'craft_count', self.modal.modal.get('craft_count', 1))
 
         target_opts, target_ids = [], []
         locs = self.modal._get_all_item_locations(include_nearby=True, nearby_containers=nearby_containers, exclude_equipped=True)
@@ -67,7 +68,8 @@ class CraftingRepairTab:
 
         can_craft, tooltips, _ = draw_common_ingredients_grid(
             self.modal, r, details_x, details_y + 50, details_w,
-            mouse_pos, click, nearby_containers, player_items, nearby_items
+            mouse_pos, click, nearby_containers, player_items, nearby_items,
+            count=count
         )
 
         draw_craft_action_footer(
@@ -77,18 +79,22 @@ class CraftingRepairTab:
         )
         return tooltips
 
-    def execute_craft(self, recipe):
+    def execute_craft(self, recipe, count=1):
         if self.modal.player.action_timer > 0:
             return
+
+        count = max(1, int(count))
 
         if not player_has_at_least_one_ingredient(self.modal.player, self.modal.game, recipe):
             display_message(tr('msg', "At least one required item must be in your inventory."))
             return
 
-        error = self.modal._validate_ingredients(recipe)
+        error = self.modal._validate_ingredients(recipe, count=count)
         if error:
             self.modal.warning_message = error
             return
+
+        total_time = round(recipe.time_required * count, 1)
 
         def craft_complete():
             nearby = self.modal.game.find_nearby_containers()
@@ -97,7 +103,7 @@ class CraftingRepairTab:
             if recipe.gain_xp:
                 for attr, amount in recipe.gain_xp.items():
                     if hasattr(self.modal.player.progression, 'add_xp'):
-                        self.modal.player.progression.add_xp(self.modal.player, attr, amount)
+                        self.modal.player.progression.add_xp(self.modal.player, attr, amount * count)
 
             target_item, target_container, target_key, target_ctype = None, None, None, None
             locations = self.modal._get_all_item_locations(include_nearby=True, nearby_containers=nearby)
@@ -119,7 +125,7 @@ class CraftingRepairTab:
             for r_idx, req in enumerate(recipe.ingredients):
                 if not req['destroy']:
                     continue
-                to_remove = req['amount']
+                to_remove = req['amount'] * count
                 valid_names = req['names']
                 removed = 0
 
@@ -159,34 +165,14 @@ class CraftingRepairTab:
             if total_repair_amount <= 0:
                 total_repair_amount = target_item.max_durability - target_item.durability
 
-            if target_ctype == 'list' and target_item in target_container:
-                target_container.remove(target_item)
-            elif target_ctype == 'fixed_list':
-                target_container[target_key] = None
-            elif target_ctype == 'dict':
-                target_container[target_key] = None
-            elif target_ctype == 'attr':
-                setattr(target_container, target_key, None)
-
             old_durability = target_item.durability
             target_item.durability = min(target_item.max_durability, target_item.durability + total_repair_amount)
             restored = target_item.durability - old_durability
-
-            if len(self.modal.player.inventory) < self.modal.player.get_total_inventory_slots():
-                self.modal.player.inventory.append(target_item)
-            else:
-                self.modal.game.items_on_ground.append(target_item)
-                target_item.x, target_item.y = self.modal.player.x, self.modal.player.y
-                target_item.rect.topleft = (target_item.x, target_item.y)
-
-            if hasattr(self.modal.player, 'progression'):
-                self.modal.player.progression.add_xp(self.modal.player, 'maintenance', 15)
-
             display_message(f"{tr('msg', 'Repaired')} {target_item.name} {tr('msg', 'by')} {int(restored)} {tr('msg', 'points.')}")
 
         self.modal.player.start_action(
             f"Repairing {recipe.output_name}",
-            recipe.time_required,
+            total_time,
             craft_complete,
             cancel_on_move=True,
             action_sound='repair.ogg',

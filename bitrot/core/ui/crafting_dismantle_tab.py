@@ -6,7 +6,12 @@ from core.entities.item.item import Item
 from core.messages import display_message
 from core.data.localization import tr
 from core.ui.notifications import check_milestone_progress
-from core.ui.crafting_common import draw_common_ingredients_grid, draw_craft_action_footer, player_has_at_least_one_ingredient
+from core.ui.crafting_common import (
+    draw_common_ingredients_grid, 
+    draw_craft_action_footer, 
+    player_has_at_least_one_ingredient, 
+    add_craft_results_to_player
+)
 
 class CraftingDismantleTab:
     def __init__(self, modal):
@@ -28,6 +33,7 @@ class CraftingDismantleTab:
     def draw_details(self, details_x, details_y, details_w, list_h, mouse_pos, click, nearby_containers, player_items, nearby_items):
         r = self.modal.selected_recipe
         surface = self.modal.surface
+        count = getattr(self.modal, 'craft_count', self.modal.modal.get('craft_count', 1))
 
         surface.blit(font_12.render(tr('item', r.output_name), False, WHITE), (details_x, details_y))
 
@@ -47,7 +53,8 @@ class CraftingDismantleTab:
 
         can_craft, tooltips, _ = draw_common_ingredients_grid(
             self.modal, r, details_x, details_y + 50, details_w,
-            mouse_pos, click, nearby_containers, player_items, nearby_items
+            mouse_pos, click, nearby_containers, player_items, nearby_items,
+            count=count
         )
 
         draw_craft_action_footer(
@@ -57,18 +64,22 @@ class CraftingDismantleTab:
         )
         return tooltips
 
-    def execute_craft(self, recipe):
+    def execute_craft(self, recipe, count=1):
         if self.modal.player.action_timer > 0:
             return
+
+        count = max(1, int(count))
 
         if not player_has_at_least_one_ingredient(self.modal.player, self.modal.game, recipe):
             display_message(tr('msg', "At least one required item must be in your inventory."))
             return
 
-        error = self.modal._validate_ingredients(recipe)
+        error = self.modal._validate_ingredients(recipe, count=count)
         if error:
             self.modal.warning_message = error
             return
+
+        total_time = round(recipe.time_required * count, 1)
 
         def craft_complete():
             nearby = self.modal.game.find_nearby_containers()
@@ -77,12 +88,12 @@ class CraftingDismantleTab:
             if recipe.gain_xp:
                 for attr, amount in recipe.gain_xp.items():
                     if hasattr(self.modal.player.progression, 'add_xp'):
-                        self.modal.player.progression.add_xp(self.modal.player, attr, amount)
+                        self.modal.player.progression.add_xp(self.modal.player, attr, amount * count)
 
             for r_idx, req in enumerate(recipe.ingredients):
                 if not req['destroy']:
                     continue
-                to_remove = req['amount']
+                to_remove = req['amount'] * count
                 valid_names = req['names']
                 removed = 0
 
@@ -115,36 +126,11 @@ class CraftingDismantleTab:
                         if removed >= to_remove:
                             break
 
-            created_items_log = []
-            maint_level = self.modal.player.progression.get_maintenance(self.modal.player)
-            maint_scale = min(10, maint_level) / 10.0
-
-            for res in recipe.results:
-                base_chance = res.get('chance', 1.0)
-                effective_chance = base_chance + (1.0 - base_chance) * maint_scale
-                if effective_chance < 1.0 and random.random() > effective_chance:
-                    continue
-
-                final_name = random.choice(res['names'])
-                result_item = Item.create_from_name(final_name)
-                if result_item:
-                    result_item.load = res['amount']
-                    if len(self.modal.player.inventory) < self.modal.player.get_total_inventory_slots():
-                        self.modal.player.inventory.append(result_item)
-                    else:
-                        self.modal.game.items_on_ground.append(result_item)
-                        result_item.x, result_item.y = self.modal.player.x, self.modal.player.y
-                        result_item.rect.topleft = (result_item.x, result_item.y)
-                    created_items_log.append(f"{res['amount']}x {final_name}")
-
-            if created_items_log:
-                display_message(f"{tr('msg', 'Dismantled into:')} {', '.join(created_items_log)}")
-            else:
-                display_message(tr('msg', "Dismantling yielded nothing."))
+            add_craft_results_to_player(self.modal.player, self.modal.game, recipe, count=count)
 
         self.modal.player.start_action(
-            f"Dismantling {recipe.output_name}",
-            recipe.time_required,
+            f"Dismantling {recipe.output_name} x{count}",
+            total_time,
             craft_complete,
             cancel_on_move=True,
             action_sound='dismantle.ogg',

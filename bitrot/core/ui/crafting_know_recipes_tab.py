@@ -54,11 +54,11 @@ class CraftingKnowRecipesTab:
         else:
             return self.craft_tab.draw_details(details_x, details_y, details_w, list_h, mouse_pos, click, nearby_containers, player_items, nearby_items)
 
-    def execute_craft(self, recipe):
+    def execute_craft(self, recipe, count=1):
         craft_type = getattr(recipe, 'craft_type', 'create')
         if craft_type == 'repair':
-            self.repair_tab.execute_craft(recipe)
+            self.repair_tab.execute_craft(recipe, count=count)
         elif craft_type == 'dismantle':
-            self.dismantle_tab.execute_craft(recipe)
+            self.dismantle_tab.execute_craft(recipe, count=count)
         else:
-            self.craft_tab.execute_craft(recipe)
+            self.craft_tab.execute_craft(recipe, count=count)
