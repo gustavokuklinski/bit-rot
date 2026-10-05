@@ -3,6 +3,7 @@
 import os
 import random
 import pygame
+import uuid
 import xml.etree.ElementTree as ET
 from types import SimpleNamespace
 from faker import Faker
@@ -364,6 +365,7 @@ def _render_paper_doll(class_id, clothes_names, class_colors=None, size=(48, 48)
 def _start_with_class(game, state, class_def):
     """Initializes player data, clothes with specific colors, starter items, and starts the game."""
     final_player_data = state['base_data'].copy()
+    final_player_data['player_id'] = str(uuid.uuid4())
     final_player_data['name'] = state.get('player_name', "Survivor")
     final_player_data['sex'] = state['base_data'].get('sex', 'Male')
 
@@ -428,14 +430,34 @@ def _start_with_class(game, state, class_def):
     final_player_data['attributes'] = final_attrs
 
     # World seed and preset resolution
-    # World seed and preset resolution
+    final_player_data['visuals'] = {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'}
+    final_player_data['sounds'] = {'steps': 'steps.ogg'}
+
+    # ---> CLIENT MULTIPLAYER: Connect directly without creating a local save <---
+    if getattr(game, 'is_client', False) and getattr(game, 'cli_connect_address', None):
+        from core.server.client import GameClient, init_client_world
+        c_ip, c_port = game.cli_connect_address
+        print(f"[Client] Connecting to dedicated server at {c_ip}:{c_port} with preset '{class_def['name']}'...")
+        game.client = GameClient(game)
+
+        success, ack_data = game.client.connect(c_ip, c_port, final_player_data)
+        if success and ack_data:
+            print(f"[Client] Connection confirmed. Loading server session '{ack_data.get('save_folder_name')}'...")
+            init_client_world(game, ack_data, final_player_data)
+            game.game_state = 'PLAYING'
+        else:
+            print(f"[Client] Failed to connect to server at {c_ip}:{c_port}")
+            from core.messages import display_message
+            display_message(game, f"Failed to connect to {c_ip}:{c_port}")
+        return
+
+    # Singleplayer branch below...
     w_state = getattr(game, 'world_setup_state', {})
     preset_to_load = state.get('selected_config_preset') or w_state.get('selected_config_preset', 'world')
 
     final_mode = w_state.get('chosen_mode') or state.get('chosen_mode') or 'sandbox'
     final_player_data['game_mode'] = final_mode
 
-    # Resolve save folder and world.xml path
     save_folder = state.get('save_folder_name') or w_state.get('save_folder_name') or getattr(game, 'current_save_folder_name', None)
     world_data = w_state.get('world_data') or state.get('world_data')
 
@@ -447,7 +469,7 @@ def _start_with_class(game, state, class_def):
         world_xml_path = os.path.join(save_path, "world.xml")
         if not world_data:
             from core.ui.helpers.trait_config_loader import load_config_data
-            world_data = load_config_data(os.path.join(DATA_PATH, "world.xml"))
+            world_data = load_config_data(core.data.config.get_world_config_path("world"))
         from core.ui.helpers.trait_config_loader import save_config_xml
         save_config_xml(world_data, world_xml_path)
     elif save_folder:
@@ -456,7 +478,6 @@ def _start_with_class(game, state, class_def):
     else:
         world_xml_path = None
 
-    # Load its world.xml inside the folder right when character is selected
     if world_xml_path and os.path.exists(world_xml_path):
         core.data.config.load_settings(world_xml_path)
 
@@ -466,7 +487,6 @@ def _start_with_class(game, state, class_def):
     final_player_data['selected_config_preset'] = preset_to_load
     final_player_data['game_settings'] = world_data
 
-    # Forward respawn folder if respawning in an existing world save
     if state.get('respawn_save_folder'):
         final_player_data['respawn_save_folder'] = state['respawn_save_folder']
 
@@ -477,13 +497,6 @@ def _start_with_class(game, state, class_def):
     else:
         world_seed = raw_seed
     final_player_data['world_seed'] = world_seed
-
-    final_player_data['visuals'] = {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'}
-    final_player_data['sounds'] = {'steps': 'steps.ogg'}
-
-    # [FIX] Attach Game Mode properly to bypass the 'sandbox' default!
-    final_mode = w_state.get('chosen_mode') or state.get('chosen_mode') or 'sandbox'
-    final_player_data['game_mode'] = final_mode
 
     game.loading_data = final_player_data
     game.game_state = 'LOADING'

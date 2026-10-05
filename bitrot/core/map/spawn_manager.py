@@ -131,7 +131,7 @@ class AsyncSpawnManager:
     return None
 
   def flush_to_game(self, game):
-    if not hasattr(game, 'player') or not game.player:
+    if not getattr(game, 'is_dedicated', False) and (not hasattr(game, 'player') or not game.player):
       return
 
     while not self.completed_queue.empty():

@@ -35,7 +35,8 @@ def save_game(game):
         save_name = f"save_{timestamp}"
         game.current_save_folder_name = save_name
 
-    save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_name)
+    save_dir_base = getattr(game, 'save_dir_base', os.path.join(get_writable_dir(), "data.rot", "save", "game"))
+    save_path = getattr(game, 'save_path', os.path.join(save_dir_base, save_name))
     game.logger.info(f"Saving game to {save_path}...")
 
     try:
@@ -63,62 +64,98 @@ def save_game(game):
             save_config_xml(w_data, world_xml_path)
         
         # --- 1. PREPARE INDIVIDUAL PLAYER DATA ---
-        player_id = getattr(game.player, 'player_id', None)
-        if not player_id:
-            player_id = str(uuid.uuid4())
-            game.player.player_id = player_id
-
-        attributes_base = {
-            "strength": game.player.progression.get_level('strength'),
-            "fitness": game.player.progression.get_level('fitness'),
-            "melee": game.player.progression.get_level('melee'),
-            "ranged": game.player.progression.get_level('ranged'),
-            "lucky": game.player.progression.get_level('lucky'),
-            "intelligence": game.player.progression.get_level('intelligence'),
-            "agility": game.player.progression.get_level('agility')
-        }
-        
-        progression_data = game.player.progression.attributes
-        is_player_alive = not getattr(game.player, 'is_dead', False) and game.player.health > 0
-
-        player_data = {
-            "player_id": player_id,
-            "name": game.player.name,
-            "sex": game.player.sex,
-            "x": game.player.x,
-            "y": game.player.y,
-            "alive": is_player_alive,
-            "map_filename": game.map_manager.current_map_filename,
-            "zombies_killed": game.zombies_killed,
-            "stats": {
-                "health": game.player.health,
-                "water": game.player.water,
-                "food": game.player.food,
-                "stamina": game.player.stamina,
-                "infection": game.player.infection,
-                "anxiety": game.player.anxiety,
-                "drugs": getattr(game.player, 'drugs', 0.0)
-            },
-            "attributes": attributes_base,
-            "progression": progression_data,
-            "traits": game.player.traits,
-            "known_recipes": game.player.known_recipes,
-            "visuals": game.player.visuals,
-            "sounds": game.player.sounds_data,
-            "inventory": [serialize_item(i) for i in game.player.inventory if i],
-            "belt": [serialize_item(i) for i in game.player.belt],
-            "clothes": {slot: serialize_item(item) for slot, item in game.player.clothes.items()},
-            "quests": getattr(game.player, 'quests', []),
-            "completed_quests": getattr(game.player, 'completed_quests', []),
-            "dialog_history": list(getattr(game.player, 'dialog_history', [])),
-            "special_dialogs": getattr(game.player, 'special_dialogs', []),
-            "completed_milestones": getattr(game.player, 'completed_milestones', []),
-            "milestone_progress": getattr(game.player, 'milestone_progress', {})
+        host_path = os.path.join(save_path, "host.rot")
+        host_data = {
+            "os": platform.system(),
+            "uip": get_host_ip(),
+            "host": {},
+            "remote": {}
         }
 
-        player_file_path = os.path.join(player_dir, f"{player_id}.rot")
-        with open(player_file_path, "w") as f:
-            json.dump(player_data, f, indent=4)
+        if os.path.exists(host_path):
+            try:
+                with open(host_path, "r") as f:
+                    existing_host = json.load(f)
+                    if isinstance(existing_host, dict):
+                        if "host" in existing_host:
+                            host_data["host"] = existing_host["host"]
+                        elif "players" in existing_host:
+                            host_data["host"] = existing_host["players"]
+                        if "remote" in existing_host:
+                            host_data["remote"] = existing_host["remote"]
+            except Exception as e:
+                if hasattr(game, 'logger'):
+                    game.logger.info(f"Could not read existing host.rot: {e}")
+
+        # --- 1. PREPARE INDIVIDUAL PLAYER DATA (Only if local player exists) ---
+        if getattr(game, 'player', None):
+            player_id = getattr(game.player, 'player_id', None)
+            if not player_id:
+                player_id = str(uuid.uuid4())
+                game.player.player_id = player_id
+
+            attributes_base = {
+                "strength": game.player.progression.get_level('strength'),
+                "fitness": game.player.progression.get_level('fitness'),
+                "melee": game.player.progression.get_level('melee'),
+                "ranged": game.player.progression.get_level('ranged'),
+                "lucky": game.player.progression.get_level('lucky'),
+                "intelligence": game.player.progression.get_level('intelligence'),
+                "agility": game.player.progression.get_level('agility')
+            }
+            
+            progression_data = game.player.progression.attributes
+            is_player_alive = not getattr(game.player, 'is_dead', False) and game.player.health > 0
+
+            player_data = {
+                "player_id": player_id,
+                "name": game.player.name,
+                "sex": game.player.sex,
+                "x": game.player.x,
+                "y": game.player.y,
+                "alive": is_player_alive,
+                "map_filename": game.map_manager.current_map_filename,
+                "zombies_killed": game.zombies_killed,
+                "stats": {
+                    "health": game.player.health,
+                    "water": game.player.water,
+                    "food": game.player.food,
+                    "stamina": game.player.stamina,
+                    "infection": game.player.infection,
+                    "anxiety": game.player.anxiety,
+                    "drugs": getattr(game.player, 'drugs', 0.0)
+                },
+                "attributes": attributes_base,
+                "progression": progression_data,
+                "traits": game.player.traits,
+                "known_recipes": game.player.known_recipes,
+                "visuals": game.player.visuals,
+                "sounds": game.player.sounds_data,
+                "inventory": [serialize_item(i) for i in game.player.inventory if i],
+                "belt": [serialize_item(i) for i in game.player.belt],
+                "clothes": {slot: serialize_item(item) for slot, item in game.player.clothes.items()},
+                "quests": getattr(game.player, 'quests', []),
+                "completed_quests": getattr(game.player, 'completed_quests', []),
+                "dialog_history": list(getattr(game.player, 'dialog_history', [])),
+                "special_dialogs": getattr(game.player, 'special_dialogs', []),
+                "completed_milestones": getattr(game.player, 'completed_milestones', []),
+                "milestone_progress": getattr(game.player, 'milestone_progress', {})
+            }
+
+            player_file_path = os.path.join(player_dir, f"{player_id}.rot")
+            with open(player_file_path, "w") as f:
+                json.dump(player_data, f, indent=4)
+
+            host_data["host"][player_id] = {
+                "name": game.player.name,
+                "playerID": f"{player_id}.rot",
+                "alive": is_player_alive,
+                "x": int(game.player.x),
+                "y": int(game.player.y)
+            }
+
+        with open(host_path, "w") as f:
+            json.dump(host_data, f, indent=4)
 
         # --- 2. PREPARE & UPDATE host.rot REGISTRY ---
         host_path = os.path.join(save_path, "host.rot")

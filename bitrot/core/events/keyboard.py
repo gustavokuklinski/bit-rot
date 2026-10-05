@@ -236,34 +236,7 @@ def process_chat_command(game, text):
     raw_command = text[5:].strip()
     command = raw_command.lower()
 
-    if command == "openserver":
-        if getattr(game, 'is_client', False):
-            display_message(game, "[Server] Client cannot start a server.")
-            return True
-        if getattr(game, 'is_server', False):
-            display_message(game, f"[Server] Server already running on {game.server.ip}:{game.server.port}")
-            return True
-
-        from core.server.server import GameServer
-        game.server = GameServer(game)
-        success, host_ip, port = game.server.start()
-        if success:
-            game.is_server = True
-            display_message(game, f"[Server] Server opened at {host_ip}:{port}")
-        else:
-            display_message(game, "[Server] Failed to open server.")
-        return True
-
-    if command == "closeserver":
-        if not getattr(game, 'is_server', False):
-            display_message(game, "[Server] No active server to close.")
-            return True
-
-        game.server.stop()
-        game.server = None
-        game.is_server = False
-        display_message(game, "[Server] Server closed. Disconnected all peers.")
-        return True
+    
 
     # --- WEATHER COMMANDS ---
     if command.startswith("weather "):

@@ -121,7 +121,14 @@ def update_entities(game, GRID_SIZE, zombies_to_remove):
     max_zombies = max(12, 25 - (map_chunks * 2))
     max_animals = max(6, max_zombies // 2)
 
-    px, py = game.player.rect.centerx, game.player.rect.centery
+    if getattr(game, 'player', None):
+        px, py = game.player.rect.centerx, game.player.rect.centery
+    elif getattr(game, 'remote_players', None):
+        first_rp = next((rp for rp in game.remote_players.values() if not getattr(rp, 'is_dead', False)), None)
+        px, py = (int(first_rp.x), int(first_rp.y)) if first_rp else (0, 0)
+    else:
+        px, py = (0, 0)
+
     lod_radius_sq = int(CHUNK_SIZE * 22 * (1.0 + map_chunks * 0.15)) ** 2
 
     # Process batches
@@ -154,12 +161,13 @@ def update_entities(game, GRID_SIZE, zombies_to_remove):
         Item.cleanup_disposables(game.containers, game.modals)
 
     # Clean modals attached to dropped/distant items
-    for modal in list(game.modals):
-        if modal['type'] in ('container', 'text', 'big_map', 'mobile'):
-            container_item = modal.get('item')
-            if container_item and hasattr(container_item, 'rect') and (container_item in game.items_on_ground):
-                if (px - container_item.rect.centerx)**2 + (py - container_item.rect.centery)**2 > (TILE_SIZE * 1.5) ** 2:
-                    game.modals.remove(modal)
+    if getattr(game, 'modals', None) and getattr(game, 'player', None):
+        for modal in list(game.modals):
+            if modal['type'] in ('container', 'text', 'big_map', 'mobile'):
+                container_item = modal.get('item')
+                if container_item and hasattr(container_item, 'rect') and (container_item in game.items_on_ground):
+                    if (px - container_item.rect.centerx)**2 + (py - container_item.rect.centery)**2 > (TILE_SIZE * 1.5) ** 2:
+                        game.modals.remove(modal)
     
     current_time = pygame.time.get_ticks()
     game.splashes = [s for s in game.splashes if current_time - s['time'] < s['duration']][:150]

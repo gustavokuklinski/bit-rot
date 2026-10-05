@@ -902,13 +902,8 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
 
         if clickable_rects.get("start_button") and clickable_rects["start_button"].collidepoint(mouse_pos):
             if state.get('total_trait_cost', 0) <= STARTING_POINTS:
-                w_state = getattr(game, 'world_setup_state', {})
-                
-                # Fetch settings properly, prioritizing explicit world_setup_state
-                final_mode = w_state.get('chosen_mode') or state.get('chosen_mode') or 'sandbox'
-                final_world_data = w_state.get('world_data') or state.get('world_data') or {}
-                
                 final_player_data = state['base_data'].copy()
+                final_player_data['player_id'] = str(uuid.uuid4())
                 final_player_data['attributes'] = state['final_attrs']
                 final_player_data['clothes'] = state['chosen_clothes']
                 final_player_data['clothes_colors'] = state.get('clothes_colors', {})
@@ -917,7 +912,29 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                 final_player_data['traits'] = state['chosen_traits']
                 final_player_data['visuals'] = {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'}
                 final_player_data['sounds'] = { 'steps': 'steps.ogg' }
-                
+
+                # ---> CLIENT MULTIPLAYER: Connect directly to server <---
+                if getattr(game, 'is_client', False) and getattr(game, 'cli_connect_address', None):
+                    from core.server.client import GameClient, init_client_world
+                    c_ip, c_port = game.cli_connect_address
+                    print(f"[Client] Connecting to dedicated server at {c_ip}:{c_port}...")
+                    game.client = GameClient(game)
+
+                    success, ack_data = game.client.connect(c_ip, c_port, final_player_data)
+                    if success and ack_data:
+                        print(f"[Client] Connected! Loading server session '{ack_data.get('save_folder_name')}'...")
+                        init_client_world(game, ack_data, final_player_data)
+                        game.game_state = 'PLAYING'
+                    else:
+                        print(f"[Client] Failed to connect to server at {c_ip}:{c_port}")
+                        from core.messages import display_message
+                        display_message(game, f"Failed to connect to {c_ip}:{c_port}")
+                    return
+
+                # Normal single player logic below...
+                w_state = getattr(game, 'world_setup_state', {})
+                final_mode = w_state.get('chosen_mode') or state.get('chosen_mode') or 'sandbox'
+                final_world_data = w_state.get('world_data') or state.get('world_data') or {}
                 final_player_data['game_mode'] = final_mode
                 final_player_data['game_settings'] = final_world_data
 
@@ -940,20 +957,6 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
 
                 game.current_save_folder_name = save_folder
                 final_player_data['save_folder_name'] = save_folder
-
-                if getattr(game, 'is_client', False) and getattr(game, 'cli_connect_address', None):
-                    from core.server.client import GameClient, init_client_world
-                    c_ip, c_port = game.cli_connect_address
-                    game.client = GameClient(game)
-
-                    success, ack_data = game.client.connect(c_ip, c_port, final_player_data)
-                    if success and ack_data:
-                        init_client_world(game, ack_data, final_player_data)
-                        game.game_state = 'PLAYING'
-                    else:
-                        from core.messages import display_message
-                        display_message(game, f"Failed to connect to {c_ip}:{c_port}")
-                    return
 
                 if state.get('respawn_save_folder'):
                     final_player_data['respawn_save_folder'] = state['respawn_save_folder']
@@ -1172,7 +1175,10 @@ def run_player_setup(game):
             #state['current_tab'] = 'World'
             state['current_tab'] = 'SelectWorld'
 
-        state['world_data'] = load_config_data(core.data.config.get_world_config_path("world"))
+        if not getattr(game, 'is_client', False):
+            state['world_data'] = load_config_data(core.data.config.get_world_config_path("world"))
+        else:
+            state['world_data'] = {}
         state['world_scroll_y'] = 0
         state['world_max_scroll'] = 0
         state['is_dragging_world_scrollbar'] = False 

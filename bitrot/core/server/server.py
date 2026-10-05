@@ -128,9 +128,15 @@ class GameServer:
                     dest_socks = target_socks if target_socks is not None else list(worker_clients.keys())
                     for s in dest_socks:
                         try:
+                            s.setblocking(True)
+                            s.settimeout(5.0)
                             s.sendall(packet)
+                            s.setblocking(False)
                         except Exception:
-                            pass
+                            try:
+                                s.setblocking(False)
+                            except Exception:
+                                pass
                 except queue.Empty:
                     break
                 except Exception:
@@ -143,10 +149,19 @@ class GameServer:
                         msg = out_q.get_nowait()
                         data = pack_payload(msg)
                         header = struct.pack('>I', len(data))
-                        s.sendall(header + data)
+                        packet = header + data
+                        s.setblocking(True)
+                        s.settimeout(5.0)
+                        s.sendall(packet)
+                        s.setblocking(False)
                     except queue.Empty:
                         break
-                    except Exception:
+                    except Exception as e:
+                        print(f"[Server Network Error] Error sending to client: {e}")
+                        try:
+                            s.setblocking(False)
+                        except Exception:
+                            pass
                         break
 
             readable = [self.server_socket, self.udp_socket] + list(worker_clients.keys())
@@ -228,7 +243,7 @@ class GameServer:
                 self.game.map_manager.update_chunks(rp.rect.center)
 
         self.sync_counter += 1
-        if self.sync_counter % 2 == 0 and (self.clients or self.udp_clients) and hasattr(self.game, 'player') and self.game.player:
+        if self.sync_counter % 2 == 0 and (self.clients or self.udp_clients):
             self._broadcast_world_sync_udp()
 
         if self.sync_counter % 30 == 0 and self.clients:
@@ -271,32 +286,34 @@ class GameServer:
             return
 
         all_players = []
-        host_wpn = self.game.player.active_weapon.name if self.game.player.active_weapon else None
-        clothes_simple = {slot: (item.name if item else None) for slot, item in getattr(self.game.player, 'clothes', {}).items()}
-        clothes_colors = {slot: item.color for slot, item in getattr(self.game.player, 'clothes', {}).items() if item and hasattr(item, 'color')}
+        if getattr(self.game, 'player', None):
+            host_wpn = self.game.player.active_weapon.name if self.game.player.active_weapon else None
+            clothes_simple = {slot: (item.name if item else None) for slot, item in getattr(self.game.player, 'clothes', {}).items()}
+            clothes_colors = {slot: item.color for slot, item in getattr(self.game.player, 'clothes', {}).items() if item and hasattr(item, 'color')}
 
-        all_players.append({
-            'id': getattr(self.game.player, 'player_id', 'host'),
-            'name': self.game.player.name,
-            'x': round(self.game.player.x, 1),
-            'y': round(self.game.player.y, 1),
-            'facing': self.game.player.facing_direction,
-            'aim_angle': round(self.game.player.aim_angle, 2),
-            'is_moving': self.game.player.is_moving,
-            'is_running': self.game.player.is_running,
-            'is_aiming': getattr(self.game.player, 'is_aiming', False),
-            'health': self.game.player.health,
-            'max_health': self.game.player.max_health,
-            'is_dead': self.game.player.is_dead,
-            'weapon': host_wpn,
-            'clothes': clothes_simple,
-            'clothes_colors': clothes_colors,
-            'swing_timer': getattr(self.game.player, 'melee_swing_timer', 0),
-            'swing_angle': round(getattr(self.game.player, 'melee_swing_angle', 0), 2),
-            'action_timer': getattr(self.game.player, 'action_timer', 0),
-            'action_total_time': getattr(self.game.player, 'action_total_time', 0),
-            'action_name': getattr(self.game.player, 'action_name', '')
-        })
+            all_players.append({
+                'id': getattr(self.game.player, 'player_id', 'host'),
+                'name': self.game.player.name,
+                'x': round(self.game.player.x, 1),
+                'y': round(self.game.player.y, 1),
+                'layer': getattr(self.game, 'current_layer_index', 1),
+                'facing': self.game.player.facing_direction,
+                'aim_angle': round(self.game.player.aim_angle, 2),
+                'is_moving': self.game.player.is_moving,
+                'is_running': self.game.player.is_running,
+                'is_aiming': getattr(self.game.player, 'is_aiming', False),
+                'health': self.game.player.health,
+                'max_health': self.game.player.max_health,
+                'is_dead': self.game.player.is_dead,
+                'weapon': host_wpn,
+                'clothes': clothes_simple,
+                'clothes_colors': clothes_colors,
+                'swing_timer': getattr(self.game.player, 'melee_swing_timer', 0),
+                'swing_angle': round(getattr(self.game.player, 'melee_swing_angle', 0), 2),
+                'action_timer': getattr(self.game.player, 'action_timer', 0),
+                'action_total_time': getattr(self.game.player, 'action_total_time', 0),
+                'action_name': getattr(self.game.player, 'action_name', '')
+            })
 
         for s, info in self.clients.items():
             if info.get('last_data'):
@@ -313,6 +330,7 @@ class GameServer:
                 'name': getattr(z, 'name', 'Zombie'),
                 'x': round(z.x, 1),
                 'y': round(z.y, 1),
+                'layer': getattr(z, 'layer', 1),
                 'hp': int(z.health),
                 'max_hp': int(z.max_health),
                 'vx': round(getattr(z, 'vx', 0), 2),
@@ -335,6 +353,7 @@ class GameServer:
                 'name': n.name,
                 'x': round(n.x, 1),
                 'y': round(n.y, 1),
+                'layer': getattr(n, 'layer', 1),
                 'hp': int(n.health),
                 'max_hp': int(n.max_health),
                 'is_friendly': getattr(n, 'is_friendly', True),
@@ -361,6 +380,7 @@ class GameServer:
                 'name': getattr(a, 'name', 'Rat'),
                 'x': round(a.x, 1),
                 'y': round(a.y, 1),
+                'layer': getattr(a, 'layer', 1),
                 'hp': int(a.health),
                 'max_hp': int(a.max_health),
                 'dx': round(getattr(a, 'dx', 0), 2),
@@ -374,6 +394,7 @@ class GameServer:
                 'name': v.name,
                 'x': round(v.x, 1),
                 'y': round(v.y, 1),
+                'layer': 1,
                 'facing': getattr(v, 'facing', 'right'),
                 'active': v.active,
                 'lights': getattr(v, 'lights', 'off')
@@ -388,6 +409,7 @@ class GameServer:
             d['name'] = it.name
             d['x'] = it.rect.x
             d['y'] = it.rect.y
+            d['layer'] = getattr(it, 'layer', 1)
             d['is_corpse'] = isinstance(it, Corpse)
             d['is_player_corpse'] = getattr(it, 'is_player_corpse', False)
             d['state'] = getattr(it, 'state', None)
@@ -401,8 +423,9 @@ class GameServer:
                 containers_data.append({
                     'x': c.rect.x,
                     'y': c.rect.y,
+                    'layer': getattr(c, 'layer', 1),
                     'is_opened': getattr(c, 'is_opened', False),
-                    'is_opening': getattr(c, 'is_opening', False), # <--- ADD THIS
+                    'is_opening': getattr(c, 'is_opening', False),
                     'inventory': [i.to_dict() if hasattr(i, 'to_dict') else i for i in getattr(c, 'inventory', [])]
                 })
 
@@ -480,28 +503,29 @@ class GameServer:
             p_name = msg.get('name', 'Survivor')
             raw_player_data = msg.get('player_data', {})
 
+            save_dir_base = getattr(self.game, 'save_dir_base', os.path.join(get_writable_dir(), "data.rot", "save", "game"))
             save_folder = self.game.current_save_folder_name or "save_multiplayer"
-            save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_folder)
+            save_path = getattr(self.game, 'save_path', os.path.join(save_dir_base, save_folder))
             map_path = getattr(self.game.map_manager, 'map_folder', os.path.join(save_path, "map"))
             current_map = getattr(self.game.map_manager, 'current_map_filename', 'map_L1_0_0_map.csv')
 
             remote_dir = os.path.join(save_path, "player", "remote")
             os.makedirs(remote_dir, exist_ok=True)
 
+            # Check if this requested_id is already in use by another active connection
+            is_id_in_use = requested_id and any(
+                c.get('id') == requested_id for s, c in self.clients.items() if s != sock
+            )
+
             matched_file = None
-            assigned_id = requested_id
+            assigned_id = requested_id if (requested_id and not is_id_in_use) else str(uuid.uuid4())
 
-            if requested_id:
+            # Only restore an existing file if the client specifically requested its own ID
+            if requested_id and not is_id_in_use:
                 candidate = f"{client_ip}-{requested_id}.rot"
-                if os.path.exists(os.path.join(remote_dir, candidate)):
+                cand_path = os.path.join(remote_dir, candidate)
+                if os.path.exists(cand_path):
                     matched_file = candidate
-
-            if not matched_file:
-                for fname in os.listdir(remote_dir):
-                    if fname.startswith(f"{client_ip}-") and fname.endswith(".rot"):
-                        matched_file = fname
-                        assigned_id = fname[len(client_ip) + 1:-4]
-                        break
 
             restored_player_data = None
             if matched_file:
@@ -513,22 +537,31 @@ class GameServer:
                 except Exception:
                     pass
 
-            if not assigned_id:
-                assigned_id = str(uuid.uuid4())
-
             c_info['id'] = assigned_id
             c_info['name'] = p_name
 
-            spawn_x, spawn_y = self.game.player.x, self.game.player.y
+            if self.game.player:
+                spawn_x, spawn_y = self.game.player.x, self.game.player.y
+            elif getattr(self.game, 'player_spawn', None):
+                spawn_x, spawn_y = self.game.player_spawn
+            else:
+                spawn_x = getattr(self.game, 'map_width_pixels', 128 * TILE_SIZE) // 2
+                spawn_y = getattr(self.game, 'map_height_pixels', 128 * TILE_SIZE) // 2
+
             if restored_player_data and 'x' in restored_player_data:
                 spawn_x = restored_player_data['x']
                 spawn_y = restored_player_data['y']
 
+            # Find a free tile checking obstacles AND other connected players so newcomers don't clip into each other
+            blocked_rects = list(getattr(self.game, 'obstacles', []))
+            for rp in getattr(self.game, 'remote_players', {}).values():
+                if getattr(rp, 'rect', None):
+                    blocked_rects.append(rp.rect)
+
             test_rect = pygame.Rect(int(spawn_x), int(spawn_y), TILE_SIZE, TILE_SIZE)
-            free_pos = find_free_tile(test_rect, getattr(self.game, 'obstacles', []), initial_pos=(spawn_x, spawn_y), max_radius=8)
+            free_pos = find_free_tile(test_rect, blocked_rects, initial_pos=(spawn_x, spawn_y), max_radius=12)
             if free_pos:
                 spawn_x, spawn_y = free_pos
-
             remote_p = RemotePlayer(assigned_id, p_name, spawn_x, spawn_y)
             c_info['player'] = remote_p
 
@@ -570,6 +603,7 @@ class GameServer:
                 } if hasattr(self.game, 'world_time') else None
             }
             send_msg(sock, ack_payload)
+            print(f"[Server] Handshake complete for player '{p_name}' ({client_ip}). Sent {len(chunk_files)} chunk files.")
             display_message(self.game, f"[Server] Player '{p_name}' ({client_ip}) joined the game.")
 
         elif m_type == NetMsg.PLAYER_UPDATE:
@@ -840,8 +874,9 @@ class GameServer:
             pass
 
     def _save_remote_player_to_disk(self, uip, player_id, player_data):
+        save_dir_base = getattr(self.game, 'save_dir_base', os.path.join(get_writable_dir(), "data.rot", "save", "game"))
         save_folder = self.game.current_save_folder_name or "save_multiplayer"
-        save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_folder)
+        save_path = getattr(self.game, 'save_path', os.path.join(save_dir_base, save_folder))
         remote_dir = os.path.join(save_path, "player", "remote")
         os.makedirs(remote_dir, exist_ok=True)
 

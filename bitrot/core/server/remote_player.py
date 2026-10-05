@@ -7,14 +7,23 @@ from core.entities.item.item_factory import get_tinted_sprite
 
 class RemotePlayer(pygame.sprite.Sprite):
     """Represents another connected player in the world."""
-    def __init__(self, player_id, name, x, y, sex="Male"):
+    def __init__(self, player_id, name, x, y, sex="Male", layer=1):
         super().__init__()
         self.player_id = player_id
         self.name = name
         self.sex = sex
         self.x = float(x)
         self.y = float(y)
+        self._layer = int(layer)
         self.rect = pygame.Rect(int(self.x), int(self.y), TILE_SIZE, TILE_SIZE)
+
+    @property
+    def layer(self):
+        return getattr(self, '_layer', 1)
+
+    @layer.setter
+    def layer(self, value):
+        self._layer = int(value)
 
         self.facing_direction = (0, 1)
         self.aim_angle = 0.0
@@ -85,6 +94,7 @@ class RemotePlayer(pygame.sprite.Sprite):
     def update_from_network(self, data):
         self.x = float(data.get('x', self.x))
         self.y = float(data.get('y', self.y))
+        self.layer = int(data.get('layer', getattr(self, 'layer', 1)))
         self.rect.topleft = (int(self.x), int(self.y))
         self.facing_direction = tuple(data.get('facing', self.facing_direction))
         self.aim_angle = float(data.get('aim_angle', self.aim_angle))
@@ -128,6 +138,8 @@ class RemotePlayer(pygame.sprite.Sprite):
 
     def draw(self, surface, offset_x, offset_y, game=None):
         if self.is_dead:
+            return
+        if game and getattr(game, 'current_layer_index', 1) != getattr(self, 'layer', 1):
             return
 
         draw_x = int(self.x + offset_x)

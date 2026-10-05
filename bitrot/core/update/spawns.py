@@ -11,9 +11,17 @@ def check_dynamic_zombie_spawns(game, grid_size=128):
       game.current_layer_index, set()
   )
 
-  if not game.player:
+  active_positions = []
+  if getattr(game, 'player', None):
+    active_positions.append(game.player.rect.center)
+  for rp in getattr(game, 'remote_players', {}).values():
+    if not getattr(rp, 'is_dead', False):
+      active_positions.append((int(rp.x), int(rp.y)))
+
+  if not active_positions:
     return
-  player_pos = game.player.rect.center
+
+  player_pos = active_positions[0]
   grid_scale = getattr(game, 'SPAWN_GRID_SIZE', 512)
   px, py = int(player_pos[0] // grid_scale), int(player_pos[1] // grid_scale)
   spawn_grid = getattr(game, 'spawn_point_grid', {})

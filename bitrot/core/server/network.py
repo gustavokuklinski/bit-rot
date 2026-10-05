@@ -3,6 +3,7 @@ import struct
 import socket
 import threading
 import queue
+import zlib
 import msgpack
 
 class NetMsg:
@@ -37,11 +38,20 @@ def unregister_socket(sock):
         _sock_locks.pop(sock, None)
 
 def pack_payload(msg_dict):
-    """Serializes a dictionary using msgpack."""
-    return msgpack.packb(msg_dict, use_bin_type=True)
+    """Serializes a dictionary using msgpack, compressing with zlib if large."""
+    raw = msgpack.packb(msg_dict, use_bin_type=True)
+    if len(raw) > 1024:
+        return b'\x01' + zlib.compress(raw)
+    return b'\x00' + raw
 
 def unpack_payload(raw_bytes):
-    """Deserializes raw msgpack bytes into a Python dictionary."""
+    """Deserializes msgpack bytes, decompressing if compressed."""
+    if not raw_bytes:
+        return {}
+    if raw_bytes.startswith(b'\x01'):
+        raw_bytes = zlib.decompress(raw_bytes[1:])
+    elif raw_bytes.startswith(b'\x00'):
+        raw_bytes = raw_bytes[1:]
     return msgpack.unpackb(raw_bytes, raw=False)
 
 def send_msg(sock, msg_dict):
@@ -62,11 +72,16 @@ def send_msg(sock, msg_dict):
             header = struct.pack('>I', len(data))
             sock.sendall(header + data)
             return True
-    except Exception:
+    except OSError as e:
+        if e.errno != 9:  # Bad file descriptor (client already closed)
+            print(f"[Network] send_msg error: {e}")
+        return False
+    except Exception as e:
+        print(f"[Network] send_msg error: {e}")
         return False
 
 def recv_msgs(sock, buffer):
-    """Reads available bytes from a non-blocking TCP socket into buffer."""
+    """Reads available bytes from a TCP socket into buffer."""
     messages = []
     try:
         chunk = sock.recv(65536)
@@ -87,7 +102,7 @@ def recv_msgs(sock, buffer):
         try:
             parsed = unpack_payload(raw_msg)
             messages.append(parsed)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[Network] unpack error: {e}")
 
     return messages, buffer, True

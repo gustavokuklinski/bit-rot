@@ -47,7 +47,12 @@ def draw_debug_radius(game, surface, offset_x, offset_y):
 def draw_entities(game, surface, offset_x, offset_y, view_w, view_h, screen_rect, zoom):
     view_radius_sq = (game.player_view_radius + TILE_SIZE) ** 2
 
+    curr_layer = getattr(game, 'current_layer_index', 1)
+
     for container in game.visible_containers:
+        if getattr(container, 'layer', 1) != curr_layer:
+            if not (getattr(container, 'item_type', '') == 'vehicle' and curr_layer == 1):
+                continue
         if not screen_rect.colliderect(container.rect): continue
         dx = container.rect.centerx - game.player.rect.centerx
         dy = container.rect.centery - game.player.rect.centery
@@ -58,6 +63,7 @@ def draw_entities(game, surface, offset_x, offset_y, view_w, view_h, screen_rect
 
     for item in game.visible_items:
         if isinstance(item, Animal): continue
+        if getattr(item, 'layer', 1) != curr_layer: continue
         if not screen_rect.colliderect(item.rect): continue
         dx = item.rect.centerx - game.player.rect.centerx
         dy = item.rect.centery - game.player.rect.centery
@@ -102,6 +108,7 @@ def draw_entities(game, surface, offset_x, offset_y, view_w, view_h, screen_rect
     for entity in visible_entities:
         if isinstance(entity, (Zombie, NPC, Animal)):
             if getattr(entity, 'is_dead', False): continue
+            if getattr(entity, 'layer', 1) != curr_layer: continue
 
             dx = entity.rect.centerx - game.player.rect.centerx
             dy = entity.rect.centery - game.player.rect.centery
@@ -141,6 +148,8 @@ def draw_entities(game, surface, offset_x, offset_y, view_w, view_h, screen_rect
                 entity.draw(surface, offset_x, offset_y, int(current_opacity))
 
     for rp in getattr(game, 'remote_players', {}).values():
+        if getattr(rp, 'layer', 1) != curr_layer:
+            continue
         if screen_rect.colliderect(rp.rect):
             rp.draw(surface, offset_x, offset_y, game)
 

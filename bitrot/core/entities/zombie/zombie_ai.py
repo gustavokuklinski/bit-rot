@@ -233,11 +233,14 @@ class ZombieAI:
 
         # Target selection: prioritize LIVING players or nearby hostile entities
         all_players = []
+        my_layer = getattr(self, 'layer', 1)
         if game.player and not getattr(game.player, 'is_dead', False) and game.player.health > 0:
-            all_players.append(game.player)
+            if getattr(game, 'current_layer_index', 1) == my_layer:
+                all_players.append(game.player)
         for rp in getattr(game, 'remote_players', {}).values():
             if not getattr(rp, 'is_dead', False) and rp.health > 0:
-                all_players.append(rp)
+                if getattr(rp, 'layer', 1) == my_layer:
+                    all_players.append(rp)
 
         target_entity = None
         target_rect = None

@@ -245,6 +245,8 @@ class WorldTime:
         one_half_hours_ms = 1.5 * ms_per_hour
 
         def has_mobile():
+            if not getattr(self.game, 'player', None):
+                return False
             for lst in [self.game.player.inventory, self.game.player.belt, list(self.game.player.clothes.values())]:
                 for item in lst:
                     if item and 'Mobile' in getattr(item, 'name', ''):
@@ -361,15 +363,16 @@ class WorldTime:
     def _send_radio_msg(self, sender, message):
         display_message(self.game, f"{sender}: {message}")
         
-        if hasattr(self.game, 'emit_noise') and self.game.player:
+        if hasattr(self.game, 'emit_noise') and getattr(self.game, 'player', None):
             self.game.emit_noise(self.game.player.rect.center, radius=TILE_SIZE * 15, source_type="radio")
 
         truncated = message
         if len(truncated) > 120:
             truncated = truncated[:117] + "..."
             
-        self.game.player.chat_text = f"[{sender}]\n{truncated}"
-        self.game.player.chat_timer = getattr(self.game.player, 'chat_duration', 300) * 2.0
+        if getattr(self.game, 'player', None):
+            self.game.player.chat_text = f"[{sender}]\n{truncated}"
+            self.game.player.chat_timer = getattr(self.game.player, 'chat_duration', 300) * 2.0
 
     def lerp(self, a, b, t):
         return a + (b - a) * t

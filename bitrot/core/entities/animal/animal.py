@@ -140,11 +140,14 @@ class Animal(Zombie):
         flee_x, flee_y = 0, 0
         
         threats = []
+        my_layer = getattr(self, 'layer', 1)
         if game.player and not game.player.is_dead:
-            threats.append(game.player)
+            if getattr(game, 'current_layer_index', 1) == my_layer:
+                threats.append(game.player)
         for rp in getattr(game, 'remote_players', {}).values():
             if not getattr(rp, 'is_dead', False):
-                threats.append(rp)
+                if getattr(rp, 'layer', 1) == my_layer:
+                    threats.append(rp)
 
         for t in threats:
             dx = t.rect.centerx - self.rect.centerx

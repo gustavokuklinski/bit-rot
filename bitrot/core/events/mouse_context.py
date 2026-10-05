@@ -165,7 +165,6 @@ def calculate_boat_fuel_cost(game, dest_gx, dest_gy):
             return max(5, (abs(cur_gx) + abs(cur_gy)) * 5)
         return 5
 
-    # Target chunk cost: (dest_gx + dest_gy) * 5, minimum 5
     return max(5, (abs(dest_gx) + abs(dest_gy)) * 5)
 
 def _is_barricade_item(it):
@@ -178,7 +177,7 @@ def _is_barricade_item(it):
     return 'barricade' in getattr(it, 'name', '').lower()
 
 def teleport_player_to_chunk(game, dest_gx, dest_gy, dest_layer=1):
-    """Safely teleports the player (and any active followers) to the beach 2 tiles away from the destination boat."""
+    """Safely teleports the player (and any active followers) to the destination chunk."""
     sys_teleport(game, dest_gx, dest_gy, dest_layer)
 
 def handle_context_menu_click(game, mouse_pos):
@@ -229,7 +228,6 @@ def handle_context_menu_click(game, mouse_pos):
                 elif source in ('player_self', 'map_tile', 'vehicle_equipment', 'vehicle_slot', 'light_source'):
                     verified_item = item
                 
-                # Check object identity OR matching item id / name so network re-sync doesn't fail validation
                 is_match = False
                 if verified_item is item or isinstance(item, dict):
                     is_match = True
@@ -567,10 +565,6 @@ def handle_context_menu_click(game, mouse_pos):
                 clicked_on_menu = True
 
             elif option == 'Use': game.player.consume_item(item, source, index, container_item)
-            elif option.startswith('Bandage '):
-                part = option.split(' ')[1].lower()
-                game.player.consume_item(item, source, index, container_item, target_part=part)
-                clicked_on_menu = True
 
             elif option == 'Remove fuel to':
                 target_container_name = target_sub_slot
@@ -1546,7 +1540,6 @@ def handle_context_menu_click(game, mouse_pos):
                                         'type': NetMsg.WORLD_ACTION, 'action': 'pickup', 'id': getattr(item, 'id', None)
                                     })
                                 elif container_item:
-                                    # Sync the container inventory to server immediately
                                     send_msg(game.client.socket, {
                                         'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
                                         'x': container_item.rect.x, 'y': container_item.rect.y,
@@ -1577,7 +1570,7 @@ def handle_right_click(game, mouse_pos):
     click_source = None
     click_index = -1
     click_container_item = None
-    click_modal_type = None  # Track source modal
+    click_modal_type = None
 
     is_over_any_modal = any(modal.get('rect') and modal['rect'].collidepoint(mouse_pos) for modal in game.modals)
 
@@ -1683,7 +1676,7 @@ def handle_right_click(game, mouse_pos):
                             game.context_menu['rects'] = []
                             game.context_menu['action_map'] = []
                             return
-###########################
+
         elif modal['type'] == 'nearby':
             active_tab_label = modal.get('active_tab')
             active_container = None
@@ -1718,7 +1711,7 @@ def handle_right_click(game, mouse_pos):
         adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
         world_pos = game.screen_to_world(adjusted_mouse_pos)
 
-        max_interact_dist_sq = (TILE_SIZE * 2) ** 2
+        max_interact_dist_sq = (TILE_SIZE * 2.5) ** 2
         for i, ground_item in enumerate(game.items_on_ground):
             if ground_item.rect.collidepoint(world_pos):
                 dx = game.player.rect.centerx - ground_item.rect.centerx
@@ -1757,8 +1750,6 @@ def handle_right_click(game, mouse_pos):
                 click_container_item = None
 
         if not clicked_item:
-            adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
-            world_pos = game.screen_to_world(adjusted_mouse_pos)
             for npc in game.npcs:
                 if npc.rect.collidepoint(world_pos) and npc.is_friendly and npc.aggro_timer <= 0:
                     clicked_item = npc
@@ -1766,14 +1757,16 @@ def handle_right_click(game, mouse_pos):
                     click_index = 0
                     break
 
+        # --- TILE CLICK DETECTION: Checked against tile center rather than arbitrary cursor edge ---
         if not clicked_item:
-            adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
-            world_pos = game.screen_to_world(adjusted_mouse_pos)
             grid_x = int(world_pos[0] // TILE_SIZE)
             grid_y = int(world_pos[1] // TILE_SIZE)
             tile = game.map_manager.get_tile_at(grid_x, grid_y)
-            dx = game.player.rect.centerx - world_pos[0]
-            dy = game.player.rect.centery - world_pos[1]
+
+            tile_cx = (grid_x + 0.5) * TILE_SIZE
+            tile_cy = (grid_y + 0.5) * TILE_SIZE
+            dx = game.player.rect.centerx - tile_cx
+            dy = game.player.rect.centery - tile_cy
             dist_sq = dx*dx + dy*dy
 
             if tile:
@@ -1784,42 +1777,54 @@ def handle_right_click(game, mouse_pos):
                 is_boat = (
                     tile.get('type') == "maptile_teleport" or 
                     tile.get('name') in ("tp_boat", "teleport_boat") or 
-                    char in ("tp_boat", "teleport_boat")
+                    char in ("tp_boat", "teleport_boat") or
+                    'boat' in str(tile.get('name', '')).lower()
                 )
-                max_dist_sq = (TILE_SIZE * 1.5) ** 2 if is_boat else (TILE_SIZE * 2) ** 2
+                
+                is_door_window = (
+                    tile.get('is_statable') or 
+                    '_open' in char.lower() or 
+                    '_close' in char.lower() or 
+                    '_broke' in char.lower() or
+                    'door' in char.lower() or 
+                    'window' in char.lower() or
+                    (tile.get('name') and ('door' in tile['name'].lower() or 'window' in tile['name'].lower()))
+                )
 
-                if dist_sq <= max_dist_sq:
-                    if tile.get('type') == "maptile_car":
-                        vehicle = game.map_manager.get_vehicle_at(grid_x, grid_y)
-                        if vehicle:
-                            clicked_item = vehicle
-                            click_source = 'container_map'
-                            click_index = 0
+                # Generous 2.8 tile interaction radius to avoid false "too far" triggers
+                max_interact_sq = (TILE_SIZE * 2.8) ** 2
 
-                    elif is_boat:
-                        clicked_item = {
-                            'name': tile.get('name', 'Boat'), 
-                            'type': 'maptile_teleport', 
-                            'grid_x': grid_x, 
-                            'grid_y': grid_y,
-                            'char': char
-                        }
-                        click_source = 'map_tile'
+                if is_boat or is_door_window or tile.get('type') == "maptile_car":
+                    if dist_sq <= max_interact_sq:
+                        if tile.get('type') == "maptile_car":
+                            vehicle = game.map_manager.get_vehicle_at(grid_x, grid_y)
+                            if vehicle:
+                                clicked_item = vehicle
+                                click_source = 'container_map'
+                                click_index = 0
 
-                    elif tile.get('is_statable') or ('door' in char.lower() or 'window' in char.lower()):
-                        clicked_item = {
-                            'name': tile.get('name', 'Object'), 
-                            'type': 'map_tile', 
-                            'grid_x': grid_x, 
-                            'grid_y': grid_y, 
-                            'state': tile.get('state'),
-                            'char': char
-                        }
-                        click_source = 'map_tile'
-                    
-                else:
-                    # if tile.get('type') == "maptile_car" or tile.get('is_statable') or is_boat:
-                    display_message(game, tr('msg', "Too far away to interact."))
+                        elif is_boat:
+                            clicked_item = {
+                                'name': tile.get('name', 'Boat'), 
+                                'type': 'maptile_teleport', 
+                                'grid_x': grid_x, 
+                                'grid_y': grid_y,
+                                'char': char
+                            }
+                            click_source = 'map_tile'
+
+                        elif is_door_window:
+                            clicked_item = {
+                                'name': tile.get('name', 'Object'), 
+                                'type': 'map_tile', 
+                                'grid_x': grid_x, 
+                                'grid_y': grid_y, 
+                                'state': tile.get('state'),
+                                'char': char
+                            }
+                            click_source = 'map_tile'
+                    else:
+                        display_message(tr('msg', "Too far away to interact."))
 
     if not clicked_item:
         adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
@@ -1828,16 +1833,6 @@ def handle_right_click(game, mouse_pos):
             if light['rect'].collidepoint(world_pos):
                 clicked_item = light
                 click_source = 'light_source'
-                click_index = 0
-                break
-
-    if not clicked_item:
-        adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
-        world_pos = game.screen_to_world(adjusted_mouse_pos)
-        for npc in game.npcs:
-            if npc.rect.collidepoint(world_pos) and npc.is_friendly:
-                clicked_item = npc
-                click_source = 'npc'
                 click_index = 0
                 break
 
@@ -1852,24 +1847,20 @@ def handle_right_click(game, mouse_pos):
         if 'tooltips' not in game.context_menu:
             game.context_menu['tooltips'] = {}
 
-        options = ['']
+        options = []
 
         if click_source == 'npc':
             dx = game.player.rect.centerx - clicked_item.rect.centerx
             dy = game.player.rect.centery - clicked_item.rect.centery
             dist_sq = dx*dx + dy*dy
             max_dist_px = TILE_SIZE * 3
-            max_dist_px_sq = max_dist_px ** 2
-            dist = dist_sq ** 0.5
-            print(f"DEBUG: NPC Interact - Name: {clicked_item.name}, Friendly: {clicked_item.is_friendly}, Dist: {dist:.1f}/{max_dist_px}")
-
-            if dist_sq <= max_dist_px_sq:
+            if dist_sq <= max_dist_px ** 2:
                 if clicked_item.is_friendly and clicked_item.aggro_timer <= 0:
                     options.append('Talk')
                     if hasattr(clicked_item, 'stop_moving'):
                         clicked_item.stop_moving()
             else:
-                display_message(game, tr('msg', "Too far to talk to them."))
+                display_message(tr('msg', "Too far to talk to them."))
 
         elif click_source == 'map_tile':
             options = []
@@ -1879,7 +1870,6 @@ def handle_right_click(game, mouse_pos):
             t_def = game.map_manager.get_tile_at(gx, gy)
 
             if clicked_item.get('type') == 'maptile_teleport':
-                # Build travel destinations list
                 cur_map = game.map_manager.current_map_filename
                 match = re.match(r'map_L\d+_(\d+)_(\d+)_map\.csv', cur_map)
                 cur_gx, cur_gy = (int(match.group(1)), int(match.group(2))) if match else (None, None)
@@ -1921,14 +1911,13 @@ def handle_right_click(game, mouse_pos):
                 player_fuel = get_player_fuel_units(game.player)
                 fuel_icon = get_fuel_icon()
 
-                # 1. Lobby Option (Always available as a safe haven fallback)
+                # 1. Lobby Option
                 if lobby_chunk and (cur_gx, cur_gy) != lobby_chunk:
                     sub_key = f"{lobby_chunk[0]}_{lobby_chunk[1]}"
                     sub_opts.append(sub_key)
                     fuel_cost = calculate_boat_fuel_cost(game, lobby_chunk[0], lobby_chunk[1])
                     display_map[sub_key] = f"{tr('ui', 'Lobby (Safe Haven)')} - "
-                    if fuel_icon:
-                        icon_map[sub_key] = fuel_icon
+                    if fuel_icon: icon_map[sub_key] = fuel_icon
                     extra_text_map[sub_key] = f"{fuel_cost}"
                     extra_color_map[sub_key] = GREEN if player_fuel >= fuel_cost else RED
                     tooltip_map[sub_key] = (
@@ -1937,26 +1926,19 @@ def handle_right_click(game, mouse_pos):
                         f"{tr('ui', 'Available fuel:')} {player_fuel}"
                     )
 
-                # 2. Island and Mainland Chunks (Excluding military chunk)
+                # 2. Island and Mainland Chunks
                 for (cgx, cgy) in sorted(list(active_chunks)):
                     sub_key = f"{cgx}_{cgy}"
-                    if (cgx, cgy) == military_chunk:
-                        continue
-                    if (cgx, cgy) == lobby_chunk:
-                        continue
-                    if (cgx, cgy) == (cur_gx, cur_gy):
-                        continue
-
-                    # ONLY allow if player owns the map for this chunk!
-                    if sub_key not in owned_maps:
-                        continue
+                    if (cgx, cgy) == military_chunk: continue
+                    if (cgx, cgy) == lobby_chunk: continue
+                    if (cgx, cgy) == (cur_gx, cur_gy): continue
+                    if sub_key not in owned_maps: continue
 
                     sub_opts.append(sub_key)
                     fuel_cost = calculate_boat_fuel_cost(game, cgx, cgy)
                     chunk_type_lbl = tr('ui', 'Island') if (cgx, cgy) in isolated_islands else tr('ui', 'Sector')
                     display_map[sub_key] = f"{chunk_type_lbl} ({cgx}, {cgy}) - "
-                    if fuel_icon:
-                        icon_map[sub_key] = fuel_icon
+                    if fuel_icon: icon_map[sub_key] = fuel_icon
                     extra_text_map[sub_key] = f"{fuel_cost}"
                     extra_color_map[sub_key] = GREEN if player_fuel >= fuel_cost else RED
                     tooltip_map[sub_key] = (
@@ -1975,6 +1957,9 @@ def handle_right_click(game, mouse_pos):
                     'sub': sub_opts, 
                     'display_names': display_map,
                     'icons': icon_map,
+                    'extra_texts': extra_text_map,
+                    'extra_colors': extra_color_map,
+                    'tooltips': tooltip_map,
                     'extra_text_map': extra_text_map,
                     'extra_color_map': extra_color_map,
                     'tooltip_map': tooltip_map
@@ -1983,15 +1968,25 @@ def handle_right_click(game, mouse_pos):
             barricade = game.map_manager.get_barricade(gx, gy)
 
             # 1. Door Open / Close
-            if not barricade and 'state' in clicked_item:
-                if clicked_item['state'] == 'close':
+            if not barricade:
+                tile_state = clicked_item.get('state')
+                if not tile_state and t_def:
+                    tile_state = t_def.get('state')
+                if not tile_state:
+                    if '_open' in char: tile_state = 'open'
+                    elif '_close' in char: tile_state = 'close'
+
+                if tile_state == 'close':
                     options.append('Open door/window')
-                elif clicked_item['state'] == 'open':
+                elif tile_state == 'open':
                     options.append('Close door/window')
 
             # 2. Place Barricade / Remove Barricade
-            is_door_or_window = ('door' in char.lower() or 'window' in char.lower() or
-                                 (t_def and (t_def.get('is_statable') or 'door' in t_def.get('name', '').lower() or 'window' in t_def.get('name', '').lower())))
+            is_door_or_window = (
+                'door' in char.lower() or 'window' in char.lower() or
+                '_open' in char.lower() or '_close' in char.lower() or '_broke' in char.lower() or
+                (t_def and (t_def.get('is_statable') or 'door' in str(t_def.get('name', '')).lower() or 'window' in str(t_def.get('name', '')).lower()))
+            )
 
             if is_door_or_window:
                 if barricade:
@@ -2055,7 +2050,7 @@ def handle_right_click(game, mouse_pos):
                 options = ['Remove fuel to']
             else:
                 options = ['Remove']
-                
+
         is_maptile = False
         if isinstance(clicked_item, dict):
             if clicked_item.get('type') in ['maptile', 'maptile_container', 'map_tile', 'maptile_teleport']:
@@ -2069,7 +2064,6 @@ def handle_right_click(game, mouse_pos):
         if click_source in ['container_map', 'map_tile']:
             is_maptile = True
 
-        # Determine source origin
         is_nearby = (click_modal_type == 'nearby') or (click_source == 'nearby')
         is_in_inv_or_gear_modal = click_modal_type in ('inventory', 'gear', 'belt')
         is_nested_in_player = (
@@ -2079,8 +2073,11 @@ def handle_right_click(game, mouse_pos):
         )
         is_player_item = is_in_inv_or_gear_modal or is_nested_in_player
 
-        # --- 1. NEARBY: STRICTLY ONLY 'Grab' AND 'Send to' ---
-        if is_nearby:
+        # --- BRANCHING: PRESERVE SPECIAL SOURCES FROM BEING CLEARED ---
+        if click_source in ('map_tile', 'light_source', 'player_self', 'vehicle_equipment', 'vehicle_slot'):
+            pass  # Retain the exact menu options built above!
+
+        elif is_nearby:
             options = []
             if not isinstance(clicked_item, Corpse) and getattr(clicked_item, 'type', None) not in ('animal', 'zombie'):
                 if not getattr(clicked_item, 'liquid', False):
@@ -2094,7 +2091,6 @@ def handle_right_click(game, mouse_pos):
             if item_type not in invalid_types and not isinstance(clicked_item, Corpse) and not is_maptile:
                 options.append('Send to')
 
-        # --- 2. GROUND / WORLD ENTITIES ---
         elif click_source == 'ground':
             options = []
             if isinstance(clicked_item, Corpse):
@@ -2107,7 +2103,6 @@ def handle_right_click(game, mouse_pos):
                         options.append('Grab')
                 options.append('Send to')
 
-        # --- 3. INVENTORY, GEAR, BELT & NESTED CONTAINERS ---
         else:
             options = game.player.get_item_context_options(clicked_item, click_source, click_container_item)
             if getattr(clicked_item, 'item_type', None) == 'consumable_repair' and 'Use' in options:
@@ -2124,13 +2119,11 @@ def handle_right_click(game, mouse_pos):
                 if 'Drop' not in options: options.append('Drop')
                 options = [o for o in options if o != 'Equip']
 
-            # Allow Place, Crafts, and Send to on all player & nested container items
             if is_player_item:
                 if 'Place' not in options: options.append('Place')
                 if 'Send to' not in options and click_source != 'vehicle_equipment':
                     options.append('Send to')
 
-                # Crafts submenu
                 item_type = getattr(clicked_item, 'item_type', None)
                 invalid_types = [None, 'vehicle', 'map_tile', 'maptile', 'maptile_container', 'maptile_teleport']
                 if item_type not in invalid_types and not isinstance(clicked_item, Corpse) and not is_maptile:
@@ -2142,7 +2135,6 @@ def handle_right_click(game, mouse_pos):
                         if has_crafts and 'Crafts' not in options:
                             options.append('Crafts')
 
-                # Vehicle installation options if near a vehicle
                 veh = getattr(game.player, 'vehicle', None)
                 if not veh:
                     for m in game.modals:
@@ -2161,7 +2153,6 @@ def handle_right_click(game, mouse_pos):
                     if veh.can_equip(clicked_item, 'tire_fl'):
                         if 'Add tire to' not in options: options.append('Add tire to')
 
-            # External container in the world (e.g. chest, locker, crate)
             elif click_source == 'container':
                 options = []
                 if not getattr(clicked_item, 'liquid', False):
@@ -2170,10 +2161,10 @@ def handle_right_click(game, mouse_pos):
                     else:
                         options.append('Grab')
                 options.append('Send to')
+
         # --- SUBMENU GENERATION LOGIC ---
         new_options = []
         for opt in options:
-            # FIX: If option is already a dictionary (like {'label': 'Travel to', ...}), keep it intact!
             if isinstance(opt, dict):
                 new_options.append(opt)
                 continue
@@ -2213,144 +2204,6 @@ def handle_right_click(game, mouse_pos):
                         
                 for c, loc_str in containers_with_loc:
                     if not getattr(c, 'allow_liquid', False): continue
-                    
-                    c_item_load = getattr(clicked_item, 'load', 1)
-                    if c_item_load is None: c_item_load = 1
-                    
-                    unit_weight = clicked_item.get_total_weight() / max(1, c_item_load)
-                    avail_weight = float('inf')
-                    
-                    cont_weight = getattr(c, 'weight', 0)
-                    if cont_weight is not None and cont_weight > 0:
-                        max_w = cont_weight * 5.0
-                        cur_w = sum(i.get_total_weight() for i in getattr(c, 'inventory', []))
-                        avail_weight = max_w - cur_w
-                        
-                    if avail_weight < unit_weight:
-                        continue 
-                        
-                    can_fit = False
-                    c_cap = getattr(c, 'capacity', 0)
-                    if c_cap is None: c_cap = 0
-                    
-                    if len(c.inventory) < c_cap:
-                        can_fit = True
-                    else:
-                        for i in c.inventory:
-                            i_cap = getattr(i, 'capacity', 1)
-                            if i_cap is None: i_cap = 1
-                            i_load = getattr(i, 'load', 1)
-                            if i_load is None: i_load = 1
-                            
-                            if hasattr(i, 'can_stack_with') and i.can_stack_with(clicked_item) and i_load < i_cap:
-                                can_fit = True
-                                break
-                                
-                    if can_fit:
-                        c_id = str(getattr(c, 'id', c.name))
-                        
-                        liquid_qty = 0
-                        liquid_name = ""
-                        
-                        if getattr(c, 'allow_liquid', False):
-                            for inside_item in getattr(c, 'inventory', []):
-                                if getattr(inside_item, 'liquid', False):
-                                    liquid_qty += getattr(inside_item, 'load', 1) or 1
-                                    liquid_name = inside_item.name
-                        
-                        max_liq_str = f"/{c.max_liquid}" if getattr(c, 'max_liquid', None) is not None else ""
-                        if liquid_qty > 0:
-                            display_str = f"{c.name} ({int(liquid_qty)}{max_liq_str} {liquid_name} {tr('ui', 'units')})"
-                        elif getattr(c, 'allow_liquid', False):
-                            display_str = f"{c.name} (0{max_liq_str} {tr('ui', 'Empty')})"
-                        else:
-                            display_str = c.name
-                            
-                        if c_id not in sub_opts:
-                            sub_opts.append(c_id)
-                            display_map[c_id] = display_str
-                            tooltip_map[c_id] = f"{tr('ui', 'Location:')} {loc_str}"
-                            
-                new_options.append({'label': 'Remove fuel to', 'sub': sub_opts, 'display_names': display_map, 'tooltips': tooltip_map})
-                continue
-
-            if opt == 'Equip':
-                sub_opts = []
-                replace_map = {}
-                item_type = getattr(clicked_item, 'item_type', None)
-                
-                if item_type == 'container':
-                    base_slot = getattr(clicked_item, 'slot', None)
-                    if base_slot and base_slot != 'util':
-                        slots_to_check = [base_slot]
-                    else:
-                        slots_to_check = ['util', 'util2', 'util3']
-                        
-                    for s in slots_to_check:
-                        sub_opts.append(s)
-                        existing = game.player.clothes.get(s)
-                        if existing:
-                            replace_map[s] = existing.name
-                            
-                elif item_type == 'cloth':
-                    slot = getattr(clicked_item, 'slot', None)
-                    if slot == 'hand': slot = 'hands'
-                    
-                    slots_to_check = []
-                    if slot == 'util':
-                        slots_to_check = ['util', 'util2', 'util3']
-                    elif slot:
-                        slots_to_check = [slot]
-                        
-                    for s in slots_to_check:
-                        sub_opts.append(s)
-                        existing = game.player.clothes.get(s)
-                        if existing:
-                            replace_map[s] = existing.name
-                        
-                elif item_type in ('weapon', 'weapon_melee', 'weapon_ranged', 'weapon_throw', 'tool', 'consumable_medical', 'utility', 'mobile', 'text', 'map', 'consumable_food'):
-                    if getattr(clicked_item, 'allow_belt', True):
-                         for b_idx in range(len(game.player.belt)):
-                             slot_str = f"belt_{b_idx}"
-                             sub_opts.append(slot_str)
-                             existing = game.player.belt[b_idx]
-                             if existing:
-                                 replace_map[slot_str] = existing.name
-                
-                if sub_opts:
-                    new_options.append({'label': 'Equip', 'sub': sub_opts, 'replacing': replace_map})
-                else:
-                    new_options.append('Equip')
-                    
-            elif opt == 'Send to':
-                sub_opts = []
-                display_map = {}
-                tooltip_map = {}
-                
-                is_liquid = getattr(clicked_item, 'liquid', False)
-                
-                if not is_liquid:
-                    sub_opts.append('Inventory')
-                    display_map['Inventory'] = 'Inventory'
-                
-                containers_with_loc = []
-                for i, b_item in enumerate(game.player.belt):
-                    if b_item and getattr(b_item, 'item_type', '') in ['container', 'cloth'] and getattr(b_item, 'inventory', None) is not None:
-                        containers_with_loc.append((b_item, f"Belt > Slot {i+1}"))
-                for i_item in game.player.inventory:
-                    if i_item and getattr(i_item, 'item_type', '') in ['container', 'cloth'] and getattr(i_item, 'inventory', None) is not None:
-                        containers_with_loc.append((i_item, "Inventory"))
-                for slot, c_item in game.player.clothes.items():
-                    if c_item and getattr(c_item, 'item_type', '') in ['container', 'cloth'] and getattr(c_item, 'inventory', None) is not None:
-                        containers_with_loc.append((c_item, f"Gear > {str(slot).capitalize()}"))
-                        
-                for c, loc_str in containers_with_loc:
-                    if c is clicked_item: continue
-                    if click_container_item and c is click_container_item: continue
-                    
-                    if is_liquid and not getattr(c, 'allow_liquid', False): continue
-                    if getattr(c, 'allow_liquid', False) and not is_liquid: continue
-                    if is_liquid and get_container_available_liquid(c) <= 0: continue
                     
                     c_item_load = getattr(clicked_item, 'load', 1)
                     if c_item_load is None: c_item_load = 1

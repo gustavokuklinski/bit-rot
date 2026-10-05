@@ -374,11 +374,12 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             if self.aggro_timer <= 0:
                 self.current_attacker = None
 
-        entities_to_check = [e for e in game.npcs if e != self and not e.is_dead]
-        if game.player and not game.player.is_dead:
+        my_layer = getattr(self, 'layer', 1)
+        entities_to_check = [e for e in game.npcs if e != self and not e.is_dead and getattr(e, 'layer', 1) == my_layer]
+        if game.player and not game.player.is_dead and getattr(game, 'current_layer_index', 1) == my_layer:
             entities_to_check.append(game.player)
         for rp in getattr(game, 'remote_players', {}).values():
-            if not getattr(rp, 'is_dead', False):
+            if not getattr(rp, 'is_dead', False) and getattr(rp, 'layer', 1) == my_layer:
                 entities_to_check.append(rp)
 
         target_entity = None

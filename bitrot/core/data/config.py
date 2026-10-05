@@ -211,8 +211,10 @@ def get_world_config_path(preset="world"):
             if os.path.exists(path):
                 return path
 
-    # 4. Default game template from data library (never the sandbox-edited world.xml)
+    # 4. Default game template from server, library, or build presets
     lib_candidates = [
+        os.path.join(get_writable_dir(), "data.rot", "server", "world.xml"),
+        os.path.join(get_writable_dir(), "data.rot", "save", "config", "world.xml"),
         os.path.join(DATA_PATH, "world.xml"),
         os.path.join(DATA_PATH, "config", "world.xml"),
         os.path.join(BASE_DIR, "data.rot", "lib", "data", "world.xml"),
@@ -222,7 +224,7 @@ def get_world_config_path(preset="world"):
         if os.path.exists(path):
             return path
 
-    return os.path.join(DATA_PATH, "world.xml")
+    return os.path.join(get_writable_dir(), "data.rot", "server", "server_world.xml")
 
 class ImageFontWrapper:
     def __init__(self, font_path, size, is_sysfont=False, max_cache_size=256):

@@ -23,6 +23,23 @@ from core.systems.quadtree import Quadtree
 from core.placement import find_free_tile
 from core.entities.zombie.corpse import Corpse
 
+def set_entity_layer(entity, new_layer):
+    """Safely updates an entity's layer without conflicting with pygame.sprite group restrictions."""
+    new_layer = int(new_layer)
+    if hasattr(entity, '_groups'):
+        for g in list(getattr(entity, '_groups', ())):
+            if hasattr(g, 'change_layer'):
+                try:
+                    g.change_layer(entity, new_layer)
+                except Exception:
+                    pass
+    if hasattr(entity, '_layer'):
+        entity._layer = new_layer
+    try:
+        entity.layer = new_layer
+    except AttributeError:
+        entity._layer = new_layer
+
 class GameClient:
     def __init__(self, game):
         self.game = game
@@ -47,52 +64,67 @@ class GameClient:
         self.target_port = int(port)
 
         try:
-            # 1. Establish TCP Handshake Socket with TCP_NODELAY
+            print(f"[Client] Opening TCP connection to {self.target_host}:{self.target_port}...")
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             self.socket.settimeout(5.0)
             self.socket.connect((self.target_host, self.target_port))
+            print(f"[Client] TCP socket connected. Sending JOIN_REQ...")
 
-            # Send initial JOIN_REQ over TCP
+            # Clean payload of non-serializable fields
+            clean_player_data = {
+                'name': player_data.get('name', 'Survivor'),
+                'sex': player_data.get('sex', 'Male'),
+                'traits': player_data.get('traits', []),
+                'clothes': player_data.get('clothes', {}),
+                'clothes_colors': {k: list(v) for k, v in player_data.get('clothes_colors', {}).items()}
+            }
+
             join_payload = {
                 'type': NetMsg.JOIN_REQ,
-                'name': player_data.get('name', 'Survivor'),
+                'name': clean_player_data['name'],
                 'player_id': player_data.get('player_id'),
-                'player_data': player_data
+                'player_data': clean_player_data
             }
             send_msg(self.socket, join_payload)
 
-            # Wait synchronously for JOIN_ACK during handshake
+            # Wait for JOIN_ACK without blocking locks
+            self.socket.setblocking(False)
             start_t = time.time()
             ack_data = None
-            while time.time() - start_t < 5.0:
-                msgs, self.buffer, is_alive = recv_msgs(self.socket, self.buffer)
-                if not is_alive:
-                    break
-                for msg in msgs:
-                    if msg.get('type') == NetMsg.JOIN_ACK:
-                        ack_data = msg
+            print(f"[Client] Waiting for server response...")
+            while time.time() - start_t < 10.0:
+                r_list, _, _ = select.select([self.socket], [], [], 0.05)
+                if r_list:
+                    msgs, self.buffer, is_alive = recv_msgs(self.socket, self.buffer)
+                    if not is_alive:
+                        print("[Client] Server closed connection during handshake.")
                         break
-                    elif msg.get('type') == NetMsg.JOIN_DENY:
-                        reason = msg.get('reason', 'Connection denied.')
-                        display_message(self.game, f"[Network] {reason}")
-                        self.socket.close()
-                        self.socket = None
-                        self.connected = False
-                        return False, None
+                    for msg in msgs:
+                        if msg.get('type') == NetMsg.JOIN_ACK:
+                            ack_data = msg
+                            break
+                        elif msg.get('type') == NetMsg.JOIN_DENY:
+                            reason = msg.get('reason', 'Connection denied.')
+                            print(f"[Client] Server denied connection: {reason}")
+                            display_message(self.game, f"[Network] {reason}")
+                            self.socket.close()
+                            self.socket = None
+                            self.connected = False
+                            return False, None
                 if ack_data:
                     break
-                time.sleep(0.02)
 
             if not ack_data:
+                print(f"[Client] Timed out waiting for JOIN_ACK from server at {self.target_host}:{self.target_port}")
                 self.socket.close()
                 self.socket = None
                 self.connected = False
                 return False, None
 
-            self.socket.setblocking(False)
             self.connected = True
             self.player_id = ack_data.get('player_id')
+            print(f"[Client] Handshake confirmed! Assigned player ID: {self.player_id}")
 
             # 2. Setup UDP Socket
             server_udp_port = ack_data.get('server_udp_port', self.target_port)
@@ -236,6 +268,8 @@ class GameClient:
                     self.game.map_manager.refresh_maps()
 
             elif m_type == NetMsg.WORLD_SYNC:
+                curr_layer = getattr(self.game, 'current_layer_index', 1)
+
                 # Players
                 players_list = msg.get('players', [])
                 if not hasattr(self.game, 'remote_players'):
@@ -248,7 +282,7 @@ class GameClient:
                         continue
                     current_p_ids.add(pid)
                     if pid not in self.game.remote_players:
-                        rp = RemotePlayer(pid, p_data.get('name', 'Player'), p_data.get('x', 0), p_data.get('y', 0))
+                        rp = RemotePlayer(pid, p_data.get('name', 'Player'), p_data.get('x', 0), p_data.get('y', 0), layer=p_data.get('layer', 1))
                         self.game.remote_players[pid] = rp
                     self.game.remote_players[pid].update_from_network(p_data)
 
@@ -256,7 +290,7 @@ class GameClient:
                     if existing_id not in current_p_ids:
                         del self.game.remote_players[existing_id]
 
-                # Zombies
+                # Zombies (filtered to player's current layer)
                 if not hasattr(self.game, '_synced_zombies'):
                     self.game._synced_zombies = {}
 
@@ -274,6 +308,7 @@ class GameClient:
                     z = self.game._synced_zombies[zid]
                     z.x = z_data['x']
                     z.y = z_data['y']
+                    set_entity_layer(z, z_data.get('layer', 1))
                     z.rect.topleft = (int(z.x), int(z.y))
                     z.health = z_data['hp']
                     z.max_health = z_data['max_hp']
@@ -301,10 +336,10 @@ class GameClient:
                     if zid not in current_z_ids:
                         del self.game._synced_zombies[zid]
 
-                self.game.zombies = list(self.game._synced_zombies.values())
+                self.game.zombies = [z for z in self.game._synced_zombies.values() if getattr(z, 'layer', 1) == curr_layer]
                 self.game.active_zombies = self.game.zombies
 
-                # Animals
+                # Animals (filtered to player's current layer)
                 if not hasattr(self.game, '_synced_animals'):
                     self.game._synced_animals = {}
 
@@ -321,6 +356,7 @@ class GameClient:
                     a = self.game._synced_animals[aid]
                     a.x = a_data['x']
                     a.y = a_data['y']
+                    set_entity_layer(a, a_data.get('layer', 1))
                     a.rect.topleft = (int(a.x), int(a.y))
                     a.health = a_data['hp']
                     a.max_health = a_data['max_hp']
@@ -329,10 +365,9 @@ class GameClient:
                     if aid not in current_a_ids:
                         del self.game._synced_animals[aid]
 
-                self.game.active_animals = list(self.game._synced_animals.values())
+                self.game.active_animals = [a for a in self.game._synced_animals.values() if getattr(a, 'layer', 1) == curr_layer]
 
-                # Ground Items & Corpses
-                # Ground Items & Corpses
+                # Ground Items & Corpses (filtered to player's current layer)
                 if not hasattr(self.game, '_synced_items'):
                     self.game._synced_items = {}
 
@@ -346,7 +381,8 @@ class GameClient:
                             corpse = Corpse(
                                 name=it_data.get('name', 'Corpse'),
                                 pos=(it_data['x'], it_data['y']),
-                                is_player_corpse=it_data.get('is_player_corpse', False)
+                                is_player_corpse=it_data.get('is_player_corpse', False),
+                                layer=it_data.get('layer', 1)
                             )
                             corpse.id = iid
                             if 'inventory' in it_data:
@@ -356,27 +392,26 @@ class GameClient:
                             item = Item.from_dict(it_data)
                             if item:
                                 item.id = iid
+                                item.layer = it_data.get('layer', 1)
                                 self.game._synced_items[iid] = item
 
                     it = self.game._synced_items.get(iid)
                     if it:
                         it.x = it_data['x']
                         it.y = it_data['y']
+                        set_entity_layer(it, it_data.get('layer', 1))
                         it.rect.topleft = (int(it.x), int(it.y))
                         if it_data.get('load') is not None:
                             it.load = it_data['load']
-                        
-                        # --- FIX: Corpse State-Locking (Prevents Item Duplication) ---
+
                         if it_data.get('is_corpse') and 'inventory' in it_data:
                             server_state = str([x.get('id', '') + str(x.get('load', '')) for x in it_data['inventory']])
                             local_state = getattr(it, '_last_sync_state', '')
 
                             if getattr(it, '_awaiting_server_sync', False):
-                                # We made local changes. Ignore server until it catches up to our state
                                 if server_state == local_state:
                                     it._awaiting_server_sync = False
                             else:
-                                # Safe to accept server changes
                                 if server_state != local_state:
                                     it.inventory = [Item.from_dict(x) for x in it_data['inventory'] if x]
                                     it._last_sync_state = server_state
@@ -385,10 +420,10 @@ class GameClient:
                     if iid not in current_i_ids:
                         del self.game._synced_items[iid]
 
-                self.game.items_on_ground = list(self.game._synced_items.values())
+                self.game.items_on_ground = [it for it in self.game._synced_items.values() if getattr(it, 'layer', 1) == curr_layer]
                 self.game.items_on_ground.extend(self.game.active_animals)
 
-                # NPCs
+                # NPCs (filtered to player's current layer)
                 if not hasattr(self.game, '_synced_npcs'):
                     self.game._synced_npcs = {}
                 current_n_ids = set()
@@ -399,13 +434,14 @@ class GameClient:
                     is_static_npc = n_data.get('is_static', False)
 
                     if nid not in self.game._synced_npcs:
-                        dummy = NPC(n_data['x'], n_data['y'], self.game, is_static=is_static_npc)
+                        dummy = NPC(n_data['x'], n_data['y'], self.game, is_static=is_static_npc, layer=n_data.get('layer', 1))
                         dummy.id = nid
                         self.game._synced_npcs[nid] = dummy
 
                     dummy = self.game._synced_npcs[nid]
                     dummy.x = n_data['x']
                     dummy.y = n_data['y']
+                    set_entity_layer(dummy, n_data.get('layer', 1))
                     dummy.rect.topleft = (int(dummy.x), int(dummy.y))
                     dummy.name = n_data['name']
                     dummy.health = n_data['hp']
@@ -439,7 +475,51 @@ class GameClient:
 
                 self.game.npcs.empty()
                 for dummy in self.game._synced_npcs.values():
-                    self.game.npcs.add(dummy)
+                    if getattr(dummy, 'layer', 1) == curr_layer:
+                        self.game.npcs.add(dummy)
+
+                # Vehicles (Surface only)
+                if curr_layer == 1:
+                    if hasattr(self.game.map_manager, 'vehicles'):
+                        sync_v_ids = set()
+                        from core.entities.vehicle.vehicle import Vehicle
+                        from core.entities.vehicle.vehicle_data import VehicleData
+                        for v_data in msg.get('vehicles', []):
+                            vid = v_data.get('id')
+                            sync_v_ids.add(vid)
+
+                            existing_v = None
+                            for v in self.game.vehicles:
+                                if getattr(v, 'id', None) == vid:
+                                    existing_v = v
+                                    break
+
+                            if not existing_v:
+                                v_def = VehicleData.get_definition_by_name(v_data['name'])
+                                existing_v = Vehicle(v_data['name'], v_data['x'], v_data['y'], TILE_SIZE, TILE_SIZE, v_def['images'] if v_def else None, v_def['stats'] if v_def else {}, facing=v_data['facing'])
+                                existing_v.id = vid
+                                self.game.map_manager.vehicles.append(existing_v)
+                                self.game.vehicles.append(existing_v)
+                                self.game.containers.append(existing_v)
+                                self.game.obstacles.append(existing_v.rect)
+
+                            existing_v.x = v_data['x']
+                            existing_v.y = v_data['y']
+                            existing_v.rect.topleft = (int(existing_v.x), int(existing_v.y))
+                            existing_v.facing = v_data['facing']
+                            existing_v.active = v_data['active']
+                            existing_v.lights = v_data['lights']
+
+                        for v in list(self.game.vehicles):
+                            if getattr(v, 'id', None) not in sync_v_ids:
+                                if v in self.game.vehicles: self.game.vehicles.remove(v)
+                                if v in self.game.map_manager.vehicles: self.game.map_manager.vehicles.remove(v)
+                                if v in self.game.containers: self.game.containers.remove(v)
+                                if v.rect in self.game.obstacles: self.game.obstacles.remove(v.rect)
+                else:
+                    self.game.vehicles = []
+                    if hasattr(self.game.map_manager, 'vehicles'):
+                        self.game.map_manager.vehicles = []
 
                 # Vehicles
                 if hasattr(self.game.map_manager, 'vehicles'):
@@ -607,6 +687,7 @@ class GameClient:
                 'name': self.game.player.name,
                 'x': round(self.game.player.x, 1),
                 'y': round(self.game.player.y, 1),
+                'layer': getattr(self.game, 'current_layer_index', 1),
                 'facing': self.game.player.facing_direction,
                 'aim_angle': round(self.game.player.aim_angle, 2),
                 'is_moving': self.game.player.is_moving,
