@@ -13,5 +13,6 @@
         <item item="Cigarette Pack" chance="0.15" />
         <item item="Cartography for [MAP_POS]" chance="0.20"/>
         <item item="Island Map" chance="0.20"/>
+        <item type="car_key" min="1" max="2" chance="0.10"  />
     </loot>
 </map>

@@ -2,6 +2,7 @@
 
 import math
 import queue
+import re
 import random
 import threading
 import core.data.config
@@ -186,6 +187,22 @@ class AsyncSpawnManager:
           npc.is_friendly = True
           game.npcs.add(npc)
 
+      elif e_type in ('hnpc', 'fnpc'):
+        # Never flush dynamic NPCs into the Lobby chunk
+        curr_map = getattr(game.map_manager, 'current_map_filename', '')
+        match = re.match(r'map_L\d+_(\d+)_(\d+)_map\.csv', curr_map)
+        if match and getattr(game, 'generator', None):
+            curr_coord = (int(match.group(1)), int(match.group(2)))
+            if curr_coord == getattr(game.generator, 'lobby_chunk', None):
+                continue
+
+        max_npc = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
+        max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
+        if max_npc > 0 and max_npc_chunk > 0 and len(game.npcs) < max_npc:
+          is_friendly = (e_type == 'fnpc')
+          npc = NPC(x, y, game, is_static=is_friendly, layer=layer)
+          npc.is_friendly = is_friendly
+          game.npcs.add(npc)
 
 # Global instance
 async_spawner = AsyncSpawnManager()
@@ -327,7 +344,13 @@ def manage_dynamic_npcs(game):
     if match and getattr(game, 'generator', None):
         curr_coord = (int(match.group(1)), int(match.group(2)))
         if curr_coord == getattr(game.generator, 'lobby_chunk', None):
-            return  # Zero NPCs allowed in Lobby
+            # Watchdog: prune any unexpected excess NPCs back to strictly 3
+            if len(game.npcs) > 3:
+                keep = list(game.npcs)[:3]
+                game.npcs.empty()
+                for n in keep:
+                    game.npcs.add(n)
+            return
     
     max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
     max_npc_global = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)

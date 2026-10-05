@@ -2,5 +2,4 @@
     <ingredient name="Metal Scrap" destroy="true" amount="1" />
     <ingredient name="Lug Wrench" destroy="false" amount="1" />
     <ingredient name="Weld" destroy="true" amount="2" />
-    <ingredient name="Blueprint" destroy="true" amount="1" />
 </recipe>

@@ -1,4 +1,4 @@
-<recipe type="weapon_melee" craft="dismantle" magazine="Carpentary Vol.1" time="2.0" gain_xp="[intelligence:0.5, maintenance:0.2]">
+<recipe type="weapon_melee" craft="dismantle" magazine="Carpentary Weapons" time="2.0" gain_xp="[intelligence:0.5, maintenance:0.2]">
     <ingredient name="Primitive Axe" destroy="true" amount="1" />
     <result name="Stone Blade" amount="1" />
     <result name="[Stick, Tree Branch]" amount="1" />

@@ -1,5 +1,6 @@
 # core/events/mouse_context.py
 
+import os
 import pygame
 import uuid
 import math
@@ -16,8 +17,14 @@ from core.messages import display_message
 from core.events.keyboard import toggle_status_modal, toggle_inventory_modal, toggle_nearby_modal, toggle_gear_modal
 from core.data.localization import tr
 from core.placement import find_free_tile
-from core.entities.item.item_helpers import does_allow_liquid, is_infinite_liquid_source, find_item_recursive, has_app, get_container_available_liquid, is_container_on_player
-from core.ui.crafting_common import is_recipe_unlocked, has_recipe_ingredients, execute_recipe_craft, get_recipe_status_details, is_recipe_relevant_to_item
+from core.entities.item.item_helpers import (
+    does_allow_liquid, is_infinite_liquid_source, find_item_recursive, 
+    has_app, get_container_available_liquid, is_container_on_player
+)
+from core.ui.crafting_common import (
+    is_recipe_unlocked, has_recipe_ingredients, execute_recipe_craft, 
+    get_recipe_status_details, is_recipe_relevant_to_item
+)
 from core.systems.utils import teleport_player_to_chunk as sys_teleport
 
 
@@ -222,12 +229,12 @@ def handle_context_menu_click(game, mouse_pos):
                 elif source in ('player_self', 'map_tile', 'vehicle_equipment', 'vehicle_slot', 'light_source'):
                     verified_item = item
                 
-                # FIX: Check object identity OR matching item id / name so network re-sync doesn't fail validation
+                # Check object identity OR matching item id / name so network re-sync doesn't fail validation
                 is_match = False
                 if verified_item is item or isinstance(item, dict):
                     is_match = True
                 elif verified_item and hasattr(verified_item, 'id') and hasattr(item, 'id') and verified_item.id == item.id:
-                    item = verified_item  # Re-bind to current local object instance
+                    item = verified_item
                     game.context_menu['item'] = verified_item
                     is_match = True
                 elif verified_item and hasattr(verified_item, 'name') and hasattr(item, 'name') and verified_item.name == item.name:
@@ -274,7 +281,6 @@ def handle_context_menu_click(game, mouse_pos):
                     gx = item['grid_x']
                     gy = item['grid_y']
 
-                    # Search player inventory or belt for the barricade
                     found_barricade = None
                     barricade_source = None
                     barricade_idx = -1
@@ -660,6 +666,10 @@ def handle_context_menu_click(game, mouse_pos):
 
             elif option == 'Send to':
                 target_container_name = target_sub_slot
+                is_external = (
+                    source in ['nearby', 'ground', 'container_map'] 
+                    or (source == 'container' and container_item and not is_container_on_player(container_item, game.player))
+                )
                 
                 def remove_item_from_src(target_item, is_clone=False):
                     if is_clone: return True
@@ -721,7 +731,7 @@ def handle_context_menu_click(game, mouse_pos):
                                     game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
                         
                     transfer_time = max(0.1, item.get_total_weight() * 0.2)
-                    if source in ['nearby', 'ground', 'container', 'container_map']:
+                    if is_external:
                         game.player.start_action(tr('msg', "Looting"), transfer_time, do_send_inv, xp_reward=0.5)
                     else:
                         do_send_inv()
@@ -834,7 +844,7 @@ def handle_context_menu_click(game, mouse_pos):
                                 remove_item_from_src(item, is_clone=is_clone)
                                 
                         transfer_time = max(0.1, item.get_total_weight() * 0.2)
-                        if source in ['nearby', 'ground', 'container', 'container_map']:
+                        if is_external:
                             game.player.start_action(f"Transferring to {target_container.name}", transfer_time, do_send_container, xp_reward=0.5)
                         else:
                             do_send_container()
@@ -1567,6 +1577,7 @@ def handle_right_click(game, mouse_pos):
     click_source = None
     click_index = -1
     click_container_item = None
+    click_modal_type = None  # Track source modal
 
     is_over_any_modal = any(modal.get('rect') and modal['rect'].collidepoint(mouse_pos) for modal in game.modals)
 
@@ -1577,7 +1588,9 @@ def handle_right_click(game, mouse_pos):
             if modal.get('active_tab', 'Inventory') == 'Inventory':
                 for i, item in enumerate(game.player.inventory):
                     if item and get_inventory_slot_rect(i, modal['position']).collidepoint(mouse_pos):
-                        clicked_item, click_source, click_index = item, 'inventory', i; break
+                        clicked_item, click_source, click_index = item, 'inventory', i
+                        click_modal_type = 'inventory'
+                        break
             
             elif modal.get('active_tab') in modal.get('container_mapping', {}):
                 container = modal['container_mapping'][modal['active_tab']]
@@ -1587,6 +1600,7 @@ def handle_right_click(game, mouse_pos):
                         if item and get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
                             clicked_item, click_source, click_index = item, 'container', i
                             click_container_item = container
+                            click_modal_type = 'inventory'
                             break
                             
             elif modal.get('active_tab') == 'Gear':
@@ -1595,7 +1609,9 @@ def handle_right_click(game, mouse_pos):
                         if slot_rect.collidepoint(mouse_pos):
                             item = game.player.clothes.get(slot_name)
                             if item:
-                                clicked_item, click_source, click_index = item, 'gear', slot_name; break
+                                clicked_item, click_source, click_index = item, 'gear', slot_name
+                                click_modal_type = 'inventory'
+                                break
 
         elif modal['type'] == 'gear':
             active_tab = modal.get('active_tab', 'Gear')
@@ -1606,6 +1622,7 @@ def handle_right_click(game, mouse_pos):
                             item = game.player.clothes.get(slot_name)
                             if item:
                                 clicked_item, click_source, click_index = item, 'gear', slot_name
+                                click_modal_type = 'gear'
                                 break
             elif active_tab in modal.get('container_mapping', {}):
                 container = modal['container_mapping'][active_tab]
@@ -1614,13 +1631,16 @@ def handle_right_click(game, mouse_pos):
                     for i, item in enumerate(container.inventory):
                         if item and get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
                             clicked_item, click_source, click_index, click_container_item = item, 'container', i, container
+                            click_modal_type = 'gear'
                             break
 
         elif modal['type'] == 'container':
             container = modal['item']
             for i, item in enumerate(container.inventory):
                 if item and get_container_slot_rect(modal['position'], i).collidepoint(mouse_pos):
-                    clicked_item, click_source, click_index, click_container_item = item, 'container', i, container; break
+                    clicked_item, click_source, click_index, click_container_item = item, 'container', i, container
+                    click_modal_type = 'container'
+                    break
         
         elif modal['type'] == 'slots':
             for slot_data in modal.get('slot_rects', []):
@@ -1629,6 +1649,7 @@ def handle_right_click(game, mouse_pos):
                     i = slot_data['index']
                     if i < len(c.inventory):
                         clicked_item, click_source, click_index, click_container_item = c.inventory[i], 'container', i, c
+                        click_modal_type = 'slots'
                         break
         
         elif modal['type'] == 'vehicle':
@@ -1662,7 +1683,7 @@ def handle_right_click(game, mouse_pos):
                             game.context_menu['rects'] = []
                             game.context_menu['action_map'] = []
                             return
-
+###########################
         elif modal['type'] == 'nearby':
             active_tab_label = modal.get('active_tab')
             active_container = None
@@ -1678,7 +1699,9 @@ def handle_right_click(game, mouse_pos):
                     pos = content_rect.topleft
                     for i, item in enumerate(active_container.inventory):
                         if item and get_container_slot_rect(pos, i).collidepoint(mouse_pos):
-                            clicked_item, click_source, click_index, click_container_item = item, 'nearby', i, active_container; break
+                            clicked_item, click_source, click_index, click_container_item = item, 'nearby', i, active_container
+                            click_modal_type = 'nearby'
+                            break
         
         if clicked_item: break
 
@@ -1688,6 +1711,7 @@ def handle_right_click(game, mouse_pos):
                 clicked_item = item
                 click_source = 'belt'
                 click_index = i
+                click_modal_type = 'belt'
                 break
 
     if not clicked_item and not is_over_any_modal:
@@ -1705,6 +1729,7 @@ def handle_right_click(game, mouse_pos):
                     click_source = 'ground'
                     click_index = i
                     click_container_item = None
+                    click_modal_type = 'ground'
                     break
                 else:
                     display_message(tr('msg', "Item is too far away to interact with."))
@@ -1950,9 +1975,9 @@ def handle_right_click(game, mouse_pos):
                     'sub': sub_opts, 
                     'display_names': display_map,
                     'icons': icon_map,
-                    'extra_texts': extra_text_map,
-                    'extra_colors': extra_color_map,
-                    'tooltips': tooltip_map
+                    'extra_text_map': extra_text_map,
+                    'extra_color_map': extra_color_map,
+                    'tooltip_map': tooltip_map
                 }]
 
             barricade = game.map_manager.get_barricade(gx, gy)
@@ -2030,71 +2055,7 @@ def handle_right_click(game, mouse_pos):
                 options = ['Remove fuel to']
             else:
                 options = ['Remove']
-        else:
-            options = game.player.get_item_context_options(clicked_item, click_source, click_container_item)
-            if getattr(clicked_item, 'item_type', None) == 'consumable_repair' and 'Use' in options:
-                options.remove('Use')
-
-        if 'Send all to Inventory' in options:
-            options.remove('Send all to Inventory')
-
-        if click_source == 'belt':
-            if 'Unequip' not in options: options.append('Unequip')
-            options = [o for o in options if o != 'Equip']
-        elif click_source == 'gear':
-            if 'Unequip' not in options: options.append('Unequip')
-            if 'Drop' not in options: options.append('Drop')
-            options = [o for o in options if o != 'Equip']
-        if click_source in ['inventory', 'belt', 'gear']:
-            if 'Place' not in options: options.append('Place')
-        elif click_source == 'ground':
-            if 'Drop' in options: options.remove('Drop')
-
-            is_camp = getattr(clicked_item, 'item_type', None) == 'camp'
-            can_grab = True
-            
-            if isinstance(clicked_item, Corpse):
-                can_grab = False
-            elif getattr(clicked_item, 'type', None) in ('animal', 'zombie'):
-                can_grab = False
-            elif is_camp and clicked_item.inventory:
-                can_grab = False
-            
-            if can_grab:
-                if not getattr(clicked_item, 'liquid', False):
-                    if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
-                        if 'Grab' in options: options.remove('Grab')
-                        options = ['Grab One', 'Grab Half', 'Grab All'] + options
-                    else:
-                        if 'Grab' not in options: options.insert(0, 'Grab') 
-
-            if getattr(clicked_item, 'inventory', None) is not None:
-                is_valid_type = getattr(clicked_item, 'item_type', '') in ['container', 'cloth']
-                if isinstance(clicked_item, Corpse) or is_valid_type:
-                    if 'Open' not in options: options.append('Open')
                 
-        elif click_source == 'container_map':
-            if getattr(clicked_item, 'item_type', '') == 'vehicle':
-                options = ['Vehicle options', 'Trunk']
-            else:
-                options = ['Open']
-        elif click_source in ['nearby', 'container']:
-            if 'Drop' in options: options.remove('Drop')
-            if 'Drop one' in options: options.remove('Drop one') 
-            if 'Drop all' in options: options.remove('Drop all') 
-            if not isinstance(clicked_item, Corpse) and getattr(clicked_item, 'type', None) not in ('animal', 'zombie'):
-                if not getattr(clicked_item, 'liquid', False):
-                    if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
-                        if 'Grab' in options: options.remove('Grab')
-                        options = ['Grab One', 'Grab Half', 'Grab All'] + options
-                    else:
-                        if 'Grab' not in options: options.insert(0, 'Grab')
-
-        if getattr(clicked_item, 'capacity', 0) and clicked_item.capacity > 0:
-            if getattr(clicked_item, 'item_type', '') in ['container', 'cloth']:
-                if 'Open' not in options:
-                    options.append('Open')
-
         is_maptile = False
         if isinstance(clicked_item, dict):
             if clicked_item.get('type') in ['maptile', 'maptile_container', 'map_tile', 'maptile_teleport']:
@@ -2108,45 +2069,107 @@ def handle_right_click(game, mouse_pos):
         if click_source in ['container_map', 'map_tile']:
             is_maptile = True
 
-        item_type = getattr(clicked_item, 'item_type', None)
-        invalid_types = [None, 'vehicle', 'map_tile', 'maptile', 'maptile_container', 'maptile_teleport']
-        
-        if item_type not in invalid_types and not isinstance(clicked_item, Corpse) and not is_maptile:
-            if 'Send to' not in options:
-                if click_source != 'vehicle_equipment':
+        # Determine source origin
+        is_nearby = (click_modal_type == 'nearby') or (click_source == 'nearby')
+        is_in_inv_or_gear_modal = click_modal_type in ('inventory', 'gear', 'belt')
+        is_nested_in_player = (
+            click_source == 'container' 
+            and click_container_item 
+            and (is_in_inv_or_gear_modal or click_modal_type == 'slots' or is_container_on_player(click_container_item, game.player))
+        )
+        is_player_item = is_in_inv_or_gear_modal or is_nested_in_player
+
+        # --- 1. NEARBY: STRICTLY ONLY 'Grab' AND 'Send to' ---
+        if is_nearby:
+            options = []
+            if not isinstance(clicked_item, Corpse) and getattr(clicked_item, 'type', None) not in ('animal', 'zombie'):
+                if not getattr(clicked_item, 'liquid', False):
+                    if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
+                        options.extend(['Grab One', 'Grab Half', 'Grab All'])
+                    else:
+                        options.append('Grab')
+
+            item_type = getattr(clicked_item, 'item_type', None)
+            invalid_types = [None, 'vehicle', 'map_tile', 'maptile', 'maptile_container', 'maptile_teleport']
+            if item_type not in invalid_types and not isinstance(clicked_item, Corpse) and not is_maptile:
+                options.append('Send to')
+
+        # --- 2. GROUND / WORLD ENTITIES ---
+        elif click_source == 'ground':
+            options = []
+            if isinstance(clicked_item, Corpse):
+                options.append('Open')
+            else:
+                if not getattr(clicked_item, 'liquid', False):
+                    if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
+                        options.extend(['Grab One', 'Grab Half', 'Grab All'])
+                    else:
+                        options.append('Grab')
+                options.append('Send to')
+
+        # --- 3. INVENTORY, GEAR, BELT & NESTED CONTAINERS ---
+        else:
+            options = game.player.get_item_context_options(clicked_item, click_source, click_container_item)
+            if getattr(clicked_item, 'item_type', None) == 'consumable_repair' and 'Use' in options:
+                options.remove('Use')
+
+            if 'Send all to Inventory' in options:
+                options.remove('Send all to Inventory')
+
+            if click_source == 'belt':
+                if 'Unequip' not in options: options.append('Unequip')
+                options = [o for o in options if o != 'Equip']
+            elif click_source == 'gear':
+                if 'Unequip' not in options: options.append('Unequip')
+                if 'Drop' not in options: options.append('Drop')
+                options = [o for o in options if o != 'Equip']
+
+            # Allow Place, Crafts, and Send to on all player & nested container items
+            if is_player_item:
+                if 'Place' not in options: options.append('Place')
+                if 'Send to' not in options and click_source != 'vehicle_equipment':
                     options.append('Send to')
 
-        veh = getattr(game.player, 'vehicle', None)
-        if not veh:
-            for m in game.modals:
-                if m['type'] == 'vehicle':
-                    veh = m['vehicle']
-                    break
+                # Crafts submenu
+                item_type = getattr(clicked_item, 'item_type', None)
+                invalid_types = [None, 'vehicle', 'map_tile', 'maptile', 'maptile_container', 'maptile_teleport']
+                if item_type not in invalid_types and not isinstance(clicked_item, Corpse) and not is_maptile:
+                    item_name_to_check = getattr(clicked_item, 'name', '')
+                    if item_name_to_check:
+                        if not RecipeManager.RECIPES:
+                            RecipeManager.load_recipes()
+                        has_crafts = any(is_recipe_relevant_to_item(r, item_name_to_check) for r in RecipeManager.RECIPES)
+                        if has_crafts and 'Crafts' not in options:
+                            options.append('Crafts')
 
-        if veh and click_source in ['inventory', 'belt', 'gear', 'container']:
-            if veh.can_equip(clicked_item, 'key'):
-                if 'Add key' not in options: options.append('Add key')
-            if veh.can_equip(clicked_item, 'fuel'):
-                if 'Add fuel' not in options: options.append('Add fuel')
-            if veh.can_equip(clicked_item, 'motor'):
-                if 'Add motor' not in options: options.append('Add motor')
-            if veh.can_equip(clicked_item, 'battery'):
-                if 'Add battery' not in options: options.append('Add battery')
-            if veh.can_equip(clicked_item, 'tire_fl'):
-                if 'Add tire to' not in options: options.append('Add tire to')
+                # Vehicle installation options if near a vehicle
+                veh = getattr(game.player, 'vehicle', None)
+                if not veh:
+                    for m in game.modals:
+                        if m['type'] == 'vehicle':
+                            veh = m['vehicle']
+                            break
+                if veh:
+                    if veh.can_equip(clicked_item, 'key'):
+                        if 'Add key' not in options: options.append('Add key')
+                    if veh.can_equip(clicked_item, 'fuel'):
+                        if 'Add fuel' not in options: options.append('Add fuel')
+                    if veh.can_equip(clicked_item, 'motor'):
+                        if 'Add motor' not in options: options.append('Add motor')
+                    if veh.can_equip(clicked_item, 'battery'):
+                        if 'Add battery' not in options: options.append('Add battery')
+                    if veh.can_equip(clicked_item, 'tire_fl'):
+                        if 'Add tire to' not in options: options.append('Add tire to')
 
-        is_item_on_player = click_source in ('inventory', 'belt', 'gear') or (click_source == 'container' and is_container_on_player(click_container_item, game.player))
-
-        if is_item_on_player and item_type not in ['map_tile', 'maptile', 'maptile_container', 'maptile_teleport', 'vehicle'] and not isinstance(clicked_item, Corpse) and not is_maptile:
-            item_name_to_check = getattr(clicked_item, 'name', '')
-            if item_name_to_check:
-                if not RecipeManager.RECIPES:
-                    RecipeManager.load_recipes()
-
-                has_crafts = any(is_recipe_relevant_to_item(r, item_name_to_check) for r in RecipeManager.RECIPES)
-                if has_crafts and 'Crafts' not in options:
-                    options.append('Crafts')
-
+            # External container in the world (e.g. chest, locker, crate)
+            elif click_source == 'container':
+                options = []
+                if not getattr(clicked_item, 'liquid', False):
+                    if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
+                        options.extend(['Grab One', 'Grab Half', 'Grab All'])
+                    else:
+                        options.append('Grab')
+                options.append('Send to')
         # --- SUBMENU GENERATION LOGIC ---
         new_options = []
         for opt in options:

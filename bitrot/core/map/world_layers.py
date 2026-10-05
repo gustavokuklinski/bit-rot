@@ -422,27 +422,48 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
             if hasattr(game, 'npcs'):
                 game.npcs.empty()
             if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points:
+                is_lobby_chunk = False
+                match = re.match(r'map_L(\d+)_(\d+)_(\d+)_map\.csv', new_filename)
+                if match and getattr(game, 'generator', None) and hasattr(game.generator, 'lobby_chunk'):
+                    layer_num = int(match.group(1))
+                    gx, gy = int(match.group(2)), int(match.group(3))
+                    if (gx, gy) == game.generator.lobby_chunk and layer_num == 1:
+                        is_lobby_chunk = True
+
+                occupied_npc_tiles = set()
+                spawned_count = 0
+
                 for spawn_data in game.npc_spawn_points:
+                    if is_lobby_chunk and spawned_count >= 3:
+                        break
+
                     if len(spawn_data) == 3:
                         nx, ny, npc_type = spawn_data
                     else:
                         nx, ny = spawn_data
                         npc_type = 'HNPC'
                         
-                    is_static = (npc_type in ('FNPC'))
+                    is_static = (npc_type in ('FNPC')) or is_lobby_chunk
                     npc = NPC(nx, ny, game, is_static=is_static, layer=layer_index)
-                    if npc_type in ('HNPC'):
+                    if is_lobby_chunk:
+                        npc.is_friendly = True
+                        npc.is_static = True
+                    elif npc_type in ('HNPC'):
                         npc.is_friendly = False   
                         npc.is_static = False     
                     elif npc_type in ('FNPC'):
                         npc.is_friendly = True    
                         npc.is_static = True   
                         
-                    free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
-                    if free_pos:
+                    # Check obstacles AND existing NPCs
+                    blocked_obstacles = list(game.obstacles) + [n.rect for n in game.npcs]
+                    free_pos = find_free_tile(npc.rect, blocked_obstacles, max_radius=15, initial_pos=(nx, ny))
+                    if free_pos and free_pos not in occupied_npc_tiles:
+                        occupied_npc_tiles.add(free_pos)
                         npc.rect.topleft = free_pos
                         npc.x, npc.y = free_pos
                         game.npcs.add(npc)
+                        spawned_count += 1
 
     if hasattr(game, 'active_animals'):
         game.active_animals.extend(chasing_animals)

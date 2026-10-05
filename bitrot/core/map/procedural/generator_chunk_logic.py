@@ -224,7 +224,8 @@ class ProceduralGeneratorChunk:
             random.shuffle(fnpc_candidates)
             chosen_npcs = []
             for cx_tile, cy_tile in fnpc_candidates:
-                if all(abs(cx_tile - ex) + abs(cy_tile - ey) >= 2 for ex, ey in chosen_npcs):
+                # Maintain at least 4 tiles (64px) between NPCs so they never spawn adjacent or stacked
+                if all(math.hypot(cx_tile - ex, cy_tile - ey) >= 4.0 for ex, ey in chosen_npcs):
                     chosen_npcs.append((cx_tile, cy_tile))
                     layers['spawn'][cy_tile][cx_tile] = 'FNPC'
                     if len(chosen_npcs) == 3:

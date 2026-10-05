@@ -5,8 +5,9 @@
     <capacity value="10" />
     <loot>
         <!-- Text: Abundant -->
-        <item type="text" min="1" max="2" chance="0.80" />
+        <item type="text" min="1" max="3" chance="0.80" />
         
+
         <!-- Books & Recipes: Middle -->
         <item type="consumable_book" min="1" max="2" chance="0.35" />
         <item type="recipe" min="1" max="2" chance="0.30" />
@@ -16,5 +17,6 @@
         <!-- Charms & Cigarettes: Middle to Rare -->
         <item item="Cigarette Pack" chance="0.12" />
         <item type="charm" min="1" max="1" chance="0.10" />
+        <item type="car_key" min="1" max="2" chance="0.10"  />
     </loot>
 </map>

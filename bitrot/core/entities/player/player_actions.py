@@ -457,11 +457,19 @@ class PlayerActions:
         if isinstance(item, Corpse):
             options.append('Open'); return options
 
-        is_on_player = (source in ('inventory', 'belt', 'gear')) or (source == 'container' and container_item and is_container_on_player(container_item, self))
+        # Check if the item's source is in inventory, belt, gear, or a carried container
+        is_on_player = (
+            (source in ('inventory', 'belt', 'gear')) 
+            or (source == 'container' and container_item and is_container_on_player(container_item, self))
+        )
+
+        # Non-player items in Nearby only get Grab and Send to (handled in mouse_context.py)
+        if not is_on_player:
+            return options
         
         if item_type == 'text' or item_type == 'recipe' or item_type == 'map':
             if item_type == 'recipe':
-                if is_on_player: options.append('Use')
+                options.append('Use')
             elif item_type == 'map':
                 options.append('Open')
             else:
@@ -477,8 +485,7 @@ class PlayerActions:
             if item_type == 'consumable_ammo' or 'Ammo' in item_name or 'Shells' in item_name:
                 pass
             else:
-                if is_on_player:
-                    options.append('Use')
+                options.append('Use')
             
             if getattr(item, 'allow_belt', False):
                 options.append('Equip')
@@ -548,10 +555,7 @@ class PlayerActions:
         if hasattr(item, 'is_stackable') and item.is_stackable() and getattr(item, 'load', None) is not None:
             options.append('Drop one')
             if getattr(item, 'load', 0) > 1: options.append('Drop all')
-            
-            if source != 'inventory':
-                if not is_liquid:
-                    options.append('Send all to Inventory')
         else: 
             options.append('Drop')
+
         return options

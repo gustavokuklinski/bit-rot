@@ -11,5 +11,6 @@
         <item type="utility" min="1" max="2" chance="0.30" />
         <item type="recipe" min="1" max="1" chance="0.25" />
         <item type="text" min="1" max="2" chance="0.80" />
+        <item type="car_key" min="1" max="2" chance="0.10"  />
     </loot>
 </map>

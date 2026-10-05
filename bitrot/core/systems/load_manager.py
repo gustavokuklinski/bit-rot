@@ -496,7 +496,11 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
 
     if spawn_entities:
         if is_in_lobby:
+            # Strictly enforce 3 non-overlapping friendly static NPCs in the Lobby
+            game.npcs.empty()
             spawned_lobby_npcs = 0
+            occupied_tiles = set()
+
             if game.current_layer_index in game.all_spawn_layers:
                 spawn_layer = game.all_spawn_layers[game.current_layer_index]
                 for y, row in enumerate(spawn_layer):
@@ -505,21 +509,29 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
                             px, py = x * TILE_SIZE, y * TILE_SIZE
                             npc = NPC(px, py, game, is_static=True)
                             npc.is_friendly = True
-                            free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=4, initial_pos=(px, py))
-                            if free_pos:
+                            
+                            # Block both physical obstacles AND already placed NPCs
+                            blocked_obstacles = list(game.obstacles) + [n.rect for n in game.npcs]
+                            free_pos = find_free_tile(npc.rect, blocked_obstacles, max_radius=6, initial_pos=(px, py))
+                            if free_pos and free_pos not in occupied_tiles:
+                                occupied_tiles.add(free_pos)
                                 npc.rect.topleft = free_pos
                                 npc.x, npc.y = free_pos
-                            game.npcs.add(npc)
-                            spawned_lobby_npcs += 1
+                                game.npcs.add(npc)
+                                spawned_lobby_npcs += 1
 
+            # Fallback: only if fewer than 3 were found on markers, top up to strictly 3
             while spawned_lobby_npcs < 3:
                 offset_x = random.randint(-4, 4) * TILE_SIZE
                 offset_y = random.randint(-4, 4) * TILE_SIZE
                 target_pos = (game.player.x + offset_x, game.player.y + offset_y)
                 npc = NPC(target_pos[0], target_pos[1], game, is_static=True)
                 npc.is_friendly = True
-                free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=10, initial_pos=target_pos)
-                if free_pos:
+                
+                blocked_obstacles = list(game.obstacles) + [n.rect for n in game.npcs]
+                free_pos = find_free_tile(npc.rect, blocked_obstacles, max_radius=10, initial_pos=target_pos)
+                if free_pos and free_pos not in occupied_tiles:
+                    occupied_tiles.add(free_pos)
                     npc.rect.topleft = free_pos
                     npc.x, npc.y = free_pos
                     game.npcs.add(npc)
@@ -1052,7 +1064,23 @@ def load_game(game, save_folder_name):
                 else:
                     game.map_states.setdefault(n_map, {})
                     game.map_states[n_map].setdefault('npcs', []).append(npc)
-        
+            
+            match = re.match(r'map_L(\d+)_(\d+)_(\d+)_map\.csv', active_map)
+            if match and getattr(game, 'generator', None) and hasattr(game.generator, 'lobby_chunk'):
+                layer_num = int(match.group(1))
+                gx, gy = int(match.group(2)), int(match.group(3))
+                if (gx, gy) == game.generator.lobby_chunk and layer_num == 1:
+                    seen_positions = set()
+                    unique_lobby_npcs = []
+                    for n in list(game.npcs):
+                        pos = (n.rect.x, n.rect.y)
+                        if pos not in seen_positions and len(unique_lobby_npcs) < 3:
+                            seen_positions.add(pos)
+                            unique_lobby_npcs.append(n)
+                    game.npcs.empty()
+                    for n in unique_lobby_npcs:
+                        game.npcs.add(n)
+
         # Load Vehicles
         if os.path.exists(os.path.join(save_path, "vehicles.rot")):
             with open(os.path.join(save_path, "vehicles.rot"), "r") as f:

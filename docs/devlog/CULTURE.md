@@ -15,8 +15,10 @@ Survival of the Dead (2009) - George A. Romero
 Dawn of the Dead (2004) - Zack Snyder
 World War Z (2013) - Marc Forster
 Army of the Dead (2021) - Zack Snyder
+We Bury the Dead (2025) - Zak Hilditch
 
 ### Games inspired by:
+Resident Evil (1996) - Capcom
 Diablo (1997) - Blizzard
 Fallout 1 (1997) - Interplay Productions
 Tibia (1997) - Cipsoft
