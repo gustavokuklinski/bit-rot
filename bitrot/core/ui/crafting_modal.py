@@ -212,27 +212,25 @@ class CraftingModal(BaseModal):
         return locations
 
     def _has_ingredients(self, recipe, player_items, nearby_items=None):
-        # Must have at least one ingredient item in personal player inventory
-        has_item_on_player = False
-        c_type = getattr(recipe, 'craft_type', 'create').lower()
-        if c_type == 'repair':
-            if any(it.name.lower() == recipe.output_name.lower() for it in player_items):
-                has_item_on_player = True
-
-        if not has_item_on_player:
-            for req in recipe.ingredients:
-                valid_names = [n.lower() for n in req['names']]
-                for item in player_items:
-                    if item.name.lower() in valid_names:
-                        qty = item.load if (item.load is not None and item.is_stackable()) else 1
-                        if qty > 0:
-                            has_item_on_player = True
-                            break
-                if has_item_on_player:
-                    break
-
-        if not has_item_on_player:
-            return False
+        if nearby_items is not None:
+            has_on_player = False
+            c_type = getattr(recipe, 'craft_type', 'create').lower()
+            if c_type == 'repair':
+                if any(it.name.lower() == recipe.output_name.lower() for it in player_items):
+                    has_on_player = True
+            if not has_on_player:
+                for req in recipe.ingredients:
+                    valid_names = [n.lower() for n in req['names']]
+                    for it in player_items:
+                        if it.name.lower() in valid_names:
+                            qty = it.load if it.load is not None else 1
+                            if qty > 0:
+                                has_on_player = True
+                                break
+                    if has_on_player:
+                        break
+            if not has_on_player:
+                return False
 
         search_items = player_items
         if nearby_items:
@@ -242,7 +240,7 @@ class CraftingModal(BaseModal):
             needed = req['amount']
             valid_names = req['names']
             
-            have = sum((item.load if (item.load is not None and item.is_stackable()) else 1) 
+            have = sum((item.load if item.load is not None else 1) 
                        for item in search_items 
                        if item.name in valid_names)
             
@@ -589,7 +587,7 @@ class CraftingModal(BaseModal):
                     if hasattr(item, 'inventory') and item.inventory: 
                         return f"{tr('msg', 'Cannot use')} {tr('item', item.name)}: {tr('msg', 'It contains items!')}"
 
-                    item_qty = item.load if (item.load is not None and item.is_stackable()) else 1
+                    item_qty = item.load if item.load is not None else 1
                     take = min(to_remove - removed_check, item_qty)
                     removed_check += take
                     

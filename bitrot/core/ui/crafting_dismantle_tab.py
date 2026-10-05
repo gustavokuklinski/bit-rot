@@ -94,12 +94,13 @@ class CraftingDismantleTab:
                     if removed >= to_remove:
                         break
                     if item.name in valid_names:
-                        item_qty = item.load if (item.load is not None and item.is_stackable()) else 1
+                        has_item_load = (item.load is not None)
+                        item_qty = item.load if has_item_load else 1
                         take = min(to_remove - removed, item_qty)
-                        if item.is_stackable() and item.load is not None:
+                        if has_item_load:
                             item.load -= take
                         removed += take
-                        if (item.is_stackable() and item.load is not None and item.load <= 0) or (not item.is_stackable() and take > 0):
+                        if (has_item_load and item.load <= 0) or (not has_item_load and take > 0):
                             if ctype == 'list':
                                 if item in container:
                                     container.remove(item)

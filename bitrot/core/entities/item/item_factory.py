@@ -286,6 +286,11 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     
     capacity_str = get_prop_val(props, 'capacity', 'value', None)
     capacity = int(capacity_str) if capacity_str else None
+    if load is not None and capacity is None:
+        capacity = max(1, int(load))
+    
+    capacity_str = get_prop_val(props, 'capacity', 'value', None)
+    capacity = int(capacity_str) if capacity_str else None
 
     color_prop = props.get('color', {'r':'255','g':'255','b':'255'})
     color = (int(color_prop.get('r', 255)), int(color_prop.get('g', 255)), int(color_prop.get('b', 255)))

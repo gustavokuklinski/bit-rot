@@ -8,7 +8,6 @@ from core.messages import display_message
 from core.ui.notifications import check_milestone_progress
 
 def player_has_at_least_one_ingredient(player, game, recipe):
-    """Checks if the player carries at least one required ingredient/target item in their own inventory/belt/gear."""
     locs = get_crafting_item_locations(player, game, include_nearby=False)
     player_items = [loc[2] for loc in locs if loc[2]]
 
@@ -21,7 +20,7 @@ def player_has_at_least_one_ingredient(player, game, recipe):
         valid_names = [n.lower() for n in req['names']]
         for it in player_items:
             if it.name.lower() in valid_names:
-                qty = it.load if (it.load is not None and it.is_stackable()) else 1
+                qty = it.load if it.load is not None else 1
                 if qty > 0:
                     return True
     return False
@@ -39,8 +38,6 @@ def prioritize_locations_for_craft(locs, preferred_id=None):
     return sorted(locs, key=sort_key)
 
 def has_recipe_ingredients(player, game, recipe, include_nearby=True):
-    """Checks if the player (and nearby ground/containers) has all required ingredients,
-    requiring that at least one item is present in the player's inventory."""
     if not player_has_at_least_one_ingredient(player, game, recipe):
         return False
 
@@ -50,7 +47,7 @@ def has_recipe_ingredients(player, game, recipe, include_nearby=True):
     for req in recipe.ingredients:
         needed = req['amount']
         valid_names = req['names']
-        have = sum((it.load if (it.load is not None and it.is_stackable()) else 1)
+        have = sum((it.load if it.load is not None else 1)
                    for it in search_items
                    if it.name in valid_names)
         if have < needed:
@@ -87,7 +84,7 @@ def get_recipe_status_details(player, game, recipe):
     for req in recipe.ingredients:
         needed = req['amount']
         valid_names = req['names']
-        have = sum((it.load if (it.load is not None and it.is_stackable()) else 1)
+        have = sum((it.load if it.load is not None else 1)
                    for it in search_items if it.name in valid_names)
         if have < needed:
             missing_ingredients.append({
@@ -116,10 +113,10 @@ def draw_common_ingredients_grid(modal, recipe, details_x, ing_y, details_w, mou
         needed = req['amount']
         valid_names = req['names']
 
-        have = sum((item.load if (item.load is not None and item.is_stackable()) else 1)
+        have = sum((item.load if item.load is not None else 1)
                    for item in player_items if item.name in valid_names)
         if nearby_items:
-            have += sum((item.load if (item.load is not None and item.is_stackable()) else 1)
+            have += sum((item.load if item.load is not None else 1)
                         for item in nearby_items if item.name in valid_names)
 
         color = GREEN if have >= needed else RED
@@ -432,7 +429,6 @@ def execute_recipe_craft(game, recipe, player=None):
             valid_names = req['names']
             removed = 0
 
-            # Prioritize taking from nearby/ground first!
             locs_now = get_crafting_item_locations(player, game, include_nearby=True, nearby_containers=nearby_now)
             locs_now = prioritize_locations_for_craft(locs_now)
 
@@ -440,7 +436,8 @@ def execute_recipe_craft(game, recipe, player=None):
                 if removed >= to_remove:
                     break
                 if it.name in valid_names and it != target_repair_item:
-                    item_qty = it.load if (it.load is not None and it.is_stackable()) else 1
+                    has_item_load = (it.load is not None)
+                    item_qty = it.load if has_item_load else 1
                     take = min(to_remove - removed, item_qty)
 
                     if craft_type == 'repair' and it.min_restore is not None and it.max_restore is not None:
@@ -448,11 +445,12 @@ def execute_recipe_craft(game, recipe, player=None):
                         restore_per_unit = random.randint(int(effective_min), int(it.max_restore))
                         total_repair_amount += (restore_per_unit * take)
 
-                    if it.is_stackable() and it.load is not None:
+                    if has_item_load:
                         it.load -= take
                     removed += take
 
-                    if (it.is_stackable() and it.load is not None and it.load <= 0) or (not it.is_stackable() and take > 0):
+                    # Only destroy item if it has no load, or if load reached <= 0
+                    if (has_item_load and it.load <= 0) or (not has_item_load and take > 0):
                         if ctype == 'list':
                             if it in container:
                                 container.remove(it)

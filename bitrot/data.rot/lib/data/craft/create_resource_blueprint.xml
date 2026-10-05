@@ -1,3 +1,15 @@
 <recipe type="resource" craft="create" output="Blueprint" gain_xp="[maintenance:1]" amount="10" time="0.5">
-    <ingredient name="[Almanach, Magazine]" destroy="true" amount="1" />
+    <ingredient name="[
+        Almanach, 
+        Magazine, 
+        Vehicle Engineering Tire, 
+        Vehicle Engineering Engine,
+        Survivor Guide Basic,
+        Sewing Cloth,
+        Sewing Backpacks,
+        Sewing Camp,
+        Guns and Ammo Almanach,
+        Medicine Kits,
+        Carpentary Wood,
+    ]" destroy="true" amount="1" />
 </recipe>

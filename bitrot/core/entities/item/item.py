@@ -284,8 +284,27 @@ class Item:
         return (self.min_light + (light_range * dur_percent)) * TILE_SIZE
 
     def is_stackable(self):
-        return (self.capacity is not None and self.capacity > 1 and 
-                self.durability is None and self.item_type in ['weapon_throw','consumable','currency','resource','reciple','car_fuel','consumable_medication','consumable_drugs','consumable_drink','consumable_ammo','consumable_food', 'utility', 'liquid'])
+        if self.durability is not None:
+            return False
+        itype = getattr(self, 'item_type', '') or ''
+        valid_type = (
+            itype.startswith('consumable') or
+            itype in [
+                'weapon_throw', 'consumable', 'currency', 'resource', 'recipe', 
+                'reciple', 'car_fuel', 'utility', 'liquid', 'book', 'consumable_book'
+            ]
+        )
+        if not valid_type:
+            return False
+        if self.capacity is not None and self.capacity > 1:
+            return True
+        if self.load is not None and self.load > 1:
+            return True
+        return False
+
+    #def is_stackable(self):
+    #    return (self.capacity is not None and self.capacity > 1 and 
+    #            self.durability is None and self.item_type in ['weapon_throw','consumable','currency','resource','reciple','car_fuel','consumable_medication','consumable_drugs','consumable_drink','consumable_ammo','consumable_food', 'utility', 'liquid'])
 
     def can_stack_with(self, other_item):
         if not self.is_stackable() or not other_item.is_stackable():

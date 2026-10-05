@@ -65,7 +65,9 @@ def _draw_slots(surface, game, container_item, start_x, start_y, modal_h, header
             show_count = False
             if hasattr(item, 'is_stackable') and getattr(item, 'is_stackable', lambda: False)() and item.load is not None and item.load > 1:
                 show_count = True
-            elif getattr(item, 'item_type', '') in ['weapon', 'weapon_ranged'] and getattr(item, 'load', None) is not None:
+            elif getattr(item, 'item_type', '') in ['weapon', 'weapon_ranged', 'weapon_throw'] and getattr(item, 'load', None) is not None:
+                show_count = True
+            elif getattr(item, 'item_type', '') == 'consumable_book' and getattr(item, 'load', None) is not None:
                 show_count = True
             elif hasattr(item, 'load') and item.load is not None and item.load > 1:
                 show_count = True

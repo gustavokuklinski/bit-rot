@@ -65,13 +65,17 @@ def draw_belt_hud(surface, game, player, mouse_pos, dynamic_h=None):
             show_count = False
             if hasattr(item, 'is_stackable') and item.is_stackable() and item.load is not None and item.load > 1:
                 show_count = True
-            elif item.item_type in ['weapon', 'weapon_ranged'] and item.load is not None:
+            elif item.item_type in ['weapon', 'weapon_ranged', 'weapon_throw'] and item.load is not None:
+                show_count = True
+            elif getattr(item, 'item_type', '') == 'consumable_book' and getattr(item, 'load', None) is not None:
+                show_count = True
+            elif hasattr(item, 'load') and item.load is not None and item.load > 1:
                 show_count = True
 
             if show_count:
                 draw_text_shadow(
                     surface, 
-                    font_12,
+                    font_12, 
                     str(int(item.load)), 
                     WHITE, 
                     (slot_rect.right - 3, slot_rect.bottom - 1), 
@@ -134,13 +138,17 @@ def _draw_inventory_tab(surface, game, player, modal, assets, mouse_pos, base_mo
             show_count = False
             if hasattr(item, 'is_stackable') and item.is_stackable() and item.load is not None and item.load > 1:
                 show_count = True
-            elif item.item_type in ['weapon', 'weapon_ranged','weapon_throw'] and item.load is not None:
+            elif item.item_type in ['weapon', 'weapon_ranged', 'weapon_throw'] and item.load is not None:
+                show_count = True
+            elif getattr(item, 'item_type', '') == 'consumable_book' and getattr(item, 'load', None) is not None:
+                show_count = True
+            elif hasattr(item, 'load') and item.load is not None and item.load > 1:
                 show_count = True
 
             if show_count:
                 draw_text_shadow(
                     surface, 
-                    font_12, 
+                    font_12,
                     str(int(item.load)), 
                     WHITE, 
                     (slot_rect.right - 3, slot_rect.bottom - 1), 
