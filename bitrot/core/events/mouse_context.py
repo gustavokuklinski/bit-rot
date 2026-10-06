@@ -149,14 +149,9 @@ def consume_player_fuel_units(player, amount_needed):
     return remaining <= 0
 
 def calculate_boat_fuel_cost(game, dest_gx, dest_gy):
-    """
-    Calculates fuel cost: min 5 units, distance = (chunk_x + chunk_y) * 5.
-    Going back to the lobby costs the same amount as it needed to go to the current chunk.
-    """
     gen = getattr(game, 'generator', None)
     lobby_chunk = getattr(gen, 'lobby_chunk', None) if gen else None
 
-    # If traveling back to Lobby, cost is based on the current chunk position
     if lobby_chunk and (dest_gx, dest_gy) == lobby_chunk:
         cur_map = getattr(game.map_manager, 'current_map_filename', '')
         match = re.match(r'map_L\d+_(\d+)_(\d+)_map\.csv', cur_map)
@@ -168,7 +163,6 @@ def calculate_boat_fuel_cost(game, dest_gx, dest_gy):
     return max(5, (abs(dest_gx) + abs(dest_gy)) * 5)
 
 def _is_barricade_item(it):
-    """Safely checks if an item is a valid barricade, guarding against NoneType values."""
     if not it:
         return False
     b_health = getattr(it, 'barricade_health', None)
@@ -177,7 +171,6 @@ def _is_barricade_item(it):
     return 'barricade' in getattr(it, 'name', '').lower()
 
 def teleport_player_to_chunk(game, dest_gx, dest_gy, dest_layer=1):
-    """Safely teleports the player (and any active followers) to the destination chunk."""
     sys_teleport(game, dest_gx, dest_gy, dest_layer)
 
 def handle_context_menu_click(game, mouse_pos):
@@ -203,6 +196,41 @@ def handle_context_menu_click(game, mouse_pos):
             source = game.context_menu['source']
             index = game.context_menu['index']
             container_item = game.context_menu.get('container_item')
+
+            def remove_from_source(target_item):
+                if source == 'inventory':
+                    if 0 <= index < len(game.player.inventory) and game.player.inventory[index] == target_item:
+                        return game.player.inventory.pop(index)
+                    if target_item in game.player.inventory:
+                        game.player.inventory.remove(target_item)
+                        return target_item
+                elif source == 'belt':
+                    if 0 <= index < len(game.player.belt) and game.player.belt[index] == target_item:
+                        game.player.belt[index] = None
+                        target_item.in_belt = False
+                        return target_item
+                elif source == 'gear':
+                    item_found = game.player.clothes.get(index)
+                    if item_found == target_item:
+                        game.player.clothes[index] = None
+                        return target_item
+                elif source in ('container', 'nearby') and container_item:
+                    if 0 <= index < len(container_item.inventory) and container_item.inventory[index] == target_item:
+                        removed = container_item.inventory.pop(index)
+                        if getattr(container_item, 'item_type', '') == 'ground' and target_item in game.items_on_ground:
+                            try: game.items_on_ground.remove(target_item)
+                            except ValueError: pass
+                        return removed
+                    if target_item in container_item.inventory:
+                        container_item.inventory.remove(target_item)
+                        return target_item
+                elif source == 'ground':
+                    if 0 <= index < len(game.items_on_ground) and game.items_on_ground[index] == target_item:
+                        return game.items_on_ground.pop(index)
+                    if target_item in game.items_on_ground:
+                        game.items_on_ground.remove(target_item)
+                        return target_item
+                return None
 
             try:
                 verified_item = None
@@ -241,7 +269,6 @@ def handle_context_menu_click(game, mouse_pos):
                     is_match = True
 
                 if not is_match:
-                    print("Error: UI Index Mismatch. The item changed or moved.")
                     game.context_menu['active'] = False
                     return
 
@@ -270,11 +297,275 @@ def handle_context_menu_click(game, mouse_pos):
                     game.modals.append(new_modal)
                     clicked_on_menu = True
 
-            if clicked_on_menu: 
-                item_name_str = item.get('name', 'Object') if isinstance(item, dict) else getattr(item, 'name', str(item))
-                print(f"Clicked '{option}' on '{item_name_str}' (source={source})")
-            
-            if option == 'Place barricade':
+            # ==========================================
+            # --- EQUIP OPTION WITH SUBMENU TARGETS ---
+            # ==========================================
+            elif option == 'Equip':
+                target_slot = target_sub_slot
+
+                # Branch A: Equip directly into a chosen Belt slot (belt_0 ... belt_4)
+                if target_slot and target_slot.startswith('belt_'):
+                    try:
+                        bi = int(target_slot.split('_')[1])
+                        item_from_src = remove_from_source(item)
+                        if item_from_src:
+                            old_item = game.player.belt[bi]
+                            game.player.belt[bi] = item_from_src
+                            item_from_src.in_belt = True
+
+                            if str(getattr(item_from_src, 'item_type', '')).startswith('weapon'):
+                                game.player.active_weapon = item_from_src
+
+                            if hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound('equip_belt.ogg', subdir='items', game=game, source_pos=game.player.rect.center, is_critical=True)
+
+                            if old_item:
+                                old_item.in_belt = False
+                                if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                    game.player.inventory.append(old_item)
+                                    if hasattr(game.player, 'stack_item_in_inventory'):
+                                        game.player.stack_item_in_inventory(old_item)
+                                else:
+                                    old_item.rect.center = game.player.rect.center
+                                    game.items_on_ground.append(old_item)
+
+                            display_message(f"{tr('msg', 'Equipped')} {tr('item', item_from_src.name)} {tr('msg', 'to belt slot')} {bi+1}.")
+                    except Exception as e:
+                        print(f"Error equipping to belt: {e}")
+
+                # Branch B: Equip to a specific Gear / Clothing slot (head, body, util, util2, etc.)
+                elif target_slot:
+                    slot_name = target_slot
+                    if slot_name == 'hand': slot_name = 'hands'
+                    item_from_src = remove_from_source(item)
+                    if item_from_src:
+                        old_item = game.player.clothes.get(slot_name)
+                        game.player.clothes[slot_name] = item_from_src
+
+                        if hasattr(game, 'sound_manager'):
+                            game.sound_manager.play_sound('equip_gear.ogg', subdir='items', game=game, source_pos=game.player.rect.center, is_critical=True)
+
+                        if old_item:
+                            if getattr(old_item, 'liquid', False):
+                                old_item.rect.center = game.player.rect.center
+                                game.items_on_ground.append(old_item)
+                            elif len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                game.player.inventory.append(old_item)
+                            else:
+                                old_item.rect.center = game.player.rect.center
+                                game.items_on_ground.append(old_item)
+
+                        display_message(f"{tr('msg', 'Equipped')} {tr('item', item_from_src.name)} {tr('msg', 'to')} {tr('ui', slot_name.capitalize())}.")
+
+                # Branch C: Fallback when clicked without submenu selection
+                else:
+                    item_type = getattr(item, 'item_type', '') or ''
+                    if item_type in ('cloth', 'container'):
+                        target_s = getattr(item, 'slot', None)
+                        if target_s == 'hand': target_s = 'hands'
+                        if target_s == 'util' or not target_s:
+                            target_s = next((s for s in ['util', 'util2', 'util3'] if game.player.clothes.get(s) is None), 'util')
+                        item_from_src = remove_from_source(item)
+                        if item_from_src:
+                            old_item = game.player.clothes.get(target_s)
+                            game.player.clothes[target_s] = item_from_src
+                            if old_item:
+                                game.player.inventory.append(old_item)
+                    else:
+                        game.player.equip_item_to_belt(item, source, index, container_item)
+
+                clicked_on_menu = True
+
+            # ==========================================
+            # --- SEND TO OPTION WITH SUBMENU TARGETS ---
+            # ==========================================
+            elif option == 'Send to':
+                target_dest = target_sub_slot
+                is_external = (
+                    source in ['nearby', 'ground', 'container_map'] 
+                    or (source == 'container' and container_item and not is_container_on_player(container_item, game.player))
+                )
+
+                # 1. Send to Player Inventory
+                if target_dest == 'Inventory':
+                    if source == 'inventory':
+                        game.context_menu['active'] = False
+                        return
+
+                    if getattr(item, 'liquid', False):
+                        display_message(tr('msg', "Liquid spills without a proper container."))
+                        game.context_menu['active'] = False
+                        return
+
+                    def do_send_inv():
+                        removed = remove_from_source(item)
+                        if removed:
+                            removed.is_placed = False
+                            game.player.inventory.append(removed)
+                            if hasattr(game.player, 'stack_item_in_inventory'):
+                                game.player.stack_item_in_inventory(removed)
+                            if hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
+                            display_message(f"{tr('msg', 'Sent')} {tr('item', removed.name)} {tr('msg', 'to inventory.')}")
+
+                    transfer_time = max(0.1, item.get_total_weight() * 0.2)
+                    if is_external:
+                        game.player.start_action(tr('msg', "Looting"), transfer_time, do_send_inv, xp_reward=0.5)
+                    else:
+                        do_send_inv()
+
+                # 2. Send to Belt
+                elif target_dest == 'Belt':
+                    if source == 'belt':
+                        game.context_menu['active'] = False
+                        return
+
+                    empty_idx = next((bi for bi, b in enumerate(game.player.belt) if b is None), None)
+                    if empty_idx is not None:
+                        removed = remove_from_source(item)
+                        if removed:
+                            removed.in_belt = True
+                            game.player.belt[empty_idx] = removed
+                            if hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound('equip_belt.ogg', subdir='items', game=game, source_pos=game.player.rect.center, is_critical=True)
+                            display_message(f"{tr('msg', 'Sent')} {tr('item', removed.name)} {tr('msg', 'to belt slot')} {empty_idx+1}.")
+                    else:
+                        display_message(tr('msg', "Belt is full."))
+
+                # 3. Send to Container / Vessel / Trunk
+                else:
+                    target_container = None
+                    search_pools = [
+                        [b for b in game.player.belt if b and hasattr(b, 'inventory')],
+                        [it for it in game.player.inventory if it and hasattr(it, 'inventory')],
+                        [c for c in game.player.clothes.values() if c and hasattr(c, 'inventory')],
+                        [m.get('item') for m in game.modals if m.get('type') == 'container' and m.get('item')],
+                        [m.get('vehicle') for m in game.modals if m.get('type') == 'vehicle' and m.get('vehicle')],
+                        game.find_nearby_containers()
+                    ]
+                    for pool in search_pools:
+                        for c in pool:
+                            if c and (str(getattr(c, 'id', '')) == target_dest or getattr(c, 'name', '') == target_dest):
+                                target_container = c
+                                break
+                        if target_container:
+                            break
+
+                    if target_container and hasattr(target_container, 'inventory'):
+                        # Enforce container state checks
+                        if getattr(target_container, 'item_type', '') == 'maptile_container' and not getattr(target_container, 'is_opened', False):
+                            display_message(tr('msg', "Cannot send items into a closed container."))
+                            game.context_menu['active'] = False
+                            return
+
+                        c_cap = getattr(target_container, 'capacity', 0)
+                        if c_cap is None or c_cap <= 0:
+                            display_message(tr('msg', "Target has no inventory capacity."))
+                            game.context_menu['active'] = False
+                            return
+
+                        def do_send_cont():
+                            is_liquid = getattr(item, 'liquid', False)
+                            total_load = getattr(item, 'load', 1)
+                            if total_load is None: total_load = 1
+
+                            # A. Handle Liquid Transfer with strict max_liquid clamping
+                            if is_liquid:
+                                avail_liquid = get_container_available_liquid(target_container)
+                                if avail_liquid <= 0:
+                                    display_message(tr('msg', "Container is full of liquid."))
+                                    return
+
+                                transfer_units = min(total_load, avail_liquid)
+                                target_max_l = getattr(target_container, 'max_liquid', transfer_units) or transfer_units
+
+                                # Stack into existing liquid unit in target container if present
+                                stacked = False
+                                for inv_it in target_container.inventory:
+                                    if getattr(inv_it, 'liquid', False) and inv_it.name == item.name:
+                                        inv_it.load = (getattr(inv_it, 'load', 0) or 0) + transfer_units
+                                        inv_it.capacity = target_max_l
+                                        stacked = True
+                                        break
+
+                                # Or add as new liquid item
+                                if not stacked:
+                                    if len(target_container.inventory) >= c_cap:
+                                        display_message(tr('msg', "Container is full."))
+                                        return
+                                    new_liq = Item.create_from_name(item.name)
+                                    if new_liq:
+                                        new_liq.load = transfer_units
+                                        new_liq.capacity = target_max_l
+                                        target_container.inventory.append(new_liq)
+
+                                # Deduct transferred amount from source
+                                if transfer_units >= total_load:
+                                    remove_from_source(item)
+                                else:
+                                    item.load -= transfer_units
+
+                                if hasattr(game, 'sound_manager'):
+                                    game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
+                                display_message(f"{tr('msg', 'Transferred')} {int(transfer_units)} {tr('item', item.name)} {tr('msg', 'into')} {target_container.name}.")
+                                return
+
+                            # B. Handle Regular Stackable / Single Item Transfer
+                            qty_to_send = total_load
+                            stacked = False
+
+                            if getattr(item, 'is_stackable', lambda: False)():
+                                for inv_it in target_container.inventory:
+                                    if hasattr(inv_it, 'can_stack_with') and inv_it.can_stack_with(item):
+                                        i_cap = getattr(inv_it, 'capacity', 100) or 100
+                                        i_load = getattr(inv_it, 'load', 1) or 1
+                                        avail = max(0, i_cap - i_load)
+                                        trans = min(avail, qty_to_send)
+                                        if trans > 0:
+                                            inv_it.load = i_load + trans
+                                            qty_to_send -= trans
+                                            stacked = True
+                                        if qty_to_send <= 0:
+                                            break
+
+                            # If transferring leftover stack or new item into a slot
+                            if qty_to_send > 0:
+                                if len(target_container.inventory) < c_cap:
+                                    if qty_to_send < total_load:
+                                        # Split stack
+                                        new_it = Item.create_from_name(item.name)
+                                        if new_it:
+                                            new_it.load = qty_to_send
+                                            target_container.inventory.append(new_it)
+                                            item.load -= qty_to_send
+                                    else:
+                                        # Whole item transferred
+                                        removed = remove_from_source(item)
+                                        if removed:
+                                            target_container.inventory.append(removed)
+                                else:
+                                    if not stacked:
+                                        display_message(tr('msg', "Container is full."))
+                                        return
+                                    else:
+                                        item.load = qty_to_send
+
+                            elif stacked:
+                                remove_from_source(item)
+
+                            if hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
+                            display_message(f"{tr('msg', 'Sent to')} {target_container.name}.")
+
+                        transfer_time = max(0.1, item.get_total_weight() * 0.2)
+                        if is_external:
+                            game.player.start_action(f"Transferring to {target_container.name}", transfer_time, do_send_cont, xp_reward=0.5)
+                        else:
+                            do_send_cont()
+
+                clicked_on_menu = True
+
+            elif option == 'Place barricade':
                 if source == 'map_tile' and isinstance(item, dict):
                     gx = item['grid_x']
                     gy = item['grid_y']
@@ -351,7 +642,6 @@ def handle_context_menu_click(game, mouse_pos):
                                 game.player.belt[barricade_idx] = None
 
                             game.player.inventory = [it for it in game.player.inventory if it is not None]
-
                             game.map_manager.add_barricade(gx, gy, found_barricade)
                             display_message(tr('msg', "Barricade placed successfully."))
 
@@ -432,17 +722,17 @@ def handle_context_menu_click(game, mouse_pos):
                             for req_name, req_qty in r_info['items'].items():
                                 left = req_qty
                                 for it_list in [game.player.belt, game.player.inventory]:
-                                    for i in range(len(it_list)):
-                                        it = it_list[i]
+                                    for i_idx in range(len(it_list)):
+                                        it = it_list[i_idx]
                                         if it and req_name.lower() in it.name.lower():
                                             if hasattr(it, 'is_stackable') and it.is_stackable() and it.load:
                                                 take = min(left, it.load)
                                                 it.load -= take
                                                 left -= take
                                                 if it.load <= 0:
-                                                    it_list[i] = None
+                                                    it_list[i_idx] = None
                                             else:
-                                                it_list[i] = None
+                                                it_list[i_idx] = None
                                                 left -= 1
                                             if left <= 0:
                                                 break
@@ -561,438 +851,9 @@ def handle_context_menu_click(game, mouse_pos):
             elif option == 'Toggle Light':
                 if source == 'light_source':
                     item['active'] = not item['active']
-                    print(f"Light turned {'ON' if item['active'] else 'OFF'}")
                 clicked_on_menu = True
 
             elif option == 'Use': game.player.consume_item(item, source, index, container_item)
-
-            elif option == 'Remove fuel to':
-                target_container_name = target_sub_slot
-                veh = container_item
-                slot_name = index
-                
-                target_container = None
-                all_containers = [item for item in game.player.belt if item] + \
-                                 [item for item in game.player.inventory if item] + \
-                                 [item for item in game.player.clothes.values() if item]
-                
-                for c_item in all_containers:
-                    if getattr(c_item, 'item_type', '') in ['container', 'cloth']:
-                        if hasattr(c_item, 'id') and str(c_item.id) == target_container_name:
-                            target_container = c_item
-                            break
-                        if not target_container and c_item.name == target_container_name:
-                            target_container = c_item
-                            
-                if target_container:
-                    fuel_item = veh.equipment.get(slot_name)
-                    if fuel_item:
-                        transfer_time = max(0.1, fuel_item.get_total_weight() * 0.2)
-                        
-                        def do_remove_fuel():
-                            removed_item = veh.remove_equipment(slot_name)
-                            if removed_item:
-                                qty_to_send = getattr(removed_item, 'load', 1)
-                                if qty_to_send is None: qty_to_send = 1
-                                
-                                unit_weight = removed_item.get_total_weight() / max(1, qty_to_send)
-                                avail_weight = float('inf')
-                                
-                                cont_weight = getattr(target_container, 'weight', 0)
-                                if cont_weight is not None and cont_weight > 0:
-                                    max_w = cont_weight * 5.0
-                                    cur_w = sum(i.get_total_weight() for i in getattr(target_container, 'inventory', []))
-                                    avail_weight = max_w - cur_w
-                                    
-                                max_qty_by_weight = int(avail_weight // unit_weight) if unit_weight > 0 else qty_to_send
-                                
-                                actual_transfer = min(qty_to_send, max_qty_by_weight)
-                                
-                                if actual_transfer <= 0:
-                                    veh.add_equipment(removed_item, slot_name)
-                                    display_message(tr('msg', "Container is full by weight."))
-                                    game.context_menu['active'] = False
-                                    return
-                                    
-                                original_load = qty_to_send
-                                amount_transferred = 0
-                                
-                                if hasattr(removed_item, 'is_stackable') and removed_item.is_stackable():
-                                    for inv_item in target_container.inventory:
-                                        if inv_item.can_stack_with(removed_item):
-                                            i_cap = getattr(target_container, 'max_liquid', None) or getattr(inv_item, 'capacity', 1) or 1
-                                            i_load = getattr(inv_item, 'load', 1) or 1
-                                            
-                                            avail = i_cap - i_load
-                                            trans = min(avail, actual_transfer)
-                                            if trans > 0:
-                                                inv_item.load = i_load + trans
-                                                actual_transfer -= trans
-                                                amount_transferred += trans
-                                            if actual_transfer <= 0:
-                                                break
-                                                
-                                c_cap = getattr(target_container, 'capacity', 0)
-                                if c_cap is None: c_cap = 0
-                                
-                                if actual_transfer > 0 and len(target_container.inventory) < c_cap:
-                                    new_item = Item.create_from_name(removed_item.name)
-                                    if new_item:
-                                        new_item.load = actual_transfer
-                                        if hasattr(removed_item, 'durability'): new_item.durability = removed_item.durability
-                                        target_container.inventory.append(new_item)
-                                        amount_transferred += actual_transfer
-                                        actual_transfer = 0
-                                        
-                                remaining_load = original_load - amount_transferred
-                                
-                                if remaining_load > 0:
-                                    removed_item.load = remaining_load
-                                    veh.add_equipment(removed_item, slot_name)
-                                    
-                                if amount_transferred > 0:
-                                    display_message(f"{tr('msg', 'Removed fuel to')} {tr('item', target_container.name)}.")
-                                else:
-                                    display_message(tr('msg', "Container is full."))
-                                    
-                        game.player.start_action(f"Transferring {tr('item', fuel_item.name)}", transfer_time, do_remove_fuel, xp_reward=1)
-                clicked_on_menu = True
-
-            elif option == 'Send to':
-                target_container_name = target_sub_slot
-                is_external = (
-                    source in ['nearby', 'ground', 'container_map'] 
-                    or (source == 'container' and container_item and not is_container_on_player(container_item, game.player))
-                )
-                
-                def remove_item_from_src(target_item, is_clone=False):
-                    if is_clone: return True
-                    
-                    if source == 'inventory':
-                        for idx_val, v in enumerate(game.player.inventory):
-                            if v is target_item: game.player.inventory.pop(idx_val); return True
-                    elif source == 'belt':
-                        for idx_val, v in enumerate(game.player.belt):
-                            if v is target_item: game.player.belt[idx_val] = None; return True
-                    elif source == 'container' and container_item:
-                        for idx_val, v in enumerate(container_item.inventory):
-                            if v is target_item: container_item.inventory.pop(idx_val); return True
-                    elif source == 'nearby' and container_item:
-                        for idx_val, v in enumerate(container_item.inventory):
-                            if v is target_item: 
-                                container_item.inventory.pop(idx_val)
-                                if getattr(container_item, 'item_type', '') == 'ground':
-                                    for g_idx, g_v in enumerate(game.items_on_ground):
-                                        if g_v is target_item: game.items_on_ground.pop(g_idx); break
-                                return True
-                    elif source == 'ground':
-                        for idx_val, v in enumerate(game.items_on_ground):
-                            if v is target_item: game.items_on_ground.pop(idx_val); return True
-                    elif source == 'gear':
-                        for k, v in game.player.clothes.items():
-                            if v is target_item: game.player.clothes[k] = None; return True
-                    return False
-
-                if target_container_name == 'Inventory':
-                    if source == 'inventory':
-                        game.context_menu['active'] = False
-                        return
-                    
-                    if getattr(item, 'liquid', False):
-                        display_message(tr('msg', "Liquid spills. It needs a container."))
-                        game.context_menu['active'] = False
-                        return
-
-                    def do_send_inv():
-                        is_inf = source in ['nearby', 'container_map', 'container'] and container_item and is_infinite_liquid_source(container_item)
-                        
-                        if is_inf and getattr(item, 'liquid', False):
-                            clone = Item.create_from_name(item.name)
-                            if clone:
-                                clone.load = getattr(item, 'capacity', 100)
-                                clone.durability = item.durability
-                                clone.is_placed = False
-                                game.player.inventory.append(clone)
-                                game.player.stack_item_in_inventory(clone)
-                                if game and hasattr(game, 'sound_manager'):
-                                    game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
-                        else:
-                            if remove_item_from_src(item):
-                                item.is_placed = False
-                                game.player.inventory.append(item)
-                                game.player.stack_item_in_inventory(item)
-                                if game and hasattr(game, 'sound_manager'):
-                                    game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
-                        
-                    transfer_time = max(0.1, item.get_total_weight() * 0.2)
-                    if is_external:
-                        game.player.start_action(tr('msg', "Looting"), transfer_time, do_send_inv, xp_reward=0.5)
-                    else:
-                        do_send_inv()
-                        
-                else:
-                    target_container = None
-                    all_containers = [item for item in game.player.belt if item] + \
-                                     [item for item in game.player.inventory if item] + \
-                                     [item for item in game.player.clothes.values() if item]
-                    
-                    for c_item in all_containers:
-                        if getattr(c_item, 'item_type', '') in ['container', 'cloth']:
-                            if hasattr(c_item, 'id') and str(c_item.id) == target_container_name:
-                                target_container = c_item
-                                break
-                            if not target_container and c_item.name == target_container_name:
-                                target_container = c_item
-                            
-                    if target_container:
-                        item_load = getattr(item, 'load', 1)
-                        if item_load is None: item_load = 1
-                        
-                        unit_weight = item.get_total_weight() / max(1, item_load)
-                        avail_weight = float('inf')
-                        
-                        cont_weight = getattr(target_container, 'weight', 0)
-                        if cont_weight is not None and cont_weight > 0:
-                            max_w = cont_weight * 5.0
-                            cur_w = sum(i.get_total_weight() for i in getattr(target_container, 'inventory', []))
-                            avail_weight = max_w - cur_w
-                            
-                        max_qty_by_weight = int(avail_weight // unit_weight) if unit_weight > 0 else item_load
-                        
-                        if max_qty_by_weight <= 0:
-                            display_message(tr('msg', "Container is full by weight."))
-                            game.context_menu['active'] = False
-                            return
-                            
-                        def do_send_container():
-                            removed_item = item
-                            is_clone = False
-                            
-                            is_inf = source in ['nearby', 'container_map', 'container'] and container_item and is_infinite_liquid_source(container_item)
-                            
-                            if is_inf and getattr(removed_item, 'liquid', False):
-                                clone = Item.create_from_name(removed_item.name)
-                                if clone:
-                                    clone.load = getattr(removed_item, 'capacity', 100)
-                                    clone.durability = removed_item.durability
-                                    removed_item = clone
-                                    is_clone = True
-                                    
-                            qty_to_send = getattr(removed_item, 'load', 1)
-                            if qty_to_send is None: qty_to_send = 1
-                            
-                            if qty_to_send > max_qty_by_weight:
-                                qty_to_send = max_qty_by_weight
-                                
-                            stacked = False
-                            if hasattr(removed_item, 'is_stackable') and removed_item.is_stackable():
-                                for inv_item in target_container.inventory:
-                                    if inv_item.can_stack_with(removed_item):
-                                        i_cap = getattr(target_container, 'max_liquid', None) or getattr(inv_item, 'capacity', 1) or 1
-                                        i_load = getattr(inv_item, 'load', 1) or 1
-                                        r_load = getattr(removed_item, 'load', 1) or 1
-                                        
-                                        avail = i_cap - i_load
-                                        trans = min(avail, qty_to_send, r_load)
-                                        if trans > 0:
-                                            inv_item.load = i_load + trans
-                                            inv_item.capacity = i_cap
-                                            removed_item.load = r_load - trans
-                                            qty_to_send -= trans
-                                            stacked = True
-                                        if qty_to_send <= 0 or removed_item.load <= 0:
-                                            break
-                            
-                            c_cap = getattr(target_container, 'capacity', 0)
-                            if c_cap is None: c_cap = 0
-                            
-                            if qty_to_send > 0 and len(target_container.inventory) < c_cap:
-                                r_load = getattr(removed_item, 'load', 1) or 1
-                                target_max_liq = getattr(target_container, 'max_liquid', None)
-                                trans_qty = min(qty_to_send, target_max_liq) if target_max_liq is not None else qty_to_send
-
-                                if trans_qty > 0:
-                                    if trans_qty < r_load:
-                                        new_item = Item.create_from_name(removed_item.name)
-                                        if new_item:
-                                            new_item.load = trans_qty
-                                            if target_max_liq is not None:
-                                                new_item.capacity = target_max_liq
-                                            if hasattr(removed_item, 'durability'): new_item.durability = removed_item.durability
-                                            removed_item.load = r_load - trans_qty
-                                            target_container.inventory.append(new_item)
-                                        
-                                        if game and hasattr(game, 'sound_manager'):
-                                            game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
-                                    
-                                    else:
-                                        if remove_item_from_src(item, is_clone=is_clone):
-                                            if target_max_liq is not None:
-                                                removed_item.capacity = target_max_liq
-                                            target_container.inventory.append(removed_item)
-
-                            elif qty_to_send > 0 and not stacked:
-                                display_message(tr('msg', "Container is full."))
-                                
-                            if hasattr(removed_item, 'load') and removed_item.load is not None and removed_item.load <= 0:
-                                remove_item_from_src(item, is_clone=is_clone)
-                                
-                        transfer_time = max(0.1, item.get_total_weight() * 0.2)
-                        if is_external:
-                            game.player.start_action(f"Transferring to {target_container.name}", transfer_time, do_send_container, xp_reward=0.5)
-                        else:
-                            do_send_container()
-                            
-                clicked_on_menu = True
-
-            # --- CLICK HANDLER FOR CRAFTS & FAST CRAFTING ---
-            elif option == 'Crafts':
-                if target_sub_slot and target_sub_slot.startswith('header_'):
-                    return
-
-                if target_sub_slot == 'open_craft' or not target_sub_slot:
-                    translated_name = tr('item', item.name)
-                    tab_name = tr('tab', "Known Recipes")
-                    
-                    game.modals = [m for m in game.modals if m['type'] != 'crafting']
-                    default_pos = (GAME_WIDTH // 2 - CRAFTING_MODAL_WIDTH // 2, GAME_HEIGHT // 2 - CRAFTING_MODAL_HEIGHT // 2)
-                    pos = game.last_modal_positions.get('crafting', default_pos) if hasattr(game, 'last_modal_positions') else default_pos
-
-                    new_modal = {
-                        'id': uuid.uuid4(),
-                        'type': 'crafting',
-                        'position': pos,
-                        'rect': pygame.Rect(pos[0], pos[1], CRAFTING_MODAL_WIDTH, CRAFTING_MODAL_HEIGHT),
-                        'is_dragging': False,
-                        'drag_offset': (0, 0),
-                        'active_tab': tab_name,
-                        'search_text': translated_name,
-                        'search_active': False
-                    }
-                    game.modals.append(new_modal)
-                else:
-                    recipe = game.context_menu.get('craft_recipes', {}).get(target_sub_slot)
-                    if recipe:
-                        execute_recipe_craft(game, recipe)
-                clicked_on_menu = True
-
-            elif option == 'Remove' and source == 'vehicle_equipment':
-                veh = container_item
-                slot_name = index
-                item_to_remove = veh.equipment.get(slot_name)
-                
-                if item_to_remove:
-                    transfer_time = max(0.1, item_to_remove.get_total_weight() * 0.2)
-                    
-                    def do_remove():
-                        removed_item = veh.remove_equipment(slot_name)
-                        if removed_item:
-                            if len(game.player.inventory) < game.player.get_total_inventory_slots():
-                                game.player.inventory.append(removed_item)
-                                if hasattr(game.player, 'stack_item_in_inventory'):
-                                    game.player.stack_item_in_inventory(removed_item)
-                            else:
-                                removed_item.rect.center = game.player.rect.center
-                                game.items_on_ground.append(removed_item)
-                            display_message(f"{tr('msg', 'Removed')} {tr('item', removed_item.name)}.")
-                            
-                    game.player.start_action(f"Removing {tr('item', item_to_remove.name)}", transfer_time, do_remove, xp_reward=1)
-                clicked_on_menu = True
-
-            elif option.startswith('Insert '):
-                if isinstance(item, dict) and item.get('type') == 'virtual_slot':
-                    veh = item['vehicle']
-                    slot_name = item['slot']
-
-                    found_item, src_list, idx, _ = find_item_recursive(
-                        game.player.belt, lambda it: veh.can_equip(it, slot_name)
-                    )
-                    if not found_item:
-                        found_item, src_list, idx, _ = find_item_recursive(
-                            game.player.inventory, lambda it: veh.can_equip(it, slot_name)
-                        )
-                    if not found_item:
-                        for k, v in game.player.clothes.items():
-                            if not v: continue
-                            if veh.can_equip(v, slot_name):
-                                found_item, src_list, idx = v, game.player.clothes, k
-                                break
-                            if hasattr(v, 'inventory') and v.inventory:
-                                found_item, src_list, idx, _ = find_item_recursive(
-                                    v.inventory, lambda it: veh.can_equip(it, slot_name)
-                                )
-                                if found_item: break
-                                
-                    if found_item:
-                        transfer_time = max(0.1, found_item.get_total_weight() * 0.2)
-                        
-                        def do_insert():
-                            if src_list == game.player.belt:
-                                game.player.belt[idx] = None
-                            elif src_list == game.player.clothes:
-                                game.player.clothes[idx] = None
-                            else:
-                                src_list.pop(idx)
-                                
-                            old_item = veh.add_equipment(found_item, slot_name)
-                            if old_item:
-                                if len(game.player.inventory) < game.player.get_total_inventory_slots():
-                                    game.player.inventory.append(old_item)
-                                    if hasattr(game.player, 'stack_item_in_inventory'):
-                                        game.player.stack_item_in_inventory(old_item)
-                                else:
-                                    old_item.rect.center = game.player.rect.center
-                                    game.items_on_ground.append(old_item)
-                            display_message(f"{tr('msg', 'Inserted')} {tr('item', found_item.name)}.")
-                            
-                        game.player.start_action(f"Inserting {tr('item', found_item.name)}", transfer_time, do_insert, xp_reward=1)
-                    else:
-                        display_message(f"{tr('msg', 'You do not have a suitable item for this slot.')}")
-                        
-                clicked_on_menu = True
-
-            elif option in ['Add key', 'Add fuel', 'Add motor', 'Add battery', 'Add tire to']:
-                veh = getattr(game.player, 'vehicle', None)
-                if not veh:
-                    for m in game.modals:
-                        if m['type'] == 'vehicle':
-                            veh = m['vehicle']
-                            break
-                            
-                if veh:
-                    slot = None
-                    if option == 'Add key': slot = 'key'
-                    elif option == 'Add fuel': slot = 'fuel'
-                    elif option == 'Add motor': slot = 'motor'
-                    elif option == 'Add battery': slot = 'battery'
-                    elif option == 'Add tire to': slot = target_sub_slot
-
-                    if slot and veh.can_equip(item, slot):
-                        transfer_time = max(0.1, item.get_total_weight() * 0.2)
-                        
-                        def do_add():
-                            if source == 'inventory':
-                                game.player.inventory.pop(index)
-                            elif source == 'belt':
-                                game.player.belt[index] = None
-                            elif source == 'gear':
-                                game.player.clothes[index] = None
-                            elif source == 'container' and container_item:
-                                container_item.inventory.pop(index)
-
-                            old_item = veh.add_equipment(item, slot)
-                            if old_item:
-                                if len(game.player.inventory) < game.player.get_total_inventory_slots():
-                                    game.player.inventory.append(old_item)
-                                    if hasattr(game.player, 'stack_item_in_inventory'):
-                                        game.player.stack_item_in_inventory(old_item)
-                                else:
-                                    old_item.rect.center = game.player.rect.center
-                                    game.items_on_ground.append(old_item)
-                            display_message(f"{tr('msg', 'Installed')} {tr('item', item.name)} {tr('msg', 'in vehicle')}.")
-                            
-                        game.player.start_action(f"Installing {tr('item', item.name)}", transfer_time, do_add, xp_reward=1)
-                clicked_on_menu = True
 
             elif option == 'Reload':
                 if getattr(item, 'item_type', None) in ['utility', 'mobile']:
@@ -1011,217 +872,70 @@ def handle_context_menu_click(game, mouse_pos):
                         game.items_on_ground[index] = result
                 elif source == 'nearby' and container_item and result and hasattr(result, 'name'):
                     if getattr(container_item, 'item_type', '') == 'ground':
-                        for i, ground_item in enumerate(game.items_on_ground):
+                        for i_idx, ground_item in enumerate(game.items_on_ground):
                             if ground_item is item:
-                                game.items_on_ground[i] = result
+                                game.items_on_ground[i_idx] = result
                                 break
-            
-            elif option == 'Equip':
-                item_type = getattr(item, 'item_type', None)
-                if item_type in ('cloth', 'container'):
-                    
-                    if target_sub_slot:
-                        item_slot = target_sub_slot
-                    else:
-                        item_slot = getattr(item, 'slot', None)
-                        if item_slot == 'hand': item_slot = 'hands'
-                        
-                        if item_type == 'container':
-                            slots_to_try = [item_slot] if item_slot and item_slot not in ['util'] else ['util', 'util2', 'util3']
-                            if item_slot == 'util' or not item_slot:
-                                slots_to_try = ['util', 'util2', 'util3']
-                                
-                            found_empty_slot = False
-                            for slot in slots_to_try:
-                                if game.player.clothes.get(slot) is None:
-                                    item_slot = slot
-                                    found_empty_slot = True
-                                    break
-                        else:
-                            if item_slot == 'util':
-                                if game.player.clothes.get('util') is not None:
-                                    if game.player.clothes.get('util2') is None:
-                                        item_slot = 'util2'
-                                    elif game.player.clothes.get('util3') is None:
-                                        item_slot = 'util3'
-
-                    if item_slot in game.player.clothes_slots or item_slot in ['util', 'util2', 'util3']:
-                        item_from_source = None
-                        if source == 'inventory' and 0 <= index < len(game.player.inventory):
-                            item_from_source = game.player.inventory.pop(index)
-                        elif source == 'container' and container_item and 0 <= index < len(container_item.inventory):
-                            item_from_source = container_item.inventory.pop(index)
-                        elif source == 'ground' and 0 <= index < len(game.items_on_ground):
-                            item_from_source = game.items_on_ground.pop(index)
-                        elif source == 'nearby' and container_item and 0 <= index < len(container_item.inventory):
-                            item_from_source = container_item.inventory.pop(index)
-                            if getattr(container_item, 'item_type', '') == 'ground' and item_from_source in game.items_on_ground:
-                                game.items_on_ground.remove(item_from_source)
-
-                        if item_from_source:
-                            old_item = game.player.clothes.get(item_slot)
-                            game.player.clothes[item_slot] = item_from_source
-                            print(f"Equipped {item_from_source.name} to {item_slot}.")
-
-                            if game and hasattr(game, 'sound_manager'):
-                                game.sound_manager.play_sound(
-                                    'equip_gear.ogg',
-                                    subdir='items',
-                                    game=game,
-                                    source_pos=game.player.rect.center,
-                                    base_volume=0.5,
-                                    pitch_variance=0.1,
-                                    is_critical=True
-                                )
-
-                            if old_item:
-                                if getattr(old_item, 'liquid', False):
-                                    old_item.rect.center = game.player.rect.center
-                                    game.items_on_ground.append(old_item)
-                                elif len(game.player.inventory) < game.player.get_total_inventory_slots():
-                                    game.player.inventory.append(old_item)
-                                else:
-                                    old_item.rect.center = game.player.rect.center
-                                    game.items_on_ground.append(old_item)
-                else: 
-                    if source == 'ground':
-                        if getattr(item, 'liquid', False):
-                            print("Cannot pick up liquid directly to inventory.")
-                            game.context_menu['active'] = False
-                            return
-
-                        placed = False
-                        if target_sub_slot and target_sub_slot.startswith('belt_'):
-                            try:
-                                bi = int(target_sub_slot.split('_')[1])
-                                old_belt_item = game.player.belt[bi]
-                                game.player.belt[bi] = item
-                                if 0 <= index < len(game.items_on_ground):
-                                    game.items_on_ground.pop(index)
-                                print(f"Picked up and equipped {tr('item', item.name)} to belt slot {bi+1}.")
-                                placed = True
-                                
-                                if game and hasattr(game, 'sound_manager'):
-                                    game.sound_manager.play_sound(
-                                        'equip_belt.ogg',
-                                        subdir='items',
-                                        game=game,
-                                        source_pos=game.player.rect.center,
-                                        base_volume=0.5,
-                                        pitch_variance=0.1,
-                                        is_critical=True
-                                    )
-
-                                if old_belt_item:
-                                    if len(game.player.inventory) < game.player.get_total_inventory_slots():
-                                        game.player.inventory.append(old_belt_item)
-                                    else:
-                                        old_belt_item.rect.center = game.player.rect.center
-                                        game.items_on_ground.append(old_belt_item)
-                            except ValueError: pass
-                        else:
-                            for bi, slot in enumerate(game.player.belt):
-                                item_t = getattr(item, 'item_type', '') or ''
-                                if slot is None and (item_t.startswith('weapon') or item_t == 'tool'):
-                                    game.player.belt[bi] = item
-                                    if 0 <= index < len(game.items_on_ground):
-                                        game.items_on_ground.pop(index)
-                                    print(f"Picked up and equipped {tr('item', item.name)} to belt slot {bi+1}.")
-                                    placed = True
-
-                                    if game and hasattr(game, 'sound_manager'):
-                                        game.sound_manager.play_sound(
-                                            'equip_belt.ogg',
-                                            subdir='items',
-                                            game=game,
-                                            source_pos=game.player.rect.center,
-                                            base_volume=0.5,
-                                            pitch_variance=0.1,
-                                            is_critical=True
-                                        )
-
-                                    break
-                                    
-                        if not placed:
-                            if len(game.player.inventory) < game.player.get_total_inventory_slots():
-                                game.player.inventory.append(item)
-                                if 0 <= index < len(game.items_on_ground):
-                                    game.items_on_ground.pop(index)
-                                print(f"Picked up {tr('item', item.name)} into inventory.")
-                            else:
-                                print("No space to equip or pick up the item.")
-                                
-                        if str(getattr(item, 'item_type', '')).startswith('weapon'):
-                            game.player.active_weapon = item
-                    else:
-                        if target_sub_slot and target_sub_slot.startswith('belt_'):
-                             try:
-                                 bi = int(target_sub_slot.split('_')[1])
-                                 item_from_source = None
-                                 if source == 'inventory' and 0 <= index < len(game.player.inventory):
-                                     item_from_source = game.player.inventory.pop(index)
-                                 elif source == 'container' and container_item and 0 <= index < len(container_item.inventory):
-                                     item_from_source = container_item.inventory.pop(index)
-                                 elif source == 'nearby' and container_item and 0 <= index < len(container_item.inventory):
-                                     item_from_source = container_item.inventory.pop(index)
-                                     if getattr(container_item, 'item_type', '') == 'ground' and item_from_source in game.items_on_ground:
-                                         game.items_on_ground.remove(item_from_source)
-                                         
-                                 if item_from_source:
-                                     old_belt_item = game.player.belt[bi]
-                                     game.player.belt[bi] = item_from_source
-                                     print(f"Equipped {tr('item', item_from_source.name)} to belt slot {bi+1}.")
-
-                                     if game and hasattr(game, 'sound_manager'):
-                                         game.sound_manager.play_sound(
-                                             'equip_belt.ogg',
-                                             subdir='items',
-                                             game=game,
-                                             source_pos=game.player.rect.center,
-                                             base_volume=0.5,
-                                             pitch_variance=0.1,
-                                             is_critical=True
-                                         )
-
-                                     if old_belt_item:
-                                         if len(game.player.inventory) < game.player.get_total_inventory_slots():
-                                             game.player.inventory.append(old_belt_item)
-                                         else:
-                                             old_belt_item.rect.center = game.player.rect.center
-                                             game.items_on_ground.append(old_belt_item)
-                             except ValueError: pass
-                        else:
-                             game.player.equip_item_to_belt(item, source, index, container_item)
 
             elif option == 'Drop one':
                 if getattr(item, 'liquid', False):
-                    if hasattr(item, 'load') and item.load is not None and item.load > 1:
+                    has_load = hasattr(item, 'load') and item.load is not None
+                    if has_load and item.load > 1:
                         item.load -= 1
-                        print(f"A portion of {tr('item', item.name)} spills.")
+                        display_message(f"{tr('msg', 'A portion of')} {tr('item', item.name)} {tr('msg', 'spills.')}")
                     else:
-                        print(f"The {tr('item', item.name)} spills.")
-                        if source == 'inventory' and 0 <= index < len(game.player.inventory):
-                            game.player.inventory.pop(index)
-                        elif source == 'belt' and 0 <= index < len(game.player.belt):
-                            game.player.belt[index] = None
-                        elif source == 'container' and container_item and 0 <= index < len(container_item.inventory):
-                            container_item.inventory.pop(index)
+                        remove_from_source(item)
+                        display_message(f"{tr('item', item.name)} {tr('msg', 'spills on the ground.')}")
+                    
+                    if hasattr(game, 'splashes'):
+                        game.splashes.append({
+                            'pos': (game.player.rect.centerx, game.player.rect.bottom),
+                            'time': pygame.time.get_ticks(),
+                            'duration': 350,
+                            'radius': 3,
+                            'type': 'hit_puff'
+                        })
+                    if container_item and getattr(game, 'is_client', False) and getattr(game, 'client', None):
+                        from core.server.network import NetMsg, send_msg
+                        send_msg(game.client.socket, {
+                            'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
+                            'x': container_item.rect.x, 'y': container_item.rect.y,
+                            'is_opened': getattr(container_item, 'is_opened', True),
+                            'inventory': [it.to_dict() for it in container_item.inventory]
+                        })
                 else:
                     game.player.drop_item_stack(game, source, index, container_item, 1)
-                
+                clicked_on_menu = True
+
             elif option == 'Drop all':
                 if getattr(item, 'liquid', False):
-                    print(f"All of the {tr('item', item.name)} spills.")
-                    if source == 'inventory' and 0 <= index < len(game.player.inventory):
-                        game.player.inventory.pop(index)
-                    elif source == 'belt' and 0 <= index < len(game.player.belt):
-                        game.player.belt[index] = None
-                    elif source == 'container' and container_item and 0 <= index < len(container_item.inventory):
-                        container_item.inventory.pop(index)
+                    remove_from_source(item)
+                    display_message(f"{tr('msg', 'All of the')} {tr('item', item.name)} {tr('msg', 'spills on the ground.')}")
+                    if hasattr(game, 'splashes'):
+                        game.splashes.append({
+                            'pos': (game.player.rect.centerx, game.player.rect.bottom),
+                            'time': pygame.time.get_ticks(),
+                            'duration': 350,
+                            'radius': 5,
+                            'type': 'hit_puff'
+                        })
+                    if container_item and getattr(game, 'is_client', False) and getattr(game, 'client', None):
+                        from core.server.network import NetMsg, send_msg
+                        send_msg(game.client.socket, {
+                            'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
+                            'x': container_item.rect.x, 'y': container_item.rect.y,
+                            'is_opened': getattr(container_item, 'is_opened', True),
+                            'inventory': [it.to_dict() for it in container_item.inventory]
+                        })
                 else:
                     game.player.drop_item_stack(game, source, index, container_item, 'all')
+                clicked_on_menu = True
             
             elif option == 'Place':
+                if getattr(item, 'liquid', False):
+                    display_message(tr('msg', "Cannot place liquid directly."))
+                    game.context_menu['active'] = False
+                    return
                 game.item_to_place = {
                     'item': item,
                     'source': source,
@@ -1233,26 +947,33 @@ def handle_context_menu_click(game, mouse_pos):
 
             elif option == 'Drop':
                 if getattr(item, 'liquid', False):
-                    print(f"The {tr('item', item.name)} spills.")
-                    if source == 'gear':
-                        game.player.clothes[index] = None
-                    elif source == 'inventory' and 0 <= index < len(game.player.inventory):
-                        game.player.inventory.pop(index)
-                    elif source == 'belt' and 0 <= index < len(game.player.belt):
-                        game.player.belt[index] = None
-                    elif source == 'container' and container_item and 0 <= index < len(container_item.inventory):
-                        container_item.inventory.pop(index)
+                    remove_from_source(item)
+                    display_message(f"{tr('item', item.name)} {tr('msg', 'spills on the ground.')}")
+                    if hasattr(game, 'splashes'):
+                        game.splashes.append({
+                            'pos': (game.player.rect.centerx, game.player.rect.bottom),
+                            'time': pygame.time.get_ticks(),
+                            'duration': 350,
+                            'radius': 4,
+                            'type': 'hit_puff'
+                        })
+                    if container_item and getattr(game, 'is_client', False) and getattr(game, 'client', None):
+                        from core.server.network import NetMsg, send_msg
+                        send_msg(game.client.socket, {
+                            'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
+                            'x': container_item.rect.x, 'y': container_item.rect.y,
+                            'is_opened': getattr(container_item, 'is_opened', True),
+                            'inventory': [it.to_dict() for it in container_item.inventory]
+                        })
                 else:
-                    dropped_item = None
                     if source == 'gear':
                         slot_name = index 
                         item_to_drop = game.player.clothes.get(slot_name)
                         if item_to_drop and item_to_drop == item:
-                            dropped_item = game.player.drop_item(game, source, index, container_item)
-                            if dropped_item:
-                                print(f"Dropped {dropped_item.name} from {slot_name} slot.")
+                            game.player.drop_item(game, source, index, container_item)
                     else:
                         game.player.drop_item(game, source, index, container_item)
+                clicked_on_menu = True
 
             elif option == 'Read':
                 if getattr(item, 'item_type', None) == 'text':
@@ -1273,9 +994,7 @@ def handle_context_menu_click(game, mouse_pos):
             elif option == 'Open' or option == 'Inspect':
                 if getattr(item, 'item_type', None) == 'map':
                     game.modals = [m for m in game.modals if m['type'] != 'big_map']
-                    
                     default_pos = (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2)
-                    
                     new_map_modal = {
                         'id': uuid.uuid4(), 
                         'type': 'big_map', 
@@ -1303,18 +1022,7 @@ def handle_context_menu_click(game, mouse_pos):
                         }
                         game.modals.append(new_mobile_modal)
                     clicked_on_menu = True
-                elif getattr(item, 'item_type', None) == 'text':
-                    modal_exists = any(m['type'] == 'text' and m['item'] == item for m in game.modals)
-                    if not modal_exists:
-                        new_text_modal = {
-                            'id': uuid.uuid4(), 'type': 'text', 'item': item,
-                            'position': game.last_modal_positions['text'], 
-                            'is_dragging': False, 'drag_offset': (0, 0),
-                            'rect': pygame.Rect(game.last_modal_positions['text'][0], game.last_modal_positions['text'][1], TEXT_MODAL_WIDTH, TEXT_MODAL_HEIGHT),
-                            'scroll_offset_y': 0
-                        }
-                        game.modals.append(new_text_modal)
-                    clicked_on_menu = True
+
                 elif getattr(item, 'inventory', None) is not None:
                     is_closed_maptile = getattr(item, 'item_type', '') == 'maptile_container' and not getattr(item, 'is_opened', False)
 
@@ -1403,18 +1111,13 @@ def handle_context_menu_click(game, mouse_pos):
                     if getattr(item, 'liquid', False):
                         item.rect.center = game.player.rect.center
                         game.items_on_ground.append(item)
-                        if game and hasattr(game, 'sound_manager'):
-                            game.sound_manager.play_sound('drop.ogg', subdir='items', game=game, source_pos=item.rect.center)
-
                     elif len(game.player.inventory) < game.player.get_total_inventory_slots():
                         game.player.inventory.append(item)
-                        if game and hasattr(game, 'sound_manager'):
+                        if hasattr(game, 'sound_manager'):
                             game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
                     else:
                         item.rect.center = game.player.rect.center
                         game.items_on_ground.append(item)
-                        if game and hasattr(game, 'sound_manager'):
-                            game.sound_manager.play_sound('drop.ogg', subdir='items', game=game, source_pos=item.rect.center)
                 elif source == 'gear':
                     slot_name = index 
                     item_to_unequip = game.player.clothes.get(slot_name)
@@ -1423,21 +1126,15 @@ def handle_context_menu_click(game, mouse_pos):
                         if getattr(item_to_unequip, 'liquid', False):
                             item_to_unequip.rect.center = game.player.rect.center
                             game.items_on_ground.append(item_to_unequip)
-                            if game and hasattr(game, 'sound_manager'):
-                                game.sound_manager.play_sound('drop.ogg', subdir='items', game=game, source_pos=item_to_unequip.rect.center)
                         elif len(game.player.inventory) < game.player.get_total_inventory_slots():
                             game.player.inventory.append(item_to_unequip)
-                            if game and hasattr(game, 'sound_manager'):
+                            if hasattr(game, 'sound_manager'):
                                 game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
                         else:
                             item_to_unequip.rect.center = game.player.rect.center
                             game.items_on_ground.append(item_to_unequip)
-                            if game and hasattr(game, 'sound_manager'):
-                                game.sound_manager.play_sound('drop.ogg', subdir='items', game=game, source_pos=item_to_unequip.rect.center)
-                
 
             elif source in ['ground', 'nearby', 'container'] and option in ['Grab', 'Grab One', 'Grab Half', 'Grab All']:
-                
                 if getattr(item, 'type', None) in ('animal', 'zombie'):
                     game.context_menu['active'] = False
                     return
@@ -1446,7 +1143,6 @@ def handle_context_menu_click(game, mouse_pos):
                 target_capacity = game.player.get_total_inventory_slots()
 
                 if len(target_inventory) < target_capacity:
-                    
                     weight_multiplier = 1.0
                     if hasattr(item, 'load') and item.load and item.load > 0:
                         if option == 'Grab One':
@@ -1459,7 +1155,6 @@ def handle_context_menu_click(game, mouse_pos):
                         item_to_grab = item
                         
                         if item_to_grab.name in ["Campfire on", "Lantern on"]:
-                            from core.entities.item.item import Item
                             new_item = Item.create_from_name(item_to_grab.name.replace(" on", " off"))
                             if new_item:
                                 new_item.durability = item_to_grab.durability
@@ -1468,7 +1163,6 @@ def handle_context_menu_click(game, mouse_pos):
                                 new_item.x = item_to_grab.x
                                 new_item.y = item_to_grab.y
                                 item_to_grab = new_item
-                                print(f"{item_to_grab.name.split(' ')[0]} extinguished when picked up.")
                                 display_message(tr('msg', f"{item_to_grab.name.split(' ')[0]} extinguished when picked up."))
 
                         is_partial = False
@@ -1485,7 +1179,6 @@ def handle_context_menu_click(game, mouse_pos):
                                 amount = item_to_grab.load
                                 
                         if is_partial and amount < item_to_grab.load:
-                            from core.entities.item.item import Item
                             new_item = Item.create_from_name(item_to_grab.name)
                             if new_item:
                                 new_item.load = amount
@@ -1495,15 +1188,10 @@ def handle_context_menu_click(game, mouse_pos):
                                 target_inventory.append(new_item)
                                 game.player.stack_item_in_inventory(new_item)
 
-                                if game and hasattr(game, 'sound_manager'):
+                                if hasattr(game, 'sound_manager'):
                                     game.sound_manager.play_sound(
-                                        'grab.ogg',
-                                        subdir='items',
-                                        game=game,
-                                        source_pos=game.player.rect.center,
-                                        base_volume=0.5,
-                                        pitch_variance=0.1,
-                                        is_critical=True
+                                        'grab.ogg', subdir='items', game=game,
+                                        source_pos=game.player.rect.center, base_volume=0.5, is_critical=True
                                     )
                             return
 
@@ -1521,18 +1209,12 @@ def handle_context_menu_click(game, mouse_pos):
                             target_inventory.append(item_to_grab)
                             game.player.stack_item_in_inventory(item_to_grab)
 
-                            if game and hasattr(game, 'sound_manager'):
+                            if hasattr(game, 'sound_manager'):
                                 game.sound_manager.play_sound(
-                                    'grab.ogg',
-                                    subdir='items',
-                                    game=game,
-                                    source_pos=game.player.rect.center,
-                                    base_volume=0.5,
-                                    pitch_variance=0.1,
-                                    is_critical=True
+                                    'grab.ogg', subdir='items', game=game,
+                                    source_pos=game.player.rect.center, base_volume=0.5, is_critical=True
                                 )
 
-                            # SYNC TO SERVER
                             if getattr(game, 'is_client', False) and getattr(game, 'client', None):
                                 from core.server.network import NetMsg, send_msg
                                 if source == 'ground':
@@ -1544,7 +1226,7 @@ def handle_context_menu_click(game, mouse_pos):
                                         'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
                                         'x': container_item.rect.x, 'y': container_item.rect.y,
                                         'is_opened': getattr(container_item, 'is_opened', True),
-                                        'inventory': [i.to_dict() for i in container_item.inventory]
+                                        'inventory': [it.to_dict() for it in container_item.inventory]
                                     })
 
                     if source == 'nearby':
@@ -1554,7 +1236,6 @@ def handle_context_menu_click(game, mouse_pos):
                     else:
                         do_grab()
                 else:
-                    print("Inventory full.")
                     display_message(tr('msg', "Inventory is full."))
 
             clicked_on_menu = True
@@ -1757,7 +1438,6 @@ def handle_right_click(game, mouse_pos):
                     click_index = 0
                     break
 
-        # --- TILE CLICK DETECTION: Checked against tile center rather than arbitrary cursor edge ---
         if not clicked_item:
             grid_x = int(world_pos[0] // TILE_SIZE)
             grid_y = int(world_pos[1] // TILE_SIZE)
@@ -1791,7 +1471,6 @@ def handle_right_click(game, mouse_pos):
                     (tile.get('name') and ('door' in tile['name'].lower() or 'window' in tile['name'].lower()))
                 )
 
-                # Generous 2.8 tile interaction radius to avoid false "too far" triggers
                 max_interact_sq = (TILE_SIZE * 2.8) ** 2
 
                 if is_boat or is_door_window or tile.get('type') == "maptile_car":
@@ -1808,7 +1487,7 @@ def handle_right_click(game, mouse_pos):
                                 'name': tile.get('name', 'Boat'), 
                                 'type': 'maptile_teleport', 
                                 'grid_x': grid_x, 
-                                'grid_y': grid_y,
+                                'grid_y': grid_y, 
                                 'char': char
                             }
                             click_source = 'map_tile'
@@ -1911,7 +1590,6 @@ def handle_right_click(game, mouse_pos):
                 player_fuel = get_player_fuel_units(game.player)
                 fuel_icon = get_fuel_icon()
 
-                # 1. Lobby Option
                 if lobby_chunk and (cur_gx, cur_gy) != lobby_chunk:
                     sub_key = f"{lobby_chunk[0]}_{lobby_chunk[1]}"
                     sub_opts.append(sub_key)
@@ -1926,7 +1604,6 @@ def handle_right_click(game, mouse_pos):
                         f"{tr('ui', 'Available fuel:')} {player_fuel}"
                     )
 
-                # 2. Island and Mainland Chunks
                 for (cgx, cgy) in sorted(list(active_chunks)):
                     sub_key = f"{cgx}_{cgy}"
                     if (cgx, cgy) == military_chunk: continue
@@ -1967,7 +1644,6 @@ def handle_right_click(game, mouse_pos):
 
             barricade = game.map_manager.get_barricade(gx, gy)
 
-            # 1. Door Open / Close
             if not barricade:
                 tile_state = clicked_item.get('state')
                 if not tile_state and t_def:
@@ -1981,7 +1657,6 @@ def handle_right_click(game, mouse_pos):
                 elif tile_state == 'open':
                     options.append('Close door/window')
 
-            # 2. Place Barricade / Remove Barricade
             is_door_or_window = (
                 'door' in char.lower() or 'window' in char.lower() or
                 '_open' in char.lower() or '_close' in char.lower() or '_broke' in char.lower() or
@@ -2023,7 +1698,6 @@ def handle_right_click(game, mouse_pos):
                     else:
                         game.context_menu['tooltips']['Place barricade'] = tr('ui', "Barricade must be in inventory")
 
-            # 3. Repair Door / Window
             if t_def and t_def.get('repair_info'):
                 r_info = t_def['repair_info']
                 is_broken = '_broke' in char
@@ -2075,7 +1749,7 @@ def handle_right_click(game, mouse_pos):
 
         # --- BRANCHING: PRESERVE SPECIAL SOURCES FROM BEING CLEARED ---
         if click_source in ('map_tile', 'light_source', 'player_self', 'vehicle_equipment', 'vehicle_slot'):
-            pass  # Retain the exact menu options built above!
+            pass
 
         elif is_nearby:
             options = []
@@ -2186,7 +1860,185 @@ def handle_right_click(game, mouse_pos):
                 new_options.append({'label': 'Add tire to', 'sub': sub_opts, 'display_names': display_map})
                 continue
 
-            if opt == 'Remove fuel to':
+            # =========================================================================
+            # --- 1. EQUIP AS A DETAILED SUBMENU SHOWING ALL AVAILABLE SLOTS ---
+            # =========================================================================
+            if opt == 'Equip':
+                sub_opts = []
+                display_map = {}
+                replace_map = {}
+                item_type = getattr(clicked_item, 'item_type', '') or ''
+                is_liquid = getattr(clicked_item, 'liquid', False)
+
+                # A. Belt Slots (Weapons, Tools, and items flagged with allow_belt=True)
+                can_go_belt = not is_liquid and (
+                    getattr(clicked_item, 'allow_belt', False) or 
+                    item_type in ('weapon', 'weapon_melee', 'weapon_ranged', 'weapon_throw', 'tool', 'utility', 'mobile', 'text', 'map', 'consumable_medical', 'consumable_food')
+                )
+
+                if can_go_belt and click_source != 'belt':
+                    for b_idx in range(len(game.player.belt)):
+                        slot_key = f"belt_{b_idx}"
+                        sub_opts.append(slot_key)
+                        existing = game.player.belt[b_idx]
+                        if existing:
+                            display_map[slot_key] = f"{tr('ui', 'Belt')} {b_idx + 1}"
+                            replace_map[slot_key] = existing.name
+                        else:
+                            display_map[slot_key] = f"{tr('ui', 'Belt')} {b_idx + 1} ({tr('ui', 'Empty')})"
+
+                # B. Gear / Clothes Slots (Clothes, Helmets, Armor, Bags, Vests, Containers)
+                if item_type in ('cloth', 'container') and not is_liquid:
+                    slot = getattr(clicked_item, 'slot', None)
+                    if slot == 'hand': slot = 'hands'
+                    
+                    gear_slots = []
+                    if slot in ('util', 'util1', 'util2', 'util3') or (item_type == 'container' and not slot):
+                        gear_slots = ['util', 'util2', 'util3']
+                    elif slot:
+                        gear_slots = [slot]
+                        
+                    for s in gear_slots:
+                        if s in game.player.clothes_slots or s in ('util', 'util2', 'util3'):
+                            sub_opts.append(s)
+                            existing = game.player.clothes.get(s)
+                            
+                            s_label = s
+                            if s == 'util': s_label = "Util 1"
+                            elif s == 'util2': s_label = "Util 2"
+                            elif s == 'util3': s_label = "Util 3"
+                            else: s_label = s.capitalize()
+                            
+                            if existing:
+                                display_map[s] = tr('ui', s_label)
+                                replace_map[s] = existing.name
+                            else:
+                                display_map[s] = f"{tr('ui', s_label)} ({tr('ui', 'Empty')})"
+
+                if sub_opts:
+                    new_options.append({
+                        'label': 'Equip',
+                        'sub': sub_opts,
+                        'display_names': display_map,
+                        'replacing': replace_map
+                    })
+                continue
+
+            # =========================================================================
+            # --- 2. SEND TO SUBMENU WITH OPEN CONTAINERS, BELT, AND INVENTORY ---
+            # =========================================================================
+            elif opt == 'Send to':
+                sub_opts = []
+                display_map = {}
+                tooltip_map = {}
+                is_liquid = getattr(clicked_item, 'liquid', False)
+
+                # A. Destination Inventory (Only if not already in inventory and not spilled liquid)
+                if click_source != 'inventory' and not is_liquid:
+                    sub_opts.append('Inventory')
+                    display_map['Inventory'] = tr('ui', 'Inventory')
+                    tooltip_map['Inventory'] = f"{tr('ui', 'Send to')} {tr('ui', 'Inventory')}"
+
+                # B. Destination Belt (Only if not in belt, allows belt, and has free space)
+                can_go_belt = not is_liquid and (
+                    getattr(clicked_item, 'allow_belt', False) or 
+                    getattr(clicked_item, 'item_type', '') in ('weapon', 'weapon_melee', 'weapon_ranged', 'weapon_throw', 'tool', 'utility', 'mobile', 'consumable_medical', 'consumable_food')
+                )
+                if click_source != 'belt' and can_go_belt and any(b is None for b in game.player.belt):
+                    sub_opts.append('Belt')
+                    display_map['Belt'] = tr('ui', 'Belt')
+                    tooltip_map['Belt'] = f"{tr('ui', 'Send to')} {tr('ui', 'Belt')}"
+
+                # C. Gather Potential Target Containers
+                candidate_containers = []
+
+                # Active open modals (Chest, Locker, Crate, Vehicle Trunk)
+                for m in getattr(game, 'modals', []):
+                    if m.get('type') == 'container' and m.get('item'):
+                        candidate_containers.append((m['item'], tr('ui', 'Open Container')))
+                    elif m.get('type') == 'vehicle' and m.get('vehicle'):
+                        candidate_containers.append((m['vehicle'], tr('ui', 'Vehicle Trunk')))
+
+                # Nearby world containers (EXCLUDE closed maptiles and locked vehicles)
+                for nearby_obj in game.find_nearby_containers():
+                    if hasattr(nearby_obj, 'inventory') and nearby_obj.inventory is not None:
+                        is_ground = (getattr(nearby_obj, 'item_type', '') == 'ground')
+                        is_closed_maptile = (getattr(nearby_obj, 'item_type', '') == 'maptile_container' and not getattr(nearby_obj, 'is_opened', False))
+                        is_locked_veh = (getattr(nearby_obj, 'item_type', '') == 'vehicle' and hasattr(nearby_obj, 'has_key_access') and not nearby_obj.has_key_access(game.player))
+
+                        if not is_ground and not is_closed_maptile and not is_locked_veh:
+                            candidate_containers.append((nearby_obj, tr('ui', 'Nearby Container')))
+
+                # Player's carried/worn containers (Bags, Vests, Backpacks)
+                for i, b_item in enumerate(game.player.belt):
+                    if b_item and getattr(b_item, 'inventory', None) is not None:
+                        candidate_containers.append((b_item, f"{tr('ui', 'Belt')} > {tr('ui', 'Slot')} {i+1}"))
+                for i_item in game.player.inventory:
+                    if i_item and getattr(i_item, 'inventory', None) is not None:
+                        candidate_containers.append((i_item, tr('ui', 'Inventory')))
+                for slot_k, c_item in game.player.clothes.items():
+                    if c_item and getattr(c_item, 'inventory', None) is not None:
+                        candidate_containers.append((c_item, f"{tr('ui', 'Gear')} > {str(slot_k).capitalize()}"))
+
+                seen_c_keys = set()
+                for c, loc_str in candidate_containers:
+                    if c is clicked_item: continue
+                    if click_container_item and c is click_container_item: continue
+
+                    c_key = str(getattr(c, 'id', c.name))
+                    if c_key in seen_c_keys: continue
+
+                    # 1. Reject closed containers and locked vehicles
+                    if getattr(c, 'item_type', '') == 'maptile_container' and not getattr(c, 'is_opened', False):
+                        continue
+                    if getattr(c, 'item_type', '') == 'vehicle' and hasattr(c, 'has_key_access') and not c.has_key_access(game.player):
+                        continue
+
+                    # 2. Strict Capacity Check: Clothes MUST have capacity > 0 (prevents 0-capacity clothes from appearing)
+                    c_cap = getattr(c, 'capacity', 0)
+                    if c_cap is None or c_cap <= 0:
+                        continue
+
+                    # 3. Liquid Constraints
+                    c_allows_liquid = does_allow_liquid(c)
+                    if is_liquid and not c_allows_liquid: continue
+                    if not is_liquid and c_allows_liquid: continue
+                    if is_liquid and get_container_available_liquid(c) <= 0: continue
+
+                    # 4. Item Space Availability
+                    can_fit = (len(getattr(c, 'inventory', [])) < c_cap)
+                    if not can_fit and getattr(clicked_item, 'is_stackable', lambda: False)():
+                        for inv_it in getattr(c, 'inventory', []):
+                            if hasattr(inv_it, 'can_stack_with') and inv_it.can_stack_with(clicked_item):
+                                if (getattr(inv_it, 'load', 0) or 0) < (getattr(inv_it, 'capacity', 1) or 1):
+                                    can_fit = True
+                                    break
+
+                    if can_fit:
+                        seen_c_keys.add(c_key)
+                        sub_opts.append(c_key)
+                        c_name = getattr(c, 'name', tr('ui', 'Container'))
+                        
+                        # Extra label detail for liquid vessels
+                        if c_allows_liquid:
+                            max_l = getattr(c, 'max_liquid', None)
+                            cur_l = int(sum(getattr(x, 'load', 1) or 1 for x in getattr(c, 'inventory', []) if getattr(x, 'liquid', False)))
+                            display_map[c_key] = f"{c_name} ({cur_l}/{max_l or '?'})"
+                        else:
+                            display_map[c_key] = f"{c_name}"
+
+                        tooltip_map[c_key] = f"{tr('ui', 'Location:')} {loc_str}"
+
+                if sub_opts:
+                    new_options.append({
+                        'label': 'Send to',
+                        'sub': sub_opts,
+                        'display_names': display_map,
+                        'tooltips': tooltip_map
+                    })
+                continue
+
+            elif opt == 'Remove fuel to':
                 sub_opts = []
                 display_map = {}
                 tooltip_map = {}
@@ -2205,64 +2057,30 @@ def handle_right_click(game, mouse_pos):
                 for c, loc_str in containers_with_loc:
                     if not getattr(c, 'allow_liquid', False): continue
                     
-                    c_item_load = getattr(clicked_item, 'load', 1)
-                    if c_item_load is None: c_item_load = 1
+                    c_id = str(getattr(c, 'id', c.name))
+                    liquid_qty = 0
+                    liquid_name = ""
                     
-                    unit_weight = clicked_item.get_total_weight() / max(1, c_item_load)
-                    avail_weight = float('inf')
+                    if getattr(c, 'allow_liquid', False):
+                        for inside_item in getattr(c, 'inventory', []):
+                            if getattr(inside_item, 'liquid', False):
+                                liquid_qty += getattr(inside_item, 'load', 1) or 1
+                                liquid_name = inside_item.name
                     
-                    cont_weight = getattr(c, 'weight', 0)
-                    if cont_weight is not None and cont_weight > 0:
-                        max_w = cont_weight * 5.0
-                        cur_w = sum(i.get_total_weight() for i in getattr(c, 'inventory', []))
-                        avail_weight = max_w - cur_w
-                        
-                    if avail_weight < unit_weight:
-                        continue 
-                        
-                    can_fit = False
-                    c_cap = getattr(c, 'capacity', 0)
-                    if c_cap is None: c_cap = 0
-                    
-                    if len(c.inventory) < c_cap:
-                        can_fit = True
+                    max_liq_str = f"/{c.max_liquid}" if getattr(c, 'max_liquid', None) is not None else ""
+                    if liquid_qty > 0:
+                        display_str = f"{c.name} ({int(liquid_qty)}{max_liq_str} {liquid_name} {tr('ui', 'units')})"
+                    elif getattr(c, 'allow_liquid', False):
+                        display_str = f"{c.name} (0{max_liq_str} {tr('ui', 'Empty')})"
                     else:
-                        for i in c.inventory:
-                            i_cap = getattr(i, 'capacity', 1)
-                            if i_cap is None: i_cap = 1
-                            i_load = getattr(i, 'load', 1)
-                            if i_load is None: i_load = 1
-                            
-                            if hasattr(i, 'can_stack_with') and i.can_stack_with(clicked_item) and i_load < i_cap:
-                                can_fit = True
-                                break
-                                
-                    if can_fit:
-                        c_id = str(getattr(c, 'id', c.name))
+                        display_str = c.name
                         
-                        liquid_qty = 0
-                        liquid_name = ""
-                        
-                        if getattr(c, 'allow_liquid', False):
-                            for inside_item in getattr(c, 'inventory', []):
-                                if getattr(inside_item, 'liquid', False):
-                                    liquid_qty += getattr(inside_item, 'load', 1) or 1
-                                    liquid_name = inside_item.name
-                        
-                        max_liq_str = f"/{c.max_liquid}" if getattr(c, 'max_liquid', None) is not None else ""
-                        if liquid_qty > 0:
-                            display_str = f"{c.name} ({int(liquid_qty)}{max_liq_str} {liquid_name} {tr('ui', 'units')})"
-                        elif getattr(c, 'allow_liquid', False):
-                            display_str = f"{c.name} (0{max_liq_str} {tr('ui', 'Empty')})"
-                        else:
-                            display_str = c.name
+                    if c_id not in sub_opts:
+                        sub_opts.append(c_id)
+                        display_map[c_id] = display_str
+                        tooltip_map[c_id] = f"{tr('ui', 'Location:')} {loc_str}"
                             
-                        if c_id not in sub_opts:
-                            sub_opts.append(c_id)
-                            display_map[c_id] = display_str
-                            tooltip_map[c_id] = f"{tr('ui', 'Location:')} {loc_str}"
-                            
-                new_options.append({'label': 'Send to', 'sub': sub_opts, 'display_names': display_map, 'tooltips': tooltip_map})
+                new_options.append({'label': 'Remove fuel to', 'sub': sub_opts, 'display_names': display_map, 'tooltips': tooltip_map})
                 continue
 
             elif opt == 'Crafts':
@@ -2381,7 +2199,7 @@ def handle_right_click(game, mouse_pos):
         game.context_menu['options'] = new_options
 
         if game.game_state == 'PAUSED':
-            forbidden_opts = ['Read', 'Drink', 'Use', 'Eat', 'Turn on', 'Turn off', 'Toggle Light', 'Crafts', 'Travel to','Open door/window', 'Close door/window', 'Barricate', 'Unbarricade']
+            forbidden_opts = ['Read', 'Drink', 'Use', 'Eat', 'Turn on', 'Turn off', 'Toggle Light', 'Crafts', 'Travel to', 'Open door/window', 'Close door/window', 'Barricate', 'Unbarricade']
             filtered_options = []
             for o in new_options:
                 label = o if isinstance(o, str) else o.get('label')

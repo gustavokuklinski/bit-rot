@@ -449,6 +449,8 @@ def _start_with_class(game, state, class_def):
             print(f"[Client] Failed to connect to server at {c_ip}:{c_port}")
             from core.messages import display_message
             display_message(game, f"Failed to connect to {c_ip}:{c_port}")
+            # Exit instead of freezing
+            game.running = False
         return
 
     # Singleplayer branch below...

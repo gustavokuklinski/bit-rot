@@ -922,13 +922,12 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
 
                     success, ack_data = game.client.connect(c_ip, c_port, final_player_data)
                     if success and ack_data:
-                        print(f"[Client] Connected! Loading server session '{ack_data.get('save_folder_name')}'...")
+                        print(f"[Client] Connected! Initializing world...")
                         init_client_world(game, ack_data, final_player_data)
                         game.game_state = 'PLAYING'
                     else:
                         print(f"[Client] Failed to connect to server at {c_ip}:{c_port}")
-                        from core.messages import display_message
-                        display_message(game, f"Failed to connect to {c_ip}:{c_port}")
+                        game.running = False
                     return
 
                 # Normal single player logic below...

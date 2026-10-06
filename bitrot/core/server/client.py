@@ -71,7 +71,6 @@ class GameClient:
             self.socket.connect((self.target_host, self.target_port))
             print(f"[Client] TCP socket connected. Sending JOIN_REQ...")
 
-            # Clean payload of non-serializable fields
             clean_player_data = {
                 'name': player_data.get('name', 'Survivor'),
                 'sex': player_data.get('sex', 'Male'),
@@ -88,7 +87,6 @@ class GameClient:
             }
             send_msg(self.socket, join_payload)
 
-            # Wait for JOIN_ACK without blocking locks
             self.socket.setblocking(False)
             start_t = time.time()
             ack_data = None
@@ -133,7 +131,6 @@ class GameClient:
             self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.udp_socket.setblocking(False)
 
-            # Register with server's UDP listener
             reg_bytes = pack_payload({
                 'type': NetMsg.UDP_REGISTER,
                 'player_id': self.player_id
@@ -179,9 +176,9 @@ class GameClient:
             self.udp_socket = None
 
     def _network_worker(self):
-        """Dedicated background thread for TCP/UDP socket I/O and msgpack deserialization."""
+        """Dedicated background thread for TCP/UDP socket I/O."""
         while self.thread_running and self.connected and self.socket:
-            # 1. Send outgoing TCP messages (Reliable)
+            # 1. Send outgoing TCP messages
             while not self.outbox.empty():
                 try:
                     msg = self.outbox.get_nowait()
@@ -195,7 +192,7 @@ class GameClient:
                     self.inbox.put({'type': '__DISCONNECTED__'})
                     return
 
-            # 2. Send outgoing UDP packets (Unreliable fast stream)
+            # 2. Send outgoing UDP packets
             while not self.udp_outbox.empty():
                 try:
                     udp_msg = self.udp_outbox.get_nowait()
@@ -207,13 +204,13 @@ class GameClient:
                 except Exception:
                     pass
 
-            # 3. Receive incoming messages using select on both TCP and UDP
+            # 3. Poll readable sockets
             readable_sockets = [self.socket]
             if self.udp_socket:
                 readable_sockets.append(self.udp_socket)
 
             try:
-                r_list, _, _ = select.select(readable_sockets, [], [], 0.002)
+                r_list, _, _ = select.select(readable_sockets, [], [], 0.005)
                 for s in r_list:
                     if s == self.socket:
                         msgs, self.buffer, is_alive = recv_msgs(self.socket, self.buffer)
@@ -248,10 +245,11 @@ class GameClient:
 
             m_type = msg.get('type')
 
-            if m_type == '__DISCONNECTED__':
-                display_message(self.game, "[Network] Disconnected from server.")
+            # SERVER DISCONNECT OR CRASH: Shut down client application completely
+            if m_type == '__DISCONNECTED__' or m_type == NetMsg.SERVER_CLOSED:
+                print("[Client] Connection to server lost/closed. Exiting game...")
                 self.disconnect()
-                self.game.game_state = 'MENU'
+                self.game.running = False
                 return
 
             if m_type == NetMsg.NEW_CHUNKS:
@@ -290,7 +288,7 @@ class GameClient:
                     if existing_id not in current_p_ids:
                         del self.game.remote_players[existing_id]
 
-                # Zombies (filtered to player's current layer)
+                # Zombies
                 if not hasattr(self.game, '_synced_zombies'):
                     self.game._synced_zombies = {}
 
@@ -339,7 +337,7 @@ class GameClient:
                 self.game.zombies = [z for z in self.game._synced_zombies.values() if getattr(z, 'layer', 1) == curr_layer]
                 self.game.active_zombies = self.game.zombies
 
-                # Animals (filtered to player's current layer)
+                # Animals
                 if not hasattr(self.game, '_synced_animals'):
                     self.game._synced_animals = {}
 
@@ -367,7 +365,7 @@ class GameClient:
 
                 self.game.active_animals = [a for a in self.game._synced_animals.values() if getattr(a, 'layer', 1) == curr_layer]
 
-                # Ground Items & Corpses (filtered to player's current layer)
+                # Ground Items & Corpses
                 if not hasattr(self.game, '_synced_items'):
                     self.game._synced_items = {}
 
@@ -423,7 +421,7 @@ class GameClient:
                 self.game.items_on_ground = [it for it in self.game._synced_items.values() if getattr(it, 'layer', 1) == curr_layer]
                 self.game.items_on_ground.extend(self.game.active_animals)
 
-                # NPCs (filtered to player's current layer)
+                # NPCs
                 if not hasattr(self.game, '_synced_npcs'):
                     self.game._synced_npcs = {}
                 current_n_ids = set()
@@ -478,51 +476,8 @@ class GameClient:
                     if getattr(dummy, 'layer', 1) == curr_layer:
                         self.game.npcs.add(dummy)
 
-                # Vehicles (Surface only)
-                if curr_layer == 1:
-                    if hasattr(self.game.map_manager, 'vehicles'):
-                        sync_v_ids = set()
-                        from core.entities.vehicle.vehicle import Vehicle
-                        from core.entities.vehicle.vehicle_data import VehicleData
-                        for v_data in msg.get('vehicles', []):
-                            vid = v_data.get('id')
-                            sync_v_ids.add(vid)
-
-                            existing_v = None
-                            for v in self.game.vehicles:
-                                if getattr(v, 'id', None) == vid:
-                                    existing_v = v
-                                    break
-
-                            if not existing_v:
-                                v_def = VehicleData.get_definition_by_name(v_data['name'])
-                                existing_v = Vehicle(v_data['name'], v_data['x'], v_data['y'], TILE_SIZE, TILE_SIZE, v_def['images'] if v_def else None, v_def['stats'] if v_def else {}, facing=v_data['facing'])
-                                existing_v.id = vid
-                                self.game.map_manager.vehicles.append(existing_v)
-                                self.game.vehicles.append(existing_v)
-                                self.game.containers.append(existing_v)
-                                self.game.obstacles.append(existing_v.rect)
-
-                            existing_v.x = v_data['x']
-                            existing_v.y = v_data['y']
-                            existing_v.rect.topleft = (int(existing_v.x), int(existing_v.y))
-                            existing_v.facing = v_data['facing']
-                            existing_v.active = v_data['active']
-                            existing_v.lights = v_data['lights']
-
-                        for v in list(self.game.vehicles):
-                            if getattr(v, 'id', None) not in sync_v_ids:
-                                if v in self.game.vehicles: self.game.vehicles.remove(v)
-                                if v in self.game.map_manager.vehicles: self.game.map_manager.vehicles.remove(v)
-                                if v in self.game.containers: self.game.containers.remove(v)
-                                if v.rect in self.game.obstacles: self.game.obstacles.remove(v.rect)
-                else:
-                    self.game.vehicles = []
-                    if hasattr(self.game.map_manager, 'vehicles'):
-                        self.game.map_manager.vehicles = []
-
                 # Vehicles
-                if hasattr(self.game.map_manager, 'vehicles'):
+                if curr_layer == 1 and hasattr(self.game.map_manager, 'vehicles'):
                     sync_v_ids = set()
                     from core.entities.vehicle.vehicle import Vehicle
                     from core.entities.vehicle.vehicle_data import VehicleData
@@ -559,8 +514,6 @@ class GameClient:
                             if v in self.game.containers: self.game.containers.remove(v)
                             if v.rect in self.game.obstacles: self.game.obstacles.remove(v.rect)
 
-                self.game.items_on_ground.extend(self.game.active_animals)
-
                 # Containers
                 sync_conts = {(c['x'], c['y']): c for c in msg.get('containers', [])}
                 for c in getattr(self.game, 'containers', []):
@@ -571,16 +524,13 @@ class GameClient:
                             c.is_opened = c_data.get('is_opened', False)
                             c.is_opening = c_data.get('is_opening', False)
                             
-                            # --- FIX: Standard Container State-Locking (Prevents Item Duplication) ---
                             server_state = str([i.get('id', '') + str(i.get('load', '')) for i in c_data.get('inventory', [])])
                             local_state = getattr(c, '_last_sync_state', '')
 
                             if getattr(c, '_awaiting_server_sync', False):
-                                # We made local changes. Ignore server until it catches up
                                 if server_state == local_state:
                                     c._awaiting_server_sync = False
                             else:
-                                # Safe to accept server changes
                                 if server_state != local_state:
                                     c.inventory = [Item.from_dict(d) for d in c_data.get('inventory', []) if d]
                                     c._last_sync_state = server_state
@@ -607,7 +557,6 @@ class GameClient:
                     for th_data in msg['tile_health']:
                         gx, gy, hp = th_data['x'], th_data['y'], th_data['hp']
                         self.game.map_states[map_name]['tile_health'][(gx, gy)] = hp
-                        # Activate the visual timer so it renders on the client
                         self.game.map_manager.tile_hit_timers[(gx, gy)] = 60
 
                 # World Time & Weather
@@ -670,12 +619,7 @@ class GameClient:
                 text = msg.get('text', '')
                 display_message(self.game, f"{sender}: {text}")
 
-            elif m_type == NetMsg.SERVER_CLOSED:
-                display_message(self.game, "[Network] Host closed the server.")
-                self.disconnect()
-                self.game.game_state = 'MENU'
-
-        # 2. Queue local player position updates over UDP (Non-blocking high-frequency stream)
+        # 2. Queue local player position updates over UDP
         if self.game.player and not self.game.player.is_dead and self.server_udp_addr:
             wpn = self.game.player.active_weapon.name if self.game.player.active_weapon else None
             clothes_simple = {slot: (item.name if item else None) for slot, item in getattr(self.game.player, 'clothes', {}).items()}
@@ -707,7 +651,7 @@ class GameClient:
             }
             self.udp_outbox.put(update_payload)
 
-        # 3. Queue active container syncs over TCP (Reliable transactions)
+        # 3. Queue active container syncs over TCP
         active_containers = []
         for modal in self.game.modals:
             if modal['type'] == 'container':
@@ -719,12 +663,10 @@ class GameClient:
         for c in active_containers:
             if getattr(c, 'item_type', '') == 'ground': continue
             
-            # --- FIX: Always calculate local hash and lock it if changed ---
             current_state = str([getattr(i, 'id', '') + str(getattr(i, 'load', '')) for i in getattr(c, 'inventory', [])])
-            
             if not hasattr(c, '_last_sync_state') or c._last_sync_state != current_state:
                 c._last_sync_state = current_state
-                c._awaiting_server_sync = True  # <--- MUST BE TRUE TO PREVENT OVERWRITES
+                c._awaiting_server_sync = True
                 
                 send_msg(self.socket, {
                     'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
@@ -734,11 +676,12 @@ class GameClient:
                 })
 
 def init_client_world(game, ack_data, player_data):
+    # Store temporary client chunks in data.rot/server/client_cache/ instead of creating a save directory
     save_folder = ack_data.get('save_folder_name', 'client_session')
     map_filename = ack_data.get('map_filename', 'map_L1_0_0_map.csv')
 
-    save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_folder)
-    map_dir = os.path.join(save_path, "map")
+    cache_path = os.path.join(get_writable_dir(), "data.rot", "server", "client_cache")
+    map_dir = os.path.join(cache_path, "map")
     os.makedirs(map_dir, exist_ok=True)
 
     chunk_files = ack_data.get('chunk_files', {})
@@ -748,9 +691,9 @@ def init_client_world(game, ack_data, player_data):
             with open(out_file, 'w', encoding='utf-8') as cf:
                 cf.write(content)
         except Exception as e:
-            print(f"Error saving chunk file {fname}: {e}")
+            print(f"Error saving cached chunk file {fname}: {e}")
 
-    game.current_save_folder_name = save_folder
+    game.current_save_folder_name = None  # Do not link to a singleplayer save folder
     game.map_manager.map_folder = map_dir
     game.map_manager.refresh_maps()
 

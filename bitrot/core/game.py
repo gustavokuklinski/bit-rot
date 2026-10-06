@@ -446,8 +446,12 @@ class Game:
 
                 if self.is_server and self.server:
                     self.server.update()
+
                 if self.is_client and self.client:
                     self.client.update()
+                    # If the connection closed during update(), exit the game loop immediately
+                    if not self.running:
+                        break
 
                 # The State Machine Dispatcher
                 if self.game_state == 'MENU':
@@ -466,13 +470,14 @@ class Game:
                     run_paused(self)
                 elif self.game_state == 'GAME_OVER':
                     run_game_over(self)
-                
 
         except Exception as e:
             self.logger.crash("CRITICAL GAME CRASH DETECTED", e)
             self.running = False
             raise e
         finally:
+            if self.is_client and self.client:
+                self.client.disconnect()
             self.logger.info("Game Execution Ended safely.")
 
     def _update_screen(self):

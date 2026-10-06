@@ -147,7 +147,7 @@ class DedicatedServerGame:
         self.server_dir_base = os.path.join(get_writable_dir(), "data.rot", "server")
         os.makedirs(self.server_dir_base, exist_ok=True)
 
-        server_xml_path = os.path.join(self.server_dir_base, "world.xml")
+        server_xml_path = os.path.join(self.server_dir_base, "server_world.xml")
         if not os.path.exists(server_xml_path):
             candidates = [
                 os.path.join(get_writable_dir(), "data.rot", "save", "config", "world.xml"),
@@ -177,7 +177,7 @@ class DedicatedServerGame:
         os.makedirs(self.map_path, exist_ok=True)
         os.makedirs(self.player_dir, exist_ok=True)
 
-        # Copy the active world.xml into the session directory
+        # Copy the active server_world.xml into the session directory as world.xml
         shutil.copyfile(server_xml_path, os.path.join(self.save_path, "world.xml"))
         self.map_manager.map_folder = self.map_path
 
