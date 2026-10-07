@@ -3,6 +3,63 @@ import pygame
 import core.data.config
 from core.entities.item.item import Item
 
+
+ALLOWED_POCKET_SLOTS = {'arms', 'legs', 'util', 'util1', 'util2', 'util3'}
+
+def item_allows_belt(item):
+    """Safely checks if an item allows going to belt (defaults to False if allow_belt='false')."""
+    if not item:
+        return False
+    val = getattr(item, 'allow_belt', None)
+    if val is not None:
+        if isinstance(val, str):
+            return val.lower().strip() in ('true', '1')
+        return bool(val)
+    if hasattr(item, 'properties') and isinstance(item.properties, dict):
+        val = item.properties.get('allow_belt')
+        if val is not None:
+            if isinstance(val, str):
+                return val.lower().strip() in ('true', '1')
+            return bool(val)
+    return False
+
+def is_valid_send_to_container(obj):
+    """
+    Checks if an object is a valid destination container for 'Send to':
+    - Items with type/item_type == 'container'
+    - Clothes with id/slot in 'arms', 'legs', 'util' having capacity > 0 (pockets)
+    - World containers (maptile_container, Corpse)
+    - Vehicles (trunk)
+    Excludes weapons, tools, ammo, items without capacity, and non-pocket clothing.
+    """
+    if not obj:
+        return False
+
+    itype = getattr(obj, 'item_type', '') or getattr(obj, 'type', '') or ''
+
+    # Weapons and non-container items are strictly prohibited
+    if itype.startswith('weapon') or itype in ('tool', 'resource', 'currency', 'recipe', 'text', 'map', 'liquid'):
+        return False
+
+    cap = getattr(obj, 'capacity', 0) or 0
+    if cap <= 0:
+        return False
+
+    # Standard containers, corpses, vehicles, and maptile containers
+    if itype in ('container', 'maptile_container', 'vehicle') or type(obj).__name__ in ('Container', 'Corpse', 'Vehicle'):
+        return True
+
+    # Clothes with pockets: id/slot must be 'arms', 'legs', or 'util'
+    if itype == 'cloth' or type(obj).__name__ == 'Item':
+        slot = getattr(obj, 'slot', None)
+        if not slot and hasattr(obj, 'properties') and isinstance(obj.properties, dict):
+            slot = obj.properties.get('slot', {}).get('value')
+        slot_str = str(slot).lower().strip() if slot else ''
+        if slot_str in ALLOWED_POCKET_SLOTS:
+            return True
+
+    return False
+
 def does_allow_liquid(obj):
     """Safely checks if an object allows liquid, accounting for string-parsed XML booleans."""
     if not obj:
@@ -388,3 +445,10 @@ def is_container_on_player(cont, player):
     if check_list(getattr(player, 'inventory', [])): return True
     if hasattr(player, 'clothes') and check_list(player.clothes.values()): return True
     return False
+
+def is_container_type(obj):
+    """Checks if an object is a container (item_type='container', maptile container, corpse, or vehicle)."""
+    if not obj:
+        return False
+    itype = getattr(obj, 'item_type', '') or getattr(obj, 'type', '') or ''
+    return itype in ('container', 'maptile_container', 'vehicle') or type(obj).__name__ in ('Container', 'Corpse', 'Vehicle')

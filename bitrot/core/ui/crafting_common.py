@@ -468,7 +468,7 @@ def draw_craft_action_footer(modal, recipe, details_x, details_y, details_w, lis
         if btn_rect.collidepoint(mouse_pos):
             on_execute(recipe, cur_count)
 
-def execute_recipe_craft(game, recipe, player=None, count=1):
+def execute_recipe_craft(game, recipe, player=None, count=1, preferred_item_id=None):
     """Executes a craft action for `count` batches, using Nearby items first and auto-stacking output."""
     if player is None:
         player = game.player
@@ -491,7 +491,7 @@ def execute_recipe_craft(game, recipe, player=None, count=1):
         return
 
     locations = get_crafting_item_locations(player, game, include_nearby=True, nearby_containers=nearby)
-    locations = prioritize_locations_for_craft(locations)
+    locations = prioritize_locations_for_craft(locations, preferred_id=preferred_item_id)
 
     for req in recipe.ingredients:
         if not req.get('destroy', True):
@@ -526,17 +526,21 @@ def execute_recipe_craft(game, recipe, player=None, count=1):
                 if hasattr(player.progression, 'add_xp'):
                     player.progression.add_xp(player, attr, amount * count)
 
+        total_repair_amount = 0
         target_repair_item = None
         if craft_type == 'repair':
             locs_now = get_crafting_item_locations(player, game, include_nearby=True, nearby_containers=nearby_now)
-            locs_now = prioritize_locations_for_craft(locs_now)
+            locs_now = prioritize_locations_for_craft(locs_now, preferred_id=preferred_item_id)
             for container, key, it, ctype, _ in locs_now:
-                if it.name == recipe.output_name and it.durability is not None and it.durability < it.max_durability:
+                if it.name.lower() == recipe.output_name.lower() and it.durability is not None and it.durability < it.max_durability:
                     target_repair_item = it
                     break
             if not target_repair_item:
-                display_message(f"{tr('msg', 'No damaged')} {recipe.output_name} {tr('msg', 'found.')}")
+                display_message(f"{tr('msg', 'No damaged')} {tr('item', recipe.output_name)} {tr('msg', 'found.')}")
                 return
+
+        maint_level = player.progression.get_maintenance(player)
+        maint_scale = min(10, maint_level) / 10.0
 
         # Deduct ingredients prioritizing Nearby / Ground items first
         for req in recipe.ingredients:
@@ -547,15 +551,21 @@ def execute_recipe_craft(game, recipe, player=None, count=1):
             removed = 0
 
             locs_now = get_crafting_item_locations(player, game, include_nearby=True, nearby_containers=nearby_now)
-            locs_now = prioritize_locations_for_craft(locs_now)
+            locs_now = prioritize_locations_for_craft(locs_now, preferred_id=preferred_item_id)
 
             for container, key, it, ctype, _ in locs_now:
                 if removed >= to_remove:
                     break
-                if it.name in valid_names and it != target_repair_item:
+                if any(it.name.lower() == vn.lower() for vn in valid_names) and it != target_repair_item:
                     has_item_load = (it.load is not None)
                     item_qty = it.load if has_item_load else 1
                     take = min(to_remove - removed, item_qty)
+
+                    if craft_type == 'repair':
+                        if getattr(it, 'min_restore', None) is not None and getattr(it, 'max_restore', None) is not None:
+                            effective_min = it.min_restore + (it.max_restore - it.min_restore) * maint_scale
+                            restore_per_unit = random.randint(int(effective_min), int(it.max_restore))
+                            total_repair_amount += (restore_per_unit * take)
 
                     if has_item_load:
                         it.load -= take
@@ -577,11 +587,29 @@ def execute_recipe_craft(game, recipe, player=None, count=1):
                     if removed >= to_remove:
                         break
 
-        # Give results and auto-stack
-        add_craft_results_to_player(player, game, recipe, count=count)
+        if craft_type == 'repair' and target_repair_item:
+            if total_repair_amount <= 0:
+                total_repair_amount = target_repair_item.max_durability - target_repair_item.durability
+
+            old_durability = target_repair_item.durability
+            target_repair_item.durability = min(target_repair_item.max_durability, target_repair_item.durability + total_repair_amount)
+            restored = target_repair_item.durability - old_durability
+            display_message(f"{tr('msg', 'Repaired')} {tr('item', target_repair_item.name)} {tr('msg', 'by')} {int(restored)} {tr('msg', 'points.')}")
+        else:
+            # Give results and auto-stack
+            add_craft_results_to_player(player, game, recipe, count=count)
+
+    if craft_type == 'dismantle':
+        action_label = f"{tr('ui', 'Dismantling')} {tr('item', recipe.output_name)}"
+    elif craft_type == 'repair':
+        action_label = f"{tr('ui', 'Repairing')} {tr('item', recipe.output_name)}"
+    else:
+        action_label = f"{tr('ui', 'Crafting')} {tr('item', recipe.output_name)}"
+    if count > 1:
+        action_label += f" x{count}"
 
     player.start_action(
-        f"Crafting {recipe.output_name} x{count}",
+        action_label,
         total_time,
         craft_complete,
         cancel_on_move=True,
