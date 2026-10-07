@@ -60,13 +60,7 @@ def load_assets():
     except pygame.error as e:
         print(f"Error loading mechanics icon: {e}")
         assets['mechanics_icon'] = None
-    
-    try:
-        assets['seats_icon'] = pygame.image.load(SPRITE_PATH + 'ui/seats.png').convert_alpha()
-    except pygame.error as e:
-        print(f"Error loading seats icon: {e}")
-        assets['seats_icon'] = None
-        
+           
     try:
         # This image should be a white circle fading to transparent
         assets['light_texture'] = pygame.image.load(SPRITE_PATH + 'ui/light.png').convert_alpha()

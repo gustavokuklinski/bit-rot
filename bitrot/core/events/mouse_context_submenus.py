@@ -7,6 +7,7 @@ from core.data.recipe_manager import RecipeManager
 from core.entities.item.item_helpers import does_allow_liquid, get_container_available_liquid, item_allows_belt, is_valid_send_to_container
 from core.events.mouse_drag_utils import check_container_weight_limit, check_recursive_containment
 from core.ui.crafting_common import get_recipe_status_details, is_recipe_relevant_to_item
+from core.events.mouse_context_helpers import is_fuel_item
 
 HAIR_STYLES = ['Bald', 'Mowalk', 'Cut', 'Crew', 'Long']
 
@@ -68,11 +69,95 @@ def build_equip_submenu(clicked_item, click_source, game):
         }
     return None
 
+def build_install_vehicle_submenu(clicked_item, game):
+    """Builds submenu for installing a part or refueling a nearby or open vehicle."""
+    veh = None
+    veh_modal = next((m for m in reversed(game.modals) if m.get('type') == 'vehicle'), None)
+    if veh_modal and veh_modal.get('vehicle'):
+        veh = veh_modal.get('vehicle')
+    elif getattr(game.player, 'vehicle', None):
+        veh = game.player.vehicle
+    else:
+        for v in getattr(game, 'vehicles', []) + [c for c in game.containers if getattr(c, 'item_type', '') == 'vehicle']:
+            if math.hypot(game.player.rect.centerx - v.rect.centerx, game.player.rect.centery - v.rect.centery) <= TILE_SIZE * 2.5:
+                veh = v
+                break
+
+    if not veh:
+        return None
+
+    # Check whether the vehicle has its key in the key slot (or does not require one)
+    has_veh_key = (not veh.required_key_id) or (veh.equipment.get('key') is not None)
+    is_key = veh.can_equip(clicked_item, 'key')
+
+    # If the vehicle has no key in the key slot, ONLY allow installing the key itself!
+    if not has_veh_key and not is_key:
+        return None
+
+    sub_opts = []
+    display_map = {}
+    tooltip_map = {}
+
+    # Key Slot
+    if is_key:
+        sub_opts.append('key')
+        display_map['key'] = tr('ui', "Key Slot")
+        tooltip_map['key'] = tr('ui', "Insert key into vehicle ignition")
+
+    # Non-key parts require key inserted in slot
+    if has_veh_key:
+        # Check fuel
+        if veh.can_equip(clicked_item, 'fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit':
+            sub_opts.append('fuel')
+            display_map['fuel'] = tr('ui', "Fuel Tank")
+            tooltip_map['fuel'] = f"{tr('ui', 'Add fuel to')} {veh.name}"
+        # Check motor
+        if veh.can_equip(clicked_item, 'motor'):
+            sub_opts.append('motor')
+            display_map['motor'] = tr('ui', "Engine")
+            tooltip_map['motor'] = f"{tr('ui', 'Install engine in')} {veh.name}"
+        # Check battery
+        if veh.can_equip(clicked_item, 'battery'):
+            sub_opts.append('battery')
+            display_map['battery'] = tr('ui', "Battery")
+            tooltip_map['battery'] = f"{tr('ui', 'Install battery in')} {veh.name}"
+        # Check tires
+        for t_slot in getattr(veh, 'required_tires', []):
+            if veh.can_equip(clicked_item, t_slot):
+                sub_opts.append(t_slot)
+                clean_name = t_slot.replace('tire_', '').replace('_', ' ').title()
+                display_map[t_slot] = tr('ui', clean_name)
+                tooltip_map[t_slot] = f"{tr('ui', 'Mount tire on')} {clean_name}"
+
+    if not sub_opts:
+        return None
+
+    return {
+        'label': 'Install on Vehicle',
+        'sub': sub_opts,
+        'display_names': display_map,
+        'tooltips': tooltip_map
+    }
+
 def build_send_to_submenu(clicked_item, click_source, click_container_item, game):
     sub_opts = []
     display_map = {}
     tooltip_map = {}
-    is_liquid = getattr(clicked_item, 'liquid', False)
+
+    # Loose liquids must spill when sent to raw inventory
+    is_liquid = bool(getattr(clicked_item, 'liquid', False))
+
+    if click_source == 'vehicle_equipment':
+        # Vehicle parts can ONLY be sent to inventory. Never directly to Ground.
+        sub_opts = ['Inventory']
+        display_map['Inventory'] = tr('ui', 'Inventory')
+        tooltip_map['Inventory'] = f"{tr('ui', 'Send to')} {tr('ui', 'Inventory')}"
+        return {
+            'label': 'Send to',
+            'sub': sub_opts,
+            'display_names': display_map,
+            'tooltips': tooltip_map
+        }
 
     if click_source != 'inventory' and not is_liquid:
         sub_opts.append('Inventory')

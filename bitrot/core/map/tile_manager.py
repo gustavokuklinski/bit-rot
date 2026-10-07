@@ -141,8 +141,7 @@ class TileManager:
                                             'key': key_value,
                                             'fuel': car_node.find('fuel').get('value', '0'),
                                             'motor': car_node.find('motor').get('value', '1'),
-                                            'battery': car_node.find('battery').get('value', '1'),
-                                            'seats': car_node.find('seats').get('value', '4') if car_node.find('seats') is not None else '4'
+                                            'battery': car_node.find('battery').get('value', '1')
                                         }
                                         lights_node = car_node.find('lights')
                                         if lights_node is not None:

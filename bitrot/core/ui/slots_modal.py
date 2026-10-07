@@ -139,41 +139,27 @@ def draw_slots_modal(surface, game, player, modal, assets, mouse_pos):
     draw_scrollbar(surface, modal, bar_rect, view_h, total_height, modal['scroll_offset_y'])
 
     # --- 6. Draw Tooltips and Breadcrumbs ---
-    hovered_header = None
-    for header_data in modal.get('header_rects', []):
-        if header_data['rect'].collidepoint(mouse_pos):
-            hovered_header = header_data
-            break
+    is_top_modal = (game.modals and game.modals[-1]['id'] == modal['id'])
 
-    if hovered_header and not getattr(game, 'is_dragging', False) and not modal.get('is_dragging_scrollbar') and not modal.get('is_dragging', False):
-        # Draw Breadcrumb Tooltip on Container Header
+    hovered_header = None
+    if is_top_modal:
+        for header_data in modal.get('header_rects', []):
+            if header_data['rect'].collidepoint(mouse_pos):
+                hovered_header = header_data
+                break
+
+    if is_top_modal and hovered_header and not getattr(game, 'is_dragging', False) and not modal.get('is_dragging_scrollbar') and not modal.get('is_dragging', False):
         bc_text = hovered_header['breadcrumb']
         bc_surf = font_12.render(bc_text, False, YELLOW)
         bc_rect = bc_surf.get_rect(midbottom=(mouse_pos[0], mouse_pos[1] - 15))
-        
         if bc_rect.left < 0: bc_rect.left = 5
         if bc_rect.right > GAME_WIDTH: bc_rect.right = GAME_WIDTH - 5
-        
         bg_rect = bc_rect.inflate(10, 6)
         s = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
         s.fill((0, 0, 0, 220))
         surface.blit(s, bg_rect.topleft)
         pygame.draw.rect(surface, WHITE, bg_rect, 1)
         surface.blit(bc_surf, bc_rect)
-
-    hovered_slot = None
-    for slot_data in modal.get('slot_rects', []):
-        if slot_data['rect'].collidepoint(mouse_pos):
-            hovered_slot = slot_data
-            break
-
-    if hovered_slot and not getattr(game, 'is_dragging', False) and not modal.get('is_dragging_scrollbar') and not modal.get('is_dragging', False):
-        # Draw Item Tooltip for contents
-        c = hovered_slot['container']
-        idx = hovered_slot['index']
-        if idx < len(c.inventory):
-            item = c.inventory[idx]
-            draw_tooltip(surface, item, (mouse_pos[0] + 15, mouse_pos[1] + 15))
 
     buttons = [close_button]
     return buttons

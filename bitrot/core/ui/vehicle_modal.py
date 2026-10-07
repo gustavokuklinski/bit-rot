@@ -193,13 +193,11 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
             motor_val, motor_max = float(motor_item.durability), float(getattr(motor_item, 'max_durability', 100.0))
     motor_pct = max(0.0, min(1.0, (motor_val / motor_max) if motor_max > 0 else 0.0))
 
+    fuel_max = float(getattr(vehicle, 'max_fuel', 100.0))
+    fuel_val = float(vehicle.fuel)
     fuel_item = vehicle.equipment.get('fuel')
-    fuel_val, fuel_max = 0.0, 100.0
-    if fuel_item:
-        if hasattr(fuel_item, 'load') and fuel_item.load is not None:
-            fuel_val = float(fuel_item.load)
-        if hasattr(fuel_item, 'capacity') and fuel_item.capacity is not None:
-            fuel_max = float(fuel_item.capacity)
+    if fuel_item and hasattr(fuel_item, 'load') and fuel_item.load is not None:
+        fuel_val = float(fuel_item.load)
     fuel_pct = max(0.0, min(1.0, (fuel_val / fuel_max) if fuel_max > 0 else 0.0))
 
     batt_item = vehicle.equipment.get('battery')
@@ -370,7 +368,8 @@ def draw_vehicle_modal(surface, game, modal, assets, mouse_pos):
     elif active_tab == 'Mechanics':
         draw_vehicle_mechanics_tab(surface, vehicle, content_x, content_y, base_modal.modal_w, mouse_pos, modal, assets)
 
-    if 'equipment_rects' in modal:
+    is_top_modal = (game.modals and game.modals[-1]['id'] == modal['id'])
+    if is_top_modal and 'equipment_rects' in modal:
         for slot_name, rect in modal['equipment_rects'].items():
             if rect.collidepoint(mouse_pos):
                 item = vehicle.equipment.get(slot_name)

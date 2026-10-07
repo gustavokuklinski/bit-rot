@@ -16,7 +16,7 @@ from core.entities.item.item_helpers import (
 from core.events.mouse_drag_utils import check_container_weight_limit
 from core.events.mouse_context_helpers import (
     calculate_boat_fuel_cost, get_player_fuel_units,
-    consume_player_fuel_units, teleport_player_to_chunk, is_barricade_item
+    consume_player_fuel_units, teleport_player_to_chunk, is_barricade_item, is_fuel_item
 )
 from core.ui.crafting_common import (
     execute_recipe_craft, get_recipe_status_details,
@@ -55,6 +55,16 @@ def remove_from_source(game, target_item, source, index, container_item=None):
         if target_item in game.items_on_ground:
             game.items_on_ground.remove(target_item)
             return target_item
+    elif source == 'vehicle_equipment' and container_item:
+        if hasattr(container_item, 'remove_equipment'):
+            return container_item.remove_equipment(index)
+        elif hasattr(container_item, 'equipment') and index in container_item.equipment:
+            removed = container_item.equipment[index]
+            container_item.equipment[index] = None
+            if hasattr(container_item, 'update_stats_from_equipment'):
+                container_item.update_stats_from_equipment()
+            return removed
+
     return None
 
 def handle_context_menu_click(game, mouse_pos):
@@ -225,8 +235,16 @@ def handle_context_menu_click(game, mouse_pos):
 
             elif option == 'Send to':
                 target_dest = target_sub_slot
+
+                # Verify key requirement if sending from vehicle equipment
+                if source == 'vehicle_equipment' and container_item:
+                    if container_item.equipment.get('key') is None:
+                        display_message(tr('msg', "Vehicle requires key inserted in the Key slot."))
+                        game.context_menu['active'] = False
+                        return
+
                 is_external = (
-                    source in ['nearby', 'ground', 'container_map'] 
+                    source in ['nearby', 'ground', 'container_map', 'vehicle_equipment'] 
                     or (source == 'container' and container_item and not is_container_on_player(container_item, game.player))
                 )
 
@@ -235,8 +253,22 @@ def handle_context_menu_click(game, mouse_pos):
                         game.context_menu['active'] = False
                         return
 
+                    if source == 'vehicle_equipment' and index == 'fuel':
+                        display_message(tr('msg', "Use 'Remove fuel to' to transfer fuel into a container."))
+                        game.context_menu['active'] = False
+                        return
+
                     if getattr(item, 'liquid', False):
-                        display_message(tr('msg', "Liquid spills without a proper container."))
+                        removed = remove_from_source(game, item, source, index, container_item)
+                        display_message(tr('msg', f"The {item.name} spills on the ground and is lost."))
+                        if hasattr(game, 'splashes'):
+                            game.splashes.append({
+                                'pos': (game.player.rect.centerx, game.player.rect.bottom),
+                                'time': pygame.time.get_ticks(),
+                                'duration': 350,
+                                'radius': 4,
+                                'type': 'hit_puff'
+                            })
                         game.context_menu['active'] = False
                         return
 
@@ -244,18 +276,64 @@ def handle_context_menu_click(game, mouse_pos):
                         removed = remove_from_source(game, item, source, index, container_item)
                         if removed:
                             removed.is_placed = False
-                            game.player.inventory.append(removed)
-                            if hasattr(game.player, 'stack_item_in_inventory'):
-                                game.player.stack_item_in_inventory(removed)
+                            if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                game.player.inventory.append(removed)
+                                if hasattr(game.player, 'stack_item_in_inventory'):
+                                    game.player.stack_item_in_inventory(removed)
+                            else:
+                                removed.rect.center = game.player.rect.center
+                                removed.x, removed.y = removed.rect.topleft
+                                game.items_on_ground.append(removed)
+                                display_message(tr('msg', "Inventory full. Item dropped on ground."))
+
                             if hasattr(game, 'sound_manager'):
                                 game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
                             display_message(f"{tr('msg', 'Sent')} {tr('item', removed.name)} {tr('msg', 'to inventory.')}")
 
-                    transfer_time = max(0.1, item.get_total_weight() * 0.2)
+                    item_weight = item.get_total_weight() if hasattr(item, 'get_total_weight') else getattr(item, 'weight', 1.0)
+                    transfer_time = max(0.5, item_weight * 0.4)
                     if is_external:
-                        game.player.start_action(tr('msg', "Looting"), transfer_time, do_send_inv, xp_reward=0.5)
+                        action_label = f"{tr('ui', 'Removing')} {tr('item', item.name)}" if source == 'vehicle_equipment' else tr('msg', "Looting")
+                        game.player.start_action(action_label, transfer_time, do_send_inv, xp_reward=0.5)
                     else:
                         do_send_inv()
+
+                elif target_dest == 'Ground':
+                    if source == 'vehicle_equipment':
+                        display_message(tr('msg', "Vehicle parts must be sent to inventory first."))
+                        game.context_menu['active'] = False
+                        return
+
+                    if getattr(item, 'liquid', False):
+                        remove_from_source(game, item, source, index, container_item)
+                        display_message(tr('msg', f"The {item.name} spills on the ground."))
+                        if hasattr(game, 'splashes'):
+                            game.splashes.append({
+                                'pos': (game.player.rect.centerx, game.player.rect.bottom),
+                                'time': pygame.time.get_ticks(),
+                                'duration': 350,
+                                'radius': 4,
+                                'type': 'hit_puff'
+                            })
+                        game.context_menu['active'] = False
+                        return
+
+                    def do_send_ground():
+                        removed = remove_from_source(game, item, source, index, container_item)
+                        if removed:
+                            removed.rect.center = game.player.rect.center
+                            removed.x, removed.y = removed.rect.topleft
+                            removed.is_placed = False
+                            game.items_on_ground.append(removed)
+                            if hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound('drop.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
+                            display_message(f"{tr('msg', 'Dropped')} {tr('item', removed.name)} {tr('msg', 'on ground.')}")
+
+                    item_weight = item.get_total_weight() if hasattr(item, 'get_total_weight') else getattr(item, 'weight', 1.0)
+                    transfer_time = max(0.5, item_weight * 0.4)
+                    action_label = f"{tr('ui', 'Removing')} {tr('item', item.name)}"
+                    game.player.start_action(action_label, transfer_time, do_send_ground, xp_reward=0.5)
+                
 
                 elif target_dest == 'Belt':
                     if source == 'belt':
@@ -415,6 +493,215 @@ def handle_context_menu_click(game, mouse_pos):
                         else:
                             do_send_cont()
 
+                clicked_on_menu = True
+            
+            elif option == 'Remove fuel to':
+                veh = container_item if getattr(container_item, 'item_type', '') == 'vehicle' else getattr(game.player, 'vehicle', None)
+                if not veh:
+                    for m in game.modals:
+                        if m.get('type') == 'vehicle':
+                            veh = m.get('vehicle')
+                            break
+
+                if not veh:
+                    display_message(tr('msg', "No vehicle found."))
+                    game.context_menu['active'] = False
+                    return
+
+                if veh.required_key_id and veh.equipment.get('key') is None:
+                    display_message(tr('msg', "Vehicle requires key inserted in the Key slot."))
+                    game.context_menu['active'] = False
+                    return
+
+                fuel_amount = veh.fuel
+                if fuel_amount <= 0:
+                    display_message(tr('msg', "No fuel to remove."))
+                    game.context_menu['active'] = False
+                    return
+
+                # Find target container
+                target_container = None
+                for c_list in [game.player.belt, game.player.inventory, list(game.player.clothes.values())]:
+                    for c in c_list:
+                        if not c: continue
+                        if str(getattr(c, 'id', c.name)) == target_sub_slot:
+                            target_container = c
+                            break
+                        if hasattr(c, 'inventory') and c.inventory:
+                            for sub_c in c.inventory:
+                                if str(getattr(sub_c, 'id', sub_c.name)) == target_sub_slot:
+                                    target_container = sub_c
+                                    break
+                    if target_container: break
+
+                if not target_container:
+                    display_message(tr('msg', "Target container not found."))
+                    game.context_menu['active'] = False
+                    return
+
+                avail_liquid = get_container_available_liquid(target_container)
+                if avail_liquid <= 0:
+                    display_message(f"{target_container.name} {tr('msg', 'is full of liquid.')}")
+                    game.context_menu['active'] = False
+                    return
+
+                transfer_units = min(fuel_amount, avail_liquid)
+
+                def do_siphon_fuel():
+                    if not hasattr(target_container, 'inventory'):
+                        target_container.inventory = []
+
+                    # Find existing fuel or create new item in the target container
+                    existing_fuel = next((it for it in target_container.inventory if it and it.name == "Fuel Unit"), None)
+                    max_liq_cap = int(getattr(target_container, 'max_liquid', 100) or 100)
+
+                    if existing_fuel:
+                        existing_fuel.load = (getattr(existing_fuel, 'load', 0) or 0) + transfer_units
+                        existing_fuel.capacity = max_liq_cap
+                    else:
+                        new_fuel = Item.create_from_name("Fuel Unit")
+                        if new_fuel:
+                            new_fuel.load = transfer_units
+                            new_fuel.capacity = max_liq_cap
+                            target_container.inventory.append(new_fuel)
+
+                    # Deduct from vehicle tank
+                    veh.fuel = max(0.0, veh.fuel - transfer_units)
+                    fuel_eq = veh.equipment.get('fuel')
+                    if fuel_eq and hasattr(fuel_eq, 'load'):
+                        fuel_eq.load = max(0.0, float(fuel_eq.load) - transfer_units)
+                    veh.update_stats_from_equipment()
+
+                    from core.events.mouse_drag_utils import _sync_container_to_server
+                    _sync_container_to_server(game, target_container)
+
+                    if hasattr(game, 'sound_manager'):
+                        game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
+                    display_message(f"{tr('msg', 'Transferred')} {int(transfer_units)} {tr('item', 'Fuel Unit')} {tr('msg', 'to')} {target_container.name}.")
+
+                siphon_time = max(0.4, transfer_units * 0.05)
+                game.player.start_action(tr('ui', "Siphoning Fuel"), siphon_time, do_siphon_fuel, xp_reward=0.5)
+                clicked_on_menu = True
+
+            elif option == 'Install on Vehicle':
+                veh = None
+                veh_modal = next((m for m in reversed(game.modals) if m.get('type') == 'vehicle'), None)
+                if veh_modal and veh_modal.get('vehicle'):
+                    veh = veh_modal.get('vehicle')
+                elif getattr(game.player, 'vehicle', None):
+                    veh = game.player.vehicle
+                else:
+                    for v in getattr(game, 'vehicles', []) + [c for c in game.containers if getattr(c, 'item_type', '') == 'vehicle']:
+                        if math.hypot(game.player.rect.centerx - v.rect.centerx, game.player.rect.centery - v.rect.centery) <= TILE_SIZE * 2.5:
+                            veh = v
+                            break
+
+                if not veh:
+                    display_message(tr('msg', "No vehicle nearby."))
+                    game.context_menu['active'] = False
+                    return
+
+                target_slot = target_sub_slot
+                if not target_slot:
+                    if veh.can_equip(item, 'key'): target_slot = 'key'
+                    elif veh.can_equip(item, 'fuel') or getattr(item, 'name', '') == 'Fuel Unit': target_slot = 'fuel'
+                    elif veh.can_equip(item, 'motor'): target_slot = 'motor'
+                    elif veh.can_equip(item, 'battery'): target_slot = 'battery'
+                    else:
+                        for t_s in getattr(veh, 'required_tires', []):
+                            if veh.can_equip(item, t_s):
+                                target_slot = t_s
+                                break
+
+                if not target_slot:
+                    display_message(tr('msg', "Item cannot be installed on this vehicle."))
+                    game.context_menu['active'] = False
+                    return
+
+                # Non-key parts strictly require the key to be in the key slot
+                if target_slot != 'key' and veh.required_key_id and veh.equipment.get('key') is None:
+                    display_message(tr('msg', "Vehicle requires key inserted in the Key slot."))
+                    game.context_menu['active'] = False
+                    return
+
+                if target_slot == 'fuel':
+                    def do_refuel_action():
+                        trans, err = veh.refuel(item)
+                        if err:
+                            display_message(tr('msg', err))
+                        else:
+                            if hasattr(item, 'load') and item.load <= 0:
+                                remove_from_source(game, item, source, index, container_item)
+                            if hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound('repair.ogg', subdir='craft', game=game, source_pos=game.player.rect.center)
+                            display_message(f"{tr('msg', 'Added')} {int(trans)} {tr('msg', 'fuel units to vehicle.')}")
+
+                    transfer_time = max(0.4, float(getattr(item, 'load', 1) or 1) * 0.05)
+                    game.player.start_action(tr('ui', "Refueling"), transfer_time, do_refuel_action, xp_reward=0.5)
+                else:
+                    def do_install_action():
+                        removed = remove_from_source(game, item, source, index, container_item)
+                        if removed:
+                            old_item = veh.add_equipment(removed, target_slot)
+                            if old_item:
+                                if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                    game.player.inventory.append(old_item)
+                                else:
+                                    old_item.rect.center = game.player.rect.center
+                                    game.items_on_ground.append(old_item)
+                            veh.update_stats_from_equipment()
+                            if hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound('repair.ogg', subdir='craft', game=game, source_pos=game.player.rect.center)
+                            display_message(f"{tr('msg', 'Installed')} {tr('item', removed.name)} {tr('msg', 'into vehicle.')}")
+
+                    item_weight = item.get_total_weight() if hasattr(item, 'get_total_weight') else getattr(item, 'weight', 1.0)
+                    install_time = max(0.4, item_weight * 0.4)
+                    game.player.start_action(f"{tr('ui', 'Installing')} {tr('item', item.name)}", install_time, do_install_action, xp_reward=0.5)
+
+                clicked_on_menu = True
+
+            elif option in ['Add key', 'Add fuel', 'Add motor', 'Add battery', 'Add tire to']:
+                veh_modal = next((m for m in reversed(game.modals) if m.get('type') == 'vehicle'), None)
+                veh = veh_modal.get('vehicle') if veh_modal else None
+
+                if not veh:
+                    display_message(tr('msg', "No vehicle modal open."))
+                    game.context_menu['active'] = False
+                    return
+
+                target_slot = 'key' if option == 'Add key' else ('fuel' if option == 'Add fuel' else ('motor' if option == 'Add motor' else ('battery' if option == 'Add battery' else target_sub_slot)))
+
+                if target_slot != 'key' and veh.equipment.get('key') is None:
+                    display_message(tr('msg', "Vehicle requires key inserted in the Key slot."))
+                    game.context_menu['active'] = False
+                    return
+
+                def do_install_part():
+                    # Re-check key status
+                    if target_slot != 'key' and veh.equipment.get('key') is None:
+                        display_message(tr('msg', "Vehicle requires key inserted in the Key slot."))
+                        return
+
+                    removed = remove_from_source(game, item, source, index, container_item)
+                    if removed:
+                        old_item = veh.add_equipment(removed, target_slot)
+                        if old_item:
+                            if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                game.player.inventory.append(old_item)
+                            else:
+                                old_item.rect.center = game.player.rect.center
+                                old_item.x, old_item.y = old_item.rect.topleft
+                                game.items_on_ground.append(old_item)
+
+                        veh.update_stats_from_equipment()
+                        if hasattr(game, 'sound_manager'):
+                            game.sound_manager.play_sound('repair.ogg', subdir='craft', game=game, source_pos=game.player.rect.center)
+                        display_message(f"{tr('msg', 'Installed')} {tr('item', removed.name)} {tr('msg', 'into vehicle.')}")
+
+                item_weight = item.get_total_weight() if hasattr(item, 'get_total_weight') else getattr(item, 'weight', 1.0)
+                install_time = max(0.4, item_weight * 0.4)
+                action_name = f"{tr('ui', 'Installing')} {tr('item', item.name)}"
+                game.player.start_action(action_name, install_time, do_install_part, xp_reward=0.5)
                 clicked_on_menu = True
 
             elif option == 'Place barricade':

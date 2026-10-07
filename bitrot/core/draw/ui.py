@@ -28,7 +28,7 @@ from core.data.localization import tr
 from core.ui.helpers.keybinds import keybind_manager
 from core.ui.notifications import draw_notifications
 from core.events.mouse_drag import check_recursive_containment
-from core.entities.item.item_helpers import does_allow_liquid, get_container_available_liquid
+from core.entities.item.item_helpers import does_allow_liquid, get_container_available_liquid, is_container_closed_or_locked
 
 # Hardcoded default English fallbacks for interaction tooltips
 DEFAULT_TOOLTIPS = {
@@ -96,10 +96,6 @@ def is_item_allowed_in_slot(item, slot_type, index_or_name, target_obj=None):
     elif slot_type == 'vehicle_equipment':
         if target_obj and hasattr(target_obj, 'can_equip'):
             return target_obj.can_equip(item, index_or_name)
-        return False
-
-    elif slot_type == 'vehicle_seat':
-        # Items cannot be equipped or stored in passenger seats
         return False
 
     elif slot_type == 'npc_trade_offer':
@@ -187,7 +183,7 @@ def get_targeted_slot_info(game, mouse_pos, dynamic_h=GAME_HEIGHT):
                     break
             content_rect = top_modal.get('content_rect')
             if c and content_rect:
-                is_closed = (getattr(c, 'item_type', '') == 'maptile_container' and not getattr(c, 'is_opened', False))
+                is_closed = is_container_closed_or_locked(c, game.player)
                 if not is_closed:
                     for i in range(c.capacity or 0):
                         slot = get_container_slot_rect(content_rect.topleft, i)
@@ -218,6 +214,11 @@ def get_targeted_slot_info(game, mouse_pos, dynamic_h=GAME_HEIGHT):
                 for slot_data in top_modal.get('app_slot_rects', []):
                     if slot_data['rect'].collidepoint(mouse_pos):
                         return slot_data['rect'], 'app', slot_data['index'], None
+        
+        elif m_type == 'slots':
+            for slot_data in top_modal.get('slot_rects', []):
+                if slot_data['rect'].collidepoint(mouse_pos):
+                    return slot_data['rect'], 'container', slot_data['index'], slot_data['container']
 
         # If mouse is over ANY top modal, NEVER fall through to the belt HUD underneath
         return None, None, None, None

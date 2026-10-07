@@ -33,7 +33,10 @@ def check_container_weight_limit(container, incoming_item, item_to_remove=None):
 
     # 1. Vehicle max_weight check
     if hasattr(container, 'max_weight'):
-        cur_weight = getattr(container, 'current_weight', 0.0)
+        try:
+            cur_weight = float(getattr(container, 'current_weight', 0.0) or 0.0)
+        except Exception:
+            cur_weight = 0.0
         return (cur_weight + incoming_weight) <= container.max_weight
 
     # 2. Container and clothes pocket check (weight * 5.0)

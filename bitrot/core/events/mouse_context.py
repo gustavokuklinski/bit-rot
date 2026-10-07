@@ -17,23 +17,55 @@ from core.messages import display_message
 from core.data.localization import tr
 from core.entities.item.item_data import ITEM_TEMPLATES
 from core.ui.crafting_common import is_recipe_relevant_to_item
-from core.entities.item.item_helpers import is_infinite_liquid_source, is_container_on_player, is_container_type
-from core.events.mouse_context_helpers import get_fuel_icon, is_fuel_item, get_player_fuel_units, consume_player_fuel_units, calculate_boat_fuel_cost, is_barricade_item, teleport_player_to_chunk
-from core.events.mouse_context_submenus import build_equip_submenu, build_send_to_submenu, build_remove_fuel_submenu, build_crafts_submenu
-from core.events.mouse_context_actions import handle_context_menu_click, remove_from_source
+from core.entities.item.item_helpers import (
+    is_infinite_liquid_source, is_container_on_player, is_valid_send_to_container, item_allows_belt, is_container_closed_or_locked
+)
+from core.events.mouse_context_helpers import (
+    get_fuel_icon, is_fuel_item, get_player_fuel_units,
+    consume_player_fuel_units, calculate_boat_fuel_cost,
+    is_barricade_item, teleport_player_to_chunk
+)
+from core.events.mouse_context_submenus import (
+    build_equip_submenu, build_send_to_submenu,
+    build_remove_fuel_submenu, build_crafts_submenu
+)
+from core.events.mouse_context_actions import (
+    handle_context_menu_click, remove_from_source
+)
 
 def handle_right_click(game, mouse_pos):
+    game.context_menu['active'] = False
+    game.context_menu['options'] = []
+    game.context_menu['rects'] = []
+    game.context_menu['action_map'] = []
+    game.context_menu['tooltips'] = {}
+    game.context_menu['last_hovered_sub'] = -1
+    game.context_menu.pop('craft_recipes', None)
+
     clicked_item = None
     click_source = None
     click_index = -1
     click_container_item = None
     click_modal_type = None
 
-    is_over_any_modal = any(modal.get('rect') and modal['rect'].collidepoint(mouse_pos) for modal in game.modals)
-
+    # Find the single topmost modal under mouse_pos based on z-order
+    top_modal = None
     for modal in reversed(game.modals):
-        if not modal['rect'].collidepoint(mouse_pos): continue
+        if modal.get('rect') and modal['rect'].collidepoint(mouse_pos):
+            top_modal = modal
+            break
 
+    # Unconditionally define is_over_any_modal so it is available on all code paths
+    is_over_any_modal = (top_modal is not None)
+
+    # If right-clicking on a modal, bring it to the front (focused)
+    if top_modal:
+        if game.modals[-1] != top_modal:
+            game.modals.remove(top_modal)
+            game.modals.append(top_modal)
+
+
+        modal = top_modal
         if modal['type'] == 'inventory':
             if modal.get('active_tab', 'Inventory') == 'Inventory':
                 for i, item in enumerate(game.player.inventory):
@@ -116,22 +148,12 @@ def handle_right_click(game, mouse_pos):
                             click_container_item = veh
                             break
                         else:
-                            game.context_menu['active'] = True
-                            game.context_menu['item'] = {'type': 'virtual_slot', 'slot': slot_name, 'vehicle': veh}
-                            game.context_menu['source'] = 'vehicle_slot'
-                            game.context_menu['index'] = -1
-                            game.context_menu['container_item'] = veh
-                            game.context_menu['position'] = mouse_pos
+                            # Empty slot clicked: only allow insert key if locked
+                            if slot_name != 'key' and veh.equipment.get('key') is None:
+                                display_message(tr('msg', "Vehicle requires key inserted in the Key slot."))
+                                return
+
                             
-                            display_name = slot_name.replace('_', ' ').title()
-                            if display_name == 'Tire Fl': display_name = 'Front Left Tire'
-                            elif display_name == 'Tire Fr': display_name = 'Front Right Tire'
-                            elif display_name == 'Tire Bl': display_name = 'Back Left Tire'
-                            elif display_name == 'Tire Br': display_name = 'Back Right Tire'
-                            
-                            game.context_menu['options'] = [f"Insert {display_name}"]
-                            game.context_menu['rects'] = []
-                            game.context_menu['action_map'] = []
                             return
 
         elif modal['type'] == 'nearby':
@@ -144,7 +166,8 @@ def handle_right_click(game, mouse_pos):
             
             content_rect = modal.get('content_rect')
             if active_container and hasattr(active_container, 'inventory') and content_rect:
-                is_closed = (getattr(active_container, 'item_type', '') == 'maptile_container' and not getattr(active_container, 'is_opened', False))
+                # Disallow right-click inspection if container is closed or vehicle trunk is locked
+                is_closed = is_container_closed_or_locked(active_container, game.player)
                 if not is_closed:
                     pos = content_rect.topleft
                     for i, item in enumerate(active_container.inventory):
@@ -152,8 +175,9 @@ def handle_right_click(game, mouse_pos):
                             clicked_item, click_source, click_index, click_container_item = item, 'nearby', i, active_container
                             click_modal_type = 'nearby'
                             break
-        
-        if clicked_item: break
+
+        if not clicked_item:
+            return
 
     if not clicked_item and not is_over_any_modal:
         for i, item in enumerate(game.player.belt):
@@ -495,10 +519,21 @@ def handle_right_click(game, mouse_pos):
         elif click_source == 'player_self':
             options = ['Status', 'Inventory', 'Gear']
         elif click_source == 'vehicle_equipment':
+            veh = click_container_item
+            has_vehicle_key = (veh.equipment.get('key') is not None) if (veh and hasattr(veh, 'equipment')) else False
+
+            # Require key inserted in the Key slot to remove or send any parts
+            if not has_vehicle_key:
+                display_message(tr('msg', "Vehicle requires key inserted in the Key slot."))
+                return
+
+            # Keep ONLY 'Send to' (Remove is deleted)
+            options = []
             if click_index == 'fuel':
-                options = ['Remove fuel to']
+                # Fuel slot only permits siphoning into containers
+                options.append('Remove fuel to')
             else:
-                options = ['Remove']
+                options.append('Send to')
 
         is_maptile = False
         if isinstance(clicked_item, dict):
@@ -525,10 +560,27 @@ def handle_right_click(game, mouse_pos):
         if click_source in ('map_tile', 'light_source', 'player_self', 'vehicle_equipment', 'vehicle_slot'):
             pass
 
+        elif getattr(clicked_item, 'item_type', '') == 'vehicle':
+            # Vehicle must have key physically in equipment['key']
+            if clicked_item.required_key_id and clicked_item.equipment.get('key') is None:
+                display_message(tr('msg', "Need a vehicle key to interact."))
+                if 'fail' in getattr(clicked_item, 'sounds', {}):
+                    game.sound_manager.play_sound(
+                        clicked_item.sounds['fail'],
+                        subdir='vehicles',
+                        game=game,
+                        source_pos=clicked_item.rect.center,
+                        base_volume=0.5,
+                        is_critical=True
+                    )
+                game.context_menu['active'] = False
+                return
+            options = ['Vehicle options', 'Trunk']
+
         elif is_nearby:
             options = []
             if not isinstance(clicked_item, Corpse) and getattr(clicked_item, 'type', None) not in ('animal', 'zombie'):
-                if not getattr(clicked_item, 'liquid', False):
+                if not getattr(clicked_item, 'liquid', False) or is_fuel_item(clicked_item):
                     if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
                         options.extend(['Grab One', 'Grab Half', 'Grab All'])
                     else:
@@ -544,7 +596,7 @@ def handle_right_click(game, mouse_pos):
             if isinstance(clicked_item, Corpse):
                 options.append('Open')
             else:
-                if not getattr(clicked_item, 'liquid', False):
+                if not getattr(clicked_item, 'liquid', False) or is_fuel_item(clicked_item):
                     if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
                         options.extend(['Grab One', 'Grab Half', 'Grab All'])
                     else:
@@ -584,27 +636,39 @@ def handle_right_click(game, mouse_pos):
                         if has_crafts and 'Crafts' not in options:
                             options.append('Crafts')
 
-                veh = getattr(game.player, 'vehicle', None)
-                if not veh:
-                    for m in game.modals:
-                        if m['type'] == 'vehicle':
-                            veh = m['vehicle']
+                # TARGET ONLY THE OPENED VEHICLE MODAL HIGHLIGHTED BY THE PLAYER
+                veh = None
+                veh_modal = next((m for m in reversed(game.modals) if m.get('type') == 'vehicle'), None)
+                if veh_modal and veh_modal.get('vehicle'):
+                    veh = veh_modal.get('vehicle')
+                elif getattr(game.player, 'vehicle', None):
+                    veh = game.player.vehicle
+                else:
+                    for v in getattr(game, 'vehicles', []) + [c for c in game.containers if getattr(c, 'item_type', '') == 'vehicle']:
+                        if math.hypot(game.player.rect.centerx - v.rect.centerx, game.player.rect.centery - v.rect.centery) <= TILE_SIZE * 2.5:
+                            veh = v
                             break
+
                 if veh:
-                    if veh.can_equip(clicked_item, 'key'):
-                        if 'Add key' not in options: options.append('Add key')
-                    if veh.can_equip(clicked_item, 'fuel'):
-                        if 'Add fuel' not in options: options.append('Add fuel')
-                    if veh.can_equip(clicked_item, 'motor'):
-                        if 'Add motor' not in options: options.append('Add motor')
-                    if veh.can_equip(clicked_item, 'battery'):
-                        if 'Add battery' not in options: options.append('Add battery')
-                    if veh.can_equip(clicked_item, 'tire_fl'):
-                        if 'Add tire to' not in options: options.append('Add tire to')
+                    has_veh_key = (not veh.required_key_id) or (veh.equipment.get('key') is not None)
+                    is_key = veh.can_equip(clicked_item, 'key')
+                    can_install = False
+
+                    # Only show install option if it's the key or the vehicle already has its key inserted
+                    if is_key or has_veh_key:
+                        for slot in list(veh.equipment.keys()) + getattr(veh, 'required_tires', []):
+                            if slot != 'key' and not has_veh_key:
+                                continue
+                            if veh.can_equip(clicked_item, slot):
+                                can_install = True
+                                break
+
+                    if can_install and 'Install on Vehicle' not in options:
+                        options.append('Install on Vehicle')
 
             elif click_source == 'container':
                 options = []
-                if not getattr(clicked_item, 'liquid', False):
+                if not getattr(clicked_item, 'liquid', False) or is_fuel_item(clicked_item):
                     if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
                         options.extend(['Grab One', 'Grab Half', 'Grab All'])
                     else:
@@ -623,15 +687,11 @@ def handle_right_click(game, mouse_pos):
             if opt.startswith('Add to '): 
                 continue 
 
-            if opt == 'Add tire to':
-                sub_opts = ['tire_fl', 'tire_fr', 'tire_bl', 'tire_br']
-                display_map = {
-                    'tire_fl': 'Front Left', 
-                    'tire_fr': 'Front Right', 
-                    'tire_bl': 'Back Left', 
-                    'tire_br': 'Back Right'
-                }
-                new_options.append({'label': 'Add tire to', 'sub': sub_opts, 'display_names': display_map})
+            if opt == 'Install on Vehicle':
+                from core.events.mouse_context_submenus import build_install_vehicle_submenu
+                install_sub = build_install_vehicle_submenu(clicked_item, game)
+                if install_sub:
+                    new_options.append(install_sub)
                 continue
 
             if opt == 'Equip':

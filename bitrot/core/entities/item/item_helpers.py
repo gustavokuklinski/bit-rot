@@ -452,3 +452,14 @@ def is_container_type(obj):
         return False
     itype = getattr(obj, 'item_type', '') or getattr(obj, 'type', '') or ''
     return itype in ('container', 'maptile_container', 'vehicle') or type(obj).__name__ in ('Container', 'Corpse', 'Vehicle')
+
+def is_container_closed_or_locked(container, player=None):
+    """Returns True if the container is closed or if it is a vehicle trunk locked without key access."""
+    if not container:
+        return True
+    if getattr(container, 'item_type', '') == 'maptile_container' and not getattr(container, 'is_opened', False):
+        return True
+    if getattr(container, 'item_type', '') == 'vehicle' and hasattr(container, 'has_key_access'):
+        if player and not container.has_key_access(player):
+            return True
+    return False

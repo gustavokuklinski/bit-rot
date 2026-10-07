@@ -9,77 +9,95 @@ from core.ui.inventory_modal import get_inventory_slot_rect, get_belt_hud_slot_r
 from core.ui.container_modal import get_container_slot_rect
 from core.messages import display_message
 from core.data.localization import tr
-from core.entities.item.item_helpers import is_infinite_liquid_source
+from core.entities.item.item_helpers import is_infinite_liquid_source, is_container_closed_or_locked
 
 def find_item_at_pos(game, mouse_pos):
-    is_over_modal = any(modal.get('rect') and modal['rect'].collidepoint(mouse_pos) for modal in game.modals)
-
+    # 1. Identify the single topmost modal under the mouse cursor based on z-order
+    top_modal = None
     for modal in reversed(game.modals):
-        if not modal['rect'].collidepoint(mouse_pos):
-            continue
+        if modal.get('rect') and modal['rect'].collidepoint(mouse_pos):
+            top_modal = modal
+            break
 
-        if modal['type'] == 'inventory':
-            if modal.get('active_tab', 'Inventory') == 'Inventory':
+    # 2. If the mouse is over any modal, ONLY look inside that topmost modal!
+    if top_modal:
+        m_type = top_modal.get('type')
+
+        if m_type == 'inventory':
+            if top_modal.get('active_tab', 'Inventory') == 'Inventory':
                 for i, item in enumerate(game.player.inventory):
-                    if item and get_inventory_slot_rect(i, modal['position']).collidepoint(mouse_pos):
+                    if item and get_inventory_slot_rect(i, top_modal['position']).collidepoint(mouse_pos):
                         return item
-            
-            elif modal.get('active_tab') in modal.get('container_mapping', {}):
-                container = modal['container_mapping'][modal['active_tab']]
-                if container:
-                    pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
+            elif top_modal.get('active_tab') in top_modal.get('container_mapping', {}):
+                container = top_modal['container_mapping'][top_modal['active_tab']]
+                if container and hasattr(container, 'inventory'):
+                    pos_for_calc = (top_modal['rect'].x, top_modal['rect'].y + 40)
                     for i, item in enumerate(container.inventory):
                         if item and get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
                             return item
-            
-        elif modal['type'] == 'container':
-            container = modal['item']
-            if is_infinite_liquid_source(container):
-                for item in container.inventory:
-                    if getattr(item, 'liquid', False):
-                        item.load = getattr(item, 'capacity', 100)
-            for i, item in enumerate(container.inventory):
-                if item and get_container_slot_rect(modal['position'], i).collidepoint(mouse_pos):
-                    return item
 
-        elif modal['type'] == 'gear':
-            active_tab = modal.get('active_tab', 'Gear')
+        elif m_type == 'container':
+            container = top_modal.get('item')
+            if container and hasattr(container, 'inventory'):
+                if is_infinite_liquid_source(container):
+                    for item in container.inventory:
+                        if getattr(item, 'liquid', False):
+                            item.load = getattr(item, 'capacity', 100)
+                for i, item in enumerate(container.inventory):
+                    if item and get_container_slot_rect(top_modal['position'], i).collidepoint(mouse_pos):
+                        return item
+
+        elif m_type == 'gear':
+            active_tab = top_modal.get('active_tab', 'Gear')
             if active_tab == 'Gear':
-                if 'gear_slot_rects' in modal:
-                    for slot_name, slot_rect in modal['gear_slot_rects'].items():
+                if 'gear_slot_rects' in top_modal:
+                    for slot_name, slot_rect in top_modal['gear_slot_rects'].items():
                         if slot_rect.collidepoint(mouse_pos):
                             return game.player.clothes.get(slot_name)
-            elif active_tab in modal.get('container_mapping', {}):
-                container = modal['container_mapping'][active_tab]
-                if container:
-                    pos_for_calc = (modal['rect'].x, modal['rect'].y + 40)
+            elif active_tab in top_modal.get('container_mapping', {}):
+                container = top_modal['container_mapping'][active_tab]
+                if container and hasattr(container, 'inventory'):
+                    pos_for_calc = (top_modal['rect'].x, top_modal['rect'].y + 40)
                     for i, item in enumerate(container.inventory):
                         if item and get_container_slot_rect(pos_for_calc, i).collidepoint(mouse_pos):
                             return item
 
-        elif modal['type'] == 'npc_dialog':
-            if modal.get('active_tab_index') == 2:
-                for slot_data in modal.get('trade_slot_rects', []):
+        elif m_type == 'slots':
+            for slot_data in top_modal.get('slot_rects', []):
+                if slot_data['rect'].collidepoint(mouse_pos):
+                    c = slot_data['container']
+                    i = slot_data['index']
+                    if hasattr(c, 'inventory') and i < len(c.inventory):
+                        return c.inventory[i]
+
+        elif m_type == 'vehicle':
+            if top_modal.get('active_tab') == 'Mechanics' and 'equipment_rects' in top_modal:
+                veh = top_modal.get('vehicle')
+                if veh and hasattr(veh, 'equipment'):
+                    for slot_name, slot_rect in top_modal['equipment_rects'].items():
+                        if slot_rect.collidepoint(mouse_pos):
+                            return veh.equipment.get(slot_name)
+
+        elif m_type == 'npc_dialog':
+            if top_modal.get('active_tab_index') == 2:
+                for slot_data in top_modal.get('trade_slot_rects', []):
                     if slot_data['rect'].collidepoint(mouse_pos):
                         return slot_data['item']
-                drop_zone = modal.get('trade_drop_zone_rect')
+                drop_zone = top_modal.get('trade_drop_zone_rect')
                 if drop_zone and drop_zone.collidepoint(mouse_pos):
-                    offered_item = modal.get('trade_offered_item')
-                    if offered_item:
-                        return offered_item
+                    return top_modal.get('trade_offered_item')
 
-        elif modal['type'] == 'nearby':
-            active_tab_label = modal.get('active_tab')
+        elif m_type == 'nearby':
+            active_tab_label = top_modal.get('active_tab')
             active_container = None
-            tabs_data = modal.get('tabs_data', [])
-            for tab_data in tabs_data:
+            for tab_data in top_modal.get('tabs_data', []):
                 if tab_data['label'] == active_tab_label:
                     active_container = tab_data['container']
                     break
-            
-            content_rect = modal.get('content_rect')
+
+            content_rect = top_modal.get('content_rect')
             if active_container and hasattr(active_container, 'inventory') and content_rect:
-                is_closed = (getattr(active_container, 'item_type', '') == 'maptile_container' and not getattr(active_container, 'is_opened', False))
+                is_closed = is_container_closed_or_locked(active_container, game.player)
                 if not is_closed:
                     if is_infinite_liquid_source(active_container):
                         for item in active_container.inventory:
@@ -89,12 +107,14 @@ def find_item_at_pos(game, mouse_pos):
                     for i, item in enumerate(active_container.inventory):
                         if item and get_container_slot_rect(pos, i).collidepoint(mouse_pos):
                             return item
-            return None
 
-    if not is_over_modal:
-        for i, item in enumerate(game.player.belt):
-            if item and get_belt_hud_slot_rect(i, game=game).collidepoint(mouse_pos):
-                return item
+        # Cursor is over the topmost modal -> NEVER fall through to modals beneath it!
+        return None
+
+    # Not over any modal -> check Belt HUD
+    for i, item in enumerate(game.player.belt):
+        if item and get_belt_hud_slot_rect(i, game=game).collidepoint(mouse_pos):
+            return item
 
     return None
 
@@ -118,6 +138,11 @@ def handle_left_click_drag_candidate(game, mouse_pos):
                     vehicle = modal['vehicle']
                     item = vehicle.equipment.get(slot_name)
                     if item:
+                        # Cannot drag parts out without key inserted in the Key slot
+                        if vehicle.equipment.get('key') is None:
+                            display_message(tr('msg', "Vehicle requires key inserted in the Key slot."))
+                            return
+
                         game.drag_candidate = (item, (slot_name, 'vehicle_equipment', vehicle))
                         game.drag_start_pos = mouse_pos
                         game.drag_offset = (mouse_pos[0] - slot_rect.x, mouse_pos[1] - slot_rect.y)
@@ -144,7 +169,7 @@ def handle_left_click_drag_candidate(game, mouse_pos):
                 break
         
         if active_container and hasattr(active_container, 'inventory'):
-            is_closed = (getattr(active_container, 'item_type', '') == 'maptile_container' and not getattr(active_container, 'is_opened', False))
+            is_closed = is_container_closed_or_locked(active_container, game.player)
             if not is_closed:
                 content_rect = modal.get('content_rect')
                 if content_rect and content_rect.collidepoint(mouse_pos):

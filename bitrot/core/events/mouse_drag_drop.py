@@ -12,7 +12,8 @@ from core.data.localization import tr
 from core.entities.item.item_helpers import (
     does_allow_liquid, is_infinite_liquid_source,
     get_container_max_liquid, get_container_available_liquid,
-    add_item_to_container_inventory, is_container_on_player
+    add_item_to_container_inventory, is_container_on_player,
+    is_container_closed_or_locked
 )
 from core.events.mouse_drag_utils import (
     check_recursive_containment, check_container_weight_limit,
@@ -62,54 +63,48 @@ def handle_mouse_up(game, event, mouse_pos):
                         for slot_name, slot_rect in modal['equipment_rects'].items():
                             if slot_rect.collidepoint(mouse_pos):
                                 vehicle = modal['vehicle']
+
+                                # Key slot can accept keys; all other slots require key in Key slot
+                                if slot_name != 'key' and vehicle.equipment.get('key') is None:
+                                    display_message(tr('msg', "Vehicle requires key inserted in the Key slot."))
+                                    dropped_successfully = False
+                                    break
+
                                 valid_drop = vehicle.can_equip(game.dragged_item, slot_name)
                                 if valid_drop:
                                     item_ref = game.dragged_item
-                                    existing_item = vehicle.equipment.get(slot_name)
-                                    if existing_item and existing_item.can_stack_with(item_ref):
-                                        item_ref.rect.center = game.player.rect.center
-                                        if item_ref not in game.items_on_ground:
-                                            game.items_on_ground.append(item_ref)
-                                            
-                                        def do_stack_vehicle():
+                                    item_ref = game.dragged_item
+                                    item_ref.rect.center = game.player.rect.center
+                                    if item_ref not in game.items_on_ground:
+                                        game.items_on_ground.append(item_ref)
+
+                                    if slot_name == 'fuel':
+                                        def do_refuel_vehicle():
                                             _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
-                                            available = existing_item.capacity - existing_item.load
-                                            transfer = min(available, item_ref.load)
-                                            existing_item.load += transfer
-                                            item_ref.load -= transfer
-                                            vehicle.update_stats_from_equipment()
-                                            
-                                            if item_ref.load > 0:
+                                            trans, err = vehicle.refuel(item_ref)
+                                            if err:
+                                                display_message(tr('msg', err))
+                                            if hasattr(item_ref, 'load') and item_ref.load > 0:
                                                 if len(game.player.inventory) < game.player.get_total_inventory_slots():
                                                     game.player.inventory.append(item_ref)
                                                 else:
                                                     game.items_on_ground.append(item_ref)
-                                                    item_ref.rect.center = game.player.rect.center
-                                        
-                                        action_name = tr('msg', "Refueling") if slot_name == 'fuel' else tr('msg', "Transferring")
                                         transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
-                                        game.player.start_action(action_name, transfer_time, do_stack_vehicle, xp_reward=0.5)
-                                        
-                                        game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
-                                        return
+                                        game.player.start_action(tr('msg', "Refueling"), transfer_time, do_refuel_vehicle, xp_reward=0.5)
+                                    else:
+                                        def do_equip_vehicle():
+                                            _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
+                                            old_item = vehicle.add_equipment(item_ref, slot_name)
+                                            if old_item:
+                                                if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                                    game.player.inventory.append(old_item)
+                                                else:
+                                                    game.items_on_ground.append(old_item)
+                                                    old_item.rect.center = game.player.rect.center
 
-                                    item_ref.rect.center = game.player.rect.center
-                                    if item_ref not in game.items_on_ground:
-                                        game.items_on_ground.append(item_ref)
-                                    
-                                    def do_equip_vehicle():
-                                        _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
-                                        old_item = vehicle.add_equipment(item_ref, slot_name)
-                                        if old_item:
-                                            if len(game.player.inventory) < game.player.get_total_inventory_slots():
-                                                game.player.inventory.append(old_item)
-                                            else:
-                                                game.items_on_ground.append(old_item)
-                                                old_item.rect.center = game.player.rect.center
-                                    
-                                    action_name = tr('msg', "Equipping") if not is_external_source else tr('msg', "Transferring")
-                                    transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
-                                    game.player.start_action(action_name, transfer_time, do_equip_vehicle, xp_reward=0.5)
+                                        action_name = tr('msg', "Equipping") if not is_external_source else tr('msg', "Transferring")
+                                        transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
+                                        game.player.start_action(action_name, transfer_time, do_equip_vehicle, xp_reward=0.5)
                                     
                                     game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                     return
@@ -1019,6 +1014,8 @@ def handle_mouse_up(game, event, mouse_pos):
                 return
 
             # --- Target 4: Container and Nearby Modals ---
+                
+
             for modal in reversed(game.modals):
                 if modal['type'] in ['container', 'nearby'] and modal['rect'].collidepoint(mouse_pos):
                     container = None
@@ -1031,6 +1028,12 @@ def handle_mouse_up(game, event, mouse_pos):
                                 container = tab_data['container']; break
                     
                     if not container: break
+                    # if not container: break
+                    if is_container_closed_or_locked(container, game.player):
+                        display_message(tr('msg', "Trunk is locked! Requires vehicle key.") if getattr(container, 'item_type', '') == 'vehicle' else tr('msg', "Container is closed."))
+                        dropped_successfully = False
+                        break
+
                     if getattr(container, 'item_type', '') == 'maptile_container' and not getattr(container, 'is_opened', False):
                         break
                     
@@ -1244,6 +1247,54 @@ def handle_mouse_up(game, event, mouse_pos):
 
             game_world_rect = pygame.Rect(GAME_OFFSET_X, 0, GAME_WIDTH, GAME_HEIGHT)
             if game.dragged_item:
+                # Check if dropped onto a vehicle in the world
+                world_drop_pos = game.screen_to_world((mouse_pos[0] - game.viewport_left_offset, mouse_pos[1]))
+                target_world_vehicle = None
+                for v in getattr(game, 'vehicles', []) + [c for c in game.containers if getattr(c, 'item_type', '') == 'vehicle']:
+                    if v.rect.collidepoint(world_drop_pos):
+                        target_world_vehicle = v
+                        break
+
+                if target_world_vehicle and not is_over_modal and math.hypot(game.player.rect.centerx - target_world_vehicle.rect.centerx, game.player.rect.centery - target_world_vehicle.rect.centery) <= TILE_SIZE * 2.5:
+                    v = target_world_vehicle
+                    item_ref = game.dragged_item
+                    matching_slot = None
+
+                    if v.can_equip(item_ref, 'key'): matching_slot = 'key'
+                    elif v.can_equip(item_ref, 'fuel') or getattr(item_ref, 'name', '') == 'Fuel Unit': matching_slot = 'fuel'
+                    elif v.can_equip(item_ref, 'motor'): matching_slot = 'motor'
+                    elif v.can_equip(item_ref, 'battery'): matching_slot = 'battery'
+                    else:
+                        for t_s in getattr(v, 'required_tires', []):
+                            if v.can_equip(item_ref, t_s):
+                                matching_slot = t_s
+                                break
+
+                    if matching_slot:
+                        if matching_slot != 'key' and v.required_key_id and v.equipment.get('key') is None:
+                            display_message(tr('msg', "Vehicle requires key inserted in the Key slot."))
+                        else:
+                            if matching_slot == 'fuel':
+                                trans, err = v.refuel(item_ref)
+                                if err:
+                                    display_message(tr('msg', err))
+                                else:
+                                    display_message(f"{tr('msg', 'Added')} {int(trans)} {tr('msg', 'fuel units to vehicle.')}")
+                                    if hasattr(item_ref, 'load') and item_ref.load <= 0:
+                                        game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                        return
+                            else:
+                                old_it = v.add_equipment(item_ref, matching_slot)
+                                if old_it:
+                                    if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                        game.player.inventory.append(old_it)
+                                    else:
+                                        old_it.rect.center = game.player.rect.center
+                                        game.items_on_ground.append(old_it)
+                                display_message(f"{tr('msg', 'Installed')} {tr('item', item_ref.name)} {tr('msg', 'into vehicle.')}")
+                                game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
+                                return
+
                 if game_world_rect.collidepoint(mouse_pos) and not is_over_modal:
                     poured_in_map = False
                     if getattr(game.dragged_item, 'liquid', False):
@@ -1360,6 +1411,8 @@ def handle_mouse_up(game, event, mouse_pos):
                         slot_name = i_orig
                         vehicle.equipment[slot_name] = game.dragged_item
                         vehicle.update_stats_from_equipment()
+                        if slot_name == 'key':
+                            vehicle.close_trunk(game)
                     else:
                         game.player.inventory.append(game.dragged_item)
 

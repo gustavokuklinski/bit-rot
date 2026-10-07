@@ -15,186 +15,143 @@ from core.entities.item.item_helpers import has_app
 from core.entities.vehicle.vehicle import Vehicle
 from core.entities.vehicle.vehicle_data import VehicleData
 
-def toggle_inventory_modal(game):
-    inventory_modal_exists = False
+def _focus_or_toggle_modal(game, modal_type, create_func):
+    """If modal is open but not on top, bring to front. If already on top, close. If closed, open."""
     for modal in game.modals:
-        if modal['type'] == 'inventory':
-            game.last_modal_positions['inventory'] = (modal['rect'].x, modal['rect'].y)
-            game.modals.remove(modal)
-            inventory_modal_exists = True
-            break
-    if not inventory_modal_exists:
-        new_inventory_modal = {
-            'id': uuid.uuid4(),
-            'type': 'inventory',
-            'item': None,
-            'position': getattr(game, 'last_modal_positions', {}).get('inventory', (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT)),
-            'is_dragging': False,
-            'drag_offset': (0, 0),
-            'rect': pygame.Rect(getattr(game, 'last_modal_positions', {}).get('inventory', (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT))[0], 
-                                getattr(game, 'last_modal_positions', {}).get('inventory', (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT))[1], 
-                                INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)
-        }
-        game.modals.append(new_inventory_modal)
+        if modal.get('type') == modal_type:
+            if game.modals[-1] == modal:
+                # Already on top -> close it
+                if 'rect' in modal:
+                    game.last_modal_positions[modal_type] = (modal['rect'].x, modal['rect'].y)
+                game.modals.remove(modal)
+            else:
+                # Open but buried -> bring to top (focus)
+                game.modals.remove(modal)
+                game.modals.append(modal)
+            return True
+    return False
+    
+def toggle_inventory_modal(game):
+    if _focus_or_toggle_modal(game, 'inventory', None):
+        return
+    pos = getattr(game, 'last_modal_positions', {}).get('inventory', (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT))
+    new_modal = {
+        'id': uuid.uuid4(),
+        'type': 'inventory',
+        'item': None,
+        'position': pos,
+        'is_dragging': False,
+        'drag_offset': (0, 0),
+        'rect': pygame.Rect(pos[0], pos[1], INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)
+    }
+    game.modals.append(new_modal)
 
 def toggle_status_modal(game):
-    status_modal_exists = False
-    for modal in game.modals:
-        if modal['type'] == 'status':
-            game.last_modal_positions['status'] = (modal['rect'].x, modal['rect'].y)
-            game.modals.remove(modal)
-            status_modal_exists = True
-            break
-    if not status_modal_exists:
-        new_status_modal = {
-            'id': uuid.uuid4(),
-            'type': 'status',
-            'item': None,
-            'position': getattr(game, 'last_modal_positions', {}).get('status', (0, 0)),
-            'is_dragging': False,
-            'drag_offset': (0, 0),
-            'rect': pygame.Rect(getattr(game, 'last_modal_positions', {}).get('status', (0, 0))[0], 
-                                getattr(game, 'last_modal_positions', {}).get('status', (0, 0))[1], 
-                                STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)
-        }
-        game.modals.append(new_status_modal)
+    if _focus_or_toggle_modal(game, 'status', None):
+        return
+    pos = getattr(game, 'last_modal_positions', {}).get('status', (0, 0))
+    new_modal = {
+        'id': uuid.uuid4(),
+        'type': 'status',
+        'item': None,
+        'position': pos,
+        'is_dragging': False,
+        'drag_offset': (0, 0),
+        'rect': pygame.Rect(pos[0], pos[1], STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)
+    }
+    game.modals.append(new_modal)
 
 def toggle_nearby_modal(game):
-    nearby_modal_exists = False
-    for modal in game.modals:
-        if modal['type'] == 'nearby':
-            game.last_modal_positions['nearby'] = (modal['rect'].x, modal['rect'].y)
-            game.modals.remove(modal)
-            nearby_modal_exists = True
-            break
-    if not nearby_modal_exists:
-        new_nearby_modal = {
-            'id': uuid.uuid4(),
-            'type': 'nearby',
-            'item': None,
-            'position': getattr(game, 'last_modal_positions', {}).get('nearby', (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT)),
-            'is_dragging': False,
-            'drag_offset': (0, 0),
-            'rect': pygame.Rect(getattr(game, 'last_modal_positions', {}).get('nearby', (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT))[0], 
-                                getattr(game, 'last_modal_positions', {}).get('nearby', (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT))[1], 
-                                NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT)
-        }
-        game.modals.append(new_nearby_modal)
+    if _focus_or_toggle_modal(game, 'nearby', None):
+        return
+    pos = getattr(game, 'last_modal_positions', {}).get('nearby', (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT))
+    new_modal = {
+        'id': uuid.uuid4(),
+        'type': 'nearby',
+        'item': None,
+        'position': pos,
+        'is_dragging': False,
+        'drag_offset': (0, 0),
+        'rect': pygame.Rect(pos[0], pos[1], NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT)
+    }
+    game.modals.append(new_modal)
 
 def toggle_messages_modal(game):
-    messages_modal_exists = False
-    for modal in game.modals:
-        if modal['type'] == 'messages':
-            game.last_modal_positions['messages'] = (modal['rect'].x, modal['rect'].y)
-            game.modals.remove(modal)
-            messages_modal_exists = True
-            break
-    if not messages_modal_exists:
-        new_messages_modal = {
-            'id': uuid.uuid4(),
-            'type': 'messages',
-            'item': None,
-            'position': getattr(game, 'last_modal_positions', {}).get('messages', (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT)),
-            'is_dragging': False,
-            'drag_offset': (0, 0),
-            'rect': pygame.Rect(getattr(game, 'last_modal_positions', {}).get('messages', (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT))[0], 
-                                getattr(game, 'last_modal_positions', {}).get('messages', (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT))[1], 
-                                MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT)
-        }
-        game.modals.append(new_messages_modal)
+    if _focus_or_toggle_modal(game, 'messages', None):
+        return
+    pos = getattr(game, 'last_modal_positions', {}).get('messages', (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT))
+    new_modal = {
+        'id': uuid.uuid4(),
+        'type': 'messages',
+        'item': None,
+        'position': pos,
+        'is_dragging': False,
+        'drag_offset': (0, 0),
+        'rect': pygame.Rect(pos[0], pos[1], MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT)
+    }
+    game.modals.append(new_modal)
 
 def toggle_gear_modal(game):
-    gear_modal_exists = False
-    for modal in game.modals:
-        if modal['type'] == 'gear':
-            game.last_modal_positions['gear'] = (modal['rect'].x, modal['rect'].y)
-            game.modals.remove(modal)
-            gear_modal_exists = True
-            break
-    if not gear_modal_exists:
-        new_gear_modal = {
-            'id': uuid.uuid4(),
-            'type': 'gear',
-            'item': None,
-            'position': getattr(game, 'last_modal_positions', {}).get('gear', (GAME_WIDTH - GEAR_MODAL_WIDTH, 0)),
-            'is_dragging': False,
-            'drag_offset': (0, 0),
-            'rect': pygame.Rect(getattr(game, 'last_modal_positions', {}).get('gear', (GAME_WIDTH - GEAR_MODAL_WIDTH, 0))[0], 
-                                getattr(game, 'last_modal_positions', {}).get('gear', (GAME_WIDTH - GEAR_MODAL_WIDTH, 0))[1], 
-                                GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT)
-        }
-        game.modals.append(new_gear_modal)
+    if _focus_or_toggle_modal(game, 'gear', None):
+        return
+    pos = getattr(game, 'last_modal_positions', {}).get('gear', (GAME_WIDTH - GEAR_MODAL_WIDTH, 0))
+    new_modal = {
+        'id': uuid.uuid4(),
+        'type': 'gear',
+        'item': None,
+        'position': pos,
+        'is_dragging': False,
+        'drag_offset': (0, 0),
+        'rect': pygame.Rect(pos[0], pos[1], GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT)
+    }
+    game.modals.append(new_modal)
 
 def toggle_crafting_modal(game):
-    crafting_modal_exists = False
-    for modal in game.modals:
-        if modal['type'] == 'crafting':
-            game.last_modal_positions['crafting'] = (modal['rect'].x, modal['rect'].y)
-            game.modals.remove(modal)
-            crafting_modal_exists = True
-            break
-    if not crafting_modal_exists:
-        modal_data = {
-            'id': uuid.uuid4(),
-            'type': 'crafting',
-            'position': getattr(game, 'last_modal_positions', {}).get('crafting', (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2)),
-            'is_dragging': False,
-            'drag_offset': (0, 0),
-            'rect': pygame.Rect(
-                getattr(game, 'last_modal_positions', {}).get('crafting', (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2))[0], 
-                getattr(game, 'last_modal_positions', {}).get('crafting', (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2))[1], 
-                CRAFTING_MODAL_WIDTH, CRAFTING_MODAL_HEIGHT
-            )
-        }
-        
-        screen = getattr(game, 'screen', pygame.display.get_surface())
-        assets = getattr(game, 'assets', {})
-        crafting_instance = CraftingModal(screen, modal_data, assets, game)
-        modal_data['instance'] = crafting_instance
-        game.modals.append(modal_data)
+    if _focus_or_toggle_modal(game, 'crafting', None):
+        return
+    pos = getattr(game, 'last_modal_positions', {}).get('crafting', (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2))
+    modal_data = {
+        'id': uuid.uuid4(),
+        'type': 'crafting',
+        'position': pos,
+        'is_dragging': False,
+        'drag_offset': (0, 0),
+        'rect': pygame.Rect(pos[0], pos[1], CRAFTING_MODAL_WIDTH, CRAFTING_MODAL_HEIGHT)
+    }
+    screen = getattr(game, 'screen', pygame.display.get_surface())
+    assets = getattr(game, 'assets', {})
+    modal_data['instance'] = CraftingModal(screen, modal_data, assets, game)
+    game.modals.append(modal_data)
 
 def toggle_slots_modal(game):
-    slots_modal_exists = False
-    for modal in game.modals:
-        if modal['type'] == 'slots':
-            game.last_modal_positions['slots'] = (modal['rect'].x, modal['rect'].y)
-            game.modals.remove(modal)
-            slots_modal_exists = True
-            break
-    if not slots_modal_exists:
-        new_slots_modal = {
-            'id': uuid.uuid4(),
-            'type': 'slots',
-            'position': getattr(game, 'last_modal_positions', {}).get('slots', (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT)),
-            'is_dragging': False,
-            'drag_offset': (0, 0),
-            'rect': pygame.Rect(
-                getattr(game, 'last_modal_positions', {}).get('slots', (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT))[0],
-                getattr(game, 'last_modal_positions', {}).get('slots', (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT))[1],
-                SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT)
-        }
-        game.modals.append(new_slots_modal)
+    if _focus_or_toggle_modal(game, 'slots', None):
+        return
+    pos = getattr(game, 'last_modal_positions', {}).get('slots', (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT))
+    new_modal = {
+        'id': uuid.uuid4(),
+        'type': 'slots',
+        'position': pos,
+        'is_dragging': False,
+        'drag_offset': (0, 0),
+        'rect': pygame.Rect(pos[0], pos[1], SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT)
+    }
+    game.modals.append(new_modal)
+
 
 def toggle_help_modal(game):
-    help_modal_exists = False
-    for modal in game.modals:
-        if modal['type'] == 'help':
-            game.last_modal_positions['help'] = (modal['rect'].x, modal['rect'].y)
-            game.modals.remove(modal)
-            help_modal_exists = True
-            break
-    if not help_modal_exists:
-        new_help_modal = {
-            'id': uuid.uuid4(),
-            'type': 'help',
-            'position': (GAME_WIDTH / 2 - HELP_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - HELP_MODAL_HEIGHT / 2),
-            'is_dragging': False,
-            'drag_offset': (0, 0),
-            'rect': pygame.Rect(0, 0, HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT),
-            'scroll_offset_y': 0
-        }
-        new_help_modal['rect'].topleft = new_help_modal['position']
-        game.modals.append(new_help_modal)
+    if _focus_or_toggle_modal(game, 'help', None):
+        return
+    pos = (GAME_WIDTH / 2 - HELP_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - HELP_MODAL_HEIGHT / 2)
+    new_modal = {
+        'id': uuid.uuid4(),
+        'type': 'help',
+        'position': pos,
+        'is_dragging': False,
+        'drag_offset': (0, 0),
+        'rect': pygame.Rect(pos[0], pos[1], HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT),
+        'scroll_offset_y': 0
+    }
+    game.modals.append(new_modal)
 
 def find_closest_vehicle(game):
     closest_vehicle = None

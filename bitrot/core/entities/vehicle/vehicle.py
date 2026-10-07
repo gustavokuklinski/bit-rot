@@ -19,7 +19,7 @@ class Vehicle:
         self.name = name
 
         # Fetch stats directly from the definition if they are missing or empty (e.g., during load from save state)
-        if not stats or 'seats' not in stats:
+        if not stats:
             if not VehicleData.VEHICLE_TEMPLATES: VehicleData.load_templates()
             definition = VehicleData.get_definition_by_name(name)
             if definition and 'stats' in definition:
@@ -53,7 +53,9 @@ class Vehicle:
         self.inventory = items if items is not None else []
         self.max_speed = float(stats.get('max_speed', 10))
         
-        self.fuel = float(stats.get('fuel', 0.0))
+        # Explicit vehicle fuel capacity (independent of canister capacity)
+        self.max_fuel = float(stats.get('max_fuel', stats.get('fuel_max', 100.0)))
+        self.fuel = min(self.max_fuel, float(stats.get('fuel', 0.0)))
         self.battery = float(stats.get('battery', 0.0))
         self.motor = float(stats.get('motor', 0.0))
 
@@ -105,54 +107,20 @@ class Vehicle:
         if definition and 'sounds' in definition:
             self.sounds = definition['sounds']
 
-    @property
-    def seats(self):
-        """Backwards compatibility helper: returns list containing the driver if present."""
-        return [self.driver] if self.driver else []
 
-    def has_key_access(self, player):
+    def has_key_access(self, player=None):
         """
-        Returns True if the vehicle key is inserted in equipment['key']
-        or if the player has the key in their inventory, belt, or gear.
+        Returns True ONLY if the vehicle key is physically inserted in equipment['key'].
+        Keys stored in player inventory, belt, or clothes do NOT grant trunk access.
         """
         # If the vehicle doesn't require a key, access is always granted
         if not self.required_key_id or str(self.required_key_id).lower() in ['false', 'none', '']:
             return True
 
-        # 1. Check if matching key is already set in the vehicle's key slot
+        # ONLY the key physically set in equipment['key'] grants access
         key_item = self.equipment.get('key')
         if key_item and self.can_equip(key_item, 'key'):
             return True
-
-        # 2. Check if the player has the matching key on them
-        if player:
-            # Check Belt
-            found_key, _, _, _ = find_item_recursive(
-                player.belt, lambda it: self.can_equip(it, 'key')
-            )
-            if found_key:
-                return True
-
-            # Check Inventory
-            found_key, _, _, _ = find_item_recursive(
-                player.inventory, lambda it: self.can_equip(it, 'key')
-            )
-            if found_key:
-                return True
-
-            # Check Clothes / Gear
-            if hasattr(player, 'clothes'):
-                for slot_name, cloth_item in player.clothes.items():
-                    if not cloth_item:
-                        continue
-                    if self.can_equip(cloth_item, 'key'):
-                        return True
-                    if hasattr(cloth_item, 'inventory') and cloth_item.inventory:
-                        found_key, _, _, _ = find_item_recursive(
-                            cloth_item.inventory, lambda it: self.can_equip(it, 'key')
-                        )
-                        if found_key:
-                            return True
 
         return False
 
@@ -626,6 +594,52 @@ class Vehicle:
 
         return False
 
+
+        
+    def close_trunk(self, game=None):
+        """Immediately closes any open trunk/container modals for this vehicle."""
+        if not game:
+            from core.messages import _game_instance
+            game = _game_instance
+        if game and hasattr(game, 'modals'):
+            game.modals = [m for m in game.modals if not (m.get('type') == 'container' and m.get('item') == self)]
+
+    def refuel(self, fuel_item):
+        """
+        Pours fuel from a canister or fuel item into the vehicle tank,
+        strictly respecting self.max_fuel without overriding tank capacity.
+        Returns (transferred_amount, error_message).
+        """
+        space_available = max(0.0, self.max_fuel - self.fuel)
+        if space_available <= 0:
+            return 0.0, "Fuel tank is already full."
+
+        item_load = float(getattr(fuel_item, 'load', 1) or 1)
+        if item_load <= 0:
+            return 0.0, "Fuel container is empty."
+
+        transfer = min(space_available, item_load)
+        self.fuel = min(self.max_fuel, self.fuel + transfer)
+        item_load -= transfer
+
+        # Ensure equipment['fuel'] represents the vehicle's permanent fuel tank
+        tank_item = self.equipment.get('fuel')
+        if not tank_item:
+            tank_item = Item.create_from_name("Fuel Unit")
+            self.equipment['fuel'] = tank_item
+
+        if tank_item:
+            tank_item.capacity = int(self.max_fuel)
+            tank_item.load = self.fuel
+
+        if hasattr(fuel_item, 'load'):
+            fuel_item.load = item_load
+
+        self.update_stats_from_equipment()
+        return transfer, None
+
+
+
     def add_equipment(self, item, slot):
         if not self.can_equip(item, slot):
             display_message(f"{tr('msg', 'Cannot equip')} {tr('item', item.name)} {tr('msg', 'in')} {slot} {tr('msg', 'slot.')}")
@@ -641,6 +655,8 @@ class Vehicle:
             item = self.equipment[slot]
             self.equipment[slot] = None 
             self.update_stats_from_equipment()
+            if slot == 'key':
+                self.close_trunk()
             return item
         return None
 
@@ -656,9 +672,13 @@ class Vehicle:
         
         fuel_item = self.equipment.get('fuel')
         if fuel_item:
-            if hasattr(fuel_item, 'load') and fuel_item.load is not None: self.fuel = float(fuel_item.load)
-            else: self.fuel = 0.0 
-        else: self.fuel = 0
+            fuel_item.capacity = int(getattr(self, 'max_fuel', 100.0))
+            if hasattr(fuel_item, 'load') and fuel_item.load is not None:
+                self.fuel = min(self.max_fuel, float(fuel_item.load))
+            else:
+                self.fuel = min(self.max_fuel, self.fuel)
+        else:
+            self.fuel = min(getattr(self, 'max_fuel', 100.0), self.fuel)
         
         motor_item = self.equipment.get('motor')
         if motor_item:
@@ -806,10 +826,13 @@ class Vehicle:
                     display_message(tr('msg', "Engine died (No Battery)."))
 
         has_key = self.equipment.get('key') is not None
-        if not has_key and self.active:
-             self.active = False
-             self.car_state = "Off"
-             display_message(tr('msg', "Engine stopped (Key removed)."))
+        if not has_key:
+            if self.required_key_id:
+                self.close_trunk(game)
+            if self.active:
+                self.active = False
+                self.car_state = "Off"
+                display_message(tr('msg', "Engine stopped (Key removed)."))
              
         if not battery_item and self.active:
              self.active = False
@@ -818,12 +841,20 @@ class Vehicle:
 
     @property
     def current_weight(self):
-        return sum(getattr(item, 'load', 1) for item in self.inventory)
+        total = 0.0
+        for item in self.inventory:
+            if not item:
+                continue
+            if hasattr(item, 'get_total_weight'):
+                total += item.get_total_weight()
+            else:
+                total += float(getattr(item, 'load', 1) or 1)
+        return total
 
     @property
     def max_weight(self):
         return self.capacity * 10
-        
+
     def draw(self, surface, offset_x, offset_y):
         if self.image:
             surface.blit(self.image, (self.rect.x + offset_x, self.rect.y + offset_y))

@@ -42,10 +42,18 @@ def _draw_closed_container_view(surface, game, container, content_rect, mouse_po
         faded_img.fill((255, 255, 255, 140), special_flags=pygame.BLEND_RGBA_MULT)
         img_scaled = pygame.transform.scale(faded_img, (48, 48))
         surface.blit(img_scaled, img_scaled.get_rect(center=(center_x, area_center_y - 25)))
-        
-    title_surf = font_12.render(tr('ui', "Closed container"), False, WHITE)
+
+    is_veh = getattr(container, 'item_type', '') == 'vehicle'
+    title_str = tr('ui', "Trunk is locked") if is_veh else tr('ui', "Closed container")
+    title_surf = font_12.render(title_str, False, WHITE)
     surface.blit(title_surf, title_surf.get_rect(center=(center_x, area_center_y + 15)))
-    
+
+    if is_veh:
+        # Vehicles require the vehicle key to open the trunk
+        msg_surf = font_12.render(tr('msg', "Requires vehicle key to open."), False, (180, 180, 180))
+        surface.blit(msg_surf, msg_surf.get_rect(center=(center_x, area_center_y + 40)))
+        return
+        
     btn_w, btn_h = 130, 30
     btn_rect = pygame.Rect(center_x - btn_w // 2, area_center_y + 40, btn_w, btn_h)
     
@@ -67,7 +75,6 @@ def _draw_closed_container_view(surface, game, container, content_rect, mouse_po
                     container.open(game)
                     modal['active_tab'] = container.name
 
-            # Zero timer if SD card app is installed
             if getattr(core.data.config, 'ALL_VISIBLE', False) or has_app(game, 'open_container_instant'):
                 do_open_container()
             else:
@@ -79,7 +86,6 @@ def _draw_closed_container_view(surface, game, container, content_rect, mouse_po
                     if hasattr(container, 'is_opening'):
                         container.is_opening = False
                 game.player.start_action(f"{game.player.name} {tr('ui', 'Opening')}", open_time, do_open_container, xp_reward=1.5, cancel_on_move=True, on_cancel=cancel_open)
-
 
 def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
     base_modal = BaseModal(surface, modal, assets, tr('ui', "Nearby"))

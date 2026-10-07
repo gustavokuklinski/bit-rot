@@ -10,8 +10,7 @@
         <tire_front_right value="Car tire" />
         <tire_back_left value="Car tire" />
         <tire_back_right value="Car tire" />
-        <lights min="5" max="100" radius="8" />
-        <seats value="2" /> 
+        <lights min="5" max="50" radius="8" />
     </car>
     <loot>
         <item item="Fuel Canister" chance="0.6" />

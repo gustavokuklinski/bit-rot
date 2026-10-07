@@ -366,6 +366,10 @@ class Game:
             elif modal['type'] in ('container', 'text', 'big_map'):
                 container_item = modal.get('item')
                 if container_item:
+                    if getattr(container_item, 'item_type', '') == 'vehicle':
+                        if container_item.required_key_id and container_item.equipment.get('key') is None:
+                            modals_to_remove.append(modal)
+                            continue
                     is_equipped = False
                     if is_item_in_inventory(container_item, self.player.inventory):
                         is_equipped = True

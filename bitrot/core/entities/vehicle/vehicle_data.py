@@ -58,14 +58,7 @@ class VehicleData:
                                 if val is not None:
                                     stats[child.tag] = val
 
-                    # Seats
-                    if 'seats' not in stats:
-                        if 'seats' in root.attrib:
-                            stats['seats'] = root.get('seats')
-                        else:
-                            seats_node = root.find('seats')
-                            if seats_node is not None:
-                                stats['seats'] = seats_node.get('value', '4')
+                    
 
                     # Capacity
                     capacity_node = root.find('capacity')
