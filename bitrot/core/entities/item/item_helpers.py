@@ -1,5 +1,6 @@
 # core/entities/item/item_helpers.py
 import pygame
+import math
 import core.data.config
 from core.entities.item.item import Item
 
@@ -22,6 +23,66 @@ def item_allows_belt(item):
                 return val.lower().strip() in ('true', '1')
             return bool(val)
     return False
+
+
+def is_item_liquid(item):
+    """Checks if an item is a liquid (including type='car_fuel' and 'Fuel Unit')."""
+    if not item:
+        return False
+    if getattr(item, 'liquid', False):
+        return True
+    itype = getattr(item, 'item_type', '') or getattr(item, 'type', '') or ''
+    if itype in ('liquid', 'car_fuel'):
+        return True
+    return getattr(item, 'name', '') == 'Fuel Unit'
+
+def get_container_liquid_capacity_units(container, liquid_item, target_item=None):
+    """
+    Calculates how many units of liquid_item can fit inside container:
+    1. Checks available volume (max_liquid - current_liquid).
+    2. Calculates remaining weight capacity and converts it to liquid units.
+    3. Always floors down to the nearest integer (e.g. 1.5 -> 1, 1.9 -> 1).
+    4. Safely handles float('inf') without raising OverflowError.
+    """
+    if not container or not liquid_item:
+        return 0
+
+    if not does_allow_liquid(container):
+        return 0
+
+    # 1. Volume Capacity (max_liquid)
+    avail_vol = get_container_available_liquid(container, target_item=target_item)
+    if avail_vol <= 0 or (isinstance(avail_vol, float) and math.isnan(avail_vol)):
+        return 0
+
+    # 2. Weight Capacity
+    unit_weight = getattr(liquid_item, 'weight', 0.0) or 0.0
+
+    if hasattr(container, 'max_weight'):
+        max_w = float(getattr(container, 'max_weight', 0.0) or 0.0)
+    elif hasattr(container, 'weight') and container.weight > 0.0:
+        max_w = float(container.weight * 5.0)
+    else:
+        max_w = float('inf')
+
+    if max_w != float('inf') and unit_weight > 0:
+        cur_w = sum(i.get_total_weight() for i in getattr(container, 'inventory', []) if i is not target_item)
+        rem_w = max(0.0, max_w - cur_w)
+        avail_weight_units = rem_w / unit_weight
+    else:
+        avail_weight_units = float('inf')
+
+    # Float comparison handles float('inf') correctly before integer conversion
+    units = min(avail_vol, avail_weight_units)
+
+    if math.isinf(units):
+        return 999999
+    if math.isnan(units) or units <= 0:
+        return 0
+
+    # Always floor down to integer (1.5 -> 1, 1.9 -> 1)
+    return int(math.floor(units))
+
 
 def is_valid_send_to_container(obj):
     """
@@ -336,7 +397,7 @@ def get_container_liquid_load(container, exclude_item=None):
         return 0.0
     total = 0.0
     for it in container.inventory:
-        if it and it is not exclude_item and getattr(it, 'liquid', False):
+        if it and it is not exclude_item and is_item_liquid(it):
             total += float(getattr(it, 'load', 0) or 0)
     return total
 
@@ -353,15 +414,51 @@ def get_container_available_liquid(container, target_item=None):
 
 def add_item_to_container_inventory(container, item_to_add, target_index=-1, is_stack=False):
     """
-    Safely adds or stacks item_to_add into container.inventory, enforcing container.max_liquid limits.
+    Safely adds or stacks item_to_add into container.inventory, enforcing container volume and weight limits.
     Returns (transferred_amount, remaining_load, success).
     """
     if not container or not hasattr(container, 'inventory'):
         return 0.0, float(getattr(item_to_add, 'load', 1) or 1), False
 
-    is_liquid = getattr(item_to_add, 'liquid', False)
-    max_liq = get_container_max_liquid(container) if is_liquid else None
+    is_liquid = is_item_liquid(item_to_add)
     current_load = float(getattr(item_to_add, 'load', 1) or 1)
+
+    if is_liquid:
+        avail_units = get_container_liquid_capacity_units(container, item_to_add)
+        if avail_units <= 0:
+            return 0.0, current_load, False
+
+        # Floor transferred units to the integer below
+        trans = float(int(math.floor(min(current_load, float(avail_units)))))
+        if trans <= 0:
+            return 0.0, current_load, False
+
+        max_l_val = getattr(container, 'max_liquid', None)
+        if max_l_val is not None and not math.isinf(float(max_l_val)):
+            target_max_l = int(math.floor(float(max_l_val)))
+        else:
+            target_max_l = int(getattr(item_to_add, 'capacity', 100) or 100)
+
+        # Check existing matching liquid stack
+        dst = next((it for it in container.inventory if it and is_item_liquid(it) and it.name == item_to_add.name), None)
+        if dst:
+            dst.load = (getattr(dst, 'load', 0) or 0) + trans
+            dst.capacity = target_max_l
+        else:
+            new_it = Item.create_from_name(item_to_add.name)
+            if not new_it:
+                return 0.0, current_load, False
+            new_it.load = trans
+            new_it.capacity = target_max_l
+            if target_index != -1 and target_index <= len(container.inventory):
+                container.inventory.insert(target_index, new_it)
+            else:
+                container.inventory.append(new_it)
+
+        remaining = current_load - trans
+        if hasattr(item_to_add, 'load') and item_to_add.load is not None:
+            item_to_add.load = remaining
+        return trans, remaining, True
 
     if is_stack:
         dst = None
@@ -374,57 +471,29 @@ def add_item_to_container_inventory(container, item_to_add, target_index=-1, is_
             return 0.0, current_load, False
 
         avail = (dst.capacity or 100) - dst.load
-        if max_liq is not None:
-            avail_liq = get_container_available_liquid(container, target_item=dst)
-            avail = min(avail, avail_liq)
-
         trans = min(max(0.0, avail), current_load)
         if trans <= 0:
             return 0.0, current_load, False
 
         dst.load += trans
-        if max_liq is not None:
-            dst.capacity = int(max_liq)
         remaining = current_load - trans
         if hasattr(item_to_add, 'load') and item_to_add.load is not None:
             item_to_add.load = remaining
         return trans, remaining, True
 
     else:
-        avail = current_load
-        if max_liq is not None:
-            avail_liq = get_container_available_liquid(container)
-            avail = min(avail, avail_liq)
-
-        trans = min(max(0.0, avail), current_load)
-        if trans <= 0:
+        if not check_container_weight_limit(container, item_to_add):
             return 0.0, current_load, False
 
-        if trans < current_load:
-            new_it = Item.create_from_name(item_to_add.name)
-            if not new_it:
-                return 0.0, current_load, False
-            new_it.load = trans
-            if max_liq is not None:
-                new_it.capacity = int(max_liq)
-            if hasattr(item_to_add, 'durability'):
-                new_it.durability = item_to_add.durability
-            if target_index != -1 and target_index <= len(container.inventory):
-                container.inventory.insert(target_index, new_it)
-            else:
-                container.inventory.append(new_it)
-            remaining = current_load - trans
-            if hasattr(item_to_add, 'load') and item_to_add.load is not None:
-                item_to_add.load = remaining
-            return trans, remaining, True
+        c_cap = getattr(container, 'capacity', 0) or 0
+        if len(container.inventory) >= c_cap:
+            return 0.0, current_load, False
+
+        if target_index != -1 and target_index <= len(container.inventory):
+            container.inventory.insert(target_index, item_to_add)
         else:
-            if max_liq is not None:
-                item_to_add.capacity = int(max_liq)
-            if target_index != -1 and target_index <= len(container.inventory):
-                container.inventory.insert(target_index, item_to_add)
-            else:
-                container.inventory.append(item_to_add)
-            return trans, 0.0, True
+            container.inventory.append(item_to_add)
+        return current_load, 0.0, True
 
 def is_container_on_player(cont, player):
     """Checks if a container object is equipped, worn, or in the player's inventory/belt."""

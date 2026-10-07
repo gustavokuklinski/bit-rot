@@ -2,11 +2,11 @@
     <properties>
         <capacity value="1" />
         <sprite file="container_liquid_fuel_canister.png" />
-        <weight weight="1.0" reduction="5%" />
+        <weight weight="2.0" reduction="5%" />
         <max_liquid value="25" />
     </properties>
     <loot>
-        <item name="Fuel Unit" chance="1.0" />
+        <item name="Fuel Unit" chance="0.5" />
     </loot>
     <spawn chance="1" />
 </item>

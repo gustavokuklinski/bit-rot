@@ -579,8 +579,9 @@ def handle_right_click(game, mouse_pos):
 
         elif is_nearby:
             options = []
+            is_item_liq = getattr(clicked_item, 'liquid', False) or getattr(clicked_item, 'item_type', '') in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
             if not isinstance(clicked_item, Corpse) and getattr(clicked_item, 'type', None) not in ('animal', 'zombie'):
-                if not getattr(clicked_item, 'liquid', False) or is_fuel_item(clicked_item):
+                if not is_item_liq:
                     if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
                         options.extend(['Grab One', 'Grab Half', 'Grab All'])
                     else:
@@ -593,10 +594,11 @@ def handle_right_click(game, mouse_pos):
 
         elif click_source == 'ground':
             options = []
+            is_item_liq = getattr(clicked_item, 'liquid', False) or getattr(clicked_item, 'item_type', '') in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
             if isinstance(clicked_item, Corpse):
                 options.append('Open')
             else:
-                if not getattr(clicked_item, 'liquid', False) or is_fuel_item(clicked_item):
+                if not is_item_liq:
                     if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
                         options.extend(['Grab One', 'Grab Half', 'Grab All'])
                     else:
@@ -668,7 +670,8 @@ def handle_right_click(game, mouse_pos):
 
             elif click_source == 'container':
                 options = []
-                if not getattr(clicked_item, 'liquid', False) or is_fuel_item(clicked_item):
+                is_item_liq = getattr(clicked_item, 'liquid', False) or getattr(clicked_item, 'item_type', '') in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
+                if not is_item_liq:
                     if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
                         options.extend(['Grab One', 'Grab Half', 'Grab All'])
                     else:

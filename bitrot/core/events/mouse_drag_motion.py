@@ -41,7 +41,7 @@ def find_item_at_pos(game, mouse_pos):
             if container and hasattr(container, 'inventory'):
                 if is_infinite_liquid_source(container):
                     for item in container.inventory:
-                        if getattr(item, 'liquid', False):
+                        if getattr(item, 'liquid', False) or getattr(item, 'item_type', '') in ('liquid', 'car_fuel') or getattr(item, 'name', '') == 'Fuel Unit':
                             item.load = getattr(item, 'capacity', 100)
                 for i, item in enumerate(container.inventory):
                     if item and get_container_slot_rect(top_modal['position'], i).collidepoint(mouse_pos):

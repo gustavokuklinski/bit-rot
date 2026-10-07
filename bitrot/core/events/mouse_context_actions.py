@@ -1,6 +1,7 @@
 # In core/events/mouse_context_actions.py
 
 import uuid
+import math
 import pygame
 from core.data.config import *
 from core.entities.item.item import Item
@@ -11,7 +12,8 @@ from core.events.keyboard import (
 )
 from core.entities.item.item_helpers import (
     get_container_available_liquid, is_container_on_player,
-    item_allows_belt, is_valid_send_to_container
+    item_allows_belt, is_valid_send_to_container, does_allow_liquid,
+    is_item_liquid, get_container_liquid_capacity_units, is_infinite_liquid_source
 )
 from core.events.mouse_drag_utils import check_container_weight_limit
 from core.events.mouse_context_helpers import (
@@ -387,44 +389,64 @@ def handle_context_menu_click(game, mouse_pos):
                             return
 
                         c_cap = getattr(target_container, 'capacity', 0)
-                        if c_cap is None or c_cap <= 0:
+                        if (c_cap is None or c_cap <= 0) and not does_allow_liquid(target_container):
                             display_message(tr('msg', "Target has no inventory capacity."))
                             game.context_menu['active'] = False
                             return
 
-                        # Enforce container weight limit!
-                        if not check_container_weight_limit(target_container, item):
-                            display_message(f"{tr('item', target_container.name)} {tr('msg', 'cannot carry that much weight.')}")
-                            game.context_menu['active'] = False
-                            return
-
-                        def do_send_cont():
+                        # Enforce container capacity (Liquid vs Solid)
+                        if is_item_liquid(item) and does_allow_liquid(target_container):
+                            avail_units = get_container_liquid_capacity_units(target_container, item)
+                            if avail_units <= 0:
+                                if get_container_available_liquid(target_container) <= 0:
+                                    display_message(tr('msg', "Container is full of liquid."))
+                                else:
+                                    display_message(f"{tr('item', target_container.name)} {tr('msg', 'cannot carry that much weight.')}")
+                                game.context_menu['active'] = False
+                                return
+                        else:
                             if not check_container_weight_limit(target_container, item):
                                 display_message(f"{tr('item', target_container.name)} {tr('msg', 'cannot carry that much weight.')}")
+                                game.context_menu['active'] = False
                                 return
 
-                            is_liquid = getattr(item, 'liquid', False)
+                        def do_send_cont():
+                            is_liquid = is_item_liquid(item)
                             total_load = getattr(item, 'load', 1)
                             if total_load is None: total_load = 1
 
                             if is_liquid:
-                                avail_liquid = get_container_available_liquid(target_container)
-                                if avail_liquid <= 0:
-                                    display_message(tr('msg', "Container is full of liquid."))
+                                # First calculate weight, then volume to determine exact fillable units
+                                avail_units = get_container_liquid_capacity_units(target_container, item)
+                                if avail_units <= 0:
+                                    if get_container_available_liquid(target_container) <= 0:
+                                        display_message(tr('msg', "Container is full of liquid."))
+                                    else:
+                                        display_message(f"{tr('item', target_container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                     return
 
-                                transfer_units = min(total_load, avail_liquid)
-                                target_max_l = getattr(target_container, 'max_liquid', transfer_units) or transfer_units
+                                # Floor units down to the integer below
+                                transfer_units = float(int(math.floor(min(total_load, float(avail_units)))))
+                                if transfer_units <= 0:
+                                    return
+
+                                max_l_val = getattr(target_container, 'max_liquid', None)
+                                if max_l_val is not None and not math.isinf(float(max_l_val)):
+                                    target_max_l = int(math.floor(float(max_l_val)))
+                                else:
+                                    target_max_l = int(getattr(item, 'capacity', 100) or 100)
 
                                 stacked = False
                                 for inv_it in target_container.inventory:
-                                    if getattr(inv_it, 'liquid', False) and inv_it.name == item.name:
+                                    is_inv_liq = getattr(inv_it, 'liquid', False) or getattr(inv_it, 'item_type', '') in ('liquid', 'car_fuel') or getattr(inv_it, 'name', '') == 'Fuel Unit'
+                                    if is_inv_liq and inv_it.name == item.name:
                                         inv_it.load = (getattr(inv_it, 'load', 0) or 0) + transfer_units
                                         inv_it.capacity = target_max_l
                                         stacked = True
                                         break
 
                                 if not stacked:
+                                    c_cap = max(1, getattr(target_container, 'capacity', 0) or 1)
                                     if len(target_container.inventory) >= c_cap:
                                         display_message(tr('msg', "Container is full."))
                                         return
@@ -434,14 +456,27 @@ def handle_context_menu_click(game, mouse_pos):
                                         new_liq.capacity = target_max_l
                                         target_container.inventory.append(new_liq)
 
-                                if transfer_units >= total_load:
-                                    remove_from_source(game, item, source, index, container_item)
+                                # If transferring from an infinite liquid maptile container, preserve its stock
+                                if container_item and is_infinite_liquid_source(container_item):
+                                    item.load = getattr(item, 'capacity', 100)
                                 else:
-                                    item.load -= transfer_units
+                                    if transfer_units >= total_load:
+                                        remove_from_source(game, item, source, index, container_item)
+                                    else:
+                                        item.load -= transfer_units
+
+                                from core.events.mouse_drag_utils import _sync_container_to_server
+                                _sync_container_to_server(game, target_container)
+                                if container_item:
+                                    _sync_container_to_server(game, container_item)
 
                                 if hasattr(game, 'sound_manager'):
                                     game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
                                 display_message(f"{tr('msg', 'Transferred')} {int(transfer_units)} {tr('item', item.name)} {tr('msg', 'into')} {target_container.name}.")
+                                return
+
+                            if not check_container_weight_limit(target_container, item):
+                                display_message(f"{tr('item', target_container.name)} {tr('msg', 'cannot carry that much weight.')}")
                                 return
 
                             qty_to_send = total_load

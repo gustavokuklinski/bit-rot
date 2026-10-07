@@ -65,7 +65,8 @@ class Item:
         self.firing_distance = firing_distance 
         self.disposable = disposable
         
-        self.liquid = str(liquid).lower() == 'true' if isinstance(liquid, str) else bool(liquid)
+        is_liq = (str(liquid).lower() == 'true' if isinstance(liquid, str) else bool(liquid)) or (self.item_type in ('liquid', 'car_fuel')) or (self.name == 'Fuel Unit')
+        self.liquid = is_liq
         self.allow_liquid = str(allow_liquid).lower() == 'true' if isinstance(allow_liquid, str) else bool(allow_liquid)
 
         self.require = require
@@ -309,8 +310,9 @@ class Item:
     def can_stack_with(self, other_item):
         if not self.is_stackable() or not other_item.is_stackable():
             return False
+        type_matches = (self.item_type == other_item.item_type) or (self.liquid and getattr(other_item, 'liquid', False))
         return (self.name == other_item.name and 
-                self.item_type == other_item.item_type and
+                type_matches and
                 self.durability is None)
 
     @property

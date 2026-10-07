@@ -13,7 +13,7 @@ from core.data.localization import tr
 from core.entities.item.item_helpers import find_item_recursive
 
 class Vehicle:
-    def __init__(self, name, x, y, width, height, image, stats, capacity=20, items=None, loot_table=None, facing='right'):
+    def __init__(self, name, x, y, width, height, image, stats, capacity=15, items=None, loot_table=None, facing='right'):
 
         self.item_type = 'vehicle'
         self.name = name
@@ -185,12 +185,21 @@ class Vehicle:
             if key_item:
                 self.equipment['key'] = key_item
 
-        if random.random() < veh_has_fuel:
-            fuel_item = Item.create_from_name("Fuel Unit") 
-            if fuel_item:
-                if hasattr(fuel_item, 'capacity') and fuel_item.capacity:
-                    fuel_item.load = random.uniform(1.0, float(fuel_item.capacity))
-                self.equipment['fuel'] = fuel_item
+        # Only randomize fuel on brand new vehicle spawns if initial fuel was not explicitly set
+        if self.equipment.get('fuel') is None:
+            if self.fuel > 0:
+                tank_item = Item.create_from_name("Fuel Unit")
+                if tank_item:
+                    tank_item.capacity = int(self.max_fuel)
+                    tank_item.load = float(self.fuel)
+                    self.equipment['fuel'] = tank_item
+            elif random.random() < veh_has_fuel:
+                tank_item = Item.create_from_name("Fuel Unit")
+                if tank_item:
+                    tank_item.capacity = int(self.max_fuel)
+                    tank_item.load = round(random.uniform(5.0, self.max_fuel * 0.5), 1)
+                    self.fuel = float(tank_item.load)
+                    self.equipment['fuel'] = tank_item
         
         if random.random() < veh_has_motor:
             motor_item = Item.create_from_name("Car Engine")
@@ -606,7 +615,7 @@ class Vehicle:
 
     def refuel(self, fuel_item):
         """
-        Pours fuel from a canister or fuel item into the vehicle tank,
+        Pours fuel from a canister, container, or loose fuel unit into the vehicle tank,
         strictly respecting self.max_fuel without overriding tank capacity.
         Returns (transferred_amount, error_message).
         """
@@ -614,15 +623,35 @@ class Vehicle:
         if space_available <= 0:
             return 0.0, "Fuel tank is already full."
 
-        item_load = float(getattr(fuel_item, 'load', 1) or 1)
+        # Case A: fuel_item is a container holding liquid in its inventory
+        source_fuel_unit = None
+        if hasattr(fuel_item, 'inventory') and fuel_item.inventory:
+            for it in fuel_item.inventory:
+                if it and (getattr(it, 'liquid', False) or it.name == "Fuel Unit") and (getattr(it, 'load', 0) or 0) > 0:
+                    source_fuel_unit = it
+                    break
+
+        # Case B: fuel_item itself is the Fuel Unit item
+        if not source_fuel_unit and getattr(fuel_item, 'name', '') == "Fuel Unit":
+            source_fuel_unit = fuel_item
+
+        if not source_fuel_unit:
+            return 0.0, "Fuel container is empty."
+
+        item_load = float(getattr(source_fuel_unit, 'load', 0) or 0)
         if item_load <= 0:
             return 0.0, "Fuel container is empty."
 
         transfer = min(space_available, item_load)
         self.fuel = min(self.max_fuel, self.fuel + transfer)
-        item_load -= transfer
+        source_fuel_unit.load = max(0.0, item_load - transfer)
 
-        # Ensure equipment['fuel'] represents the vehicle's permanent fuel tank
+        # If stored inside a container and now depleted, remove the empty liquid stack
+        if hasattr(fuel_item, 'inventory') and source_fuel_unit.load <= 0:
+            if source_fuel_unit in fuel_item.inventory:
+                fuel_item.inventory.remove(source_fuel_unit)
+
+        # Update vehicle's internal fuel tank item representation
         tank_item = self.equipment.get('fuel')
         if not tank_item:
             tank_item = Item.create_from_name("Fuel Unit")

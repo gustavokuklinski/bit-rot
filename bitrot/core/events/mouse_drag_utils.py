@@ -2,8 +2,10 @@
 
 from core.data.localization import tr
 from core.entities.item.item_helpers import (
-    is_infinite_liquid_source, is_container_on_player
+    is_infinite_liquid_source, is_container_on_player,
+    does_allow_liquid, is_item_liquid, get_container_available_liquid
 )
+
 
 def check_recursive_containment(dragged_item, target_container):
     if dragged_item is target_container:
@@ -29,7 +31,18 @@ def check_container_weight_limit(container, incoming_item, item_to_remove=None):
     if hasattr(container, 'inventory') and incoming_item in container.inventory:
         return True
 
-    incoming_weight = incoming_item.get_total_weight() if hasattr(incoming_item, 'get_total_weight') else getattr(incoming_item, 'weight', 0.0)
+    # For liquids entering a liquid container, only test the weight of the liquid that fits
+    if does_allow_liquid(container) and is_item_liquid(incoming_item):
+        unit_w = getattr(incoming_item, 'weight', 0.0) or 0.0
+        avail_vol = get_container_available_liquid(container)
+        incoming_load = float(getattr(incoming_item, 'load', 1) or 1)
+        if avail_vol != float('inf'):
+            transfer_qty = min(avail_vol, incoming_load)
+        else:
+            transfer_qty = incoming_load
+        incoming_weight = transfer_qty * unit_w
+    else:
+        incoming_weight = incoming_item.get_total_weight() if hasattr(incoming_item, 'get_total_weight') else getattr(incoming_item, 'weight', 0.0)
 
     # 1. Vehicle max_weight check
     if hasattr(container, 'max_weight'):

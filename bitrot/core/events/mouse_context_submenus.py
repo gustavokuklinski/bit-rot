@@ -4,7 +4,10 @@ import pygame
 from core.data.config import WHITE, GRAY
 from core.data.localization import tr
 from core.data.recipe_manager import RecipeManager
-from core.entities.item.item_helpers import does_allow_liquid, get_container_available_liquid, item_allows_belt, is_valid_send_to_container
+from core.entities.item.item_helpers import (
+    does_allow_liquid, get_container_available_liquid, item_allows_belt,
+    is_valid_send_to_container, is_item_liquid, get_container_liquid_capacity_units
+)
 from core.events.mouse_drag_utils import check_container_weight_limit, check_recursive_containment
 from core.ui.crafting_common import get_recipe_status_details, is_recipe_relevant_to_item
 from core.events.mouse_context_helpers import is_fuel_item
@@ -145,7 +148,7 @@ def build_send_to_submenu(clicked_item, click_source, click_container_item, game
     tooltip_map = {}
 
     # Loose liquids must spill when sent to raw inventory
-    is_liquid = bool(getattr(clicked_item, 'liquid', False))
+    is_liquid = is_item_liquid(clicked_item)
 
     if click_source == 'vehicle_equipment':
         # Vehicle parts can ONLY be sent to inventory. Never directly to Ground.
@@ -223,31 +226,48 @@ def build_send_to_submenu(clicked_item, click_source, click_container_item, game
         if c_cap is None or c_cap <= 0:
             continue
 
-        # Enforce container weight capacity!
-        if not check_container_weight_limit(c, clicked_item):
-            continue
-
         c_allows_liquid = does_allow_liquid(c)
         if is_liquid and not c_allows_liquid: continue
         if not is_liquid and c_allows_liquid: continue
-        if is_liquid and get_container_available_liquid(c) <= 0: continue
 
-        can_fit = (len(getattr(c, 'inventory', [])) < c_cap)
-        if not can_fit and getattr(clicked_item, 'is_stackable', lambda: False)():
-            for inv_it in getattr(c, 'inventory', []):
-                if hasattr(inv_it, 'can_stack_with') and inv_it.can_stack_with(clicked_item):
-                    if (getattr(inv_it, 'load', 0) or 0) < (getattr(inv_it, 'capacity', 1) or 1):
-                        can_fit = True
-                        break
+        if is_liquid:
+            # Prevent pouring into a container holding a different liquid
+            if hasattr(c, 'inventory'):
+                has_different_liquid = False
+                for inside_it in c.inventory:
+                    if inside_it and is_item_liquid(inside_it):
+                        if inside_it.name != clicked_item.name and (getattr(inside_it, 'load', 0) or 0) > 0:
+                            has_different_liquid = True
+                            break
+                if has_different_liquid:
+                    continue
+
+            # First calculate available units based on weight, then volume
+            avail_units = get_container_liquid_capacity_units(c, clicked_item)
+            if avail_units <= 0:
+                continue
+            can_fit = True
+        else:
+            if c_cap is None or c_cap <= 0:
+                continue
+            if not check_container_weight_limit(c, clicked_item):
+                continue
+            can_fit = (len(getattr(c, 'inventory', [])) < c_cap)
+            if not can_fit and getattr(clicked_item, 'is_stackable', lambda: False)():
+                for inv_it in getattr(c, 'inventory', []):
+                    if hasattr(inv_it, 'can_stack_with') and inv_it.can_stack_with(clicked_item):
+                        if (getattr(inv_it, 'load', 0) or 0) < (getattr(inv_it, 'capacity', 1) or 1):
+                            can_fit = True
+                            break
 
         if can_fit:
             seen_c_keys.add(c_key)
             sub_opts.append(c_key)
             c_name = getattr(c, 'name', tr('ui', 'Container'))
-            
+
             if c_allows_liquid:
                 max_l = getattr(c, 'max_liquid', None)
-                cur_l = int(sum(getattr(x, 'load', 1) or 1 for x in getattr(c, 'inventory', []) if getattr(x, 'liquid', False)))
+                cur_l = int(sum(getattr(x, 'load', 1) or 1 for x in getattr(c, 'inventory', []) if is_item_liquid(x)))
                 display_map[c_key] = f"{c_name} ({cur_l}/{max_l or '?'})"
             else:
                 display_map[c_key] = f"{c_name}"
