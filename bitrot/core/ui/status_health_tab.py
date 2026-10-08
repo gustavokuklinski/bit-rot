@@ -155,7 +155,6 @@ def draw_health_tab(surface, player, modal, assets, game=None):
 
     # --- 4. OTHER INFO ---
     if game:
-        day_count = getattr(game.world_time, 'day_count', 0)
         player_has_mobile = _player_has_mobile(player)
         
         current_hour = game.world_time.current_hour
@@ -163,7 +162,7 @@ def draw_health_tab(surface, player, modal, assets, game=None):
         mins = (mins // 10) * 10 
         time_ratio = (current_hour * 60 + mins) / 1440.0
         
-        day_suffix = tr('ui', 'day') if day_count == 1 else tr('ui', 'days')
+        
         
         weather_state = getattr(game.world_time, 'weather', 'CLEAR')
 
@@ -198,7 +197,7 @@ def draw_health_tab(surface, player, modal, assets, game=None):
         day_night_str = tr('ui', "Darkness") if world_state in ['NIGHT', 'TRANSITION_TO_NIGHT'] else tr('ui', "Daylight")
 
         combined_lines = [
-            (SPRITE_PATH + "ui/clock.png", tr('ui', "Time"), f"{time_str} - {day_count} {day_suffix}", time_color, time_ratio),
+            (SPRITE_PATH + "ui/clock.png", tr('ui', "Time"), f"{time_str}", time_color, time_ratio),
             (weather_icon, "", f"{day_night_str} - {weather_label}", weather_color, None),
         ]
         status_title = font_12.render(tr('ui', "World Info"), False, WHITE)

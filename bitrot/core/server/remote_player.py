@@ -89,6 +89,27 @@ class RemotePlayer(pygame.sprite.Sprite):
                         'infection': infection
                     })
                     break
+
+        if hasattr(game, 'blood_stains') and damage > 0:
+            direction = None
+            if attacker and hasattr(attacker, 'rect'):
+                dx = self.rect.centerx - attacker.rect.centerx
+                dy = self.rect.centery - attacker.rect.centery
+                dist = math.hypot(dx, dy)
+                if dist > 0:
+                    direction = [dx / dist, dy / dist]
+            from core.update.combat import create_blood_splatter
+            create_blood_splatter(game, self.rect, damage, direction)
+
+        if hasattr(game, 'splashes') and damage > 0:
+            game.splashes.append({
+                'pos': self.rect.center,
+                'time': pygame.time.get_ticks(),
+                'duration': 350,
+                'radius': 3,
+                'type': 'hit_puff'
+            })
+
         return False
 
     def update_from_network(self, data):
@@ -204,14 +225,14 @@ class RemotePlayer(pygame.sprite.Sprite):
         # --- FIX: Default Game Melee Arc ---
         if is_swinging:
             self.swing_timer -= 1
-            swing_radius = TILE_SIZE * 0.7
-            center_x, center_y = draw_rect.center
-            start_angle = self.swing_angle - (3.1415 / 4)
-            end_angle = self.swing_angle + (3.1415 / 4)
-            arc_surf = pygame.Surface((swing_radius * 2, swing_radius * 2), pygame.SRCALPHA)
-            arc_rect = arc_surf.get_rect()
-            pygame.draw.arc(arc_surf, (0, 0, 0, 80), arc_rect, start_angle, end_angle, 2)
-            surface.blit(arc_surf, (center_x - swing_radius, center_y - swing_radius))
+            #swing_radius = TILE_SIZE * 0.7
+            #center_x, center_y = draw_rect.center
+            #start_angle = self.swing_angle - (3.1415 / 4)
+            #end_angle = self.swing_angle + (3.1415 / 4)
+            #arc_surf = pygame.Surface((swing_radius * 2, swing_radius * 2), pygame.SRCALPHA)
+            #arc_rect = arc_surf.get_rect()
+            #pygame.draw.arc(arc_surf, (0, 0, 0, 80), arc_rect, start_angle, end_angle, 2)
+            #surface.blit(arc_surf, (center_x - swing_radius, center_y - swing_radius))
 
         # --- FIX: Default Game Gun Flash ---
         if getattr(self, 'gun_flash_timer', 0) > 0:

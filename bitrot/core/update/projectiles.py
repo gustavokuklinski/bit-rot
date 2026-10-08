@@ -35,9 +35,8 @@ def update_projectiles(game, GRID_SIZE, zombies_to_remove):
 
         if getattr(p, 'hostile', False) and game.player and not game.player.is_dead:
             if p.rect.colliderect(game.player.rect):
-                game.player.take_damage(game, getattr(p, 'damage', 5), 0)
+                game.player.take_damage(game, getattr(p, 'damage', 5), 0, attacker=getattr(p, 'owner', None))
                 print(f"You were hit!")
-                game.splashes.append({'pos': game.player.rect.center, 'time': pygame.time.get_ticks(), 'duration': 350, 'radius': 3, 'type': 'hit_puff'})
                 projectiles_to_remove.append(p)
                 continue
                 

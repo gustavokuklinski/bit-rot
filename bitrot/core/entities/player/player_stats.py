@@ -1,6 +1,7 @@
 # core/entities/player/player_stats.py
-
+import math
 import random
+import pygame
 from core.messages import display_message
 from core.data.localization import tr
 
@@ -33,12 +34,46 @@ class PlayerStats:
             if item_hit.durability <= 0:
                 display_message(f"{tr('msg', 'Your')} {tr('item', item_hit.name)} {tr('msg', 'broke!')}")
 
-    def take_damage(self, game, base_damage, base_infection):
+    def take_damage(self, game, base_damage, base_infection, attacker=None):
         
         if getattr(self, 'vehicle', None):
             if hasattr(self.vehicle, 'damage_motor'):
                 self.vehicle.damage_motor(base_damage)
             return 0, 0
+        
+        # --- PLAYER BLEEDING EFFECT ---
+        if base_damage > 0:
+            direction = None
+            if attacker and hasattr(attacker, 'rect'):
+                dx = self.rect.centerx - attacker.rect.centerx
+                dy = self.rect.centery - attacker.rect.centery
+                dist = math.hypot(dx, dy)
+                if dist > 0:
+                    direction = [dx / dist, dy / dist]
+
+            from core.update.combat import create_blood_splatter
+            create_blood_splatter(game, self.rect, base_damage, direction)
+
+            if hasattr(game, 'blood_stains'):
+                count = random.randint(1, 2)
+                for _ in range(count):
+                    game.blood_stains.append({
+                        'pos': (self.rect.centerx + random.randint(-6, 6), self.rect.centery + random.randint(-6, 6)),
+                        'size': random.randint(4, 8),
+                        'color': (139, 0, 0),
+                        'time': pygame.time.get_ticks(),
+                        'duration': random.randint(30000, 60000)
+                    })
+
+            if hasattr(game, 'splashes'):
+                game.splashes.append({
+                    'pos': (self.rect.centerx, self.rect.centery),
+                    'time': pygame.time.get_ticks(),
+                    'duration': 350,
+                    'radius': 3,
+                    'type': 'hit_puff'
+                })
+        # ------------------------------
 
         # 1. Damage will first go to DEFENCE (Clothes Durability acts as the Defense Pool)
         remaining_damage = base_damage

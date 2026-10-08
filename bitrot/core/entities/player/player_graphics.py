@@ -214,15 +214,15 @@ class PlayerGraphics:
                 
                 surface.blit(rotated_image, rotated_rect)
 
-            swing_radius = TILE_SIZE * 0.7
-            center_x, center_y = draw_rect.center
-            start_angle = self.melee_swing_angle - (3.1415 / 4)
-            end_angle = self.melee_swing_angle + (3.1415 / 4)
-            arc_surf = pygame.Surface((swing_radius * 2, swing_radius * 2), pygame.SRCALPHA)
+            #swing_radius = TILE_SIZE * 0.7
+            #center_x, center_y = draw_rect.center
+            #start_angle = self.melee_swing_angle - (3.1415 / 4)
+            #end_angle = self.melee_swing_angle + (3.1415 / 4)
+            #arc_surf = pygame.Surface((swing_radius * 2, swing_radius * 2), pygame.SRCALPHA)
             
-            arc_rect = arc_surf.get_rect()
-            pygame.draw.arc(arc_surf, (0, 0, 0, 80), arc_rect, start_angle, end_angle, 2)
-            surface.blit(arc_surf, (center_x - swing_radius, center_y - swing_radius))
+            #arc_rect = arc_surf.get_rect()
+            #pygame.draw.arc(arc_surf, (0, 0, 0, 80), arc_rect, start_angle, end_angle, 2)
+            #surface.blit(arc_surf, (center_x - swing_radius, center_y - swing_radius))
             
             self.melee_swing_timer -= 1
 

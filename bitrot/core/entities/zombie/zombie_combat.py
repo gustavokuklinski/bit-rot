@@ -102,7 +102,7 @@ class ZombieCombat:
                 infection = random.uniform(self.min_infection, self.max_infection)
             
             if target_entity == game.player:
-                final_dmg, final_inf = target_entity.take_damage(game, damage, infection)
+                final_dmg, final_inf = target_entity.take_damage(game, damage, infection, attacker=self)
                 if final_inf > 0:
                     print(f"**HIT!** Zombie hit you for {final_dmg:.1f} damage and {final_inf:.1f} infection!")
                 else:

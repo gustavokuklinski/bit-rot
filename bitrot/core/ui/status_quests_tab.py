@@ -1,6 +1,7 @@
+# core/ui/status_quests_tab.py
+
 import pygame
 import os
-import json
 import xml.etree.ElementTree as ET
 from core.data.config import *
 from core.ui.tooltip import draw_tooltip
@@ -18,7 +19,7 @@ def load_quests():
         
     _QUESTS_CACHE = []
 
-    # 1. Load Standard Handcrafted Quests from XML (Now iterates through npc_dialogs)
+    # Load Standard Handcrafted Quests from XML
     dialogs_dir = os.path.join(DATA_PATH, 'npc_dialogs')
     if os.path.exists(dialogs_dir):
         for filename in os.listdir(dialogs_dir):
@@ -54,50 +55,10 @@ def load_quests():
                                 'rqst_item_name': rqst_item,
                                 'item_obj': item,
                                 'tip': tip,
-                                'complete_flag': complete_flag,
-                                'is_procedural': False 
+                                'complete_flag': complete_flag
                             })
                 except Exception as e:
                     print(f"Error loading quests from {filename}: {e}")
-
-    # 2. Load Procedural Quests directly from the dynamic quests.rot
-    quests_rot_path = NPCDialog.QUESTS_FILE_PATH
-    
-    if quests_rot_path and os.path.exists(quests_rot_path):
-        try:
-            with open(quests_rot_path, 'r') as f:
-                proc_data = json.load(f)
-                
-            for node_id, options in proc_data.get("nodes", {}).items():
-                if not any(q['node_id'] == node_id for q in _QUESTS_CACHE):
-                    quest_name = node_id[6:].strip().replace("_", " ") 
-                    
-                    raw_item_str = None
-                    tip = "Bring the requested supplies to a survivor."
-                    complete_flag = node_id
-                    
-                    for opt in options:
-                        if opt.get('rqst_item'): raw_item_str = opt.get('rqst_item')
-                        elif not raw_item_str and opt.get('award_item'): raw_item_str = opt.get('award_item')
-                    
-                    rqst_item = None
-                    if raw_item_str:
-                        cleaned_str = raw_item_str.replace('[', '').replace(']', '')
-                        rqst_item = cleaned_str.split(',')[0].strip()
-                    
-                    item = Item.create_from_name(rqst_item) if rqst_item else None
-                    
-                    _QUESTS_CACHE.append({
-                        'node_id': node_id,
-                        'name': quest_name,
-                        'rqst_item_name': rqst_item,
-                        'item_obj': item,
-                        'tip': tip,
-                        'complete_flag': complete_flag,
-                        'is_procedural': True 
-                    })
-        except Exception as e:
-            print(f"Error loading quests from {quests_rot_path}: {e}")
 
     return _QUESTS_CACHE
 
@@ -112,31 +73,24 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
     
     completed_list = getattr(player, 'completed_quests', [])
     active_list = getattr(player, 'quests', [])
-    
-    # --- FIX: Ensure we have the list safely ---
     completed_milestones = getattr(player, 'completed_milestones', [])
     
-    in_progress, next_petrol_locked, island_locked, completed_quests = [], [], [], []
+    in_progress, next_petrol_locked, completed_quests = [], [], []
     ms_completed, ms_locked = [], [] 
-    np_total = np_comp = isl_total = isl_comp = 0
+    np_total = np_comp = 0
 
     for q in quests:
         is_completed = (q['complete_flag'] in completed_list) or (q['node_id'] in completed_list)
         is_open = ((q['node_id'] in active_list) or (q['name'] in active_list)) and not is_completed
         
-        if q['is_procedural']:
-            isl_total += 1
-            if is_completed: isl_comp += 1
-        else:
-            np_total += 1
-            if is_completed: np_comp += 1
+        np_total += 1
+        if is_completed: np_comp += 1
             
         if is_completed: completed_quests.append(q)
         elif is_open: in_progress.append(q)
-        elif q['is_procedural']: island_locked.append(q)
         else: next_petrol_locked.append(q)
 
-    # PROCESS MILESTONES (Fix string matching)
+    # PROCESS MILESTONES
     for ms in milestones:
         ms_name = ms.get('name', '').strip()
         if ms_name in completed_milestones:
@@ -159,7 +113,7 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
 
     total_content_height = (
         get_section_height(in_progress) + get_section_height(next_petrol_locked) +
-        get_section_height(island_locked) + get_section_height(completed_quests) +
+        get_section_height(completed_quests) +
         get_section_height(ms_completed) + get_section_height(ms_locked)
     )
     
@@ -265,7 +219,7 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
                         def __init__(self, q_data):
                             self.name = tr('ui', q_data['name'])
                             
-                            # Proper tooltips for Milestones vs Quests
+                            # Tooltips for Milestones vs Quests
                             if q_data.get('is_milestone'):
                                 if outline_color == YELLOW:
                                     self.tooltip_text = f"{tr('ui', q_data.get('message', ''))}\n{tr('ui', 'Check your quest tab')}"
@@ -284,10 +238,9 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
         
     current_y = draw_quest_section(f"{tr('ui', 'In Progress')} ({in_prog_count})", in_progress, current_y, YELLOW)
     current_y = draw_quest_section(f"{tr('ui', 'Next Petrol')} ({np_comp}/{np_total})", next_petrol_locked, current_y, GRAY_60)
-    current_y = draw_quest_section(f"{tr('ui', 'Island Quest')} ({isl_comp}/{isl_total})", island_locked, current_y, GRAY_60)
     current_y = draw_quest_section(f"{tr('ui', 'Completed')} ({comp_global}/{total_global})", completed_quests, current_y, GREEN)
     current_y = draw_quest_section(f"{tr('ui', 'Completed Milestones')} ({len(ms_completed)}/{len(milestones)})", ms_completed, current_y, YELLOW)
-    current_y = draw_quest_section(f"{tr('ui', "Locked Milestones")}", ms_locked, current_y, GRAY_60)
+    current_y = draw_quest_section(f"{tr('ui', 'Locked Milestones')}", ms_locked, current_y, GRAY_60)
 
     surface.set_clip(None)
     bar_rect = pygame.Rect(modal_rect.right - 10, base_y, 8, visible_height)

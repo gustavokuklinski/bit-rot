@@ -1,11 +1,11 @@
+# core/ui/npc_dialog_modal.py
+
 import pygame
 from core.data.config import *
 from core.ui.modals import BaseModal, draw_scrollbar
 from core.data.localization import tr
 from core.ui.tabs import Tabs
 from core.ui.npc_special_dialogs_tab import draw_special_dialogs_tab
-
-# --- [NEW] Import Trade Tab ---
 from core.ui.npc_trade_tab import draw_trade_tab
 
 COL_1_WIDTH = 180  
@@ -55,18 +55,25 @@ def get_npc_dialog_option_rect(modal_pos, index, dialogs, scroll_offset_y=0):
                 
     return pygame.Rect(start_x, start_y + extra_y, option_width, current_height)
 
-def draw_tabs(surface, font_12, x, y, tabs, active_index, total_width):
-    """A standalone tab drawing function for custom column layouts."""
+def draw_tabs(surface, font_12, x, y, tabs, active_index, total_width, mouse_pos=None):
+    """A standalone tab drawing function with hover highlights."""
     tab_rects = []
     tab_width = total_width // len(tabs)
     tab_height = 30
     
     for i, tab_name in enumerate(tabs):
         rect = pygame.Rect(x + (i * tab_width), y, tab_width, tab_height)
-        color = GRAY_60 if i == active_index else DARK_GRAY
+        is_hover = rect.collidepoint(mouse_pos) if mouse_pos else False
+        if i == active_index:
+            color = GRAY_60
+        elif is_hover:
+            color = (55, 55, 55)
+        else:
+            color = DARK_GRAY
+
         pygame.draw.rect(surface, color, rect)
-        pygame.draw.rect(surface, WHITE, rect, 1)
-        text_surf = font_12.render(tab_name, True, WHITE)
+        pygame.draw.rect(surface, YELLOW if (is_hover and i != active_index) else WHITE, rect, 1)
+        text_surf = font_12.render(tab_name, True, YELLOW if is_hover else WHITE)
         text_rect = text_surf.get_rect(center=rect.center)
         surface.blit(text_surf, text_rect)
         tab_rects.append(rect)
@@ -120,9 +127,11 @@ def draw_npc_dialog_modal(surface, modal, game):
     
     active_tab = modal.get('active_tab_index', 0)
     
-    # --- [NEW] Add Trade to tabs list ---
+    # Properly scaled mouse coordinates
+    mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+    
     tabs = [tr('dialog', 'Current Dialog'), tr('dialog', 'Special Dialogs'), tr('dialog', 'Trade')]
-    tab_rects = draw_tabs(surface, font_12, col2_x, y + 40, tabs, active_tab, text_area_width)
+    tab_rects = draw_tabs(surface, font_12, col2_x, y + 40, tabs, active_tab, text_area_width, mouse_pos=mouse_pos)
     modal['tab_rects'] = tab_rects
     
     content_y = tab_rects[0].bottom + 15
@@ -138,8 +147,6 @@ def draw_npc_dialog_modal(surface, modal, game):
         viewport_height = height - (content_y - y) - PADDING
             
         if active_index == -1:
-            mouse_pos = pygame.mouse.get_pos()
-            
             opt_width = text_area_width - 20
             cache_key = f"dialog_list_{id(dialogs)}_{opt_width}"
             
@@ -183,9 +190,8 @@ def draw_npc_dialog_modal(surface, modal, game):
                 modal['is_dragging_scrollbar'] = False
 
             if modal.get('is_dragging_scrollbar') and max_scroll > 0:
-                m_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
                 handle_h = max(20, (viewport_height / total_height) * viewport_height)
-                rel_y = m_pos[1] - content_y - (handle_h / 2)
+                rel_y = mouse_pos[1] - content_y - (handle_h / 2)
                 pct = max(0.0, min(1.0, rel_y / (viewport_height - handle_h)))
                 modal['scroll_offset_y'] = pct * max_scroll
 
@@ -193,28 +199,39 @@ def draw_npc_dialog_modal(surface, modal, game):
             modal['scroll_offset_y'] = scroll_offset_y
 
             clip_rect = pygame.Rect(col2_x, content_y, text_area_width + 15, viewport_height)
+            modal['content_rect'] = clip_rect
+            modal['dialog_option_rects'] = []
+
             original_clip = surface.get_clip()
             surface.set_clip(clip_rect)
 
             for i, option in enumerate(dialogs):
                 lay = layout_data[i]
                 start_x = x + COL_1_WIDTH + PADDING
-                start_y = y + 80 - scroll_offset_y + lay['y_offset']
+                # Align start_y with content_y to prevent clipping
+                start_y = content_y - scroll_offset_y + lay['y_offset']
                 rect = pygame.Rect(start_x, start_y, opt_width, lay['height'])
                 
+                # Cache clickable bounds
+                if clip_rect.colliderect(rect):
+                    modal['dialog_option_rects'].append({
+                        'index': i,
+                        'rect': rect,
+                        'option': option
+                    })
+
                 if lay['is_new_node']:
                     title_map = {
                         'greeting': 'Greeting', 
-                        'small_talk': 'Small Talk',
                         'tips': 'Tips',
                         'lore_branch': 'Gossip',
                         'quest_branch': 'Quest'
                     }
                     raw_title = title_map.get(lay['node_id'], lay['node_id'].replace('_', ' ').title())
                     title_surf = font_12.render(tr('dialog', raw_title), True, (170, 170, 170)) 
-                    surface.blit(title_surf, (col2_x, rect.y - 22))
+                    surface.blit(title_surf, (col2_x, rect.y - 20))
                     
-                is_hovered = rect.collidepoint(mouse_pos)
+                is_hovered = rect.collidepoint(mouse_pos) and clip_rect.collidepoint(mouse_pos)
                 color = YELLOW if is_hovered else WHITE
                 
                 for line_idx, line in enumerate(lay['lines']):
@@ -256,9 +273,8 @@ def draw_npc_dialog_modal(surface, modal, game):
                 modal['is_dragging_scrollbar'] = False
 
             if modal.get('is_dragging_scrollbar') and max_scroll > 0:
-                m_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
                 handle_h = max(20, (viewport_height / total_height) * viewport_height)
-                rel_y = m_pos[1] - content_y - (handle_h / 2)
+                rel_y = mouse_pos[1] - content_y - (handle_h / 2)
                 pct = max(0.0, min(1.0, rel_y / (viewport_height - handle_h)))
                 modal['scroll_offset_y'] = pct * max_scroll
 
@@ -266,6 +282,7 @@ def draw_npc_dialog_modal(surface, modal, game):
             modal['scroll_offset_y'] = scroll_offset_y
             
             clip_rect = pygame.Rect(col2_x, content_y, text_area_width + 15, viewport_height)
+            modal['content_rect'] = clip_rect
             original_clip = surface.get_clip()
             surface.set_clip(clip_rect)
             
@@ -292,7 +309,6 @@ def draw_npc_dialog_modal(surface, modal, game):
     elif active_tab == 1:
         draw_special_dialogs_tab(surface, modal, game, col2_x, content_y, text_area_width, height - (content_y - y) - PADDING)
         
-    # --- [NEW] Draw Trade Tab ---
     elif active_tab == 2:
         draw_trade_tab(surface, modal, game, col2_x, content_y, text_area_width, height - (content_y - y) - PADDING)
 

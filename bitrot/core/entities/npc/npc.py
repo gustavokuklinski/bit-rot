@@ -764,7 +764,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     self.melee_swing_angle = attack_angle
                     
                     if target_entity == game.player:
-                        target_entity.take_damage(game, damage_to_deal, 0)
+                        target_entity.take_damage(game, damage_to_deal, 0, attacker=self)
                     elif type(target_entity).__name__ == 'RemotePlayer':
                         target_entity.take_damage(damage_to_deal, game, attacker=self)
                     else:

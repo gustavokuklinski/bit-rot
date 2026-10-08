@@ -253,6 +253,159 @@ def handle_mouse_down(game, event, mouse_pos):
                             topmost_modal['active_tab'] = tabs_data[i]['label']
                             return
 
+            # --- [FIX] NPC DIALOG MODAL TABS & DIALOGUE CLICK HANDLER ---
+            if topmost_modal.get('type') == 'npc_dialog':
+                # 1. Tab Clicks (Current Dialog, Special Dialogs, Trade)
+                if 'tab_rects' in topmost_modal:
+                    for i, tab_rect in enumerate(topmost_modal['tab_rects']):
+                        if tab_rect.collidepoint(mouse_pos):
+                            topmost_modal['active_tab_index'] = i
+                            topmost_modal['scroll_offset_y'] = 0
+                            topmost_modal['active_dialog_index'] = -1
+                            npc = topmost_modal.get('npc')
+                            if npc and i == 0:
+                                topmost_modal['dialogs'] = npc.get_dialog_options()
+                            if hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_ui_hover()
+                            return
+
+                # 2. Dialogue Lines & Answers (Tab 0: Current Dialog)
+                if topmost_modal.get('active_tab_index', 0) == 0:
+                    active_idx = topmost_modal.get('active_dialog_index', -1)
+                    if active_idx == -1:
+                        for opt_data in topmost_modal.get('dialog_option_rects', []):
+                            if opt_data['rect'].collidepoint(mouse_pos):
+                                clicked_idx = opt_data['index']
+                                opt = opt_data['option']
+                                npc = topmost_modal.get('npc')
+
+                                topmost_modal['active_dialog_index'] = clicked_idx
+                                topmost_modal['scroll_offset_y'] = 0
+
+                                # 1. Gain XP reward if specified
+                                gain_xp = opt.get('gain_xp')
+                                if gain_xp:
+                                    clean_xp = gain_xp.replace('[', '').replace(']', '').strip()
+                                    for part in clean_xp.split(','):
+                                        if ':' in part:
+                                            skill, amt = part.split(':', 1)
+                                            try:
+                                                if hasattr(game.player, 'progression'):
+                                                    amt_val = float(amt.strip())
+                                                    game.player.progression.add_xp(game.player, skill.strip().lower(), amt_val)
+                                                    display_message(game, f"+{int(amt_val)} XP {skill.strip().capitalize()}")
+                                            except ValueError:
+                                                pass
+
+                                # 2. Deduct requested items from player
+                                rqst = opt.get('rqst_item')
+                                if rqst:
+                                    clean_rqst = rqst.replace('[', '').replace(']', '').strip()
+                                    for iname in [x.strip() for x in clean_rqst.split(',') if x.strip()]:
+                                        target_lower = iname.lower()
+                                        deducted = False
+                                        for inv_list in [game.player.inventory, game.player.belt]:
+                                            for slot_i, it in enumerate(inv_list):
+                                                if it and (it.name.lower() == target_lower or target_lower in it.name.lower()):
+                                                    if hasattr(it, 'load') and it.load is not None and it.load > 1:
+                                                        it.load -= 1
+                                                    else:
+                                                        if inv_list is game.player.belt:
+                                                            game.player.belt[slot_i] = None
+                                                        else:
+                                                            inv_list.pop(slot_i)
+                                                    deducted = True
+                                                    display_message(game, f"{tr('msg', 'Gave:')} {tr('item', it.name)}")
+                                                    break
+                                            if deducted: break
+                                        if not deducted and hasattr(game.player, 'clothes'):
+                                            for slot_k, it in game.player.clothes.items():
+                                                if it and (it.name.lower() == target_lower or target_lower in it.name.lower()):
+                                                    game.player.clothes[slot_k] = None
+                                                    display_message(game, f"{tr('msg', 'Gave:')} {tr('item', it.name)}")
+                                                    break
+
+                                # 3. Award items to player with fallback aliases
+                                award = opt.get('award_item')
+                                if award:
+                                    clean_award = award.replace('[', '').replace(']', '').strip()
+                                    for iname in [x.strip() for x in clean_award.split(',') if x.strip()]:
+                                        new_it = Item.create_from_name(iname)
+                                        if not new_it:
+                                            for cand in [f"{iname} on", f"{iname} off", iname.replace(" phone", "")]:
+                                                new_it = Item.create_from_name(cand)
+                                                if new_it: break
+
+                                        if new_it:
+                                            if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                                game.player.inventory.append(new_it)
+                                                if hasattr(game.player, 'stack_item_in_inventory'):
+                                                    game.player.stack_item_in_inventory(new_it)
+                                            else:
+                                                new_it.rect.center = game.player.rect.center
+                                                new_it.x, new_it.y = new_it.rect.topleft
+                                                game.items_on_ground.append(new_it)
+                                            display_message(game, f"{tr('msg', 'Received:')} {tr('item', new_it.name)}")
+
+                                # 4. Unlock narrative flags or new quests
+                                unlock = opt.get('unlock_flag')
+                                if unlock and npc:
+                                    npc.unlock_node(unlock)
+                                    if str(unlock).startswith("Quest:"):
+                                        from core.ui.notifications import add_notification
+                                        add_notification(game, tr('ui', 'New Quest!'), str(unlock)[6:].strip(), target_tab='Quests')
+                                        display_message(game, f"{tr('msg', 'New Quest:')} {str(unlock)[6:].strip()}")
+
+                                # 5. Complete quests
+                                complete = opt.get('complete_flag')
+                                if complete:
+                                    if complete not in game.player.completed_quests:
+                                        game.player.completed_quests.append(complete)
+                                    if hasattr(game.player, 'quests') and complete in game.player.quests:
+                                        game.player.quests.remove(complete)
+                                    from core.ui.notifications import add_notification
+                                    add_notification(game, tr('ui', 'Quest Completed!'), complete, target_tab='Quests')
+                                    display_message(game, f"{tr('msg', 'Quest Completed:')} {complete}")
+
+                                # 6. FIX: ONLY add to dialog_history if dialog_type is "once"
+                                d_type = opt.get('dialog_type', '')
+                                if d_type == 'once':
+                                    dialog_key = f"{opt.get('node_id')}_{opt['q']}"
+                                    if hasattr(game.player, 'dialog_history'):
+                                        if dialog_key not in game.player.dialog_history:
+                                            game.player.dialog_history.append(dialog_key)
+
+                                if d_type in ('once', 'special'):
+                                    if not hasattr(game.player, 'special_dialogs'):
+                                        game.player.special_dialogs = []
+                                    game.player.special_dialogs.append({
+                                        'q': opt['q'],
+                                        'a': opt['a'],
+                                        'npc_name': npc.name if npc else 'Survivor'
+                                    })
+
+                                # 7. Attitude adjustments
+                                if opt.get('npc_state_friendly') is not None and npc:
+                                    npc.is_friendly = str(opt['npc_state_friendly']).lower() == 'true'
+                                if opt.get('npc_state_static') is not None and npc:
+                                    npc.is_static = str(opt['npc_state_static']).lower() == 'true'
+
+                                if hasattr(game, 'sound_manager'):
+                                    game.sound_manager.play_ui_hover()
+                                return
+                    else:
+                        # FIX: In answer view, clicking ANYWHERE inside the modal returns to the dialogue list
+                        if topmost_modal.get('rect') and topmost_modal['rect'].collidepoint(mouse_pos):
+                            topmost_modal['active_dialog_index'] = -1
+                            topmost_modal['scroll_offset_y'] = 0
+                            npc = topmost_modal.get('npc')
+                            if npc:
+                                topmost_modal['dialogs'] = npc.get_dialog_options()
+                            if hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_ui_hover()
+                            return
+            # -------------------------------------------------------------
+
             if hasattr(topmost_modal, 'handle_event'):
                 if topmost_modal.handle_event(event): return
 
