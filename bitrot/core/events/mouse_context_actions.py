@@ -414,6 +414,7 @@ def handle_context_menu_click(game, mouse_pos):
                             is_liquid = is_item_liquid(item)
                             total_load = getattr(item, 'load', 1)
                             if total_load is None: total_load = 1
+                            target_cap = getattr(target_container, 'capacity', 0) or 0
 
                             if is_liquid:
                                 # First calculate weight, then volume to determine exact fillable units
@@ -446,10 +447,12 @@ def handle_context_menu_click(game, mouse_pos):
                                         break
 
                                 if not stacked:
-                                    c_cap = max(1, getattr(target_container, 'capacity', 0) or 1)
-                                    if len(target_container.inventory) >= c_cap:
+                                    target_cap = max(1, getattr(target_container, 'capacity', 0) or 1)
+                                    if len(target_container.inventory) >= target_cap:
                                         display_message(tr('msg', "Container is full."))
                                         return
+                                    
+                                    # Only create a new item if no stack exists
                                     new_liq = Item.create_from_name(item.name)
                                     if new_liq:
                                         new_liq.load = transfer_units
@@ -497,7 +500,7 @@ def handle_context_menu_click(game, mouse_pos):
                                             break
 
                             if qty_to_send > 0:
-                                if len(target_container.inventory) < c_cap:
+                                if len(target_container.inventory) < target_cap:
                                     if qty_to_send < total_load:
                                         new_it = Item.create_from_name(item.name)
                                         if new_it:
@@ -665,14 +668,21 @@ def handle_context_menu_click(game, mouse_pos):
                         if err:
                             display_message(tr('msg', err))
                         else:
-                            if hasattr(item, 'load') and item.load <= 0:
+                            # FIX: Distinguish between a container (canister) and a loose fuel item
+                            is_container = hasattr(item, 'inventory')
+                            is_loose_fuel = (getattr(item, 'name', '') == "Fuel Unit")
+                            
+                            # Only remove from source if it's a loose fuel unit and it's now empty
+                            if is_loose_fuel and hasattr(item, 'load') and item.load <= 0:
                                 remove_from_source(game, item, source, index, container_item)
+                            
                             if hasattr(game, 'sound_manager'):
                                 game.sound_manager.play_sound('repair.ogg', subdir='craft', game=game, source_pos=game.player.rect.center)
                             display_message(f"{tr('msg', 'Added')} {int(trans)} {tr('msg', 'fuel units to vehicle.')}")
 
                     transfer_time = max(0.4, float(getattr(item, 'load', 1) or 1) * 0.05)
                     game.player.start_action(tr('ui', "Refueling"), transfer_time, do_refuel_action, xp_reward=0.5)
+
                 else:
                     def do_install_action():
                         removed = remove_from_source(game, item, source, index, container_item)

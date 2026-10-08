@@ -194,10 +194,7 @@ def draw_vehicle_info_tab(surface, vehicle, start_x, start_y, modal_w, mouse_pos
     motor_pct = max(0.0, min(1.0, (motor_val / motor_max) if motor_max > 0 else 0.0))
 
     fuel_max = float(getattr(vehicle, 'max_fuel', 100.0))
-    fuel_val = float(vehicle.fuel)
-    fuel_item = vehicle.equipment.get('fuel')
-    if fuel_item and hasattr(fuel_item, 'load') and fuel_item.load is not None:
-        fuel_val = float(fuel_item.load)
+    fuel_val = float(vehicle.fuel) # Only use the float. Ignore the item's load.
     fuel_pct = max(0.0, min(1.0, (fuel_val / fuel_max) if fuel_max > 0 else 0.0))
 
     batt_item = vehicle.equipment.get('battery')

@@ -107,6 +107,8 @@ def build_install_vehicle_submenu(clicked_item, game):
         display_map['key'] = tr('ui', "Key Slot")
         tooltip_map['key'] = tr('ui', "Insert key into vehicle ignition")
 
+    replace_map = {}
+
     # Non-key parts require key inserted in slot
     if has_veh_key:
         # Check fuel
@@ -114,22 +116,40 @@ def build_install_vehicle_submenu(clicked_item, game):
             sub_opts.append('fuel')
             display_map['fuel'] = tr('ui', "Fuel Tank")
             tooltip_map['fuel'] = f"{tr('ui', 'Add fuel to')} {veh.name}"
+
         # Check motor
         if veh.can_equip(clicked_item, 'motor'):
             sub_opts.append('motor')
-            display_map['motor'] = tr('ui', "Engine")
+            existing_motor = veh.equipment.get('motor')
+            if existing_motor:
+                display_map['motor'] = tr('ui', "Engine")
+                replace_map['motor'] = existing_motor.name
+            else:
+                display_map['motor'] = f"{tr('ui', 'Engine')} ({tr('ui', 'Empty')})"
             tooltip_map['motor'] = f"{tr('ui', 'Install engine in')} {veh.name}"
+
         # Check battery
         if veh.can_equip(clicked_item, 'battery'):
             sub_opts.append('battery')
-            display_map['battery'] = tr('ui', "Battery")
+            existing_battery = veh.equipment.get('battery')
+            if existing_battery:
+                display_map['battery'] = tr('ui', "Battery")
+                replace_map['battery'] = existing_battery.name
+            else:
+                display_map['battery'] = f"{tr('ui', 'Battery')} ({tr('ui', 'Empty')})"
             tooltip_map['battery'] = f"{tr('ui', 'Install battery in')} {veh.name}"
+
         # Check tires
         for t_slot in getattr(veh, 'required_tires', []):
             if veh.can_equip(clicked_item, t_slot):
                 sub_opts.append(t_slot)
                 clean_name = t_slot.replace('tire_', '').replace('_', ' ').title()
-                display_map[t_slot] = tr('ui', clean_name)
+                existing_tire = veh.equipment.get(t_slot)
+                if existing_tire:
+                    display_map[t_slot] = tr('ui', clean_name)
+                    replace_map[t_slot] = existing_tire.name
+                else:
+                    display_map[t_slot] = f"{tr('ui', clean_name)} ({tr('ui', 'Empty')})"
                 tooltip_map[t_slot] = f"{tr('ui', 'Mount tire on')} {clean_name}"
 
     if not sub_opts:
@@ -139,7 +159,8 @@ def build_install_vehicle_submenu(clicked_item, game):
         'label': 'Install on Vehicle',
         'sub': sub_opts,
         'display_names': display_map,
-        'tooltips': tooltip_map
+        'tooltips': tooltip_map,
+        'replacing': replace_map
     }
 
 def build_send_to_submenu(clicked_item, click_source, click_container_item, game):

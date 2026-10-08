@@ -587,7 +587,13 @@ class Vehicle:
             return (item_name == required_val) or (item_key_id and item_key_id == required_val)
             
         elif slot == 'fuel': 
-            return getattr(item, 'status_effect', None) == 'fuel' or getattr(item, 'name', '') == 'Fuel Unit'
+            if getattr(item, 'status_effect', None) == 'fuel' or getattr(item, 'name', '') == 'Fuel Unit':
+                return True
+            if hasattr(item, 'inventory') and item.inventory:
+                for it in item.inventory:
+                    if getattr(it, 'status_effect', None) == 'fuel' or getattr(it, 'name', '') == 'Fuel Unit':
+                        return True
+            return False
             
         elif slot == 'battery':
             item_type = getattr(item, 'item_type', getattr(item, 'type', None))
@@ -623,33 +629,39 @@ class Vehicle:
         if space_available <= 0:
             return 0.0, "Fuel tank is already full."
 
+        from core.entities.item.item_helpers import is_infinite_liquid_source
+        
         # Case A: fuel_item is a container holding liquid in its inventory
         source_fuel_unit = None
         if hasattr(fuel_item, 'inventory') and fuel_item.inventory:
             for it in fuel_item.inventory:
-                if it and (getattr(it, 'liquid', False) or it.name == "Fuel Unit") and (getattr(it, 'load', 0) or 0) > 0:
+                if it and (getattr(it, 'status_effect', None) == 'fuel' or it.name == "Fuel Unit") and (getattr(it, 'load', 0) or 0) > 0:
                     source_fuel_unit = it
                     break
 
         # Case B: fuel_item itself is the Fuel Unit item
-        if not source_fuel_unit and getattr(fuel_item, 'name', '') == "Fuel Unit":
+        if not source_fuel_unit and (getattr(fuel_item, 'status_effect', None) == 'fuel' or getattr(fuel_item, 'name', '') == "Fuel Unit"):
             source_fuel_unit = fuel_item
 
         if not source_fuel_unit:
-            return 0.0, "Fuel container is empty."
+            return 0.0, "Fuel container is empty or does not contain fuel."
 
         item_load = float(getattr(source_fuel_unit, 'load', 0) or 0)
         if item_load <= 0:
-            return 0.0, "Fuel container is empty."
+            return 0.0, "Fuel container is empty or does not contain fuel."
 
         transfer = min(space_available, item_load)
         self.fuel = min(self.max_fuel, self.fuel + transfer)
-        source_fuel_unit.load = max(0.0, item_load - transfer)
-
-        # If stored inside a container and now depleted, remove the empty liquid stack
-        if hasattr(fuel_item, 'inventory') and source_fuel_unit.load <= 0:
-            if source_fuel_unit in fuel_item.inventory:
-                fuel_item.inventory.remove(source_fuel_unit)
+        
+        if is_infinite_liquid_source(fuel_item):
+            # Infinite sources never deplete
+            source_fuel_unit.load = getattr(source_fuel_unit, 'capacity', 100)
+        else:
+            source_fuel_unit.load = max(0.0, item_load - transfer)
+            # If stored inside a container and now depleted, remove the empty liquid stack
+            if hasattr(fuel_item, 'inventory') and source_fuel_unit.load <= 0:
+                if source_fuel_unit in fuel_item.inventory:
+                    fuel_item.inventory.remove(source_fuel_unit)
 
         # Update vehicle's internal fuel tank item representation
         tank_item = self.equipment.get('fuel')
@@ -661,8 +673,8 @@ class Vehicle:
             tank_item.capacity = int(self.max_fuel)
             tank_item.load = self.fuel
 
-        if hasattr(fuel_item, 'load'):
-            fuel_item.load = item_load
+        #if hasattr(fuel_item, 'load'):
+        #    fuel_item.load = item_load
 
         self.update_stats_from_equipment()
         return transfer, None
@@ -673,6 +685,19 @@ class Vehicle:
         if not self.can_equip(item, slot):
             display_message(f"{tr('msg', 'Cannot equip')} {tr('item', item.name)} {tr('msg', 'in')} {slot} {tr('msg', 'slot.')}")
             return False
+        
+        if slot == 'fuel':
+            # Fuel is a resource, not a swappable part.
+            # We add the load to the current fuel and return None so it's not given back to inventory.
+            fuel_amount = float(getattr(item, 'load', 0))
+            self.fuel = min(self.max_fuel, self.fuel + fuel_amount)
+            
+            # Sync the equipment item to the new float value
+            tank_item = self.equipment.get('fuel')
+            if tank_item:
+                tank_item.load = self.fuel
+            
+            return None # Item is consumed into the tank, return nothing to inventory
 
         old_item = self.equipment.get(slot)
         self.equipment[slot] = item
@@ -701,13 +726,9 @@ class Vehicle:
         
         fuel_item = self.equipment.get('fuel')
         if fuel_item:
+            # The FLOAT (self.fuel) is the Master. The ITEM reflects the float.
             fuel_item.capacity = int(getattr(self, 'max_fuel', 100.0))
-            if hasattr(fuel_item, 'load') and fuel_item.load is not None:
-                self.fuel = min(self.max_fuel, float(fuel_item.load))
-            else:
-                self.fuel = min(self.max_fuel, self.fuel)
-        else:
-            self.fuel = min(getattr(self, 'max_fuel', 100.0), self.fuel)
+            fuel_item.load = self.fuel 
         
         motor_item = self.equipment.get('motor')
         if motor_item:

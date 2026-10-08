@@ -142,6 +142,11 @@ def handle_left_click_drag_candidate(game, mouse_pos):
                         if vehicle.equipment.get('key') is None:
                             display_message(tr('msg', "Vehicle requires key inserted in the Key slot."))
                             return
+                        
+                        # Prevent dragging the fuel tank out
+                        if slot_name == 'fuel':
+                            display_message(tr('msg', "Cannot remove the fuel tank. Right-click to siphon."))
+                            return
 
                         game.drag_candidate = (item, (slot_name, 'vehicle_equipment', vehicle))
                         game.drag_start_pos = mouse_pos

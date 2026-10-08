@@ -80,17 +80,35 @@ def handle_mouse_up(game, event, mouse_pos):
 
                                     if slot_name == 'fuel':
                                         def do_refuel_vehicle():
+                                            # 1. Remove from source first
                                             _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
+                                            
+                                            # 2. Perform refuel
                                             trans, err = vehicle.refuel(item_ref)
                                             if err:
                                                 display_message(tr('msg', err))
-                                            if hasattr(item_ref, 'load') and item_ref.load > 0:
-                                                if len(game.player.inventory) < game.player.get_total_inventory_slots():
-                                                    game.player.inventory.append(item_ref)
-                                                else:
-                                                    game.items_on_ground.append(item_ref)
+                                                # If refuel failed, give the item back immediately
+                                                return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
+                                                return
+                                    
+                                            # FIX: STRICTOR RETURN LOGIC
+                                            # Calculate if there is actually anything left to return
+                                            has_fuel_left = False
+                                            if hasattr(item_ref, 'load'):
+                                                has_fuel_left = item_ref.load > 0.1 # Use epsilon for floats
+                                            
+                                            is_canister = hasattr(item_ref, 'inventory') # It's a fuel can/container
+                                            
+                                            # Only return if it's a canister (even if empty) 
+                                            # OR if it's a loose unit that still has fuel.
+                                            # If it's a loose 'Fuel Unit' and load <= 0, it is destroyed.
+                                            if is_canister or has_fuel_left:
+                                                return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
+                                    
                                         transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
                                         game.player.start_action(tr('msg', "Refueling"), transfer_time, do_refuel_vehicle, xp_reward=0.5)
+                                    
+                                        dropped_successfully = True 
                                     else:
                                         def do_equip_vehicle():
                                             _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
@@ -101,11 +119,13 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 else:
                                                     game.items_on_ground.append(old_item)
                                                     old_item.rect.center = game.player.rect.center
-
+                                    
                                         action_name = tr('msg', "Equipping") if not is_external_source else tr('msg', "Transferring")
                                         transfer_time = max(0.1, item_ref.get_total_weight() * 0.2)
                                         game.player.start_action(action_name, transfer_time, do_equip_vehicle, xp_reward=0.5)
-                                    
+
+                                        dropped_successfully = True
+
                                     game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                     return
                                 else:

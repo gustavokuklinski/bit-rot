@@ -4,7 +4,6 @@ import math
 import core.data.config
 from core.entities.item.item import Item
 
-
 ALLOWED_POCKET_SLOTS = {'arms', 'legs', 'util', 'util1', 'util2', 'util3'}
 
 def item_allows_belt(item):
@@ -482,6 +481,7 @@ def add_item_to_container_inventory(container, item_to_add, target_index=-1, is_
         return trans, remaining, True
 
     else:
+        from core.events.mouse_drag_utils import check_container_weight_limit
         if not check_container_weight_limit(container, item_to_add):
             return 0.0, current_load, False
 

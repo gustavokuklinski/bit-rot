@@ -4,6 +4,7 @@ The Night of the Living Dead (1968) - John Russo
 The Return of the Living Dead (1978) - John Russo
 Apocalypse Z - The Beginning of the End (2007) - Manel Loureiro
 Apocalypse Z - Dark Days - Manel Loureiro (2010) - Manel Loureiro
+Apocalypse Z - The wrath of the Just - Manel Loureiro (2011) - Manel Loureiro
 
 ### Movies inspired by:
 Night of the Living Dead (1968) - George A. Romero
