@@ -37,10 +37,14 @@ def handle_mouse_down(game, event, mouse_pos):
             in_range = abs(mouse_tx - p_tx) <= 1 and abs(mouse_ty - p_ty) <= 1
             
             if in_range:
+                from core.systems.utils import is_door_or_window_tile
                 test_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
                 is_free = not any(ob.colliderect(test_rect) for ob in getattr(game, 'obstacles', []))
-                
-                if not is_free:
+                is_door_win = is_door_or_window_tile(game, mouse_tx, mouse_ty)
+
+                if is_door_win:
+                    display_message(tr('msg', "Cannot place item in a doorway or window!"))
+                elif not is_free:
                     display_message(tr('msg', "Cannot place item here, blocked by obstacle!"))
                 else:
                     item_data = game.item_to_place

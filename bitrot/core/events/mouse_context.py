@@ -11,6 +11,7 @@ from core.data.config import *
 from core.entities.item.item import Item
 from core.data.recipe_manager import RecipeManager
 from core.entities.zombie.corpse import Corpse
+from core.entities.animal.animal import Animal
 from core.ui.inventory_modal import get_belt_hud_slot_rect, get_inventory_slot_rect
 from core.ui.container_modal import get_container_slot_rect
 from core.messages import display_message
@@ -192,8 +193,13 @@ def handle_right_click(game, mouse_pos):
         adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
         world_pos = game.screen_to_world(adjusted_mouse_pos)
 
+        curr_layer = getattr(game, 'current_layer_index', 1)
         max_interact_dist_sq = (TILE_SIZE * 2.5) ** 2
         for i, ground_item in enumerate(game.items_on_ground):
+            if getattr(ground_item, 'layer', 1) != curr_layer:
+                continue
+            if isinstance(ground_item, Animal) or getattr(ground_item, 'type', '') == 'animal':
+                continue
             if ground_item.rect.collidepoint(world_pos):
                 dx = game.player.rect.centerx - ground_item.rect.centerx
                 dy = game.player.rect.centery - ground_item.rect.centery
@@ -587,6 +593,23 @@ def handle_right_click(game, mouse_pos):
                     else:
                         options.append('Grab')
 
+            # Toggle utility items on Nearby (Campfire, Lantern)
+            item_state = getattr(clicked_item, 'state', None)
+            if item_state in ('on', 'off'):
+                is_restricted_toggle = any(name in getattr(clicked_item, 'name', '') for name in ["Campfire"])
+                can_toggle = True
+                if is_restricted_toggle:
+                    is_on_ground = (click_source == 'ground') or (is_nearby and getattr(click_container_item, 'item_type', '') == 'ground')
+                    if not is_on_ground or not getattr(clicked_item, 'is_placed', False):
+                        can_toggle = False
+                if can_toggle:
+                    if item_state == 'on':
+                        options.insert(0, 'Turn off')
+                    elif item_state == 'off':
+                        options.insert(0, 'Turn on')
+                if getattr(clicked_item, 'fuel_type', None):
+                    options.append('Reload')
+
             item_type = getattr(clicked_item, 'item_type', None)
             invalid_types = [None, 'vehicle', 'map_tile', 'maptile', 'maptile_container', 'maptile_teleport']
             if item_type not in invalid_types and not isinstance(clicked_item, Corpse) and not is_maptile:
@@ -603,6 +626,22 @@ def handle_right_click(game, mouse_pos):
                         options.extend(['Grab One', 'Grab Half', 'Grab All'])
                     else:
                         options.append('Grab')
+
+                # Toggle utility items on the ground (Campfire, Lantern)
+                item_state = getattr(clicked_item, 'state', None)
+                if item_state in ('on', 'off'):
+                    is_restricted_toggle = any(name in getattr(clicked_item, 'name', '') for name in ["Campfire"])
+                    can_toggle = True
+                    if is_restricted_toggle and not getattr(clicked_item, 'is_placed', False):
+                        can_toggle = False
+                    if can_toggle:
+                        if item_state == 'on':
+                            options.insert(0, 'Turn off')
+                        elif item_state == 'off':
+                            options.insert(0, 'Turn on')
+                    if getattr(clicked_item, 'fuel_type', None):
+                        options.append('Reload')
+
                 options.append('Send to')
 
         else:

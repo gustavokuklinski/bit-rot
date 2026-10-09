@@ -132,6 +132,10 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.is_friendly = True
         else:
             self.is_friendly = False
+        
+        if getattr(self, 'layer', 1) in (2, 3):
+            self.is_static = False
+            self.is_friendly = False
             
         self.state = 'wandering' if not self.is_static else 'idle'
 
@@ -850,14 +854,19 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                         break
                     spawn_pos = get_out_of_sight_spawn_pos(game)
                     if spawn_pos:
+                        respawn_layer = getattr(self, 'layer', getattr(game, 'current_layer_index', 1))
                         new_npc = NPC(
                             spawn_pos[0], 
                             spawn_pos[1], 
                             game, 
                             is_static=False, 
-                            layer=getattr(self, 'layer', getattr(game, 'current_layer_index', 1))
+                            layer=respawn_layer
                         )
-                        new_npc.is_friendly = random.random() > getattr(core.data.config, 'NPC_HOSTILE_PERCENT', 0.6)
+                        if respawn_layer in (2, 3):
+                            new_npc.is_friendly = False
+                            new_npc.is_static = False
+                        else:
+                            new_npc.is_friendly = random.random() > getattr(core.data.config, 'NPC_HOSTILE_PERCENT', 0.6)
                         game.npcs.add(new_npc)
 
         max_zombies = getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500)

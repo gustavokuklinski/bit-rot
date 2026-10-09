@@ -180,12 +180,19 @@ class AsyncSpawnManager:
 
       # Friendly NPC (FNPC)
       elif e_type in ('fnpc'):
-        max_npc = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
-        max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
-        if max_npc > 0 and max_npc_chunk > 0 and len(game.npcs) < max_npc:
-          npc = NPC(x, y, game, is_static=True, layer=layer)
-          npc.is_friendly = True
+        # Never spawn FNPC at L2 or L3
+        if layer in (2, 3):
+          e_type = 'hnpc'
+          npc = NPC(x, y, game, is_static=False, layer=layer)
+          npc.is_friendly = False
           game.npcs.add(npc)
+        else:
+          max_npc = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
+          max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
+          if max_npc > 0 and max_npc_chunk > 0 and len(game.npcs) < max_npc:
+            npc = NPC(x, y, game, is_static=True, layer=layer)
+            npc.is_friendly = True
+            game.npcs.add(npc)
 
       elif e_type in ('hnpc', 'fnpc'):
         # Only suppress dynamic NPCs on Layer 1 of the Lobby chunk

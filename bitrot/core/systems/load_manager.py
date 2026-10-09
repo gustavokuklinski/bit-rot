@@ -110,10 +110,13 @@ def handle_player_death(game):
         return
 
     game.player.is_dead = True
-    death_pos = (game.player.rect.centerx, game.player.rect.centery)
+    raw_death_pos = (game.player.rect.centerx, game.player.rect.centery)
     death_layer = getattr(game, 'current_layer_index', 1)
     death_map = getattr(game.map_manager, 'current_map_filename', f"map_L{death_layer}_0_0_map.csv")
     player_id = getattr(game.player, 'player_id', None) or str(uuid.uuid4())
+
+    from core.systems.utils import get_safe_non_door_pos
+    death_pos = get_safe_non_door_pos(game, raw_death_pos)
 
     if hasattr(game, 'logger'):
         game.logger.info(f"Player '{game.player.name}' (ID: {player_id}) died at {death_pos} on Layer {death_layer} ({death_map}). Creating 30-minute yellow corpse...")
@@ -554,7 +557,12 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
                                 game.npc_spawn_points.append((x * TILE_SIZE, y * TILE_SIZE, 'HNPC'))
                             elif c_str in ('FNPC'):
                                 px, py = x * TILE_SIZE, y * TILE_SIZE
-                                npc = NPC(px, py, game, is_static=True)
+                                if game.current_layer_index in (2, 3):
+                                    # Never spawn FNPC at L2 or L3
+                                    npc = NPC(px, py, game, is_static=False, layer=game.current_layer_index)
+                                    npc.is_friendly = False
+                                else:
+                                    npc = NPC(px, py, game, is_static=True, layer=game.current_layer_index)
                                 game.npcs.add(npc)
 
             if 1 in game.all_map_layers:
@@ -1031,15 +1039,21 @@ def load_game(game, save_folder_name):
                 npc_list = json.load(f)
             game.npcs.empty()
             for n_data in npc_list:
-                is_static = n_data.get('is_static', False)
                 layer = n_data.get('layer', 1)
+                if layer in (2, 3):
+                    is_static = False
+                    is_friendly = False
+                else:
+                    is_static = n_data.get('is_static', False)
+                    is_friendly = n_data.get('is_friendly', True)
                 n_map = n_data.get('map_filename', active_map)
                 npc = NPC(n_data['x'], n_data['y'], game, is_static=is_static, layer=layer)
                 npc.map_filename = n_map
                 npc.name = n_data.get('name', 'Survivor')
                 npc.health = n_data.get('health', 100)
                 npc.max_health = n_data.get('max_health', 100)
-                npc.is_friendly = n_data.get('is_friendly', True)
+                npc.is_friendly = is_friendly
+                npc.is_static = is_static
                 if 'id' in n_data and n_data['id']: npc.id = n_data['id']
                 if 'dialog_flags' in n_data: npc.dialog_flags = set(n_data['dialog_flags'])
                 

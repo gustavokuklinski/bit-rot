@@ -12,6 +12,7 @@ from core.messages import display_message
 from core.entities.item.item import Item
 from core.placement import find_free_tile
 from core.data.localization import tr
+from core.entities.animal.animal import Animal
 
 class MapManager:
     def __init__(self, game, map_folder=f"{os.path.join(BASE_DIR, 'data.rot', 'lib', 'map')}"):
@@ -374,84 +375,103 @@ class MapManager:
 
         tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
-        if new_state == "close":
-            entities_in_door = []
-            
-            # [FIX] Use a slightly relaxed hitbox to catch edge-clipping entities that need pushing
-            door_hitbox = tile_rect.inflate(-8, -8)
+        tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+        door_cx = tile_rect.centerx
+        door_cy = tile_rect.centery
 
-            if getattr(self.game, 'player', None) and self.game.player.rect.colliderect(door_hitbox):
-                entities_in_door.append(self.game.player)
-            
+        if new_state == "close":
+            # Collect all active entities on this layer
+            entities_to_check = []
+            if getattr(self.game, 'player', None) and not getattr(self.game.player, 'is_dead', False):
+                entities_to_check.append(self.game.player)
             for z in getattr(self.game, 'zombies', []):
-                if z.rect.colliderect(door_hitbox):
-                    entities_in_door.append(z)
-                    
+                if not getattr(z, 'is_dead', False) and getattr(z, 'health', 0) > 0:
+                    entities_to_check.append(z)
             for n in getattr(self.game, 'npcs', []):
-                if n.rect.colliderect(door_hitbox):
-                    entities_in_door.append(n)
+                if not getattr(n, 'is_dead', False) and getattr(n, 'health', 0) > 0:
+                    entities_to_check.append(n)
+            for a in getattr(self.game, 'active_animals', []):
+                if not getattr(a, 'is_dead', False) and getattr(a, 'health', 0) > 0:
+                    entities_to_check.append(a)
+            for it in getattr(self.game, 'items_on_ground', []):
+                if isinstance(it, Animal) and not getattr(it, 'is_dead', False) and getattr(it, 'health', 0) > 0:
+                    if it not in entities_to_check:
+                        entities_to_check.append(it)
+            for rp in getattr(self.game, 'remote_players', {}).values():
+                if not getattr(rp, 'is_dead', False) and getattr(rp, 'layer', 1) == self.game.current_layer_index:
+                    entities_to_check.append(rp)
+
+            entities_in_door = []
+            five_pct = TILE_SIZE * 0.05  # 5% threshold
+
+            for entity in entities_to_check:
+                if entity.rect.colliderect(tile_rect):
+                    overlap = entity.rect.clip(tile_rect)
+                    if overlap.width >= five_pct and overlap.height >= five_pct:
+                        entities_in_door.append(entity)
 
             if entities_in_door:
+                # 1. Avoid closing if any entity is in the middle of the door
+                middle_threshold = TILE_SIZE * 0.18
                 for entity in entities_in_door:
-                    ex = getattr(entity, 'x', float(entity.rect.centerx))
-                    ey = getattr(entity, 'y', float(entity.rect.centery))
-                    door_cx = tile_rect.centerx
-                    door_cy = tile_rect.centery
-                    
-                    # [NEW] "Dead Center" Check
-                    # If the player is standing solidly in the middle of the doorway, 
-                    # do not push them. Block the door and display the exact message requested.
-                    dist_sq = (ex - door_cx)**2 + (ey - door_cy)**2
-                    dead_center_threshold = (TILE_SIZE // 3) ** 2  # Represents the middle core of the tile
-                    
-                    if entity == getattr(self.game, 'player', None) and dist_sq <= dead_center_threshold:
-                        display_message(tr('msg', "Player is in the doorway, cannot close."))
-                        return 
-                    
-                    # [PUSH LOGIC] If they are off-center (or are a zombie), gracefully push them out
-                    bias_x, bias_y = 0, 0
-                    facing = getattr(entity, 'facing', '')
-                    if facing == 'up': bias_y = 5      
-                    elif facing == 'down': bias_y = -5 
-                    elif facing == 'left': bias_x = 5  
-                    elif facing == 'right': bias_x = -5 
-                    
-                    eff_ex = ex + bias_x
-                    eff_ey = ey + bias_y
-                    
-                    valid_targets = []
-                    dirs = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-                    
-                    for d_gx, d_gy in dirs:
-                        tgt_gx = grid_x + d_gx
-                        tgt_gy = grid_y + d_gy
-                        
-                        if 0 <= tgt_gy < len(self.game.map_data) and 0 <= tgt_gx < len(self.game.map_data[0]):
-                            tgt_char = self.game.map_data[tgt_gy][tgt_gx]
-                            tgt_def = self.game.tile_manager.definitions.get(tgt_char)
-                            if tgt_def and not tgt_def.get('is_obstacle'):
-                                tgt_cx = tgt_gx * TILE_SIZE + TILE_SIZE / 2
-                                tgt_cy = tgt_gy * TILE_SIZE + TILE_SIZE / 2
-                                dist = (eff_ex - tgt_cx)**2 + (eff_ey - tgt_cy)**2
-                                valid_targets.append((dist, tgt_gx, tgt_gy))
-                                
-                    pushed = False
-                    if valid_targets:
-                        valid_targets.sort(key=lambda x: x[0])
-                        best_target = valid_targets[0]
-                        tgt_rect = pygame.Rect(best_target[1] * TILE_SIZE, best_target[2] * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                        
-                        entity.rect.centerx = tgt_rect.centerx
-                        entity.rect.centery = tgt_rect.centery
-                        if hasattr(entity, 'x'): entity.x = float(entity.rect.x)
-                        if hasattr(entity, 'y'): entity.y = float(entity.rect.y)
-                        pushed = True
-                    
-                    # Fallback if they are entirely boxed in by obstacles
-                    if not pushed:
+                    dx = abs(entity.rect.centerx - door_cx)
+                    dy = abs(entity.rect.centery - door_cy)
+                    if dx <= middle_threshold and dy <= middle_threshold:
                         if entity == getattr(self.game, 'player', None):
-                            display_message(tr('msg', "Door is completely blocked, cannot close."))
-                        return 
+                            display_message(tr('msg', "Player is in the doorway, cannot close."))
+                        else:
+                            display_message(tr('msg', "Doorway is blocked, cannot close."))
+                        return
+
+                # 2. Relocate entities to the tile where they are predominantly located
+                def is_tile_walkable(tx, ty):
+                    if not (0 <= ty < len(self.game.map_data) and 0 <= tx < len(self.game.map_data[0])):
+                        return False
+                    t_def = self.get_tile_at(tx, ty)
+                    if t_def and t_def.get('is_obstacle', False):
+                        return False
+                    t_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                    if any(t_rect.colliderect(ob) for ob in self.game.obstacles):
+                        return False
+                    return True
+
+                for entity in entities_in_door:
+                    ex = entity.rect.centerx
+                    ey = entity.rect.centery
+                    dx = ex - door_cx
+                    dy = ey - door_cy
+
+                    # Identify preferred target tile based on displacement axis
+                    target_candidates = []
+                    if abs(dx) >= abs(dy):
+                        primary = (grid_x - 1, grid_y) if dx < 0 else (grid_x + 1, grid_y)
+                        secondary = (grid_x, grid_y - 1) if dy < 0 else (grid_x, grid_y + 1)
+                        target_candidates = [primary, secondary]
+                    else:
+                        primary = (grid_x, grid_y - 1) if dy < 0 else (grid_x, grid_y + 1)
+                        secondary = (grid_x - 1, grid_y) if dx < 0 else (grid_x + 1, grid_y)
+                        target_candidates = [primary, secondary]
+
+                    # Append remaining directions as fallback
+                    for cand_dir in [(grid_x + 1, grid_y), (grid_x - 1, grid_y), (grid_x, grid_y + 1), (grid_x, grid_y - 1)]:
+                        if cand_dir not in target_candidates:
+                            target_candidates.append(cand_dir)
+
+                    pushed = False
+                    for tgx, tgy in target_candidates:
+                        if is_tile_walkable(tgx, tgy):
+                            target_rect = pygame.Rect(tgx * TILE_SIZE, tgy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                            entity.rect.center = target_rect.center
+                            if hasattr(entity, 'x'): entity.x = float(entity.rect.x)
+                            if hasattr(entity, 'y'): entity.y = float(entity.rect.y)
+                            if hasattr(entity, 'vx'): entity.vx = 0
+                            if hasattr(entity, 'vy'): entity.vy = 0
+                            pushed = True
+                            break
+
+                    if not pushed:
+                        display_message(tr('msg', "Doorway is blocked, cannot close."))
+                        return
         
         base_name = current_char.replace("_open", "").replace("_close", "")
         new_char = f"{base_name}_{new_state}"

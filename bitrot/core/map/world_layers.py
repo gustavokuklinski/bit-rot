@@ -460,12 +460,18 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
                         nx, ny = spawn_data
                         npc_type = 'HNPC'
                         
-                    is_static = (npc_type in ('FNPC')) or is_lobby_chunk
+                    # Never spawn FNPC at L2 or L3
+                    if layer_index in (2, 3):
+                        is_static = False
+                        npc_type = 'HNPC'
+                    else:
+                        is_static = (npc_type in ('FNPC')) or is_lobby_chunk
+
                     npc = NPC(nx, ny, game, is_static=is_static, layer=layer_index)
                     if is_lobby_chunk:
                         npc.is_friendly = True
                         npc.is_static = True
-                    elif npc_type in ('HNPC'):
+                    elif layer_index in (2, 3) or npc_type in ('HNPC'):
                         npc.is_friendly = False   
                         npc.is_static = False     
                     elif npc_type in ('FNPC'):

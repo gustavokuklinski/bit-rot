@@ -168,10 +168,14 @@ class NPCCombat:
 
         corpse_layer = getattr(self, 'layer', getattr(game, 'current_layer_index', 1))
         map_name = getattr(self, 'map_filename', getattr(game.map_manager, 'current_map_filename', ''))
+
+        from core.systems.utils import get_safe_non_door_pos
+        safe_death_pos = get_safe_non_door_pos(game, self.rect.center)
+
         corpse = Corpse(
             name=f"Corpse of {self.name}",
             capacity=15,
-            pos=self.rect.center, 
+            pos=safe_death_pos, 
             image_path="zombie/dead.png",
             decay_ms=60000,
             layer=corpse_layer,

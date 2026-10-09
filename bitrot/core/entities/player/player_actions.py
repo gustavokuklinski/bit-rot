@@ -339,6 +339,8 @@ class PlayerActions:
         new_item.x = item.x
         new_item.y = item.y
         new_item.is_placed = getattr(item, 'is_placed', False)
+        new_item.layer = getattr(item, 'layer', getattr(self, 'layer', 1))
+        new_item.map_filename = getattr(item, 'map_filename', None)
 
         if getattr(item, 'item_type', '') == 'mobile' or 'Mobile' in getattr(item, 'name', ''):
             target_game = getattr(self, 'game', None) or getattr(core.messages, '_game_instance', None)

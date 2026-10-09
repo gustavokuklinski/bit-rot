@@ -1056,12 +1056,23 @@ def handle_context_menu_click(game, mouse_pos):
                 if source == 'ground' and result and hasattr(result, 'name'):
                     if index is not None and 0 <= index < len(game.items_on_ground):
                         game.items_on_ground[index] = result
+                    else:
+                        for idx_g, g_it in enumerate(game.items_on_ground):
+                            if g_it is item or getattr(g_it, 'id', None) == getattr(item, 'id', None):
+                                game.items_on_ground[idx_g] = result
+                                break
+                    if hasattr(game, 'spatial_manager'):
+                        game.spatial_manager.rebuild_item_grid(force=True)
                 elif source == 'nearby' and container_item and result and hasattr(result, 'name'):
                     if getattr(container_item, 'item_type', '') == 'ground':
                         for i_idx, ground_item in enumerate(game.items_on_ground):
-                            if ground_item is item:
+                            if ground_item is item or getattr(ground_item, 'id', None) == getattr(item, 'id', None):
                                 game.items_on_ground[i_idx] = result
                                 break
+                    if index is not None and 0 <= index < len(container_item.inventory):
+                        container_item.inventory[index] = result
+                    if hasattr(game, 'spatial_manager'):
+                        game.spatial_manager.rebuild_item_grid(force=True)
 
             elif option == 'Drop one':
                 if getattr(item, 'liquid', False):

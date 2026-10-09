@@ -425,6 +425,91 @@ def get_targeted_interactable(game):
     candidates.sort(key=lambda x: x['dist'])
     return candidates[0]
 
+def is_door_or_window_tile(game, grid_x, grid_y):
+    """Returns True if the given tile coordinates correspond to a door or window (open, closed, or broken)."""
+    if not game or not hasattr(game, 'map_data') or not game.map_data:
+        return False
+    if not (0 <= grid_y < len(game.map_data) and 0 <= grid_x < len(game.map_data[0])):
+        return False
+
+    char = str(game.map_data[grid_y][grid_x]).lower().strip()
+    tile_def = game.map_manager.get_tile_at(grid_x, grid_y) if hasattr(game, 'map_manager') else None
+    name = str(tile_def.get('name', '')).lower().strip() if tile_def else ''
+
+    if tile_def and (tile_def.get('is_statable') or tile_def.get('is_window')):
+        return True
+    if any(k in char for k in ('door', 'window', '_open', '_close', '_broke')):
+        return True
+    if any(k in name for k in ('door', 'window')):
+        return True
+    if hasattr(game, 'map_manager') and game.map_manager.get_barricade(grid_x, grid_y):
+        return True
+    return False
+
+def is_rect_on_door_or_window(game, rect):
+    """Checks if a rect intersects any door or window tile on the map."""
+    if not game or not hasattr(game, 'map_data') or not game.map_data:
+        return False
+    min_gx = max(0, rect.left // TILE_SIZE)
+    max_gx = min(len(game.map_data[0]) - 1, rect.right // TILE_SIZE)
+    min_gy = max(0, rect.top // TILE_SIZE)
+    max_gy = min(len(game.map_data) - 1, rect.bottom // TILE_SIZE)
+
+    for gy in range(min_gy, max_gy + 1):
+        for gx in range(min_gx, max_gx + 1):
+            if is_door_or_window_tile(game, gx, gy):
+                tile_rect = pygame.Rect(gx * TILE_SIZE, gy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                if rect.colliderect(tile_rect):
+                    return True
+    return False
+
+def get_safe_non_door_pos(game, initial_pos, rect_size=(TILE_SIZE, TILE_SIZE), max_radius=4):
+    """
+    If initial_pos is on or near a door/window or obstacle, finds the nearest walkable,
+    non-door, non-window tile.
+    """
+    if not game or not hasattr(game, 'map_data') or not game.map_data:
+        return initial_pos
+
+    start_gx = int(initial_pos[0] // TILE_SIZE)
+    start_gy = int(initial_pos[1] // TILE_SIZE)
+    test_rect = pygame.Rect(0, 0, rect_size[0], rect_size[1])
+    test_rect.center = initial_pos
+
+    if not is_rect_on_door_or_window(game, test_rect) and not any(test_rect.colliderect(ob) for ob in getattr(game, 'obstacles', [])):
+        return initial_pos
+
+    map_h = len(game.map_data)
+    map_w = len(game.map_data[0]) if map_h > 0 else 0
+    obstacles = getattr(game, 'obstacles', [])
+    ground_data = getattr(game, 'ground_data', None)
+
+    for r in range(1, max_radius + 1):
+        candidates = []
+        for dy in range(-r, r + 1):
+            for dx in range(-r, r + 1):
+                if abs(dx) < r and abs(dy) < r:
+                    continue
+                nx = start_gx + dx
+                ny = start_gy + dy
+                if 0 <= nx < map_w and 0 <= ny < map_h:
+                    if not is_door_or_window_tile(game, nx, ny):
+                        cand_cx = nx * TILE_SIZE + TILE_SIZE // 2
+                        cand_cy = ny * TILE_SIZE + TILE_SIZE // 2
+                        test_rect.center = (cand_cx, cand_cy)
+                        if not any(test_rect.colliderect(ob) for ob in obstacles):
+                            if ground_data and 0 <= ny < len(ground_data) and 0 <= nx < len(ground_data[ny]):
+                                if 'water' in str(ground_data[ny][nx]).lower():
+                                    continue
+                            dist = math.hypot(cand_cx - initial_pos[0], cand_cy - initial_pos[1])
+                            candidates.append((dist, (cand_cx, cand_cy)))
+
+        if candidates:
+            candidates.sort(key=lambda c: c[0])
+            return candidates[0][1]
+
+    return initial_pos
+
 def screen_to_world(game, screen_pos):
     screen_x, screen_y = screen_pos
     screen_x -= GAME_OFFSET_X

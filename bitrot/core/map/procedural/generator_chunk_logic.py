@@ -231,6 +231,13 @@ class ProceduralGeneratorChunk:
                     if len(chosen_npcs) == 3:
                         break
 
+        for ly in range(h):
+            for lx in range(w):
+                if layers['spawn_L2'][ly][lx] == 'FNPC':
+                    layers['spawn_L2'][ly][lx] = 'HNPC'
+                if layers['spawn_L3'][ly][lx] == 'FNPC':
+                    layers['spawn_L3'][ly][lx] = 'HNPC'
+
         return layers
 
     def _place_single_teleport_boat(self, layers, w, h):

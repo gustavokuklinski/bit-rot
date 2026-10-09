@@ -2,11 +2,30 @@
 import random
 from core.data.config import GAME_WIDTH, GAME_HEIGHT, TILE_SIZE
 
-def _is_colliding(rect, obstacles):
-    """Checks if rect collides with any obstacle in the list."""
-    return any(rect.colliderect(ob) for ob in obstacles)
+def _is_colliding(rect, obstacles, game=None):
+    """Checks if rect collides with any obstacle in the list or any door/window."""
+    if any(rect.colliderect(ob) for ob in obstacles):
+        return True
 
-def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_radius=10):
+    target_game = game
+    if target_game is None:
+        try:
+            from core.messages import _game_instance
+            target_game = _game_instance
+        except Exception:
+            target_game = None
+
+    if target_game is not None:
+        try:
+            from core.systems.utils import is_rect_on_door_or_window
+            if is_rect_on_door_or_window(target_game, rect):
+                return True
+        except Exception:
+            pass
+
+    return False
+
+def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_radius=10, game=None):
     if initial_pos:
         start_x = (initial_pos[0] // TILE_SIZE) * TILE_SIZE
         start_y = (initial_pos[1] // TILE_SIZE) * TILE_SIZE
@@ -17,7 +36,7 @@ def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_
     rect.x = start_x
     rect.y = start_y
 
-    if not _is_colliding(rect, obstacles):
+    if not _is_colliding(rect, obstacles, game=game):
         return (rect.x, rect.y)
 
     if initial_pos:
@@ -37,7 +56,7 @@ def find_free_tile(rect, obstacles, items_on_ground=None, initial_pos=None, max_
                     rect.x = cand_x
                     rect.y = cand_y
 
-                    if not _is_colliding(rect, obstacles):
+                    if not _is_colliding(rect, obstacles, game=game):
                         return (rect.x, rect.y)
 
     return None

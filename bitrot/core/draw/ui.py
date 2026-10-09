@@ -904,8 +904,10 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             snap_y = mouse_ty * TILE_SIZE
             in_range = abs(mouse_tx - p_tx) <= 1 and abs(mouse_ty - p_ty) <= 1
             
+            from core.systems.utils import is_door_or_window_tile
+            is_door_win = is_door_or_window_tile(game, mouse_tx, mouse_ty)
             test_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
-            is_free = not any(ob.colliderect(test_rect) for ob in game.obstacles)
+            is_free = not any(ob.colliderect(test_rect) for ob in game.obstacles) and not is_door_win
             can_place = in_range and is_free
             
             screen_snap_x = ((snap_x + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
