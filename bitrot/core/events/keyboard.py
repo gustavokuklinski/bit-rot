@@ -14,6 +14,7 @@ from core.map.world_layers import set_active_layer
 from core.entities.item.item_helpers import has_app
 from core.entities.vehicle.vehicle import Vehicle
 from core.entities.vehicle.vehicle_data import VehicleData
+from core.entities.player.player_movement import get_available_chunk_transition, perform_chunk_transition
 
 def _focus_or_toggle_modal(game, modal_type, create_func):
     """If modal is open but not on top, bring to front. If already on top, close. If closed, open."""
@@ -840,113 +841,115 @@ def handle_keyboard_events(game, event, action_triggered=None):
                     display_message(game, f"{tr('msg', 'You pushed an enemy away!')}")
 
         elif action_triggered == 'interact':
+            # 1. Chunk boundary manual transition via 'E'
+            chunk_trans = get_available_chunk_transition(game)
+            if chunk_trans:
+                perform_chunk_transition(game, *chunk_trans)
+                return
+
+            # 2. Stairs manual transition: player must be standing directly on top of the stair tile
+            p_gx = int(game.player.rect.centerx // TILE_SIZE)
+            p_gy = int(game.player.rect.centery // TILE_SIZE)
+            stair_tile = game.map_manager.get_tile_at(p_gx, p_gy)
+            if stair_tile and stair_tile.get('is_stair'):
+                target_layer = stair_tile.get('target_layer')
+                if target_layer and target_layer != game.current_layer_index:
+                    if game.player.layer_switch_cooldown <= 0:
+                        if set_active_layer(game, target_layer):
+                            game.player.layer_switch_cooldown = 30
+                    return
+
+            # 3. Vehicle exit
             if getattr(game.player, 'vehicle', None):
                 game.player.exit_vehicle(game)
-            else:
-                target = get_targeted_interactable(game)
-                if target:
-                    if target['type'] == 'npc':
-                        found_npc = target['entity']
-                        if not any(m['type'] == 'npc_dialog' for m in game.modals):
-                            pos_x = (GAME_WIDTH // 2) - (NPC_DIALOG_MODAL_WIDTH // 2)
-                            pos_y = (GAME_HEIGHT // 2) - (NPC_DIALOG_MODAL_HEIGHT // 2)
-                            game.modals.append({
-                                'id': str(uuid.uuid4()),
-                                'type': 'npc_dialog',
-                                'npc': found_npc,
-                                'dialogs': found_npc.get_dialog_options(), 
-                                'active_dialog_index': -1,                 
-                                'position': (pos_x, pos_y),
-                                'rect': pygame.Rect(pos_x, pos_y, NPC_DIALOG_MODAL_WIDTH, NPC_DIALOG_MODAL_HEIGHT),
-                                'is_dragging': False,
-                                'drag_offset': (0, 0)
-                            })
-                    elif target['type'] == 'vehicle':
-                        found_vehicle = target['entity']
-                        game.player.enter_vehicle(found_vehicle, game)
-                        if not any(m['type'] == 'vehicle' for m in game.modals):
-                            default_pos = (GAME_WIDTH // 2 - 200, GAME_HEIGHT // 2 + 120)
-                            pos = getattr(game, 'last_modal_positions', {}).get('vehicle', default_pos)
-                            
-                            new_modal = {
-                                'id': str(uuid.uuid4()),
-                                'type': 'vehicle',
-                                'vehicle': found_vehicle,
-                                'position': pos,
-                                'rect': pygame.Rect(pos[0], pos[1], VEHICLE_MODAL_WIDTH, VEHICLE_MODAL_HEIGHT),
-                                'is_dragging': False, 
-                                'drag_offset': (0, 0), 
-                                'active_tab': 'Info'
-                            }
-                            game.modals.append(new_modal)
-                    elif target['type'] == 'stair':
-                        px, py = target['entity']
-                        current_tile_char = game.map_data[py][px]
-                        current_tile_def = game.tile_manager.definitions.get(current_tile_char)
-                        if current_tile_def and current_tile_def.get('is_stair'):
-                            target_layer = current_tile_def.get('target_layer')
-                            if game.player.layer_switch_cooldown <= 0:
-                                if set_active_layer(game, target_layer):
-                                    game.player.layer_switch_cooldown = 30
-                    elif target['type'] == 'tile':
-                        tx, ty = target['entity']
-                        tile = game.map_manager.get_tile_at(tx, ty)
-                        if tile and tile.get('is_stair'):
-                            target_layer = tile.get('target_layer')
-                            if game.player.layer_switch_cooldown <= 0:
-                                if set_active_layer(game, target_layer):
-                                    game.player.layer_switch_cooldown = 30
-                        elif tile and tile.get('is_statable') and tile.get('type') == 'maptile':
-                            game.map_manager.toggle_door_state(tx, ty)
-                    
-                    elif target['type'] == 'maptile_teleport':
-                        tx, ty = target['entity']
-                        zoom = getattr(game, 'zoom_level', 1.0)
-                        screen_x = int(((tx * TILE_SIZE + TILE_SIZE/2 + game.offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset)
-                        screen_y = int(((ty * TILE_SIZE + TILE_SIZE/2 + game.offset_y) * zoom))
-                        
-                        from core.events.mouse_context import handle_right_click
-                        handle_right_click(game, (screen_x, screen_y))
-                        
-                    elif target['type'] == 'container':
-                        found_container = target['entity']
-                        is_closed_maptile = getattr(found_container, 'item_type', '') == 'maptile_container' and not getattr(found_container, 'is_opened', False)
-                        
-                        def open_and_show_modal():
-                            if hasattr(found_container, 'open'):
-                                found_container.open(game)
-                            else:
-                                found_container.is_opened = True
+                return
 
-                            nearby_modal = next((m for m in game.modals if m['type'] == 'nearby'), None)
-                            if nearby_modal:
-                                nearby_modal['active_tab'] = found_container.name
-                                game.modals.remove(nearby_modal)
-                                game.modals.append(nearby_modal)
-                            else:
-                                modal_exists = any(m['type'] == 'container' and m.get('item') == found_container for m in game.modals)
-                                if not modal_exists:
-                                    target_pos = getattr(game, 'last_modal_positions', {}).get('nearby', (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT))
-                                    new_modal = {
-                                        'id': uuid.uuid4(),
-                                        'type': 'container',
-                                        'item': found_container,
-                                        'position': target_pos,
-                                        'rect': pygame.Rect(target_pos[0], target_pos[1], CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT),
-                                        'is_dragging': False,
-                                        'drag_offset': (0, 0)
-                                    }
-                                    game.modals.append(new_modal)
-
-                        if is_closed_maptile:
-                            if getattr(core.data.config, 'ALL_VISIBLE', False) or has_app(game, 'open_container_instant'):
-                                open_and_show_modal()
-                            else:
-                                agility = game.player.progression.get_level('agility')
-                                open_time = max(0.2, 1.8 - (agility * 0.2))
-                                found_container.is_opening = True
-                                def cancel_open():
-                                    found_container.is_opening = False
-                                game.player.start_action(f"{game.player.name} {tr('ui', 'Opening')}", open_time, open_and_show_modal, xp_reward=1.5, cancel_on_move=True, on_cancel=cancel_open)
+            # 4. Standard interactables (NPCs, containers, vehicle entry, doors, boats)
+            target = get_targeted_interactable(game)
+            if target:
+                if target['type'] == 'npc':
+                    found_npc = target['entity']
+                    if not any(m['type'] == 'npc_dialog' for m in game.modals):
+                        pos_x = (GAME_WIDTH // 2) - (NPC_DIALOG_MODAL_WIDTH // 2)
+                        pos_y = (GAME_HEIGHT // 2) - (NPC_DIALOG_MODAL_HEIGHT // 2)
+                        game.modals.append({
+                            'id': str(uuid.uuid4()),
+                            'type': 'npc_dialog',
+                            'npc': found_npc,
+                            'dialogs': found_npc.get_dialog_options(), 
+                            'active_dialog_index': -1,                 
+                            'position': (pos_x, pos_y),
+                            'rect': pygame.Rect(pos_x, pos_y, NPC_DIALOG_MODAL_WIDTH, NPC_DIALOG_MODAL_HEIGHT),
+                            'is_dragging': False,
+                            'drag_offset': (0, 0)
+                        })
+                elif target['type'] == 'vehicle':
+                    found_vehicle = target['entity']
+                    game.player.enter_vehicle(found_vehicle, game)
+                    if not any(m['type'] == 'vehicle' for m in game.modals):
+                        default_pos = (GAME_WIDTH // 2 - 200, GAME_HEIGHT // 2 + 120)
+                        pos = getattr(game, 'last_modal_positions', {}).get('vehicle', default_pos)
+                        new_modal = {
+                            'id': str(uuid.uuid4()),
+                            'type': 'vehicle',
+                            'vehicle': found_vehicle,
+                            'position': pos,
+                            'rect': pygame.Rect(pos[0], pos[1], VEHICLE_MODAL_WIDTH, VEHICLE_MODAL_HEIGHT),
+                            'is_dragging': False, 
+                            'drag_offset': (0, 0), 
+                            'active_tab': 'Info'
+                        }
+                        game.modals.append(new_modal)
+                elif target['type'] == 'tile':
+                    tx, ty = target['entity']
+                    tile = game.map_manager.get_tile_at(tx, ty)
+                    if tile and tile.get('is_statable') and tile.get('type') == 'maptile':
+                        game.map_manager.toggle_door_state(tx, ty)
+                elif target['type'] == 'maptile_teleport':
+                    tx, ty = target['entity']
+                    zoom = getattr(game, 'zoom_level', 1.0)
+                    screen_x = int(((tx * TILE_SIZE + TILE_SIZE/2 + game.offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset)
+                    screen_y = int(((ty * TILE_SIZE + TILE_SIZE/2 + game.offset_y) * zoom))
+                    from core.events.mouse_context import handle_right_click
+                    handle_right_click(game, (screen_x, screen_y))
+                elif target['type'] == 'container':
+                    found_container = target['entity']
+                    is_closed_maptile = getattr(found_container, 'item_type', '') == 'maptile_container' and not getattr(found_container, 'is_opened', False)
+                    def open_and_show_modal():
+                        if hasattr(found_container, 'open'):
+                            found_container.open(game)
                         else:
+                            found_container.is_opened = True
+
+                        nearby_modal = next((m for m in game.modals if m['type'] == 'nearby'), None)
+                        if nearby_modal:
+                            nearby_modal['active_tab'] = found_container.name
+                            game.modals.remove(nearby_modal)
+                            game.modals.append(nearby_modal)
+                        else:
+                            modal_exists = any(m['type'] == 'container' and m.get('item') == found_container for m in game.modals)
+                            if not modal_exists:
+                                target_pos = getattr(game, 'last_modal_positions', {}).get('nearby', (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT))
+                                new_modal = {
+                                    'id': uuid.uuid4(),
+                                    'type': 'container',
+                                    'item': found_container,
+                                    'position': target_pos,
+                                    'rect': pygame.Rect(target_pos[0], target_pos[1], CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT),
+                                    'is_dragging': False,
+                                    'drag_offset': (0, 0)
+                                }
+                                game.modals.append(new_modal)
+
+                    if is_closed_maptile:
+                        if getattr(core.data.config, 'ALL_VISIBLE', False) or has_app(game, 'open_container_instant'):
                             open_and_show_modal()
+                        else:
+                            agility = game.player.progression.get_level('agility')
+                            open_time = max(0.2, 1.8 - (agility * 0.2))
+                            found_container.is_opening = True
+                            def cancel_open():
+                                found_container.is_opening = False
+                            game.player.start_action(f"{game.player.name} {tr('ui', 'Opening')}", open_time, open_and_show_modal, xp_reward=1.5, cancel_on_move=True, on_cancel=cancel_open)
+                    else:
+                        open_and_show_modal()

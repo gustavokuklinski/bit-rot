@@ -17,7 +17,6 @@ from core.update.spawns import check_dynamic_zombie_spawns
 from core.update.utils import build_obstacle_grid, get_nearby_obstacles
 from core.update.vehicles import update_vehicles
 
-
 def update_game_state(game):
   GRID_SIZE = 128
 
@@ -33,6 +32,9 @@ def update_game_state(game):
         game.player.rect, game.cached_obstacle_grid, GRID_SIZE
     )
     game.player.update_position(nearby_player_obstacles, game.zombies, game)
+    
+    if getattr(game, 'game_state', None) == 'CHUNK_LOADING':
+      return
 
     game.hovered_interactable_tile_rect = None
     facing_x, facing_y = game.get_player_facing_tile()

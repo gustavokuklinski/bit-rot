@@ -79,7 +79,7 @@ Special thanks for the players:
 
 **Assets**
 * Kenney - 1-Bit Pack
-* Pixabay.com - Sound effects
+* Pixabay.com - Images and Sound effects
 * OpenGameArt.org - Music
 
 **Software**

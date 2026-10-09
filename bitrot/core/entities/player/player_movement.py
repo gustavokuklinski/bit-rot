@@ -9,12 +9,286 @@ from core.data.config import *
 from core.messages import display_message
 from core.placement import find_free_tile
 from core.entities.npc.npc import NPC
+from core.entities.animal.animal import Animal
+from core.entities.animal.animal_loader import AnimalLoader
+from core.entities.zombie.zombie import Zombie
+from core.map.spawn_manager import spawn_random_vehicles
 from core.data.localization import tr
 from core.systems.utils import resolve_stuck_in_obstacle
 
+def get_available_chunk_transition(game):
+    """Checks if player or vehicle is at an active chunk exit boundary."""
+    if not getattr(game, 'player', None) or getattr(game, 'is_giant_map', False):
+        return None
+
+    current_map = getattr(game.map_manager, 'current_map_filename', '')
+    match = re.match(r'map_L(\d+)_(\d+)_(\d+)_map\.csv', current_map)
+    if not match:
+        return None
+
+    layer = int(match.group(1))
+    gx = int(match.group(2))
+    gy = int(match.group(3))
+
+    target = game.player.vehicle if getattr(game.player, 'vehicle', None) else game.player
+    chunk_width_px = getattr(game, 'map_width_pixels', game.CHUNK_SIZE * TILE_SIZE)
+    chunk_height_px = getattr(game, 'map_height_pixels', game.CHUNK_SIZE * TILE_SIZE)
+
+    margin = TILE_SIZE * 1.5
+    dir_x, dir_y = 0, 0
+
+    if target.rect.left <= margin:
+        dir_x = -1
+    elif target.rect.right >= chunk_width_px - margin:
+        dir_x = 1
+    elif target.rect.top <= margin:
+        dir_y = -1
+    elif target.rect.bottom >= chunk_height_px - margin:
+        dir_y = 1
+    else:
+        return None
+
+    new_gx = gx + dir_x
+    new_gy = gy + dir_y
+
+    # Check connection on Layer 1
+    if layer == 1:
+        conn_key = 'right' if dir_x == 1 else ('left' if dir_x == -1 else ('bottom' if dir_y == 1 else ('top' if dir_y == -1 else None)))
+        if conn_key and hasattr(game, 'generator') and hasattr(game.generator, 'connections_grid'):
+            cg = game.generator.connections_grid
+            if 0 <= gy < len(cg) and 0 <= gx < len(cg[0]):
+                if not cg[gy][gx].get(conn_key, False):
+                    return None
+    elif layer in (2, 3):
+        if hasattr(game, 'generator') and hasattr(game.generator, 'active_chunks'):
+            if (new_gx, new_gy) not in game.generator.active_chunks:
+                return None
+
+    new_map = f"map_L{layer}_{new_gx}_{new_gy}_map.csv"
+    return (dir_x, dir_y, new_map, layer)
+
+def perform_chunk_transition(game, dir_x, dir_y, new_map, layer):
+    """Performs the chunk transition when E is pressed."""
+    current_map = game.map_manager.current_map_filename
+    match = re.match(r'map_L(\d+)_(\d+)_(\d+)_map\.csv', current_map)
+    if not match:
+        return False
+
+    gx, gy = int(match.group(2)), int(match.group(3))
+    new_gx, new_gy = gx + dir_x, gy + dir_y
+
+    if new_map not in game.map_manager.map_files:
+        if hasattr(game, 'generator') and game.generator:
+            game.generator.generate_chunk_on_demand(new_gx, new_gy)
+            game.map_manager.refresh_maps()
+
+    if new_map not in game.map_manager.map_files:
+        return False
+
+    target = game.player.vehicle if getattr(game.player, 'vehicle', None) else game.player
+    chunk_width_px = getattr(game, 'map_width_pixels', game.CHUNK_SIZE * TILE_SIZE)
+    chunk_height_px = getattr(game, 'map_height_pixels', game.CHUNK_SIZE * TILE_SIZE)
+
+    game.map_states.setdefault(current_map, {})
+    chasing_zombies = [z for z in game.zombies if getattr(z, 'state', '') == 'chasing']
+    game.map_states[current_map]['zombies'] = [z for z in game.zombies if z not in chasing_zombies]
+
+    chasing_animals = []
+    if hasattr(game, 'active_animals'):
+        chasing_animals = [a for a in game.active_animals if getattr(a, 'state', '') == 'chasing']
+        game.map_states[current_map]['active_animals'] = [a for a in game.active_animals if a not in chasing_animals]
+
+    game.map_states[current_map]['items_on_ground'] = [i for i in game.items_on_ground if i not in chasing_animals]
+
+    if hasattr(game, 'npcs'):
+        game.map_states[current_map]['npcs'] = list(game.npcs)
+
+    clean_containers = [c for c in game.containers if c != getattr(game.player, 'vehicle', None)]
+    game.map_states[current_map]['containers'] = clean_containers
+
+    if hasattr(game.map_manager, 'vehicles'):
+        clean_vehicles = [v for v in game.map_manager.vehicles if v != getattr(game.player, 'vehicle', None)]
+        game.map_states[current_map]['vehicles'] = clean_vehicles
+
+    entities_to_teleport = [target] + chasing_zombies + chasing_animals
+
+    old_width = chunk_width_px
+    old_height = chunk_height_px
+
+    game.load_map(new_map)
+
+    new_width = getattr(game, 'map_width_pixels', game.CHUNK_SIZE * TILE_SIZE)
+    new_height = getattr(game, 'map_height_pixels', game.CHUNK_SIZE * TILE_SIZE)
+
+    cx_px = new_width // 2
+    cy_px = new_height // 2
+
+    if dir_x == 1:
+        dest_x = 2 * TILE_SIZE
+        dest_y = cy_px if layer in (2, 3) else (cy_px + (target.y - old_height / 2.0))
+    elif dir_x == -1:
+        dest_x = new_width - (3 * TILE_SIZE)
+        dest_y = cy_px if layer in (2, 3) else (cy_px + (target.y - old_height / 2.0))
+    elif dir_y == 1:
+        dest_x = cx_px if layer in (2, 3) else (cx_px + (target.x - old_width / 2.0))
+        dest_y = 2 * TILE_SIZE
+    elif dir_y == -1:
+        dest_x = cx_px if layer in (2, 3) else (cx_px + (target.x - old_width / 2.0))
+        dest_y = new_height - (3 * TILE_SIZE)
+    else:
+        dest_x = cx_px
+        dest_y = cy_px
+
+    dest_x = max(2 * TILE_SIZE, min(dest_x, new_width - 3 * TILE_SIZE))
+    dest_y = max(2 * TILE_SIZE, min(dest_y, new_height - 3 * TILE_SIZE))
+
+    delta_x = dest_x - target.x
+    delta_y = dest_y - target.y
+
+    for ent in entities_to_teleport:
+        ent.x += delta_x
+        ent.y += delta_y
+        ent.rect.topleft = (int(ent.x), int(ent.y))
+
+    free_pos = find_free_tile(target.rect, game.obstacles, initial_pos=(int(target.x), int(target.y)), max_radius=4)
+    if free_pos and (0 < free_pos[0] < new_width - TILE_SIZE) and (0 < free_pos[1] < new_height - TILE_SIZE):
+        shift_x = free_pos[0] - target.x
+        shift_y = free_pos[1] - target.y
+        target.x, target.y = free_pos
+        target.rect.topleft = (int(target.x), int(target.y))
+        for ent in entities_to_teleport[1:]:
+            ent.x += shift_x
+            ent.y += shift_y
+            ent.rect.topleft = (int(ent.x), int(ent.y))
+
+    if getattr(game.player, 'vehicle', None):
+        game.player.x = game.player.vehicle.x
+        game.player.y = game.player.vehicle.y
+        game.player.rect.topleft = (int(game.player.x), int(game.player.y))
+    else:
+        game.player.vx = 0
+        game.player.vy = 0
+        game.player.is_moving = False
+
+    # Restore / spawn new chunk state
+    if new_map in game.map_states:
+        game.items_on_ground = game.map_states[new_map].get('items_on_ground', [])
+        game.zombies = game.map_states[new_map].get('zombies', [])
+        if hasattr(game, 'active_animals'):
+            game.active_animals = game.map_states[new_map].get('active_animals', [])
+        if hasattr(game, 'npcs'):
+            game.npcs.empty()
+            for npc in game.map_states[new_map].get('npcs', []):
+                game.npcs.add(npc)
+        if 'containers' in game.map_states[new_map]:
+            default_container_rects = [c.rect for c in game.containers]
+            obstacle_container_rects = [rect for rect in default_container_rects if rect in game.obstacles]
+            game.obstacles = [obs for obs in game.obstacles if obs not in default_container_rects]
+            game.containers = game.map_states[new_map]['containers']
+            for c in game.containers:
+                if c.rect in obstacle_container_rects and c.rect not in game.obstacles:
+                    game.obstacles.append(c.rect)
+        if 'vehicles' in game.map_states[new_map] and hasattr(game.map_manager, 'vehicles'):
+            default_veh_rects = [v.rect for v in game.map_manager.vehicles]
+            game.obstacles = [obs for obs in game.obstacles if obs not in default_veh_rects]
+            game.map_manager.vehicles = game.map_states[new_map]['vehicles']
+            for v in game.map_manager.vehicles:
+                if v.rect not in game.obstacles:
+                    game.obstacles.append(v.rect)
+    else:
+        game.items_on_ground = []
+        game.zombies = []
+        if hasattr(game, 'active_animals'): game.active_animals = []
+        if hasattr(game, 'npcs'): game.npcs.empty()
+
+        max_z_chunk = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
+        z_per_spawn = getattr(core.data.config, 'ZOMBIES_PER_SPAWN', 3)
+        max_z_global = getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500)
+
+        if hasattr(game, 'current_zombie_spawns') and game.current_zombie_spawns and max_z_chunk > 0 and max_z_global > 0 and z_per_spawn > 0:
+            for szx, szy in game.current_zombie_spawns:
+                if len(game.zombies) >= max_z_chunk or len(game.zombies) >= max_z_global: break
+                for _ in range(z_per_spawn):
+                    z = Zombie.create_random(szx, szy)
+                    if z:
+                        free_spot = find_free_tile(z.rect, game.obstacles, max_radius=15, initial_pos=(szx, szy))
+                        if free_spot:
+                            z.rect.topleft = free_spot
+                            z.x, z.y = free_spot
+                            game.zombies.append(z)
+
+        max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
+        max_npc_global = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
+        can_spawn_npcs = max_npc_chunk > 0 and max_npc_global > 0 and getattr(core.data.config, 'NPC_SPAWN_CHANCE', 1.0) > 0.0
+
+        if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points and can_spawn_npcs:
+            for spawn_data in game.npc_spawn_points:
+                if len(game.npcs) >= max_npc_chunk: break
+                nx, ny = spawn_data[0], spawn_data[1]
+                npc_type = spawn_data[2] if len(spawn_data) == 3 else 'HNPC'
+                is_static = (npc_type in ('FNPC')) if layer not in (2, 3) else False
+                npc = NPC(nx, ny, game, is_static=is_static, layer=layer)
+                npc.is_friendly = is_static
+                free_spot = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
+                if free_spot:
+                    npc.rect.topleft = free_spot
+                    npc.x, npc.y = free_spot
+                    game.npcs.add(npc)
+
+        max_anim = getattr(core.data.config, 'ANIMAL_MAX_CHUNK', 6)
+        anim_per_spawn = getattr(core.data.config, 'ANIMALS_PER_SPAWN', 3)
+        if hasattr(game, 'active_animals') and max_anim > 0 and anim_per_spawn > 0:
+            AnimalLoader.load_animals()
+            curr_layer = getattr(game, 'current_layer_index', 1)
+            valid_types = [a_name for a_name, a_def in AnimalLoader.definitions.items() if curr_layer in a_def.get('spawn_layers', [1, 2])]
+            valid_weights = [max(1, int(AnimalLoader.definitions[a].get('spawn_weight', 10))) for a in valid_types]
+            if valid_types:
+                for _ in range(min(anim_per_spawn, max_anim)):
+                    ax = random.randint(100, max(101, new_width - 100))
+                    ay = random.randint(100, max(101, new_height - 100))
+                    a_type = random.choices(valid_types, weights=valid_weights, k=1)[0]
+                    animal_obj = Animal(ax, ay, a_type, game=game, layer=curr_layer)
+                    free_spot = find_free_tile(animal_obj.rect, game.obstacles, max_radius=15, initial_pos=(ax, ay))
+                    if free_spot:
+                        animal_obj.rect.topleft = free_spot
+                        animal_obj.x, animal_obj.y = free_spot
+                        game.active_animals.append(animal_obj)
+                        game.items_on_ground.append(animal_obj)
+
+        if layer == 1:
+            spawn_random_vehicles(game, count=getattr(core.data.config, 'MAX_VEH_CHUNK', 6))
+
+    game.zombies.extend(chasing_zombies)
+    if hasattr(game, 'active_animals'):
+        game.active_animals.extend(chasing_animals)
+        game.items_on_ground.extend(chasing_animals)
+
+    if getattr(game.player, 'vehicle', None):
+        veh = game.player.vehicle
+        if veh not in game.containers: game.containers.append(veh)
+        if hasattr(game.map_manager, 'vehicles') and veh not in game.map_manager.vehicles:
+            game.map_manager.vehicles.append(veh)
+        if veh.rect in game.obstacles: game.obstacles.remove(veh.rect)
+
+    zoom = getattr(game, 'zoom_level', 1.0)
+    view_w = int(game.dynamic_w / zoom)
+    view_h = int(game.dynamic_h / zoom)
+    game.true_camera_x = target.rect.centerx - (view_w / 2)
+    game.true_camera_y = target.rect.centery - (view_h / 2)
+
+    if hasattr(game, 'dt_ms'):
+        game.dt_ms = 16.0
+        game.dt_mult = 1.0
+
+    game._chunk_loading_title = tr('ui', 'Loading')
+    game._chunk_loading_bg_type = 'layer' if layer in (2, 3) else 'island'
+    game._chunk_load_timer = None
+    game.game_state = 'CHUNK_LOADING'
+    return True
+
+
 class PlayerMovement:
     def enter_vehicle(self, vehicle, game):
-        # Individual vehicle check
         if getattr(vehicle, 'driver', None) is not None:
             display_message(tr('msg', "Vehicle is already occupied!"))
             return
@@ -23,7 +297,6 @@ class PlayerMovement:
         self.x = vehicle.x 
         self.y = vehicle.y
         self.rect.topleft = (self.x, self.y)
-        
         vehicle.driver = self
 
         if vehicle.rect in game.obstacles:
@@ -33,10 +306,8 @@ class PlayerMovement:
 
     def exit_vehicle(self, game):
         if self.vehicle:
-            # --- AUTO TURN OFF ENGINE ON EXIT ---
             if self.vehicle.active:
                 self.vehicle.toggle_engine(game=game)
-            # ------------------------------------
 
             self.vehicle.driver = None
 
@@ -282,319 +553,16 @@ class PlayerMovement:
                         self.y -= step_y
                         self.rect.y = round(self.y)
 
-        # --- CHUNK TRANSITION LOGIC ---
+        # --- CHUNK BOUNDARY CLAMP (Manual transition required via 'E') ---
         if not getattr(game, 'is_giant_map', False):
             chunk_width_px = getattr(game, 'map_width_pixels', game.CHUNK_SIZE * TILE_SIZE)
             chunk_height_px = getattr(game, 'map_height_pixels', game.CHUNK_SIZE * TILE_SIZE)
 
-            current_map = game.map_manager.current_map_filename
-            match = re.match(r'map_L(\d+)_(\d+)_(\d+)_map\.csv', current_map)
-            
-            if match:
-                layer = int(match.group(1))
-                gx = int(match.group(2))
-                gy = int(match.group(3))
-                
-                new_gx, new_gy = gx, gy
-                transition = False
-                dir_x = 0
-                dir_y = 0
-                
-                target = self.vehicle if self.vehicle else self
-                
-                if target.rect.centerx < 0:
-                    new_gx -= 1
-                    dir_x = -1
-                    transition = True
-                elif target.rect.centerx >= chunk_width_px:
-                    new_gx += 1
-                    dir_x = 1
-                    transition = True
-                    
-                if target.rect.centery < 0:
-                    new_gy -= 1
-                    dir_y = -1
-                    transition = True
-                elif target.rect.centery >= chunk_height_px:
-                    new_gy += 1
-                    dir_y = 1
-                    transition = True
-                    
-                if transition:
-                    # Enforce that surface transitions on L1 require an active L1 road connection
-                    if layer == 1:
-                        conn_key = 'right' if dir_x == 1 else ('left' if dir_x == -1 else ('bottom' if dir_y == 1 else ('top' if dir_y == -1 else None)))
-                        if conn_key and hasattr(game, 'generator') and hasattr(game.generator, 'connections_grid'):
-                            cg = game.generator.connections_grid
-                            if 0 <= gy < len(cg) and 0 <= gx < len(cg[0]):
-                                if not cg[gy][gx].get(conn_key, False):
-                                    # Blocked by water/coast on L1 - player must use L2 underground
-                                    if target.rect.centerx < 0: target.x = 0
-                                    elif target.rect.centerx >= chunk_width_px: target.x = chunk_width_px - target.rect.width
-                                    if target.rect.centery < 0: target.y = 0
-                                    elif target.rect.centery >= chunk_height_px: target.y = chunk_height_px - target.rect.height
-                                    target.rect.topleft = (int(target.x), int(target.y))
-                                    if self.vehicle:
-                                        self.vehicle.velocity = [0, 0]
-                                        self.x = self.vehicle.x
-                                        self.y = self.vehicle.y
-                                        self.rect.topleft = (int(self.x), int(self.y))
-                                    return
-                    elif layer in (2, 3):
-                        # On Layer 2 & 3: allow crossing into any active neighboring room
-                        if hasattr(game, 'generator') and hasattr(game.generator, 'active_chunks'):
-                            if (new_gx, new_gy) not in game.generator.active_chunks:
-                                if target.rect.centerx < 0: target.x = 0
-                                elif target.rect.centerx >= chunk_width_px: target.x = chunk_width_px - target.rect.width
-                                if target.rect.centery < 0: target.y = 0
-                                elif target.rect.centery >= chunk_height_px: target.y = chunk_height_px - target.rect.height
-                                target.rect.topleft = (int(target.x), int(target.y))
-                                return
-
-                    new_map = f"map_L{layer}_{new_gx}_{new_gy}_map.csv"
-
-                    # Generate chunk on demand only if it's an active island chunk
-                    if new_map not in game.map_manager.map_files:
-                        if hasattr(game, 'generator') and game.generator:
-                            can_generate = False
-                            if hasattr(game.generator, 'active_chunks'):
-                                can_generate = (new_gx, new_gy) in game.generator.active_chunks
-                            elif 0 <= new_gx < game.generator.grid_w and 0 <= new_gy < game.generator.grid_h:
-                                can_generate = True
-                                
-                            if can_generate:
-                                game.generator.generate_chunk_on_demand(new_gx, new_gy)
-                                game.map_manager.refresh_maps()
-
-                    if new_map in game.map_manager.map_files:
-                        print(f"Transitioning to chunk room (Layer {layer}): {new_map}")
-                        
-                        game.map_states.setdefault(current_map, {})
-                        
-                        chasing_zombies = [z for z in game.zombies if getattr(z, 'state', '') == 'chasing']
-                        game.map_states[current_map]['zombies'] = [z for z in game.zombies if z not in chasing_zombies]
-                        
-                        chasing_animals = []
-                        if hasattr(game, 'active_animals'):
-                            chasing_animals = [a for a in game.active_animals if getattr(a, 'state', '') == 'chasing']
-                            game.map_states[current_map]['active_animals'] = [a for a in game.active_animals if a not in chasing_animals]
-                        
-                        game.map_states[current_map]['items_on_ground'] = [i for i in game.items_on_ground if i not in chasing_animals]
-                            
-                        if hasattr(game, 'npcs'):
-                            game.map_states[current_map]['npcs'] = list(game.npcs)
-                            
-                        clean_containers = [c for c in game.containers if c != self.vehicle]
-                        game.map_states[current_map]['containers'] = clean_containers
-                        
-                        if hasattr(game.map_manager, 'vehicles'):
-                            clean_vehicles = [v for v in game.map_manager.vehicles if v != self.vehicle]
-                            game.map_states[current_map]['vehicles'] = clean_vehicles
-                        
-                        entities_to_teleport = [target] + chasing_zombies + chasing_animals
-                        
-                        old_width = chunk_width_px
-                        old_height = chunk_height_px
-                        
-                        game.load_map(new_map)
-                        
-                        new_width = getattr(game, 'map_width_pixels', game.CHUNK_SIZE * TILE_SIZE)
-                        new_height = getattr(game, 'map_height_pixels', game.CHUNK_SIZE * TILE_SIZE)
-
-                        # --- SAFE DOORWAY POSITIONING (Prevents instant reverse bounce) ---
-                        cx_px = (new_width // 2)
-                        cy_px = (new_height // 2)
-
-                        if dir_x == 1:
-                            dest_x = 2 * TILE_SIZE
-                            dest_y = cy_px if layer in (2, 3) else (cy_px + (target.y - old_height / 2.0))
-                        elif dir_x == -1:
-                            dest_x = new_width - (3 * TILE_SIZE)
-                            dest_y = cy_px if layer in (2, 3) else (cy_px + (target.y - old_height / 2.0))
-                        elif dir_y == 1:
-                            dest_x = cx_px if layer in (2, 3) else (cx_px + (target.x - old_width / 2.0))
-                            dest_y = 2 * TILE_SIZE
-                        elif dir_y == -1:
-                            dest_x = cx_px if layer in (2, 3) else (cx_px + (target.x - old_width / 2.0))
-                            dest_y = new_height - (3 * TILE_SIZE)
-                        else:
-                            dest_x = cx_px
-                            dest_y = cy_px
-
-                        # Clamp strictly inside safe boundaries
-                        dest_x = max(2 * TILE_SIZE, min(dest_x, new_width - 3 * TILE_SIZE))
-                        dest_y = max(2 * TILE_SIZE, min(dest_y, new_height - 3 * TILE_SIZE))
-
-                        delta_x = dest_x - target.x
-                        delta_y = dest_y - target.y
-
-                        for ent in entities_to_teleport:
-                            ent.x += delta_x
-                            ent.y += delta_y
-                            ent.rect.topleft = (int(ent.x), int(ent.y))
-
-                        # Resolve local obstacle collision strictly inside bounds
-                        free_pos = find_free_tile(target.rect, game.obstacles, initial_pos=(int(target.x), int(target.y)), max_radius=4)
-                        if free_pos and (0 < free_pos[0] < new_width - TILE_SIZE) and (0 < free_pos[1] < new_height - TILE_SIZE):
-                            shift_x = free_pos[0] - target.x
-                            shift_y = free_pos[1] - target.y
-                            target.x, target.y = free_pos
-                            target.rect.topleft = (int(target.x), int(target.y))
-                            for ent in entities_to_teleport[1:]:
-                                ent.x += shift_x
-                                ent.y += shift_y
-                                ent.rect.topleft = (int(ent.x), int(ent.y))
-                            
-                        if self.vehicle:
-                            self.x = self.vehicle.x
-                            self.y = self.vehicle.y
-                            self.rect.topleft = (int(self.x), int(self.y))
-                        
-                        # --- RESTORE OR SPAWN NEW CHUNK STATE ---
-                        if new_map in game.map_states:
-                            game.items_on_ground = game.map_states[new_map].get('items_on_ground', [])
-                            game.zombies = game.map_states[new_map].get('zombies', [])
-                            if hasattr(game, 'active_animals'):
-                                game.active_animals = game.map_states[new_map].get('active_animals', [])
-                                
-                            if hasattr(game, 'npcs'):
-                                game.npcs.empty()
-                                for npc in game.map_states[new_map].get('npcs', []):
-                                    game.npcs.add(npc)
-                                    
-                            if 'containers' in game.map_states[new_map]:
-                                default_container_rects = [c.rect for c in game.containers]
-                                obstacle_container_rects = [rect for rect in default_container_rects if rect in game.obstacles]
-                                game.obstacles = [obs for obs in game.obstacles if obs not in default_container_rects]
-                                game.containers = game.map_states[new_map]['containers']
-                                for c in game.containers:
-                                    if c.rect in obstacle_container_rects and c.rect not in game.obstacles:
-                                        game.obstacles.append(c.rect)
-                                        
-                            if 'vehicles' in game.map_states[new_map] and hasattr(game.map_manager, 'vehicles'):
-                                default_veh_rects = [v.rect for v in game.map_manager.vehicles]
-                                game.obstacles = [obs for obs in game.obstacles if obs not in default_veh_rects]
-                                game.map_manager.vehicles = game.map_states[new_map]['vehicles']
-                                for v in game.map_manager.vehicles:
-                                    if v.rect not in game.obstacles:
-                                        game.obstacles.append(v.rect)
-                        else:
-                            game.items_on_ground = []
-                            game.zombies = []
-                            if hasattr(game, 'active_animals'):
-                                game.active_animals = []
-                            if hasattr(game, 'npcs'):
-                                game.npcs.empty()
-                                
-                            max_z_chunk = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
-                            z_per_spawn = getattr(core.data.config, 'ZOMBIES_PER_SPAWN', 3)
-                            max_z_global = getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500)
-
-                            if hasattr(game, 'current_zombie_spawns') and game.current_zombie_spawns and max_z_chunk > 0 and max_z_global > 0 and z_per_spawn > 0:
-                                from core.entities.zombie.zombie import Zombie
-                                for szx, szy in game.current_zombie_spawns:
-                                    if len(game.zombies) >= max_z_chunk or len(game.zombies) >= max_z_global:
-                                        break
-                                    for _ in range(z_per_spawn):
-                                        z = Zombie.create_random(szx, szy)
-                                        if z:
-                                            free_spot = find_free_tile(z.rect, game.obstacles, max_radius=15, initial_pos=(szx, szy))
-                                            if free_spot:
-                                                z.rect.topleft = free_spot
-                                                z.x, z.y = free_spot
-                                                game.zombies.append(z)
-                                        
-                            max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
-                            max_npc_global = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
-                            can_spawn_npcs = max_npc_chunk > 0 and max_npc_global > 0 and getattr(core.data.config, 'NPC_SPAWN_CHANCE', 1.0) > 0.0
-
-                            if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points and can_spawn_npcs:
-                                for spawn_data in game.npc_spawn_points:
-                                    if len(game.npcs) >= max_npc_chunk:
-                                        break
-                                    nx, ny = spawn_data[0], spawn_data[1]
-                                    npc_type = spawn_data[2] if len(spawn_data) == 3 else 'HNPC'
-                                    
-                                    # Never spawn FNPC at L2 or L3
-                                    if layer in (2, 3):
-                                        is_static = False
-                                    else:
-                                        is_static = (npc_type in ('FNPC'))
-
-                                    npc = NPC(nx, ny, game, is_static=is_static, layer=layer)
-                                    npc.is_friendly = is_static
-                                    free_spot = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
-                                    if free_spot:
-                                        npc.rect.topleft = free_spot
-                                        npc.x, npc.y = free_spot
-                                        game.npcs.add(npc)
-                                    
-                            max_anim = getattr(core.data.config, 'ANIMAL_MAX_CHUNK', 6)
-                            anim_per_spawn = getattr(core.data.config, 'ANIMALS_PER_SPAWN', 3)
-                            if hasattr(game, 'active_animals') and max_anim > 0 and anim_per_spawn > 0:
-                                from core.entities.animal.animal import Animal
-                                from core.entities.animal.animal_loader import AnimalLoader
-                                AnimalLoader.load_animals()
-                                curr_layer = getattr(game, 'current_layer_index', 1)
-                                valid_animal_types = []
-                                valid_weights = []
-                                for a_name, a_def in AnimalLoader.definitions.items():
-                                    allowed = a_def.get('spawn_layers', [1, 2])
-                                    if curr_layer in allowed:
-                                        valid_animal_types.append(a_name)
-                                        valid_weights.append(max(1, int(a_def.get('spawn_weight', 10))))
-
-                                if valid_animal_types:
-                                    num_to_spawn = min(anim_per_spawn, max_anim)
-                                    for _ in range(num_to_spawn):
-                                        ax = random.randint(100, max(101, new_width - 100))
-                                        ay = random.randint(100, max(101, new_height - 100))
-                                        animal_type = random.choices(valid_animal_types, weights=valid_weights, k=1)[0]
-                                        animal_obj = Animal(ax, ay, animal_type, game=game, layer=curr_layer)
-                                        free_spot = find_free_tile(animal_obj.rect, game.obstacles, max_radius=15, initial_pos=(ax, ay))
-                                        if free_spot:
-                                            animal_obj.rect.topleft = free_spot
-                                            animal_obj.x, animal_obj.y = free_spot
-                                            game.active_animals.append(animal_obj)
-                                            game.items_on_ground.append(animal_obj)
-
-                            if layer == 1:
-                                from core.map.spawn_manager import spawn_random_vehicles
-                                spawn_random_vehicles(game, count=getattr(core.data.config, 'MAX_VEH_CHUNK', 6))
-                                    
-                        
-
-                        game.zombies.extend(chasing_zombies)
-                        if hasattr(game, 'active_animals'):
-                            game.active_animals.extend(chasing_animals)
-                            game.items_on_ground.extend(chasing_animals)
-
-                        if self.vehicle:
-                            if self.vehicle not in game.containers:
-                                game.containers.append(self.vehicle)
-                            if hasattr(game.map_manager, 'vehicles') and self.vehicle not in game.map_manager.vehicles:
-                                game.map_manager.vehicles.append(self.vehicle)
-                            if self.vehicle.rect in game.obstacles:
-                                game.obstacles.remove(self.vehicle.rect)
-
-                        if hasattr(game, 'last_time'):
-                            game.last_time = pygame.time.get_ticks()
-                        if hasattr(game, 'dt_ms'):
-                            game.dt_ms = 16.0
-                            game.dt_mult = 1.0
-
-                        game.game_state = 'CHUNK_LOADING'
-                        return
-                    else:
-                        # Prevent player from walking into empty ocean cells
-                        if target.rect.centerx < 0: target.x = 0
-                        elif target.rect.centerx >= chunk_width_px: target.x = chunk_width_px - target.rect.width
-                        if target.rect.centery < 0: target.y = 0
-                        elif target.rect.centery >= chunk_height_px: target.y = chunk_height_px - target.rect.height
-                        
-                        target.rect.topleft = (int(target.x), int(target.y))
-                        if self.vehicle:
-                            self.vehicle.velocity = [0, 0]
-                            self.x = self.vehicle.x
-                            self.y = self.vehicle.y
-                            self.rect.topleft = (int(self.x), int(self.y))
+            target = self.vehicle if self.vehicle else self
+            target.x = max(0, min(target.x, chunk_width_px - target.rect.width))
+            target.y = max(0, min(target.y, chunk_height_px - target.rect.height))
+            target.rect.topleft = (int(target.x), int(target.y))
+            if self.vehicle:
+                self.x = self.vehicle.x
+                self.y = self.vehicle.y
+                self.rect.topleft = (int(self.x), int(self.y))

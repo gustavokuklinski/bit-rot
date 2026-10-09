@@ -221,6 +221,9 @@ def teleport_player_to_chunk(game, dest_gx, dest_gy, dest_layer=1):
         game.spatial_manager.rebuild_item_grid(force=True)
         game.spatial_manager.rebuild_container_grid()
 
+    game._chunk_loading_title = tr('ui', 'Loading')
+    game._chunk_loading_bg_type = 'boat'
+    game._chunk_load_timer = None
     game.game_state = 'CHUNK_LOADING'
     display_message(tr('msg', "Arrived at destination."))
 
@@ -352,10 +355,12 @@ def get_targeted_interactable(game):
     best_tile = find_interactable_tile(game)
     if best_tile:
         tx, ty = best_tile
-        tile_center_x = (tx * TILE_SIZE) + (TILE_SIZE / 2)
-        tile_center_y = (ty * TILE_SIZE) + (TILE_SIZE / 2)
-        dist = math.hypot(game.player.rect.centerx - tile_center_x, game.player.rect.centery - tile_center_y)
-        candidates.append({'type': 'tile', 'entity': (tx, ty), 'dist': dist})
+        t_def = game.map_manager.get_tile_at(tx, ty)
+        if t_def and not t_def.get('is_stair'):
+            tile_center_x = (tx * TILE_SIZE) + (TILE_SIZE / 2)
+            tile_center_y = (ty * TILE_SIZE) + (TILE_SIZE / 2)
+            dist = math.hypot(game.player.rect.centerx - tile_center_x, game.player.rect.centery - tile_center_y)
+            candidates.append({'type': 'tile', 'entity': (tx, ty), 'dist': dist})
     
     if hasattr(game, 'map_data') and 0 <= facing_y < len(game.map_data) and 0 <= facing_x < len(game.map_data[0]):
         facing_t = game.map_manager.get_tile_at(facing_x, facing_y)

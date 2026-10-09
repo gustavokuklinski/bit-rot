@@ -12,6 +12,7 @@ from core.map.tile_manager import TileManager
 from core.map.spawn_manager import spawn_initial_items, spawn_initial_zombies
 from core.entities.npc.npc import NPC
 from core.placement import find_free_tile
+from core.data.localization import tr
 
 def resize_map_layer(layer_data, target_width, target_height, fill_value=' '):
     """
@@ -513,6 +514,30 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
         game.spatial_manager.rebuild_zombie_grid(force=True)
         game.spatial_manager.rebuild_item_grid(force=True)
         game.spatial_manager.rebuild_container_grid()
+
+    # Safety reposition and velocity reset for the player on the new layer
+    if hasattr(game, 'player') and game.player:
+        free_spot = find_free_tile(game.player.rect, game.obstacles, initial_pos=(game.player.x, game.player.y), max_radius=4)
+        if free_spot:
+            game.player.x, game.player.y = free_spot
+            game.player.rect.topleft = (int(game.player.x), int(game.player.y))
+        game.player.vx = 0
+        game.player.vy = 0
+        game.player.is_moving = False
+
+        # Center camera directly on player in new layer
+        zoom = getattr(game, 'zoom_level', 1.0)
+        view_w = int(game.dynamic_w / zoom)
+        view_h = int(game.dynamic_h / zoom)
+        game.true_camera_x = game.player.rect.centerx - (view_w / 2)
+        game.true_camera_y = game.player.rect.centery - (view_h / 2)
+
+    # Trigger Loading screen when switching layers during active gameplay
+    if not skip_cache_save and getattr(game, 'game_state', None) == 'PLAYING':
+        game._chunk_loading_title = f"{tr('ui', 'Loading')}"
+        game._chunk_loading_bg_type = 'layer'
+        game._chunk_load_timer = None
+        game.game_state = 'CHUNK_LOADING'
     
     return True
 

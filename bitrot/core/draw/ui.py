@@ -581,14 +581,35 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
                     ]
                 }})
 
+    # 1. Stairs Interaction: ONLY displayed when standing directly on top of the stair tile
+    p_grid_x = int(game.player.rect.centerx // TILE_SIZE)
+    p_grid_y = int(game.player.rect.centery // TILE_SIZE)
+    stair_t = game.map_manager.get_tile_at(p_grid_x, p_grid_y)
+    if stair_t and stair_t.get('is_stair'):
+        tip_text = get_tooltip_tr('stair_interact', "Climb [{key}]").replace('{key}', get_key_name('interact'))
+        interactables.append({
+            'rect': pygame.Rect(p_grid_x * TILE_SIZE, p_grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE),
+            'tip': tip_text
+        })
+
+    # 2. Facing Tile Interactions: for doors, windows, and interactables (excluding stairs)
     fx, fy = get_player_facing_tile(game)
     if fx is not None:
         t = game.map_manager.get_tile_at(fx, fy)
-        if t and (t.get('is_stair') or t.get('is_statable')) and math.hypot(game.player.rect.centerx - (fx*TILE_SIZE + TILE_SIZE/2), game.player.rect.centery - (fy*TILE_SIZE + TILE_SIZE/2)) < TILE_SIZE * 1.5:
-            tip_key = 'stair_interact' if t.get('is_stair') else 'generic_interact'
-            default_tip = "Climb [{key}]" if t.get('is_stair') else "Interact [{key}]"
-            tip_text = get_tooltip_tr(tip_key, default_tip).replace('{key}', get_key_name('interact'))
+        if t and t.get('is_statable') and not t.get('is_stair') and math.hypot(
+            game.player.rect.centerx - (fx * TILE_SIZE + TILE_SIZE / 2),
+            game.player.rect.centery - (fy * TILE_SIZE + TILE_SIZE / 2)
+        ) < TILE_SIZE * 1.5:
+            tip_text = get_tooltip_tr('generic_interact', "Interact [{key}]").replace('{key}', get_key_name('interact'))
             interactables.append({'rect': pygame.Rect(fx * TILE_SIZE, fy * TILE_SIZE, TILE_SIZE, TILE_SIZE), 'tip': tip_text})
+
+    # 3. Chunk Boundary Travel Indicator: shows when ready to switch chunks
+    from core.entities.player.player_movement import get_available_chunk_transition
+    chunk_trans = get_available_chunk_transition(game)
+    if chunk_trans:
+        target_obj = game.player.vehicle if getattr(game.player, 'vehicle', None) else game.player
+        tip_text = get_tooltip_tr('chunk_travel', "Travel [{key}]").replace('{key}', get_key_name('interact'))
+        interactables.append({'rect': target_obj.rect, 'tip': tip_text})
 
     for obj in find_nearby_containers(game):
         if getattr(obj, 'item_type', '') != 'vehicle' and (getattr(obj, 'item_type', '') in ['container', 'maptile_container', 'corpse'] or type(obj).__name__ == 'Corpse') and screen_rect.colliderect(obj.rect):
