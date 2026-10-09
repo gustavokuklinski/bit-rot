@@ -423,9 +423,16 @@ def _start_with_class(game, state, class_def):
                 if attr in final_attrs:
                     cur = final_attrs[attr]
                     if isinstance(cur, dict):
-                        cur['level'] = cur.get('level', 0) + val
+                        cur['level'] = max(0, cur.get('level', 0) + val)
                     else:
-                        final_attrs[attr] = cur + val
+                        final_attrs[attr] = max(0, cur + val)
+
+    # Ensure no attribute can start below 0
+    for attr in final_attrs:
+        if isinstance(final_attrs[attr], dict):
+            final_attrs[attr]['level'] = max(0, final_attrs[attr].get('level', 0))
+        else:
+            final_attrs[attr] = max(0, int(final_attrs[attr]))
 
     final_player_data['attributes'] = final_attrs
 

@@ -128,10 +128,10 @@ class JoystickHandler:
         keys = pygame.key.get_pressed()
         rx, ry = 0.0, 0.0
         
-        if keys[pygame.K_LEFT]:  rx -= 1.0
-        if keys[pygame.K_RIGHT]: rx += 1.0
-        if keys[pygame.K_UP]:    ry -= 1.0
-        if keys[pygame.K_DOWN]:  ry += 1.0
+        #if keys[pygame.K_LEFT]:  rx -= 1.0
+        #if keys[pygame.K_RIGHT]: rx += 1.0
+        #if keys[pygame.K_UP]:    ry -= 1.0
+        #if keys[pygame.K_DOWN]:  ry += 1.0
         
         if rx != 0 and ry != 0:
             length = math.hypot(rx, ry)

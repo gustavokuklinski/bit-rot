@@ -29,7 +29,7 @@ def parse_player_data():
         
     # Parse attributes (NEW)
     for attr in root.findall('attributes/*'):
-        data['attributes'][attr.tag] = float(attr.get('value'))
+        data['attributes'][attr.tag] = max(0.0, float(attr.get('value')))
 
     # Parse body parts (NEW)
     body_node = root.find('body')

@@ -33,10 +33,6 @@
         <item name="Cartography for [MAP_POS]" chance="1" />
         <item name="38 Revolver" />
         <item name="Ammo Box 38" />
-        <!-- <item name="Personal Data" chance="1" />
-        <item name="Expanded Bright" chance="1" />
-        <item name="welding_ght-49" chance="1" />
-        <item name="Mobile off" chance="1" /> -->
     </initial_loot>
 
     <visuals>

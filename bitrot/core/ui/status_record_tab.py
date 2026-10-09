@@ -27,7 +27,7 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
         current_y = start_y + (i * line_height)
         
         attr_data = player.progression.attributes.get(attr_id, {})
-        level = attr_data.get('level', 0)
+        level = max(0, attr_data.get('level', 0))
         curr_xp = float(attr_data.get('xp', 0))
         req_xp = int(attr_data.get('xp_to_next_level', 100))
 

@@ -533,9 +533,9 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 if attr in current_attrs:
                     curr_val = current_attrs[attr]
                     if isinstance(curr_val, dict):
-                        curr_val['level'] = curr_val.get('level', 0) + value
+                        curr_val['level'] = max(0, curr_val.get('level', 0) + value)
                     else:
-                        current_attrs[attr] = curr_val + value
+                        current_attrs[attr] = max(0, curr_val + value)
 
     total_defence = 0
     total_weight = 0.0
@@ -629,9 +629,9 @@ def _draw_player_build_screen(game, state, mouse_pos):
             else: text_x = 0
 
             if isinstance(value_obj, dict):
-                current_level = value_obj.get('level', 0)
+                current_level = max(0, value_obj.get('level', 0))
             else:
-                current_level = int(value_obj)
+                current_level = max(0, int(value_obj))
 
             xp_mod = display_modifiers.get(attr, 0)   
             lvl_mod = level_modifiers.get(attr, 0)    
@@ -904,7 +904,17 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
             if state.get('total_trait_cost', 0) <= STARTING_POINTS:
                 final_player_data = state['base_data'].copy()
                 final_player_data['player_id'] = str(uuid.uuid4())
-                final_player_data['attributes'] = state['final_attrs']
+
+                # Enforce minimum of 0 across all attributes
+                cleaned_attrs = {}
+                for k, v in state['final_attrs'].items():
+                    if isinstance(v, dict):
+                        c = v.copy()
+                        c['level'] = max(0, c.get('level', 0))
+                        cleaned_attrs[k] = c
+                    else:
+                        cleaned_attrs[k] = max(0, int(v))
+                final_player_data['attributes'] = cleaned_attrs
                 final_player_data['clothes'] = state['chosen_clothes']
                 final_player_data['clothes_colors'] = state.get('clothes_colors', {})
                 final_player_data['name'] = state.get('player_name', "Player")

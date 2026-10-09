@@ -25,7 +25,7 @@ class PlayerProgression:
 
     def get_level(self, attr_id):
         """Returns the current level of an attribute."""
-        return self.attributes.get(attr_id, {}).get('level', 0)
+        return max(0, self.attributes.get(attr_id, {}).get('level', 0))
 
     def get_derived_bonus(self, target_effect):
         total_mult = 0.0
@@ -110,6 +110,7 @@ class PlayerProgression:
     def _create_attribute(self, player_data, attr_id):
         raw = player_data.get('attributes', {}).get(attr_id, 0.0)
         level = raw.get('level', 0) if isinstance(raw, dict) else int(raw)
+        level = max(0, level)  # Ensure attribute level never starts negative
         xp = raw.get('xp', 0) if isinstance(raw, dict) else 0
 
         xp_req = self._calc_xp_req(attr_id, level, traits=self.initial_traits)
