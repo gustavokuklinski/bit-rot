@@ -136,6 +136,18 @@ class NPCDialog:
                         pass
                 
                 # FIX 2: Deep recursive check that searches inventory, belt, clothes, and containers
+                def is_dialog_item_match(it_name, target):
+                    it_name = it_name.strip().lower()
+                    target = target.strip().lower()
+                    if it_name == target:
+                        return True
+                    if target == "id":
+                        return it_name.startswith("id:") or it_name.startswith("id ") or it_name == "id card"
+                    if target in it_name and len(target) >= 3:
+                        return True
+                    return False
+
+                # Deep recursive check that searches inventory, belt, clothes, and containers
                 def player_has_item(item_name):
                     target = item_name.strip().lower()
                     def check_list(items):
@@ -143,7 +155,7 @@ class NPCDialog:
                         for it in items:
                             if not it: continue
                             it_name = getattr(it, 'name', '').strip().lower()
-                            if it_name == target or target in it_name or it_name in target:
+                            if is_dialog_item_match(it_name, target):
                                 return True
                             if hasattr(it, 'inventory') and it.inventory:
                                 if check_list(it.inventory):
@@ -157,14 +169,14 @@ class NPCDialog:
 
                 req_item = opt.get('req_item')
                 if req_item:
-                    item_names = [i.strip() for i in req_item.replace('[', '').replace(']', '').split(',')]
-                    if not all(player_has_item(name) for name in item_names):
+                    item_names = [i.strip() for i in req_item.replace('[', '').replace(']', '').split(',') if i.strip()]
+                    if not any(player_has_item(name) for name in item_names):
                         continue
 
                 rqst_item = opt.get('rqst_item')
                 if rqst_item:
-                    item_names = [i.strip() for i in rqst_item.replace('[', '').replace(']', '').split(',')]
-                    if not all(player_has_item(name) for name in item_names):
+                    item_names = [i.strip() for i in rqst_item.replace('[', '').replace(']', '').split(',') if i.strip()]
+                    if not any(player_has_item(name) for name in item_names):
                         continue
                         
                 # FIX 3: Do not block quest starters with mobile_quest_done check

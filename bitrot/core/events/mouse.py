@@ -297,16 +297,28 @@ def handle_mouse_down(game, event, mouse_pos):
                                             except ValueError:
                                                 pass
 
-                                # 2. Deduct requested items from player
+                                # 2. Deduct requested items from player (recursive & safe match)
                                 rqst = opt.get('rqst_item')
                                 if rqst:
                                     clean_rqst = rqst.replace('[', '').replace(']', '').strip()
-                                    for iname in [x.strip() for x in clean_rqst.split(',') if x.strip()]:
-                                        target_lower = iname.lower()
-                                        deducted = False
+                                    candidate_names = [x.strip() for x in clean_rqst.split(',') if x.strip()]
+
+                                    def is_deduct_match(it_name, target):
+                                        it_name = it_name.strip().lower()
+                                        target = target.strip().lower()
+                                        if it_name == target:
+                                            return True
+                                        if target == 'id':
+                                            return it_name.startswith('id:') or it_name.startswith('id ') or it_name == 'id card'
+                                        if target in it_name and len(target) >= 3:
+                                            return True
+                                        return False
+
+                                    def deduct_candidate(target):
+                                        # Inventory and Belt
                                         for inv_list in [game.player.inventory, game.player.belt]:
                                             for slot_i, it in enumerate(inv_list):
-                                                if it and (it.name.lower() == target_lower or target_lower in it.name.lower()):
+                                                if it and is_deduct_match(it.name, target):
                                                     if hasattr(it, 'load') and it.load is not None and it.load > 1:
                                                         it.load -= 1
                                                     else:
@@ -314,29 +326,80 @@ def handle_mouse_down(game, event, mouse_pos):
                                                             game.player.belt[slot_i] = None
                                                         else:
                                                             inv_list.pop(slot_i)
-                                                    deducted = True
                                                     display_message(game, f"{tr('msg', 'Gave:')} {tr('item', it.name)}")
-                                                    break
-                                            if deducted: break
-                                        if not deducted and hasattr(game.player, 'clothes'):
+                                                    return True
+                                                # Check inside carried bags/containers
+                                                if it and hasattr(it, 'inventory') and it.inventory:
+                                                    for c_i, c_it in enumerate(it.inventory):
+                                                        if c_it and is_deduct_match(c_it.name, target):
+                                                            if hasattr(c_it, 'load') and c_it.load is not None and c_it.load > 1:
+                                                                c_it.load -= 1
+                                                            else:
+                                                                it.inventory.pop(c_i)
+                                                            display_message(game, f"{tr('msg', 'Gave:')} {tr('item', c_it.name)}")
+                                                            return True
+
+                                        # Equipped Clothes
+                                        if hasattr(game.player, 'clothes'):
                                             for slot_k, it in game.player.clothes.items():
-                                                if it and (it.name.lower() == target_lower or target_lower in it.name.lower()):
+                                                if it and is_deduct_match(it.name, target):
                                                     game.player.clothes[slot_k] = None
                                                     display_message(game, f"{tr('msg', 'Gave:')} {tr('item', it.name)}")
-                                                    break
+                                                    return True
+                                                if it and hasattr(it, 'inventory') and it.inventory:
+                                                    for c_i, c_it in enumerate(it.inventory):
+                                                        if c_it and is_deduct_match(c_it.name, target):
+                                                            if hasattr(c_it, 'load') and c_it.load is not None and c_it.load > 1:
+                                                                c_it.load -= 1
+                                                            else:
+                                                                it.inventory.pop(c_i)
+                                                            display_message(game, f"{tr('msg', 'Gave:')} {tr('item', c_it.name)}")
+                                                            return True
+                                        return False
 
-                                # 3. Award items to player with fallback aliases
+                                    for cand in candidate_names:
+                                        if deduct_candidate(cand):
+                                            break
+
+                                # 3. Award items to player with fallback aliases & quantity parsing
                                 award = opt.get('award_item')
                                 if award:
                                     clean_award = award.replace('[', '').replace(']', '').strip()
-                                    for iname in [x.strip() for x in clean_award.split(',') if x.strip()]:
-                                        new_it = Item.create_from_name(iname)
-                                        if not new_it:
-                                            for cand in [f"{iname} on", f"{iname} off", iname.replace(" phone", "")]:
-                                                new_it = Item.create_from_name(cand)
-                                                if new_it: break
+                                    for entry in [x.strip() for x in clean_award.split(',') if x.strip()]:
+                                        qty = 1
+                                        iname = entry
+                                        if ':' in entry:
+                                            parts = entry.split(':', 1)
+                                            iname = parts[0].strip()
+                                            try:
+                                                qty = int(parts[1].strip())
+                                            except ValueError:
+                                                qty = 1
+
+                                        cand_names = [
+                                            iname,
+                                            iname.replace(" off", "").replace(" on", "").strip(),
+                                            f"{iname} off",
+                                            f"{iname} on",
+                                            iname.replace(" phone", "").strip()
+                                        ]
+                                        new_it = None
+                                        for cand in cand_names:
+                                            new_it = Item.create_from_name(cand)
+                                            if new_it:
+                                                if cand.endswith(" off"):
+                                                    new_it.state = "off"
+                                                elif cand.endswith(" on"):
+                                                    new_it.state = "on"
+                                                break
+
+                                        if not new_it and iname.lower() in ("money wbrl", "money"):
+                                            new_it = Item.create_from_name("Money WBRL")
 
                                         if new_it:
+                                            if hasattr(new_it, 'load') and qty > 1:
+                                                new_it.load = qty
+
                                             if len(game.player.inventory) < game.player.get_total_inventory_slots():
                                                 game.player.inventory.append(new_it)
                                                 if hasattr(game.player, 'stack_item_in_inventory'):
@@ -394,10 +457,11 @@ def handle_mouse_down(game, event, mouse_pos):
                                     game.sound_manager.play_ui_hover()
                                 return
                     else:
-                        # FIX: In answer view, clicking ANYWHERE inside the modal returns to the dialogue list
+                        # In answer view, clicking ANYWHERE inside the modal returns to the dialogue list
                         if topmost_modal.get('rect') and topmost_modal['rect'].collidepoint(mouse_pos):
                             topmost_modal['active_dialog_index'] = -1
                             topmost_modal['scroll_offset_y'] = 0
+                            topmost_modal['dialog_list_cache_key'] = None
                             npc = topmost_modal.get('npc')
                             if npc:
                                 topmost_modal['dialogs'] = npc.get_dialog_options()

@@ -60,14 +60,9 @@ def draw_status_modal(surface, player, modal, assets, zombies_killed, mouse_pos,
     if _has_app(game, 'personal_data'):
         tabs_data.extend([
             {'label': 'Status', 'icon_path': SPRITE_PATH + 'ui/status.png'},
-            {'label': 'Record', 'icon_path': SPRITE_PATH + 'ui/xp.png'}
-        ])
-
-    # 3. If the Mobile has the Open Jobs SD Card installed
-    if _has_app(game, 'open_jobs'):
-        tabs_data.append(
+            {'label': 'Record', 'icon_path': SPRITE_PATH + 'ui/xp.png'},
             {'label': 'Quests', 'icon_path': SPRITE_PATH + 'ui/quest.png'}
-        )
+        ])
 
     modal['tabs_data'] = tabs_data
     

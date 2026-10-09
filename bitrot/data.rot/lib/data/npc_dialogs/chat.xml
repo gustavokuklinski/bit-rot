@@ -3,21 +3,13 @@
     <node id="greeting">
         <options 
             player_question="How's it going?" 
-            npc_answer="I just escaped with: [inventory_list]. You look like you've seen better days too." 
-            priority="50" 
-            gain_xp="[lucky:1]" />
-        <options 
-            player_question="You look like you've been through hell." 
-            npc_answer="Hell? No, this is just corporate cost-cutting with extra steps. At least in hell, the medical benefits would be better." 
-            priority="50" 
-            dialog_type="once" 
-            req_level="[lucky:1]" 
-            gain_xp="[lucky:50]" />
+            npc_answer="I just escaped with: [inventory_list]. You look like you've seen better days too. See, I have some good stuff here if you needed." 
+            priority="50" />
     </node>
     <node id="lore_branch">
         <options 
             player_question="I've heard a helicopter landed with survivors, is this true?" 
-            npc_answer="Sim... sí...yes? They brought the disgrace to us, some asymphomatic from the continent, it becomes a hell after them! cof...cof..." 
+            npc_answer="Yes! They brought the plague to us, some asymptomatic carriers from the continent. It became hell after they arrived! *cough* *cough*" 
             priority="10" 
             gain_xp="[lucky:10]" />
         <options 
@@ -26,8 +18,8 @@
             priority="10" 
             gain_xp="[lucky:10]" />
         <options 
-            player_question="Why did the helicopters leave us?" 
-            npc_answer="Standard protocol. Next Petrol doesn't rescue liabilities. We are the liability now. Every person is a potential carrier." 
+            player_question="What happened to the boat?!" 
+            npc_answer="We are stuck here. We probably need some specific tools to get this crap running again!" 
             priority="10" 
             gain_xp="[lucky:10]" />
     </node>
