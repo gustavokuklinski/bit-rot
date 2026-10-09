@@ -334,6 +334,17 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
     game.roof_data = game.all_roof_layers.get(layer_index, [])
     game.light_data = game.all_light_layers.get(layer_index, [])
 
+    # Remove '@' chunk borders on Layer 1 so players can walk freely to the edge and press E
+    if layer_index == 1 and game.map_data:
+        h_len = len(game.map_data)
+        w_len = len(game.map_data[0]) if h_len > 0 else 0
+        for x in range(w_len):
+            if game.map_data[0][x] == '@': game.map_data[0][x] = ' '
+            if game.map_data[h_len - 1][x] == '@': game.map_data[h_len - 1][x] = ' '
+        for y in range(h_len):
+            if game.map_data[y][0] == '@': game.map_data[y][0] = ' '
+            if game.map_data[y][w_len - 1] == '@': game.map_data[y][w_len - 1] = ' '
+
     if not getattr(game, 'is_giant_map', False) and layer_index == 1:
         if game.map_data:
             game.map_height_pixels = len(game.map_data) * TILE_SIZE

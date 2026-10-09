@@ -1067,7 +1067,9 @@ class ProceduralGeneratorChunk:
                         is_near_path = True
                         
             if not is_near_path:
-                layers['base'][by][bx] = '@'
+                # Remove '@' wall borders on Layer 1: keep perimeter open
+                if layers['base'][by][bx] == '@':
+                    layers['base'][by][bx] = ' '
             else:
                 layers['base'][by][bx] = ' '
                 if layers['ground'][by][bx] not in pathway_tiles:
@@ -1080,6 +1082,14 @@ class ProceduralGeneratorChunk:
         for y in range(h):
             apply_border_wall(0, y, False)
             apply_border_wall(w-1, y, False)
+
+        # Clear any remaining '@' on Layer 1 outer perimeter
+        for x in range(w):
+            if layers['base'][0][x] == '@': layers['base'][0][x] = ' '
+            if layers['base'][h - 1][x] == '@': layers['base'][h - 1][x] = ' '
+        for y in range(h):
+            if layers['base'][y][0] == '@': layers['base'][y][0] = ' '
+            if layers['base'][y][w - 1] == '@': layers['base'][y][w - 1] = ' '
 
         # 9. Spawns
         if hasattr(self, '_scatter_zombies'):
