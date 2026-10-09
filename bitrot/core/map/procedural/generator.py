@@ -779,6 +779,13 @@ class ProceduralGenerator(
       self._decorate_l2_pathways(l3_layers, c_w, c_h, conns_l2=conns_l3)
       self._populate_l2_spawns(l3_layers)
 
+      if hasattr(self, '_scatter_animals'):
+        self._scatter_animals(l3_layers, None, c_w, c_h, multiplier=1, is_l2=False)
+      if hasattr(self, '_scatter_npcs_l2'):
+        self._scatter_npcs_l2(l3_layers, c_w, c_h, suffix='')
+      if hasattr(self, '_scatter_quest_items'):
+        self._scatter_quest_items(l3_layers, None, c_w, c_h, 3)
+
       for y in range(c_h):
         for x in range(c_w):
           if l3_layers['ground'][y][x] == ' ':
@@ -789,7 +796,7 @@ class ProceduralGenerator(
       self._save_chunk(f'map_L2_{gx}_{gy}', l2_layers)
       self._save_chunk(f'map_L3_{gx}_{gy}', l3_layers)
       self.generated_chunks.add((gx, gy))
-      print(f'[ProceduralGenerator] Saved clean Lobby Chunk ({gx}, {gy}) [L1 Isolated, L3 Connected & Discovered] successfully.')
+      print(f'[ProceduralGenerator] Saved Lobby Chunk ({gx}, {gy}) [L1 Safe Haven, L3 Normal Spawns] successfully.')
       return
 
     # Format Layer 1 (Surface)
@@ -804,14 +811,16 @@ class ProceduralGenerator(
     if hasattr(self, '_scatter_quest_items'):
       self._scatter_quest_items(l1_layers, None, c_w, c_h, 1)
 
-    # Format Layer 2 (Caves 1)
+    # Format Layer 2 (Caves 1) - EXACT SAME SPAWN DENSITY AS L1
     self._connect_l2_drunkards(l2_layers, conns_l2=conns_l2)
     self._enforce_l2_contained_borders(l2_layers, c_w, c_h, conns_l2=conns_l2)
     self._decorate_l2_pathways(l2_layers, c_w, c_h, conns_l2=conns_l2)
     self._populate_l2_spawns(l2_layers)
 
     if hasattr(self, '_scatter_animals'):
-      self._scatter_animals(l2_layers, None, c_w, c_h, multiplier=4 if is_forest else 2, is_l2=True)
+      self._scatter_animals(l2_layers, None, c_w, c_h, multiplier=2 if is_forest else 1, is_l2=False)
+    if hasattr(self, '_scatter_npcs_l2'):
+      self._scatter_npcs_l2(l2_layers, c_w, c_h, suffix='')
     if hasattr(self, '_scatter_quest_items'):
       self._scatter_quest_items(l2_layers, None, c_w, c_h, 2)
 
@@ -821,63 +830,16 @@ class ProceduralGenerator(
                 l2_layers['ground'][y][x] = 'dirty_01'
                 l2_layers['base'][y][x] = '@'
 
-    # Format Layer 3 (Caves 2 / Deep Underground)
+    # Format Layer 3 (Caves 2) - EXACT SAME SPAWN DENSITY AS L1 AND L2
     self._connect_l2_drunkards(l3_layers, conns_l2=conns_l3)
     self._enforce_l2_contained_borders(l3_layers, c_w, c_h, conns_l2=conns_l3)
     self._decorate_l2_pathways(l3_layers, c_w, c_h, conns_l2=conns_l3)
     self._populate_l2_spawns(l3_layers)
 
     if hasattr(self, '_scatter_animals'):
-      self._scatter_animals(l3_layers, None, c_w, c_h, multiplier=4 if is_forest else 2, is_l2=True)
-    if hasattr(self, '_scatter_quest_items'):
-      self._scatter_quest_items(l3_layers, None, c_w, c_h, 3)
-
-    for y in range(c_h):
-        for x in range(c_w):
-            if l3_layers['ground'][y][x] == ' ':
-                l3_layers['ground'][y][x] = 'dirty_01'
-                l3_layers['base'][y][x] = '@'
-
-    # Save chunks for all three layers
-    self._save_chunk(f'map_L1_{gx}_{gy}', l1_layers)
-    self._save_chunk(f'map_L2_{gx}_{gy}', l2_layers)
-    self._save_chunk(f'map_L3_{gx}_{gy}', l3_layers)
-
-    # Format Layer 1 (Surface)
-    self._apply_terrain_smoothing(l1_layers, c_w, c_h)
-    self._apply_sand_smoothing(l1_layers, c_w, c_h, 'sand_01')
-    self._apply_sand_smoothing(l1_layers, c_w, c_h, 'beach_sand_01')
-    self._apply_asphalt_smoothing(l1_layers, c_w, c_h)
-
-    self._scatter_vehicles(l1_layers, None, c_w, c_h)
-    self._scatter_animals(l1_layers, None, c_w, c_h, multiplier=2 if is_forest else 1, is_l2=False)
-
-    if hasattr(self, '_scatter_quest_items'):
-      self._scatter_quest_items(l1_layers, None, c_w, c_h, 1)
-
-    # Format Layer 2 (Caves 1)
-    self._connect_l2_drunkards(l2_layers, conns_l2=conns_l2)
-    self._enforce_l2_contained_borders(l2_layers, c_w, c_h, conns_l2=conns_l2)
-    self._populate_l2_spawns(l2_layers)
-
-    if hasattr(self, '_scatter_animals'):
-      self._scatter_animals(l2_layers, None, c_w, c_h, multiplier=4 if is_forest else 2, is_l2=True)
-    if hasattr(self, '_scatter_quest_items'):
-      self._scatter_quest_items(l2_layers, None, c_w, c_h, 2)
-
-    for y in range(c_h):
-        for x in range(c_w):
-            if l2_layers['ground'][y][x] == ' ':
-                l2_layers['ground'][y][x] = 'dirty_01'
-                l2_layers['base'][y][x] = '@'
-
-    # Format Layer 3 (Caves 2 / Deep Underground - Same logic as Layer 2)
-    self._connect_l2_drunkards(l3_layers, conns_l2=conns_l3)
-    self._enforce_l2_contained_borders(l3_layers, c_w, c_h, conns_l2=conns_l3)
-    self._populate_l2_spawns(l3_layers)
-
-    if hasattr(self, '_scatter_animals'):
-      self._scatter_animals(l3_layers, None, c_w, c_h, multiplier=4 if is_forest else 2, is_l2=True)
+      self._scatter_animals(l3_layers, None, c_w, c_h, multiplier=2 if is_forest else 1, is_l2=False)
+    if hasattr(self, '_scatter_npcs_l2'):
+      self._scatter_npcs_l2(l3_layers, c_w, c_h, suffix='')
     if hasattr(self, '_scatter_quest_items'):
       self._scatter_quest_items(l3_layers, None, c_w, c_h, 3)
 

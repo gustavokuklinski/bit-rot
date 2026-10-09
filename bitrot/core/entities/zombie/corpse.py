@@ -10,7 +10,7 @@ PLAYER_CORPSE_DECAY_MS = 30 * 60 * 1000  # 30 minutes in milliseconds (1,800,000
 class Corpse(Item):
     """Lootable corpse container with automatic decay."""
 
-    def __init__(self, name="Dead corpse", capacity=15, image_path=None, pos=(0, 0), decay_ms=160000, is_permanent=False, is_player_corpse=False, layer=1, map_filename=None):
+    def __init__(self, name="Dead corpse", capacity=15, image_path=None, pos=(0, 0), decay_ms=160000, is_permanent=False, is_player_corpse=False, layer=None, map_filename=None):
         img_path = image_path or "zombie/dead.png"
         super().__init__(name, 'container', capacity=capacity, sprite_file=img_path)
         
@@ -18,7 +18,14 @@ class Corpse(Item):
         self.rect.center = pos
         self.x = self.rect.x
         self.y = self.rect.y
-        self.layer = layer
+        if layer is not None:
+            self.layer = int(layer)
+        else:
+            from core.messages import _game_instance
+            if _game_instance and hasattr(_game_instance, 'current_layer_index'):
+                self.layer = int(_game_instance.current_layer_index)
+            else:
+                self.layer = 1
         self.map_filename = map_filename
         
         self.spawn_time = pygame.time.get_ticks()
@@ -88,6 +95,8 @@ class Corpse(Item):
                 it.rect.center = (drop_x + 4, drop_y + 4)
                 it.x = it.rect.x
                 it.y = it.rect.y
+                it.layer = getattr(self, 'layer', 1)
+                it.map_filename = getattr(self, 'map_filename', None)
             except Exception:
                 pass
             items_on_ground.append(it)

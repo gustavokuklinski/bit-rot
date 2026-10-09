@@ -166,35 +166,50 @@ class NPCCombat:
                 pitch_variance=0.15
             )
 
+        corpse_layer = getattr(self, 'layer', getattr(game, 'current_layer_index', 1))
+        map_name = getattr(self, 'map_filename', getattr(game.map_manager, 'current_map_filename', ''))
         corpse = Corpse(
             name=f"Corpse of {self.name}",
-            capacity=20,
+            capacity=15,
             pos=self.rect.center, 
             image_path="zombie/dead.png",
-            decay_ms=60000
+            decay_ms=60000,
+            layer=corpse_layer,
+            map_filename=map_name
         )
         
         for item in self.inventory:
+            if hasattr(item, 'layer'):
+                item.layer = corpse_layer
             corpse.inventory.append(item)
             
         if self.equipped_weapon:
+            if hasattr(self.equipped_weapon, 'layer'):
+                self.equipped_weapon.layer = corpse_layer
             corpse.inventory.append(self.equipped_weapon)
             
         if hasattr(self, 'clothes') and self.clothes:
             for cloth_data in self.clothes.values():
                 if isinstance(cloth_data, Item):
+                    cloth_data.layer = corpse_layer
                     corpse.inventory.append(cloth_data)
                 elif isinstance(cloth_data, dict):
                     name = cloth_data.get('name')
-                    if name: corpse.inventory.append(Item.create_from_name(name))
+                    if name:
+                        it = Item.create_from_name(name)
+                        if it:
+                            it.layer = corpse_layer
+                            corpse.inventory.append(it)
                 elif isinstance(cloth_data, str):
-                     corpse.inventory.append(Item.create_from_name(cloth_data))
+                    it = Item.create_from_name(cloth_data)
+                    if it:
+                        it.layer = corpse_layer
+                        corpse.inventory.append(it)
 
         game.items_on_ground.append(corpse)
 
-        # [FIX] Force immediate item grid rebuild so corpse displays instantly
-        if hasattr(game, 'rebuild_item_grid'):
-            game.rebuild_item_grid(force=True)
+        if hasattr(game, 'spatial_manager'):
+            game.spatial_manager.rebuild_item_grid(force=True)
 
         if self in game.npcs:
             game.npcs.remove(self)

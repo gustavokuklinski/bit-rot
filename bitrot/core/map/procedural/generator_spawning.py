@@ -133,7 +133,7 @@ class ProceduralGeneratorSpawning:
 
     def _scatter_npcs_l2(self, layers, w, h, suffix='_L2'):
         """Scatters NPCs in underground layers (L2 or L3)."""
-        npc_max_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 12)
+        npc_max_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
         if npc_max_chunk <= 0: return
 
         chunk_size = getattr(core.data.config, 'CHUNK_SIZE', 128)

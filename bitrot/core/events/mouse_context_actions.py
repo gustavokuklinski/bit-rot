@@ -326,6 +326,8 @@ def handle_context_menu_click(game, mouse_pos):
                             removed.rect.center = game.player.rect.center
                             removed.x, removed.y = removed.rect.topleft
                             removed.is_placed = False
+                            removed.layer = getattr(game, 'current_layer_index', 1)
+                            removed.map_filename = getattr(game.map_manager, 'current_map_filename', '')
                             game.items_on_ground.append(removed)
                             if hasattr(game, 'sound_manager'):
                                 game.sound_manager.play_sound('drop.ogg', subdir='items', game=game, source_pos=game.player.rect.center)

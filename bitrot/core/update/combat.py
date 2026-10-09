@@ -209,6 +209,8 @@ def update_capsule_drops(game):
                     new_capsule.rect.center = (int(pos_x), int(pos_y))
                     new_capsule.x, new_capsule.y = new_capsule.rect.topleft
                     new_capsule.is_placed = False
+                    new_capsule.layer = getattr(game, 'current_layer_index', 1)
+                    new_capsule.map_filename = getattr(game.map_manager, 'current_map_filename', '')
                     game.items_on_ground.append(new_capsule)
 
                     if getattr(game, 'is_client', False) and getattr(game, 'client', None):

@@ -295,12 +295,16 @@ class Animal(Zombie):
                 pitch_variance=0.15
             )
 
+        corpse_layer = getattr(self, 'layer', getattr(game, 'current_layer_index', 1))
+        map_name = getattr(self, 'map_filename', getattr(game.map_manager, 'current_map_filename', ''))
         corpse = Corpse(
             name=f"Dead {self.name}",
             capacity=10, 
             image_path="../animals/dead.png",  
             pos=self.rect.center,
-            decay_ms=60000
+            decay_ms=60000,
+            layer=corpse_layer,
+            map_filename=map_name
         )
 
         if hasattr(self, 'loot_table') and self.loot_table:
@@ -310,7 +314,10 @@ class Animal(Zombie):
                 if random.random() <= chance_val:
                     item_name = loot_entry.get('item')
                     new_item = Item.create_from_name(item_name)
-                    if new_item: corpse.inventory.append(new_item)
+                    if new_item:
+                        new_item.layer = corpse_layer
+                        new_item.map_filename = map_name
+                        corpse.inventory.append(new_item)
 
         game.items_on_ground.append(corpse)
 

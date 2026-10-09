@@ -4,6 +4,7 @@ import random
 import core.data.config
 from core.data.config import *
 from core.entities.zombie.zombie import Zombie
+from core.entities.zombie.corpse import Corpse
 from core.entities.npc.npc import NPC
 from core.entities.animal.animal import Animal
 
@@ -70,8 +71,8 @@ def draw_entities(game, surface, offset_x, offset_y, view_w, view_h, screen_rect
         if (dx*dx + dy*dy) > view_radius_sq: continue
 
         draw_pos = item.rect.move(offset_x, offset_y)
-        # Full-size 16x16 for player corpse or placed items; small for zombie corpses & dropped items
-        if getattr(item, 'is_player_corpse', False) or getattr(item, 'is_placed', False):
+        # Full-size 16x16 for all corpses and placed items; 8x8 for small dropped items
+        if isinstance(item, Corpse) or getattr(item, 'is_corpse', False) or getattr(item, 'is_player_corpse', False) or getattr(item, 'is_placed', False):
             if getattr(item, 'image', None):
                 surface.blit(item.image, draw_pos)
             else:

@@ -39,7 +39,7 @@
         </vehicle>
         <zombie>
             <zombie_spawn_per_chunk value="8" name="Max Zombie spawn on chunk" default="8"/>
-            <spawn value="4" name="Zombies per spawn" default="4"/>
+     
             <wander value="true" name="Zombie wandering" default="true"/>
             <sight_check value="true" name="Sight player" default="true"/>
             <infection_chance value="0.6" name="Zombie infection chance" default="0.6"/>
@@ -47,14 +47,14 @@
         </zombie>
         <npc>
             <npc_spawn_per_chunk value="8" name="Max NPC spawn on chunk" default="8"/>
-            <spawn value="4" name="NPCs per spawn" default="8"/>
+    
             <static_percent value="0.50" name="Static NPC percentage" default="0.40"/>
             <hostile_percent value="0.50" name="Hostile NPC percentage" default="0.60"/>
             <respawn value="false" name="NPC respawn on death" default="true"/>
         </npc>
         <animal>
             <animal_spawn_per_chunk value="12" name="Max Animal spawn on chunk" default="12"/>
-            <spawn value="6" name="Animals per spawn" default="6"/>
+     
             <respawn value="true" name="Animal respawn on death" default="true"/>
         </animal>
     </world>

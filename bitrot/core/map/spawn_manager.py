@@ -188,12 +188,13 @@ class AsyncSpawnManager:
           game.npcs.add(npc)
 
       elif e_type in ('hnpc', 'fnpc'):
-        # Never flush dynamic NPCs into the Lobby chunk
+        # Only suppress dynamic NPCs on Layer 1 of the Lobby chunk
         curr_map = getattr(game.map_manager, 'current_map_filename', '')
-        match = re.match(r'map_L\d+_(\d+)_(\d+)_map\.csv', curr_map)
+        match = re.match(r'map_L(\d+)_(\d+)_(\d+)_map\.csv', curr_map)
         if match and getattr(game, 'generator', None):
-            curr_coord = (int(match.group(1)), int(match.group(2)))
-            if curr_coord == getattr(game.generator, 'lobby_chunk', None):
+            layer_num = int(match.group(1))
+            curr_coord = (int(match.group(2)), int(match.group(3)))
+            if curr_coord == getattr(game.generator, 'lobby_chunk', None) and layer_num == 1:
                 continue
 
         max_npc = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
@@ -340,11 +341,12 @@ def manage_dynamic_npcs(game):
         return
 
     curr_map = getattr(game.map_manager, 'current_map_filename', '')
-    match = re.match(r'map_L\d+_(\d+)_(\d+)_map\.csv', curr_map)
+    match = re.match(r'map_L(\d+)_(\d+)_(\d+)_map\.csv', curr_map)
     if match and getattr(game, 'generator', None):
-        curr_coord = (int(match.group(1)), int(match.group(2)))
-        if curr_coord == getattr(game.generator, 'lobby_chunk', None):
-            # Watchdog: prune any unexpected excess NPCs back to strictly 3
+        layer_num = int(match.group(1))
+        curr_coord = (int(match.group(2)), int(match.group(3)))
+        if curr_coord == getattr(game.generator, 'lobby_chunk', None) and layer_num == 1:
+            # Watchdog: prune any unexpected excess NPCs back to strictly 3 on Layer 1 ONLY
             if len(game.npcs) > 3:
                 keep = list(game.npcs)[:3]
                 game.npcs.empty()
@@ -506,7 +508,13 @@ def spawn_random_vehicles(game, count=10):
     spawned += 1
 
 
-def spawn_l2_population(game, count=10, target_layer=None):
+def spawn_l2_population(game, count=None, target_layer=None):
+  max_z = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
+  if count is None:
+    count = max_z
+  count = min(count, max_z)
+  if count <= 0:
+    return
   if target_layer is None:
     target_layer = game.current_layer_index
   px, py = (

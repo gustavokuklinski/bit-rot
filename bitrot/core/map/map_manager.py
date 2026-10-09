@@ -733,6 +733,8 @@ class MapManager:
                                 new_item.x = spawn_x
                                 new_item.y = spawn_y
                                 new_item.is_placed = False
+                                new_item.layer = getattr(self.game, 'current_layer_index', 1)
+                                new_item.map_filename = getattr(self, 'current_map_filename', '')
 
                                 free_spot = find_free_tile(new_item.rect, self.game.obstacles, initial_pos=(spawn_x, spawn_y), max_radius=2)
                                 if free_spot:

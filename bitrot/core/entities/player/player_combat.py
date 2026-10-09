@@ -178,6 +178,8 @@ class PlayerCombat:
              self.inventory.append(ammo); return
         
         ammo.rect.center = self.rect.center
+        ammo.layer = getattr(game, 'current_layer_index', 1)
+        ammo.map_filename = getattr(game.map_manager, 'current_map_filename', '')
         if find_free_tile(ammo.rect, game.obstacles, [], initial_pos=self.rect.center, max_radius=1):
             game.items_on_ground.append(ammo)
             display_message(tr('msg', "Inventory full. Dropped ammo on ground."))

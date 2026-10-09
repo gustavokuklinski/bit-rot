@@ -561,17 +561,18 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
                 game.logger.info("Initializing Layer 1 Population (Vehicles, Animals)...")
                 spawn_random_vehicles(game, count=getattr(core.data.config, 'MAX_VEH_CHUNK', 6))
 
-            if 2 in game.all_map_layers:
-                game.logger.info("Initializing Layer 2 Population (Zombies, Animals)...")
-                z_l2_count = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
-                if z_l2_count > 0 and getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500) > 0:
-                    spawn_l2_population(game, count=z_l2_count * 3, target_layer=2)
+        # Always initialize Layer 2 and Layer 3 underground populations
+        if 2 in game.all_map_layers:
+            game.logger.info("Initializing Layer 2 Population (Zombies, Animals)...")
+            z_l2_count = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
+            if z_l2_count > 0 and getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500) > 0:
+                spawn_l2_population(game, count=z_l2_count, target_layer=2)
 
-            if 3 in game.all_map_layers:
-                game.logger.info("Initializing Layer 3 Population (Zombies, Animals)...")
-                z_l3_count = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
-                if z_l3_count > 0 and getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500) > 0:
-                    spawn_l2_population(game, count=z_l3_count * 3, target_layer=3)
+        if 3 in game.all_map_layers:
+            game.logger.info("Initializing Layer 3 Population (Zombies, Animals)...")
+            z_l3_count = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
+            if z_l3_count > 0 and getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500) > 0:
+                spawn_l2_population(game, count=z_l3_count, target_layer=3)
 
     if hasattr(game, 'map_manager') and hasattr(game.map_manager, 'update_chunks'):
         center_x = getattr(game, 'map_width_pixels', 1000) // 2

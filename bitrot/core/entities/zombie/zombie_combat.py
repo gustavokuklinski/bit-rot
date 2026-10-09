@@ -165,15 +165,21 @@ class ZombieCombat:
             )
              
         # 2. Create Corpse at death position
+        corpse_layer = getattr(self, 'layer', getattr(game, 'current_layer_index', 1))
+        map_name = getattr(self, 'map_filename', getattr(game.map_manager, 'current_map_filename', ''))
         corpse = Corpse(
             name=f"Corpse of {self.name}",
-            capacity=20, 
+            capacity=15, 
             image_path="zombie/dead.png",
             pos=self.rect.center,
-            decay_ms=60000
+            decay_ms=60000,
+            layer=corpse_layer,
+            map_filename=map_name
         )
 
         for item in self.inventory:
+            if hasattr(item, 'layer'):
+                item.layer = corpse_layer
             corpse.inventory.append(item)
 
         if getattr(self, 'loot_table', None):
@@ -185,6 +191,8 @@ class ZombieCombat:
                     item_name = loot_entry.get('item')
                     new_item = Item.create_from_name(item_name)
                     if new_item:
+                        new_item.layer = corpse_layer
+                        new_item.map_filename = map_name
                         corpse.inventory.append(new_item)
 
         game.items_on_ground.append(corpse)

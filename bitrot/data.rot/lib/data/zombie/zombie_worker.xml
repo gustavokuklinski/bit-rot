@@ -31,10 +31,11 @@
     
     <loot>
         <item item="Money WBRL" chance="1.0" />
-        <item item="Zombie Meat" chance="1.0" />
-        <item item="Screwdriver" chance="1.0" />
+        <item item="Rot Meat" chance="1.0" />
+        <item item="Screwdriver" chance="0.5" />
+        <item item="Lighter off" chance="0.2" />
         <item item="Toolkit" chance="1.0" />
-        <item item="38 Revolver" chance="1.0" />
+        <item item="38 Revolver" chance="0.5" />
         <item item="Kukaroach (Bit Rot publisher)" chance="0.5" />
     </loot>
 
