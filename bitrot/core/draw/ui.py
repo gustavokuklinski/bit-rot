@@ -694,7 +694,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             game.help_button_rect = None
 
         tooltip_targets = [
-            (game.pause_button_rect, f"{tr('ui', 'Pause and Save')} ({get_key_name('pause') or 'F2'})"), 
+            (game.pause_button_rect, f"{tr('ui', 'Pause')} ({get_key_name('pause') or 'F2'})"), 
             (game.menu_hud_button_rect, f"{tr('ui', 'Toggle UI Menus')} ({get_key_name('toggle_menu') or 'F3'})"),
             (getattr(game, 'status_button_rect', None), f"{tr('ui', 'Player Status')} ({get_key_name('toggle_status') or 'F5'})"),
             (getattr(game, 'inventory_button_rect', None), f"{tr('ui', 'Inventory')} ({get_key_name('toggle_inventory') or 'F6'})"),

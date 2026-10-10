@@ -316,4 +316,37 @@ def draw_npc_dialog_modal(surface, modal, game):
     elif active_tab == 2:
         draw_trade_tab(surface, modal, game, col2_x, content_y, text_area_width, height - (content_y - y) - PADDING)
 
+    # --- Play sound on HOVER instead of on click ---
+    hovered_elem_id = None
+
+    # 1. Hover on tabs
+    for i, tab_rect in enumerate(modal.get('tab_rects', [])):
+        if tab_rect.collidepoint(mouse_pos):
+            hovered_elem_id = f"tab_{i}"
+            break
+
+    # 2. Hover on dialogue options
+    if hovered_elem_id is None and active_tab == 0 and modal.get('active_dialog_index', -1) == -1:
+        clip_r = modal.get('content_rect')
+        for opt_data in modal.get('dialog_option_rects', []):
+            if opt_data['rect'].collidepoint(mouse_pos):
+                if not clip_r or clip_r.collidepoint(mouse_pos):
+                    hovered_elem_id = f"opt_{opt_data['index']}"
+                    break
+
+    # 3. Hover on trade items
+    if hovered_elem_id is None and active_tab == 2:
+        clip_r = modal.get('content_rect')
+        for slot_info in modal.get('trade_slot_rects', []):
+            if slot_info['rect'].collidepoint(mouse_pos):
+                if not clip_r or clip_r.collidepoint(mouse_pos):
+                    hovered_elem_id = f"trade_{slot_info['index']}"
+                    break
+
+    # Trigger hover audio when entering a new element
+    if hovered_elem_id is not None and hovered_elem_id != modal.get('_last_hovered_dialog_id'):
+        if hasattr(game, 'sound_manager'):
+            game.sound_manager.play_ui_hover()
+    modal['_last_hovered_dialog_id'] = hovered_elem_id
+
     return close_button

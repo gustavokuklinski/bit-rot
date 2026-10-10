@@ -269,8 +269,7 @@ def handle_mouse_down(game, event, mouse_pos):
                             npc = topmost_modal.get('npc')
                             if npc and i == 0:
                                 topmost_modal['dialogs'] = npc.get_dialog_options()
-                            if hasattr(game, 'sound_manager'):
-                                game.sound_manager.play_ui_hover()
+                            
                             return
 
                 # 2. Dialogue Lines & Answers (Tab 0: Current Dialog)
@@ -470,8 +469,7 @@ def handle_mouse_down(game, event, mouse_pos):
                                 if opt.get('npc_state_static') is not None and npc:
                                     npc.is_static = str(opt['npc_state_static']).lower() == 'true'
 
-                                if hasattr(game, 'sound_manager'):
-                                    game.sound_manager.play_ui_hover()
+                                
                                 return
                     else:
                         # In answer view, clicking anywhere inside the modal returns to dialogue or closes if hostile
@@ -486,8 +484,7 @@ def handle_mouse_down(game, event, mouse_pos):
                             topmost_modal['dialog_list_cache_key'] = None
                             if npc:
                                 topmost_modal['dialogs'] = npc.get_dialog_options()
-                            if hasattr(game, 'sound_manager'):
-                                game.sound_manager.play_ui_hover()
+                            
                             return
             # -------------------------------------------------------------
 

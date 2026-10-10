@@ -438,10 +438,10 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     game.generator = generator
     
     if save_dir_name:
-        raw_seed = player_data.get('world_seed', "4-B1TR07")
+        raw_seed = player_data.get('world_seed', random.randint(10**11, (10**12) - 1))
     else:
         raw_seed = player_data.get('world_seed')
-        if not raw_seed or raw_seed == "4-B1TR07":
+        if not raw_seed or raw_seed == random.randint(10**11, (10**12) - 1):
             raw_seed = str(uuid.uuid4())
     
     world_seed = raw_seed

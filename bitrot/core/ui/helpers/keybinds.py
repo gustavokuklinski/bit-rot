@@ -19,7 +19,7 @@ DEFAULT_KB_MOUSE_BINDS = {
     
     # --- Function Keys F1 - F10 ---
     'help': {'val': pygame.K_F1, 'name': 'Help and Tutorial (F1)'},
-    'pause': {'val': pygame.K_F2, 'name': 'Pause and Save (F2)'},
+    'pause': {'val': pygame.K_F2, 'name': 'Pause (F2)'},
     'toggle_menu': {'val': pygame.K_F3, 'name': 'Toggle UI Menus (F3)'},
     'reset_modals': {'val': pygame.K_F4, 'name': 'Reset Modals (F4)'},
     'toggle_status': {'val': pygame.K_F5, 'name': 'Toggle Status (F5)'},
