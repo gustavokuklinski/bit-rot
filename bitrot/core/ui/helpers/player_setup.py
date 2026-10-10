@@ -22,6 +22,7 @@ from core.ui.modals import draw_scrollbar
 from core.data.progression_loader import PROGRESSION_CONFIG
 from core.ui.helpers.select_world import draw_select_world_screen, handle_select_world_events
 from core.ui.helpers.select_character import draw_select_character_screen, handle_select_character_events
+from core.systems.save_manager import delete_pending_world_save
 
 fake = Faker()
 _stat_icons_cache = {}
@@ -1306,6 +1307,7 @@ def run_player_setup(game):
             game.joystick_handler.process_event(event)
             
         if event.type == pygame.QUIT:
+            delete_pending_world_save(game, state)
             game.running = False
             return
             
@@ -1323,6 +1325,7 @@ def run_player_setup(game):
                     if state['current_tab'] == 'Player' and state.get('chosen_mode') == 'sandbox':
                         state['current_tab'] = 'World'
                     elif state['current_tab'] == 'World':
+                        delete_pending_world_save(game, state)
                         state['current_tab'] = 'SelectWorld'
                     else:
                         state['current_tab'] = 'SelectCharacter'

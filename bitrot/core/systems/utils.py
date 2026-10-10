@@ -221,8 +221,13 @@ def teleport_player_to_chunk(game, dest_gx, dest_gy, dest_layer=1):
         game.spatial_manager.rebuild_item_grid(force=True)
         game.spatial_manager.rebuild_container_grid()
 
-    game._chunk_loading_title = tr('ui', 'Loading')
-    game._chunk_loading_bg_type = 'boat'
+    if getattr(game, '_is_respawning_player', False):
+        game._chunk_loading_title = tr('ui', 'Loading')
+        game._chunk_loading_bg_type = 'load'
+    else:
+        game._chunk_loading_title = tr('ui', 'Loading')
+        game._chunk_loading_bg_type = 'boat'
+        display_message(tr('msg', "Arrived at destination."))
     game._chunk_load_timer = None
     game.game_state = 'CHUNK_LOADING'
     display_message(tr('msg', "Arrived at destination."))

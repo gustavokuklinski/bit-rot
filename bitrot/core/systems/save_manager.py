@@ -27,6 +27,52 @@ def get_host_ip():
         except Exception:
             return "127.0.0.1"
 
+def delete_pending_world_save(game, state=None):
+    """
+    Deletes the unstarted/pending world save folder if the player backs out before starting gameplay.
+    Never deletes an existing save during respawn (respawn_save_folder).
+    """
+    if state and state.get('respawn_save_folder'):
+        return
+
+    save_name = None
+    if state:
+        save_name = state.get('save_folder_name')
+    if not save_name and hasattr(game, 'world_setup_state'):
+        save_name = game.world_setup_state.get('save_folder_name')
+    if not save_name:
+        save_name = getattr(game, 'current_save_folder_name', None)
+
+    if not save_name:
+        return
+
+    save_dir = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_name)
+    host_rot = os.path.join(save_dir, "host.rot")
+    world_rot = os.path.join(save_dir, "world.rot")
+
+    # Safety: ONLY delete if it's an unstarted save (host.rot or world.rot does not exist)
+    if os.path.exists(save_dir) and (not os.path.exists(host_rot) or not os.path.exists(world_rot)):
+        try:
+            shutil.rmtree(save_dir)
+            if hasattr(game, 'logger'):
+                game.logger.info(f"Cleaned up unstarted world save folder: {save_name}")
+            else:
+                print(f"[SaveManager] Cleaned up unstarted world save folder: {save_name}")
+        except Exception as e:
+            print(f"[SaveManager] Error cleaning up unstarted save {save_name}: {e}")
+
+    # Reset save folder references
+    if state:
+        state['save_folder_name'] = None
+        state['world_xml_path'] = None
+    if hasattr(game, 'world_setup_state'):
+        game.world_setup_state['save_folder_name'] = None
+        game.world_setup_state['world_xml_path'] = None
+    if hasattr(game, 'player_setup_state'):
+        game.player_setup_state['save_folder_name'] = None
+        game.player_setup_state['world_xml_path'] = None
+    game.current_save_folder_name = None
+    
 def save_game(game):
     if game.current_save_folder_name:
         save_name = game.current_save_folder_name

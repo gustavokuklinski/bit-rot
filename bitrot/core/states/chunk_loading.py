@@ -9,24 +9,23 @@ _CHUNK_BG_CACHE = {}
 
 def _get_chunk_bg(bg_type):
     """Loads, scales, and caches the transition background image."""
-    if not bg_type:
-        return None
-
-    if bg_type in _CHUNK_BG_CACHE:
-        return _CHUNK_BG_CACHE[bg_type]
-
     filenames = {
         'boat': 'chunk_boat.jpg',
         'layer': 'chunk_layer.jpg',
         'island': 'chunk_island.jpg',
+        'load': 'chunk_load.jpg',
+        'respawn': 'chunk_load.jpg',
     }
-    fname = filenames.get(bg_type)
-    if not fname:
-        return None
+    fname = filenames.get(bg_type, 'chunk_load.jpg')
+
+    cache_key = fname
+    if cache_key in _CHUNK_BG_CACHE:
+        return _CHUNK_BG_CACHE[cache_key]
 
     candidates = [
         os.path.join(SPRITE_PATH, 'ui', fname),
         os.path.join(BASE_DIR, 'data.rot', 'lib', 'sprites', 'ui', fname),
+        os.path.abspath(os.path.join('data.rot', 'lib', 'sprites', 'ui', fname)),
     ]
 
     for path in candidates:
@@ -34,12 +33,12 @@ def _get_chunk_bg(bg_type):
             try:
                 img = pygame.image.load(path).convert()
                 scaled = pygame.transform.scale(img, (GAME_WIDTH, GAME_HEIGHT))
-                _CHUNK_BG_CACHE[bg_type] = scaled
+                _CHUNK_BG_CACHE[cache_key] = scaled
                 return scaled
             except Exception as e:
                 print(f"[ChunkLoading] Error loading background {path}: {e}")
 
-    _CHUNK_BG_CACHE[bg_type] = None
+    _CHUNK_BG_CACHE[cache_key] = None
     return None
 
 def _finalize_chunk_loading(game):

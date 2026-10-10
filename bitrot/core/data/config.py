@@ -164,14 +164,25 @@ def generate_random_seed(chunks=None):
     return f"{chunks}-{uuid.uuid4().hex[:8].upper()}"
 
 # --- FILE PATH HANDLERS ---
-def get_preferences_path():
-    """Gets the global preferences.xml path."""
+def get_preferences_path(for_save=False):
+    """
+    Gets the preferences.xml path.
+    - When for_save=True: Always returns the path in get_writable_dir().
+    - When for_save=False: Checks get_writable_dir() first; if not found, falls back to BASE_DIR.
+    """
     writable_root = get_writable_dir()
     filepath = os.path.join(writable_root, "data.rot", "save", "config", "preferences.xml")
-    if not os.path.exists(filepath):
-        fallback = os.path.join(BASE_DIR, "data.rot", "save", "config", "preferences.xml")
-        if os.path.exists(fallback):
-            return fallback
+    
+    if for_save:
+        return filepath
+        
+    if os.path.exists(filepath):
+        return filepath
+        
+    fallback = os.path.join(BASE_DIR, "data.rot", "save", "config", "preferences.xml")
+    if os.path.exists(fallback):
+        return fallback
+        
     return filepath
 
 def get_world_config_path(preset="world"):
@@ -435,12 +446,18 @@ def load_settings(world_preset="world"):
 def save_language_to_config(lang_code):
     global GAME_LANGUAGE
     GAME_LANGUAGE = lang_code
-    filepath = get_preferences_path()
+    filepath = get_preferences_path(for_save=True)
     
     try:
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         if not os.path.exists(filepath):
-            root = ET.Element('preferences')
+            # If creating in writable_root for the first time, load existing tree from fallback to preserve all other settings
+            read_path = get_preferences_path(for_save=False)
+            if os.path.exists(read_path):
+                tree = ET.parse(read_path)
+                root = tree.getroot()
+            else:
+                root = ET.Element('preferences')
         else:
             tree = ET.parse(filepath)
             root = tree.getroot()

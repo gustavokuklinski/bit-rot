@@ -104,7 +104,10 @@ def load_preferences_data(filepath):
         print(f"Error loading preferences {filepath}: {e}")
         return {}
 
-def save_preferences_xml(data, filepath):
+def save_preferences_xml(data, filepath=None):
+    if filepath is None:
+        filepath = core.data.config.get_preferences_path(for_save=True)
+
     import xml.etree.ElementTree as ET
     import xml.dom.minidom
     root = ET.Element("preferences")
@@ -305,7 +308,7 @@ class PreferencesMenuUI:
             if event.type == pygame.MOUSEBUTTONUP and getattr(event, 'button', 1) == 1:
                 if self.dragging_slider:
                     self.dragging_slider = None
-                    save_preferences_xml(self.settings_data, core.data.config.get_preferences_path())
+                    save_preferences_xml(self.settings_data, core.data.config.get_preferences_path(for_save=True))
 
                 self.is_dragging_scrollbar = False
                 self.is_scrolling_content = False
@@ -321,7 +324,7 @@ class PreferencesMenuUI:
                     continue
 
                 if apply_btn.collidepoint(mouse_pos):
-                    save_preferences_xml(self.settings_data, core.data.config.get_preferences_path())
+                    save_preferences_xml(self.settings_data, core.data.config.get_preferences_path(for_save=True))
                     pygame.quit()
                     if sys.argv[0].endswith('.py'):
                         subprocess.Popen([sys.executable] + sys.argv)
@@ -341,7 +344,8 @@ class PreferencesMenuUI:
                                         self._update_volume_setting(game, block, key, def_val)
                                     except Exception:
                                         pass
-                    save_preferences_xml(self.settings_data, core.data.config.get_preferences_path())
+                    save_preferences_xml(self.settings_data, core.data.config.get_preferences_path(for_save=True))
+
                     continue
 
                 # Category Tab Clicks (Exact keybinds tab pattern)

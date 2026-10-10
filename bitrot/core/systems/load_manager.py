@@ -230,87 +230,93 @@ def handle_player_death(game):
 def respawn_player_in_world(game, new_player_data, save_folder_name):
     """Loads existing world state and spawns a new character in the same map."""
     game._is_respawning_player = True
-    load_game(game, save_folder_name)
-    game._is_respawning_player = False
+    try:
+        load_game(game, save_folder_name)
 
-    game.zombies_killed = 0
-    game.current_save_folder_name = save_folder_name
-    game.player_name = new_player_data.get('name', "Player")
+        game.zombies_killed = 0
+        game.current_save_folder_name = save_folder_name
+        game.player_name = new_player_data.get('name', "Player")
 
-    # Generate a fresh unique ID for this new player
-    new_player_data['player_id'] = str(uuid.uuid4())
-    new_player = Player(player_data=new_player_data)
-    new_player.game = game
-    new_player.player_id = new_player_data['player_id']
-    game.player = new_player
+        # Generate a fresh unique ID for this new player
+        new_player_data['player_id'] = str(uuid.uuid4())
+        new_player = Player(player_data=new_player_data)
+        new_player.game = game
+        new_player.player_id = new_player_data['player_id']
+        game.player = new_player
 
-    initial_loot = new_player_data.get('initial_loot', [])
-    game.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
+        initial_loot = new_player_data.get('initial_loot', [])
+        game.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
-    # Locate safe spawn position in the existing map
-    if hasattr(game, 'generator') and hasattr(game.generator, 'lobby_chunk'):
-        lobby_gx, lobby_gy = game.generator.lobby_chunk
-        teleport_player_to_chunk(game, lobby_gx, lobby_gy)
-    else:
         # Locate safe spawn position in the existing map
-        spawn_pos = None
-        if getattr(game, 'player_spawn', None):
-            spawn_pos = find_free_tile(game.player.rect, game.obstacles, initial_pos=game.player_spawn, max_radius=15)
-            
-        if not spawn_pos:
-            house_pos = get_house_spawn_position(game)
-            if house_pos:
-                spawn_pos = find_free_tile(game.player.rect, game.obstacles, initial_pos=house_pos, max_radius=15)
-                
-        if not spawn_pos:
-            cx = getattr(game, 'map_width_pixels', 1000) // 2
-            cy = getattr(game, 'map_height_pixels', 1000) // 2
-            spawn_pos = find_free_tile(game.player.rect, game.obstacles, initial_pos=(cx, cy), max_radius=25)
-
-        if spawn_pos:
-            game.player.x, game.player.y = spawn_pos
-            game.player.rect.topleft = spawn_pos
+        if hasattr(game, 'generator') and hasattr(game.generator, 'lobby_chunk'):
+            lobby_gx, lobby_gy = game.generator.lobby_chunk
+            teleport_player_to_chunk(game, lobby_gx, lobby_gy)
         else:
-            game.player.x, game.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
-            game.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
+            spawn_pos = None
+            if getattr(game, 'player_spawn', None):
+                spawn_pos = find_free_tile(game.player.rect, game.obstacles, initial_pos=game.player_spawn, max_radius=15)
+                
+            if not spawn_pos:
+                house_pos = get_house_spawn_position(game)
+                if house_pos:
+                    spawn_pos = find_free_tile(game.player.rect, game.obstacles, initial_pos=house_pos, max_radius=15)
+                    
+            if not spawn_pos:
+                cx = getattr(game, 'map_width_pixels', 1000) // 2
+                cy = getattr(game, 'map_height_pixels', 1000) // 2
+                spawn_pos = find_free_tile(game.player.rect, game.obstacles, initial_pos=(cx, cy), max_radius=25)
 
-    # Initialize player vitals
-    game.player.health = game.player.max_health
-    game.player.stamina = game.player.max_stamina
-    game.player.water = 100.0
-    game.player.food = 100.0
-    game.player.infection = 0.0
-    game.player.anxiety = 0.0
-    game.player.drugs = 0.0
-    game.player.is_dead = False
-    game.player.vehicle = None
-    game.player.action_timer = 0
-    game.player.is_reloading = False
-    game.player.active_weapon = None
+            if spawn_pos:
+                game.player.x, game.player.y = spawn_pos
+                game.player.rect.topleft = spawn_pos
+            else:
+                game.player.x, game.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
+                game.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
 
-    stat_pos = game.last_modal_positions.get('status', (0, 0))
-    inv_pos = game.last_modal_positions.get('inventory', (1034, 256))
-    nearby_pos = game.last_modal_positions.get('nearby', (1034, 494))
-    msg_pos = game.last_modal_positions.get('messages', (3, 460))
-    gear_pos = game.last_modal_positions.get('gear', (1034, 3))
-    slots_pos = game.last_modal_positions.get('slots', (1034, 3))
+            game._chunk_loading_title = tr('ui', 'Respawning')
+            game._chunk_loading_bg_type = 'load'
+            game._chunk_load_timer = None
+            game.game_state = 'CHUNK_LOADING'
 
-    game.modals = [
-        {'type': 'status', 'id': str(uuid.uuid4()), 'position': stat_pos, 'rect': pygame.Rect(stat_pos, (STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
-        {'type': 'inventory', 'id': str(uuid.uuid4()), 'position': inv_pos, 'rect': pygame.Rect(inv_pos, (INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0), 'active_tab': 'Inventory'},
-        {'type': 'gear', 'id': str(uuid.uuid4()), 'position': gear_pos, 'rect': pygame.Rect(gear_pos, (GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
-        {'type': 'nearby', 'id': str(uuid.uuid4()), 'position': nearby_pos, 'rect': pygame.Rect(nearby_pos, (NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0), 'active_tab': 'Ground'},
-        {'type': 'messages', 'id': str(uuid.uuid4()), 'position': msg_pos, 'rect': pygame.Rect(msg_pos, (MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
-        {'type': 'slots', 'id': str(uuid.uuid4()), 'position': slots_pos, 'rect': pygame.Rect(slots_pos, (SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)}
-    ]
+        # Initialize player vitals
+        game.player.health = game.player.max_health
+        game.player.stamina = game.player.max_stamina
+        game.player.water = 100.0
+        game.player.food = 100.0
+        game.player.infection = 0.0
+        game.player.anxiety = 0.0
+        game.player.drugs = 0.0
+        game.player.is_dead = False
+        game.player.vehicle = None
+        game.player.action_timer = 0
+        game.player.is_reloading = False
+        game.player.active_weapon = None
 
-    if hasattr(game, 'spatial_manager'):
-        game.spatial_manager.rebuild_zombie_grid()
-        game.spatial_manager.rebuild_item_grid(force=True)
-        game.spatial_manager.rebuild_container_grid()
+        stat_pos = game.last_modal_positions.get('status', (0, 0))
+        inv_pos = game.last_modal_positions.get('inventory', (1034, 256))
+        nearby_pos = game.last_modal_positions.get('nearby', (1034, 494))
+        msg_pos = game.last_modal_positions.get('messages', (3, 460))
+        gear_pos = game.last_modal_positions.get('gear', (1034, 3))
+        slots_pos = game.last_modal_positions.get('slots', (1034, 3))
 
-    game.save_game()
-    game.logger.info(f"Respawned new character '{game.player.name}' ({new_player.player_id}) in world '{save_folder_name}'.")
+        game.modals = [
+            {'type': 'status', 'id': str(uuid.uuid4()), 'position': stat_pos, 'rect': pygame.Rect(stat_pos, (STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
+            {'type': 'inventory', 'id': str(uuid.uuid4()), 'position': inv_pos, 'rect': pygame.Rect(inv_pos, (INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0), 'active_tab': 'Inventory'},
+            {'type': 'gear', 'id': str(uuid.uuid4()), 'position': gear_pos, 'rect': pygame.Rect(gear_pos, (GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
+            {'type': 'nearby', 'id': str(uuid.uuid4()), 'position': nearby_pos, 'rect': pygame.Rect(nearby_pos, (NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0), 'active_tab': 'Ground'},
+            {'type': 'messages', 'id': str(uuid.uuid4()), 'position': msg_pos, 'rect': pygame.Rect(msg_pos, (MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
+            {'type': 'slots', 'id': str(uuid.uuid4()), 'position': slots_pos, 'rect': pygame.Rect(slots_pos, (SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)}
+        ]
+
+        if hasattr(game, 'spatial_manager'):
+            game.spatial_manager.rebuild_zombie_grid()
+            game.spatial_manager.rebuild_item_grid(force=True)
+            game.spatial_manager.rebuild_container_grid()
+
+        game.save_game()
+        game.logger.info(f"Respawned new character '{game.player.name}' ({new_player.player_id}) in world '{save_folder_name}'.")
+    finally:
+        game._is_respawning_player = False
 
 def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     # --- FIX: Nuke all lingering audio channels from previous sessions to free them up ---

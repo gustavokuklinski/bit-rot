@@ -6,6 +6,7 @@ import random
 from datetime import datetime
 from types import SimpleNamespace
 import xml.etree.ElementTree as ET
+from core.systems.save_manager import delete_pending_world_save
 
 import core.data.config
 from core.data.config import (
@@ -442,6 +443,7 @@ def handle_select_world_events(game, state, event, mouse_pos, clickable_rects):
             return
 
         if clickable_rects.get('back_button') and clickable_rects['back_button'].collidepoint(mouse_pos):
+            delete_pending_world_save(game, state)
             game.game_state = 'MENU'
             return
             

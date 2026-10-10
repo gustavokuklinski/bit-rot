@@ -20,6 +20,7 @@ from core.entities.item.item_data import ITEM_TEMPLATES
 from core.entities.item.item_factory import get_tinted_sprite, CLOTHING_COLORS
 from core.ui.tooltip import draw_tooltip
 from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
+from core.systems.save_manager import delete_pending_world_save
 
 fake = Faker()
 _cloth_item_cache = {}
@@ -912,6 +913,7 @@ def handle_select_character_events(game, state, event, mouse_pos, clickable_rect
                 game.current_save_folder_name = None
                 game.game_state = 'MENU'
             else:
+                delete_pending_world_save(game, state) 
                 state['current_tab'] = 'SelectWorld'
             return
 
