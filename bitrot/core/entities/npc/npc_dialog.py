@@ -10,6 +10,7 @@ class NPCDialog:
     MILESTONES = None # Class variable for Milestones
 
     @staticmethod
+    @staticmethod
     def load_dialogs(game=None):
         if NPCDialog.NPC_DIALOGS is not None and NPCDialog.MILESTONES is not None: 
             return
@@ -36,9 +37,6 @@ class NPCDialog:
                         if not node_id: 
                             continue
                         
-                        # ==========================================================
-                        # Intercept the milestones node
-                        # ==========================================================
                         if node_id == "milestones":
                             for ms in node.iter('milestone'):
                                 NPCDialog.MILESTONES.append({
@@ -51,12 +49,12 @@ class NPCDialog:
                                 })
                             continue
 
-                        options_elements = node.findall('options')
+                        options_elements = node.findall('options') + node.findall('option')
                         if options_elements:
                             if node_id not in NPCDialog.NPC_DIALOGS:
                                 NPCDialog.NPC_DIALOGS[node_id] = []
                             
-                            def parse_option(opt):
+                            for opt in options_elements:
                                 question = opt.get('player_question')
                                 answer = opt.get('npc_answer')
                                 
@@ -70,6 +68,8 @@ class NPCDialog:
                                         'q': question, 
                                         'a': answer,
                                         'priority': priority,
+                                        'stage': opt.get('stage'),
+                                        'tip': opt.get('tip'),
                                         'unlock_flag': opt.get('unlock_flag'),
                                         'npc_state_friendly': opt.get('npc_state_friendly'),
                                         'npc_state_static': opt.get('npc_state_static'),
@@ -82,9 +82,6 @@ class NPCDialog:
                                         'dialog_type': opt.get('dialog_type'),
                                         'node_id': node_id
                                     })
-
-                            for opt in options_elements:
-                                parse_option(opt)
                 except Exception as e:
                     print(f"NPC Error: Could not load dialog file {filename}: {e}")
 
@@ -94,38 +91,95 @@ class NPCDialog:
         
         options = []
         
-        # Mandatory starter categories and any unlocked story/lore flags
         mandatory_nodes = {"greeting", "tips", "lore_branch", "quest_branch"}
         active_nodes = mandatory_nodes.union(self.dialog_flags)
 
         if hasattr(self.game.player, 'quests') and self.game.player.quests:
             active_nodes.update(self.game.player.quests)
+
+        completed_quests = getattr(self.game.player, 'completed_quests', [])
+        active_quests = getattr(self.game.player, 'quests', [])
+
+        # Include uncompleted Quest nodes so their offer or turn-in stages can be evaluated
+        for n_id in NPCDialog.NPC_DIALOGS.keys():
+            if str(n_id).startswith("Quest:"):
+                quest_title = str(n_id)[6:].strip()
+                if n_id not in completed_quests and quest_title not in completed_quests:
+                    active_nodes.add(n_id)
         
         sorted_nodes = sorted(list(active_nodes))
         player_lucky = self.game.player.progression.get_lucky(self.game.player)
 
-        completed_quests = getattr(self.game.player, 'completed_quests', [])
-        active_quests = getattr(self.game.player, 'quests', [])
-        
-        active_story_quests = [q for q in active_quests if str(q).startswith("Quest:") and q not in completed_quests]
-        has_active_story_quest = len(active_story_quests) > 0
+        def is_dialog_item_match(it_name, target):
+            it_name = it_name.strip().lower()
+            target = target.strip().lower()
+            if it_name == target:
+                return True
+            if target == "id":
+                return it_name.startswith("id:") or it_name.startswith("id ") or it_name == "id card"
+            # Support Mobile on/off interchangeably for quest checks
+            if target in ("mobile", "mobile off", "mobile on") and "mobile" in it_name:
+                return True
+            if target in it_name and len(target) >= 3:
+                return True
+            return False
+
+        def player_has_item(item_name):
+            target = item_name.strip().lower()
+            def check_list(items):
+                if not items: return False
+                for it in items:
+                    if not it: continue
+                    it_name = getattr(it, 'name', '').strip().lower()
+                    if is_dialog_item_match(it_name, target):
+                        return True
+                    if hasattr(it, 'inventory') and it.inventory:
+                        if check_list(it.inventory):
+                            return True
+                return False
+
+            if check_list(self.game.player.inventory): return True
+            if check_list(self.game.player.belt): return True
+            if check_list(list(self.game.player.clothes.values())): return True
+            return False
 
         for node_id in sorted_nodes:
             node_options = NPCDialog.NPC_DIALOGS.get(node_id)
             if not node_options: 
                 continue
+
+            is_quest_node = str(node_id).startswith("Quest:")
+            quest_name = str(node_id)[6:].strip() if is_quest_node else ""
+            is_quest_active = is_quest_node and ((node_id in active_quests) or (quest_name in active_quests))
+            is_quest_completed = is_quest_node and ((node_id in completed_quests) or (quest_name in completed_quests))
+
+            if is_quest_completed:
+                continue
                 
             valid_options = []
             for opt in node_options:
-                unlock = opt.get('unlock_flag', '')
-                
-                # FIX 1: ONLY filter out if this dialogue is explicitly marked as "once"
+                stage = opt.get('stage')
+
+                # Stage lifecycle:
+                # - When quest is NOT active: only show stage="offer"
+                # - When quest IS active: only show stage="turn_in"
+                if is_quest_node:
+                    if not is_quest_active:
+                        if stage == 'turn_in':
+                            continue
+                        if stage is None and (opt.get('complete_flag') or opt.get('rqst_item')):
+                            continue
+                    else:
+                        if stage == 'offer':
+                            continue
+                        if stage is None and opt.get('unlock_flag') and not opt.get('complete_flag'):
+                            continue
+
                 if opt.get('dialog_type') == 'once':
                     dialog_key = f"{node_id}_{opt['q']}"
                     if hasattr(self.game.player, 'dialog_history') and dialog_key in self.game.player.dialog_history:
                         continue
 
-                # Skill requirement check
                 req = opt.get('req_level')
                 if req and "[lucky:" in req:
                     try:
@@ -134,38 +188,6 @@ class NPCDialog:
                             continue
                     except Exception: 
                         pass
-                
-                # FIX 2: Deep recursive check that searches inventory, belt, clothes, and containers
-                def is_dialog_item_match(it_name, target):
-                    it_name = it_name.strip().lower()
-                    target = target.strip().lower()
-                    if it_name == target:
-                        return True
-                    if target == "id":
-                        return it_name.startswith("id:") or it_name.startswith("id ") or it_name == "id card"
-                    if target in it_name and len(target) >= 3:
-                        return True
-                    return False
-
-                # Deep recursive check that searches inventory, belt, clothes, and containers
-                def player_has_item(item_name):
-                    target = item_name.strip().lower()
-                    def check_list(items):
-                        if not items: return False
-                        for it in items:
-                            if not it: continue
-                            it_name = getattr(it, 'name', '').strip().lower()
-                            if is_dialog_item_match(it_name, target):
-                                return True
-                            if hasattr(it, 'inventory') and it.inventory:
-                                if check_list(it.inventory):
-                                    return True
-                        return False
-
-                    if check_list(self.game.player.inventory): return True
-                    if check_list(self.game.player.belt): return True
-                    if check_list(list(self.game.player.clothes.values())): return True
-                    return False
 
                 req_item = opt.get('req_item')
                 if req_item:
@@ -178,24 +200,20 @@ class NPCDialog:
                     item_names = [i.strip() for i in rqst_item.replace('[', '').replace(']', '').split(',') if i.strip()]
                     if not any(player_has_item(name) for name in item_names):
                         continue
-                        
-                # FIX 3: Do not block quest starters with mobile_quest_done check
-                is_quest_starter = unlock and str(unlock).startswith("Quest:")
-                if is_quest_starter:
-                    if has_active_story_quest:
-                        continue
                 
                 valid_options.append(opt)
 
             if not valid_options: 
                 continue
 
-            if str(node_id).startswith("Quest:"):
-                if node_id in completed_quests:
-                    continue
+            if is_quest_node:
                 for opt in valid_options:
                     c_opt = opt.copy()
-                    c_opt['priority'] = 1100 
+                    # Turn-in options get highest priority (1100); offer options keep their XML priority
+                    if c_opt.get('stage') == 'turn_in' or c_opt.get('complete_flag'):
+                        c_opt['priority'] = max(1100, int(opt.get('priority', 1100)))
+                    else:
+                        c_opt['priority'] = int(opt.get('priority', 100))
                     options.append(c_opt)
                     
             elif str(node_id) == "quest_branch":
@@ -219,7 +237,6 @@ class NPCDialog:
                     
                 options.append(chosen_opt)
             else:
-                # FIX 4: For custom/unlocked dialogue nodes, append ALL valid options
                 for opt in valid_options:
                     c_opt = opt.copy()
                     c_opt['priority'] = c_opt.get('priority', 90)

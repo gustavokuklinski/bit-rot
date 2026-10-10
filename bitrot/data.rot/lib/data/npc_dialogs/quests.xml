@@ -1,131 +1,147 @@
 <?xml version='1.0' encoding='utf-8'?>
 <npc_dialog>
-    <node id="quest_branch">
-        <options 
-            player_question="I have my ID, how to get faster to the helipoint?" 
-            npc_answer="Helipoint? That area is a mess kiddo! Best you can do is survive here." 
-            req_item="[ID]" 
-            priority="100" 
-            gain_xp="[lucky:100]" 
-            dialog_type="once" 
-            unlock_flag="Quest: Mobile phone" />
-        <options 
-            player_question="I can't use the boat to leave!" 
-            npc_answer="Leave? Are you crazy?! Best you can do is survive here." 
-            req_item="[Mobile off]" 
-            priority="100" 
-            gain_xp="[lucky:100]" 
-            dialog_type="once" 
-            unlock_flag="Quest: Fuel Canister" />
-        <options 
-            player_question="Hey. You look like someone who knows a way off this rock. I'm... between contractors." 
-            npc_answer="What! Look at you – rags and desperation. Perfect. Listen, kiddo. I need a mule. There's a suitcase – old leather, brass locks, smells like trouble. Find it, then hand it to anyone who knows the code 'the tide is rising.' They'll pay. I just want my ticket out before the rot finds me. Everything has a toll. You in?" 
-            req_item="[Suitcase, Bag, Large Backpack, Small Backpack, Large Satchel, Medium Satchel, Small Satchel]" 
-            priority="10" 
-            gain_xp="[lucky:100]" 
-            dialog_type="once" 
-            unlock_flag="Quest: Find the Suitcase" />
-        <options 
-            player_question="I think I have something that may interest you..." 
-            npc_answer="Have you found the suitcase? Is there a laptop inside of it? This is research and it's valuable!" 
-            req_item="[Suitcase, Laptop]" 
-            priority="10" 
-            gain_xp="[lucky:100]" 
-            dialog_type="once" 
-            unlock_flag="Quest: Laptop" />
-        <options 
-            player_question="I've been scavenging after the island fell." 
-            npc_answer="Everybody is. Have you found anything important?" 
-            priority="10" 
-            req_item="[Laptop]" 
-            gain_xp="[lucky:100]" 
-            dialog_type="once" 
-            unlock_flag="Quest: Harddrive" />
-        <options 
-            player_question="Do you know anything about the files?" 
-            npc_answer="I'm trying to stay alive here, but people are talking about pharmas trying to steal some shit." 
-            priority="10" 
-            req_item="[Laptop]" 
-            gain_xp="[lucky:100]" 
-            dialog_type="once" 
-            unlock_flag="Quest: Pendrive" />
-    </node>
 
     <node id="Quest: Mobile phone">
-        <options 
-            player_question="If I have a mobile I could try to call someone..." 
-            npc_answer="Lucky for you, take my Mobile. It's useless right now." 
-            req_item="[ID]" 
-            gain_xp="[lucky:100]" 
-            dialog_type="once" 
-            award_item="[Mobile off, Personal Data]" 
-            tip="Your ID may save your life" 
+        <options
+            stage="offer"
+            player_question="I have my ID, how to get faster to the helipoint?"
+            npc_answer="Helipoint? That area is a mess kiddo! Best you can do is survive here."
+            req_item="[ID]"
+            priority="100"
+            gain_xp="[lucky:100]"
+            dialog_type="once"
+            unlock_flag="Quest: Mobile phone" />
+
+        <options
+            stage="turn_in"
+            player_question="If I have a mobile I could try to call someone..."
+            npc_answer="Lucky for you, take my Mobile. It's useless right now."
+            req_item="[ID]"
+            gain_xp="[lucky:100]"
+            dialog_type="once"
+            award_item="[Mobile off, Personal Data]"
+            tip="Your ID may save your life"
             complete_flag="Quest: Mobile phone" />
     </node>
 
     <node id="Quest: Fuel Canister">
-        <options 
-            player_question="How can I get this boat up and running?" 
-            npc_answer="Probably get fuel from the Pumps! Here is a Fuel Canister. The farther you go, the more fuel you'll need!" 
-            req_item="[Mobile off]" 
-            gain_xp="[lucky:100]" 
-            dialog_type="once" 
-            award_item="[Fuel Canister]" 
-            tip="Fuel the boat to the shore!" 
+        <options
+            stage="offer"
+            player_question="I can't use the boat to leave!"
+            npc_answer="Leave? Are you crazy?! Best you can do is survive here."
+            req_item="[Mobile off]"
+            priority="100"
+            gain_xp="[lucky:100]"
+            dialog_type="once"
+            unlock_flag="Quest: Fuel Canister" />
+
+        <options
+            stage="turn_in"
+            player_question="How can I get this boat up and running?"
+            npc_answer="Probably get fuel from the Pumps! Here is a Fuel Canister. The farther you go, the more fuel you'll need!"
+            req_item="[Mobile off]"
+            gain_xp="[lucky:100]"
+            dialog_type="once"
+            award_item="[Fuel Canister]"
+            tip="Fuel the boat to the shore!"
             complete_flag="Quest: Fuel Canister" />
     </node>
-    
+
     <node id="Quest: Find the Suitcase">
-        <options 
-            player_question="Yes, but looks useless right now. Do you have something to trade?" 
-            npc_answer="Well, well. The scarecrow delivers. Here's your payment. Don't spend it all in one grave. Some days you win, some days you lose. Today you're just... disposable. Hehehe. Now get lost before I decide you're worth more as bait." 
-            rqst_item="[Suitcase]" 
-            req_item="[Suitcase]" 
-            npc_state_friendly="false" 
-            npc_state_static="false" 
-            award_item="[Money WBRL:50]" 
-            gain_xp="[lucky:200]" 
-            dialog_type="once" 
-            tip="Scavenge around to find the lost Suitcase." 
+        <options
+            stage="offer"
+            player_question="Hey. You look like someone who knows a way off this rock. I'm... between contractors."
+            npc_answer="What! Look at you – rags and desperation. Perfect. Listen, kiddo. I need a mule. There's a suitcase – old leather, brass locks, smells like trouble. Find it, then hand it to anyone who knows the code 'the tide is rising.' They'll pay. I just want my ticket out before the rot finds me. Everything has a toll. You in?"
+            req_item="[Suitcase, Bag, Large Backpack, Small Backpack, Large Satchel, Medium Satchel, Small Satchel]"
+            priority="10"
+            gain_xp="[lucky:100]"
+            dialog_type="once"
+            unlock_flag="Quest: Find the Suitcase" />
+
+        <options
+            stage="turn_in"
+            player_question="Yes, but looks useless right now. Do you have something to trade?"
+            npc_answer="Well, well. The scarecrow delivers. Here's your payment. Don't spend it all in one grave. Some days you win, some days you lose. Today you're just... disposable. Hehehe. Now get lost before I decide you're worth more as bait."
+            rqst_item="[Suitcase]"
+            req_item="[Suitcase]"
+            npc_state_friendly="false"
+            npc_state_static="false"
+            award_item="[Money WBRL:50]"
+            gain_xp="[lucky:200]"
+            dialog_type="once"
+            tip="Scavenge around to find the lost Suitcase."
             complete_flag="Quest: Find the Suitcase" />
     </node>
-    
+
     <node id="Quest: Laptop">
-        <options 
-            player_question="The laptop is here, do you have something to trade?" 
-            npc_answer="Research has its price, take this and try to get out of here as fast as you can! Rotters and rogues around, can't trust anyone anymore." 
-            rqst_item="[Laptop]" 
-            req_item="[Laptop]" 
-            gain_xp="[lucky:200]" 
-            award_item="[Pistol 9mm]" 
-            dialog_type="once" 
-            tip="This laptop contains simulation data of the virus." 
+        <options
+            stage="offer"
+            player_question="I think I have something that may interest you..."
+            npc_answer="Have you found the suitcase? Is there a laptop inside of it? This is research and it's valuable!"
+            req_item="[Suitcase, Laptop]"
+            priority="10"
+            gain_xp="[lucky:100]"
+            dialog_type="once"
+            unlock_flag="Quest: Laptop" />
+
+        <options
+            stage="turn_in"
+            player_question="The laptop is here, do you have something to trade?"
+            npc_answer="Research has its price, take this and try to get out of here as fast as you can! Rotters and rogues around, can't trust anyone anymore."
+            rqst_item="[Laptop]"
+            req_item="[Laptop]"
+            gain_xp="[lucky:200]"
+            award_item="[Pistol 9mm]"
+            dialog_type="once"
+            tip="This laptop contains simulation data of the virus."
             complete_flag="Quest: Laptop" />
     </node>
-    
+
     <node id="Quest: Harddrive">
-        <options 
-            player_question="Just got this Harddrive" 
-            npc_answer="This is what people were saying about the black market pharmas around here. I don't have much, take this Blueprint." 
-            rqst_item="[Harddrive]" 
-            req_item="[Laptop]" 
-            gain_xp="[lucky:200]" 
-            award_item="[Blueprint]" 
-            dialog_type="once" 
-            tip="The raw genome data of the flu." 
+        <options
+            stage="offer"
+            player_question="I've been scavenging after the island fell."
+            npc_answer="Everybody is. Have you found anything important?"
+            priority="10"
+            req_item="[Laptop]"
+            gain_xp="[lucky:100]"
+            dialog_type="once"
+            unlock_flag="Quest: Harddrive" />
+
+        <options
+            stage="turn_in"
+            player_question="Just got this Harddrive"
+            npc_answer="This is what people were saying about the black market pharmas around here. I don't have much, take this Blueprint."
+            rqst_item="[Harddrive]"
+            req_item="[Laptop]"
+            gain_xp="[lucky:200]"
+            award_item="[Blueprint]"
+            dialog_type="once"
+            tip="The raw genome data of the flu."
             complete_flag="Quest: Harddrive" />
     </node>
-    
+
     <node id="Quest: Pendrive">
-        <options 
-            player_question="I don't know if you are the right person, but here it is." 
-            npc_answer="The vaccine simulations! We need to get out of here fast." 
-            rqst_item="[Pendrive]" 
-            req_item="[Laptop]" 
-            gain_xp="[lucky:200]" 
-            award_item="[Vaccine]" 
-            dialog_type="once" 
-            tip="Some presentations and leaked data due to bad security and public usage." 
+        <options
+            stage="offer"
+            player_question="Do you know anything about the files?"
+            npc_answer="I'm trying to stay alive here, but people are talking about pharmas trying to steal some shit."
+            priority="10"
+            req_item="[Laptop]"
+            gain_xp="[lucky:100]"
+            dialog_type="once"
+            unlock_flag="Quest: Pendrive" />
+
+        <options
+            stage="turn_in"
+            player_question="I don't know if you are the right person, but here it is."
+            npc_answer="The vaccine simulations! We need to get out of here fast."
+            rqst_item="[Pendrive]"
+            req_item="[Laptop]"
+            gain_xp="[lucky:200]"
+            award_item="[Vaccine]"
+            dialog_type="once"
+            tip="Some presentations and leaked data due to bad security and public usage."
             complete_flag="Quest: Pendrive" />
     </node>
 

@@ -227,7 +227,11 @@ def draw_npc_dialog_modal(surface, modal, game):
                         'lore_branch': 'Gossip',
                         'quest_branch': 'Quest'
                     }
-                    raw_title = title_map.get(lay['node_id'], lay['node_id'].replace('_', ' ').title())
+                    node_key = str(lay['node_id'])
+                    if node_key.startswith("Quest:"):
+                        raw_title = f"{tr('dialog', 'Quest')}: {node_key[6:].strip()}"
+                    else:
+                        raw_title = title_map.get(node_key, node_key.replace('_', ' ').title())
                     title_surf = font_12.render(tr('dialog', raw_title), True, (170, 170, 170)) 
                     surface.blit(title_surf, (col2_x, rect.y - 20))
                     

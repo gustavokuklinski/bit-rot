@@ -1,5 +1,5 @@
 garden_tall_grass,,,,
-,,,garden_grass_3,
-,,stair_l4,,
-garden_tall_grass,,,,
+,wall_01_part_right,@,wall_01_part_left,
+,,stair_l4,@,
+garden_tall_grass,wall_01_part_right_top,@,wall_01_part_left_top,
 ,,,garden_tall_grass,

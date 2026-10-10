@@ -420,21 +420,30 @@ def handle_mouse_down(game, event, mouse_pos):
                                     npc.unlock_node(unlock)
                                     if str(unlock).startswith("Quest:"):
                                         from core.ui.notifications import add_notification
-                                        add_notification(game, tr('ui', 'New Quest!'), str(unlock)[6:].strip(), target_tab='Quests')
-                                        display_message(game, f"{tr('msg', 'New Quest:')} {str(unlock)[6:].strip()}")
+                                        display_quest_name = str(unlock)[6:].strip()
+                                        add_notification(game, tr('ui', 'New Quest!'), display_quest_name, target_tab='Quests')
+                                        display_message(game, f"{tr('msg', 'New Quest:')} {display_quest_name}")
 
                                 # 5. Complete quests
                                 complete = opt.get('complete_flag')
                                 if complete:
                                     if complete not in game.player.completed_quests:
                                         game.player.completed_quests.append(complete)
-                                    if hasattr(game.player, 'quests') and complete in game.player.quests:
-                                        game.player.quests.remove(complete)
-                                    from core.ui.notifications import add_notification
-                                    add_notification(game, tr('ui', 'Quest Completed!'), complete, target_tab='Quests')
-                                    display_message(game, f"{tr('msg', 'Quest Completed:')} {complete}")
+                                    clean_q = complete[6:].strip() if str(complete).startswith("Quest:") else complete
+                                    if clean_q not in game.player.completed_quests:
+                                        game.player.completed_quests.append(clean_q)
 
-                                # 6. FIX: ONLY add to dialog_history if dialog_type is "once"
+                                    if hasattr(game.player, 'quests'):
+                                        for q_entry in (complete, clean_q, f"Quest: {clean_q}"):
+                                            if q_entry in game.player.quests:
+                                                game.player.quests.remove(q_entry)
+
+                                    from core.ui.notifications import add_notification
+                                    display_quest_name = str(complete)[6:].strip() if str(complete).startswith("Quest:") else str(complete)
+                                    add_notification(game, tr('ui', 'Quest Completed!'), display_quest_name, target_tab='Quests')
+                                    display_message(game, f"{tr('msg', 'Quest Completed:')} {display_quest_name}")
+
+                                # 6. Once dialog history
                                 d_type = opt.get('dialog_type', '')
                                 if d_type == 'once':
                                     dialog_key = f"{opt.get('node_id')}_{opt['q']}"
@@ -454,6 +463,10 @@ def handle_mouse_down(game, event, mouse_pos):
                                 # 7. Attitude adjustments
                                 if opt.get('npc_state_friendly') is not None and npc:
                                     npc.is_friendly = str(opt['npc_state_friendly']).lower() == 'true'
+                                    if not npc.is_friendly:
+                                        npc.state = 'chasing'
+                                        npc.current_attacker = game.player
+                                        npc.aggro_timer = 15000
                                 if opt.get('npc_state_static') is not None and npc:
                                     npc.is_static = str(opt['npc_state_static']).lower() == 'true'
 
@@ -461,12 +474,16 @@ def handle_mouse_down(game, event, mouse_pos):
                                     game.sound_manager.play_ui_hover()
                                 return
                     else:
-                        # In answer view, clicking ANYWHERE inside the modal returns to the dialogue list
+                        # In answer view, clicking anywhere inside the modal returns to dialogue or closes if hostile
                         if topmost_modal.get('rect') and topmost_modal['rect'].collidepoint(mouse_pos):
+                            npc = topmost_modal.get('npc')
+                            if npc and not getattr(npc, 'is_friendly', True):
+                                game.modals.remove(topmost_modal)
+                                return
+
                             topmost_modal['active_dialog_index'] = -1
                             topmost_modal['scroll_offset_y'] = 0
                             topmost_modal['dialog_list_cache_key'] = None
-                            npc = topmost_modal.get('npc')
                             if npc:
                                 topmost_modal['dialogs'] = npc.get_dialog_options()
                             if hasattr(game, 'sound_manager'):

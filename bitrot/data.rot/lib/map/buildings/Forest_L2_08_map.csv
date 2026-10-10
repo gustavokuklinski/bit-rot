@@ -1,9 +1,9 @@
 ,garden_grass_1,,,,,,,
 ,,,,,,,garden_grass_1,
 garden_grass_1,,,outside_metal_fence_1,outside_metal_fence_1,outside_metal_fence_1,outside_metal_fence_1,outside_metal_fence_1,outside_metal_fence_1
-,,,outside_metal_fence_1,house_table,garden_grass_1,,,outside_metal_fence_1
-,,,outside_metal_door_01_close,,,stair_l1,,outside_metal_fence_1
-,,,outside_metal_fence_1,garden_grass_3,,,garden_grass_1,outside_metal_fence_1
+,,,outside_metal_fence_1,house_table,garden_grass_1,wooden_wall_01,wooden_wall_01,outside_metal_fence_1
+,,,outside_metal_door_01_close,,,stair_l1,wooden_wall_01,outside_metal_fence_1
+,,,outside_metal_fence_1,garden_grass_3,,wooden_wall_01,wooden_wall_01,outside_metal_fence_1
 ,,,outside_metal_fence_1,outside_metal_fence_1,outside_metal_fence_1,outside_metal_fence_1,outside_metal_fence_1,outside_metal_fence_1
 ,garden_grass_1,,,,,,,
 ,,,,,,garden_grass_1,,

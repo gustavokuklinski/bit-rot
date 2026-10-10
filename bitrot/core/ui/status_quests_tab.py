@@ -80,8 +80,18 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
     np_total = np_comp = 0
 
     for q in quests:
-        is_completed = (q['complete_flag'] in completed_list) or (q['node_id'] in completed_list)
-        is_open = ((q['node_id'] in active_list) or (q['name'] in active_list)) and not is_completed
+        is_completed = (
+            (q['complete_flag'] in completed_list) or 
+            (q['node_id'] in completed_list) or 
+            (q['name'] in completed_list) or 
+            (f"Quest: {q['name']}" in completed_list)
+        )
+        is_open = (
+            (q['node_id'] in active_list) or 
+            (q['name'] in active_list) or 
+            (q['complete_flag'] in active_list) or
+            (f"Quest: {q['name']}" in active_list)
+        ) and not is_completed
         
         np_total += 1
         if is_completed: np_comp += 1

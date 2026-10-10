@@ -1,5 +1,5 @@
 garden_stone_powder,,,,garden_stone
-,,,,
-,,stair_l3,,
-,,,garden_tall_grass,
+,wall_01_part_right,@,wall_01_part_left,
+,@,stair_l3,,
+,wall_01_part_right_top,@,wall_01_part_left_top,
 garden_stone_iron,,,,
