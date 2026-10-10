@@ -223,19 +223,20 @@ def draw_help_modal(surface, game, modal, assets):
                 
                 if is_hovered and is_clicking:
                     modal['active_help_tab'] = i
-                    modal['scroll_offset_y'] = 0 # Reset scroll
+                    modal['scroll_offset_y'] = 0
                     
-                pygame.draw.rect(surface, DARK_GRAY, tab_rect)
+                tab_color = (45, 45, 45) if is_hovered else (25, 25, 25)
+                pygame.draw.rect(surface, tab_color, tab_rect)
                 pygame.draw.rect(surface, WHITE, tab_rect, 1) 
                 
                 tab_text = font_16.render(tab['title'], False, WHITE)
                 text_rect = tab_text.get_rect(center=tab_rect.center)
                 surface.blit(tab_text, text_rect)
 
-        # 3. Draw Active Tab (Last, so it stays on top)
+        # 3. Draw Active Tab
         if active_tab_idx < total_tabs:
             tab_rect = tab_rects[active_tab_idx]
-            pygame.draw.rect(surface, GRAY_60, tab_rect)
+            pygame.draw.rect(surface, (35, 35, 35), tab_rect)
             pygame.draw.rect(surface, WHITE, tab_rect, 1)
             
             tab_text = font_16.render(tabs[active_tab_idx]['title'], False, WHITE)

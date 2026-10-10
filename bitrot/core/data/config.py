@@ -296,6 +296,22 @@ def load_settings(world_preset="world"):
                 val_mode = ui_config.find('window_mode')
                 if val_mode is not None: WINDOW_MODE = val_mode.get('value', 'windowed')
 
+                # Load and apply custom game resolution
+                val_res = ui_config.find('ui_resolution')
+                if val_res is None:
+                    val_res = ui_config.find('resolution')
+                if val_res is not None:
+                    res_str = val_res.get('value', '1280x720')
+                    RESOLUTION = res_str
+                    if 'x' in res_str.lower():
+                        try:
+                            rw, rh = map(int, res_str.lower().split('x'))
+                            if rw >= 1280 and rh >= 720:
+                                GAME_WIDTH = rw
+                                GAME_HEIGHT = rh
+                        except Exception:
+                            pass
+
             audio_config = root.find('audio')
             if audio_config is not None:
                 for k, attr in [

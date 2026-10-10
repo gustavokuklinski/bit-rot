@@ -313,58 +313,8 @@ def _draw_world_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, WHITE, preset_rect, 1, border_radius=border_radius)
     game.game_screen.blit(font_12.render(tr('ui', "World Preset"), False, WHITE), (preset_header.x + S(10), preset_header.y + S(7)))
 
-    load_dd_rect = pygame.Rect(preset_body.x + padding, preset_body.y + S(20), preset_body.width - padding*2, S(30))
-    clickable_rects['load_dropdown_button'] = load_dd_rect
-    pygame.draw.rect(game.game_screen, (50, 50, 50), load_dd_rect)
-    pygame.draw.rect(game.game_screen, WHITE, load_dd_rect, 1)
-    selected_preset = state.get('selected_config_preset', "world")
-    game.game_screen.blit(font_12.render(selected_preset, False, WHITE), (load_dd_rect.x + S(5), load_dd_rect.y + S(5)))
-    pygame.draw.polygon(game.game_screen, WHITE, [(load_dd_rect.right - S(15), load_dd_rect.y + S(10)), (load_dd_rect.right - S(5), load_dd_rect.y + S(10)), (load_dd_rect.right - S(10), load_dd_rect.y + S(15))])
 
-    is_default = (selected_preset == "world")
-    input_y = load_dd_rect.bottom + S(20)
-    
-    game.game_screen.blit(font_12.render(tr('ui', "Preset Name:"), False, WHITE), (preset_body.x + padding, input_y))
-    name_input_rect = pygame.Rect(preset_body.x + padding, input_y + S(25), preset_body.width - padding*2, S(30))
-    
-    if is_default:
-        pygame.draw.rect(game.game_screen, (40, 40, 40), name_input_rect)
-        pygame.draw.rect(game.game_screen, GRAY, name_input_rect, 1)
-        name_text = tr('ui', "(Default Locked)")
-        text_surf = font_12.render(name_text, False, GRAY)
-    else:
-        pygame.draw.rect(game.game_screen, (50, 50, 50), name_input_rect)
-        pygame.draw.rect(game.game_screen, WHITE, name_input_rect, 1)
-        name_text = state.get('world_preset_name', '')
-        text_surf = font_12.render(name_text, False, WHITE)
-        clickable_rects['name_input'] = name_input_rect
-        
-        if state.get('name_input_active') and int(pygame.time.get_ticks() / 500) % 2 == 0:
-            cursor_x = name_input_rect.x + S(5) + text_surf.get_width()
-            pygame.draw.line(game.game_screen, WHITE, (cursor_x, name_input_rect.y + S(5)), (cursor_x, name_input_rect.bottom - S(5)), S(2))
-            
-    game.game_screen.blit(text_surf, (name_input_rect.x + S(5), name_input_rect.y + S(5)))
-
-    btn_y = name_input_rect.bottom + S(20)
-    btn_width = (preset_body.width - (padding * 3)) // 2
-    
-    save_btn_rect = pygame.Rect(preset_body.x + padding, btn_y, btn_width, S(30))
-    del_btn_rect = pygame.Rect(save_btn_rect.right + padding, btn_y, btn_width, S(30))
-
-    if is_default:
-        pygame.draw.rect(game.game_screen, (40, 40, 40), save_btn_rect, border_radius=4)
-        pygame.draw.rect(game.game_screen, (40, 40, 40), del_btn_rect, border_radius=4)
-        game.game_screen.blit(font_12.render(tr('ui', "Save"), False, GRAY), save_btn_rect.move(S(20), S(8)))
-        game.game_screen.blit(font_12.render(tr('ui', "Delete"), False, GRAY), del_btn_rect.move(S(15), S(8)))
-    else:
-        pygame.draw.rect(game.game_screen, GREEN, save_btn_rect, border_radius=4)
-        pygame.draw.rect(game.game_screen, RED, del_btn_rect, border_radius=4)
-        game.game_screen.blit(font_12.render(tr('ui', "Save"), False, WHITE), save_btn_rect.move(S(20), S(8)))
-        game.game_screen.blit(font_12.render(tr('ui', "Delete"), False, WHITE), del_btn_rect.move(S(15), S(8)))
-        clickable_rects['save_button'] = save_btn_rect
-        clickable_rects['delete_button'] = del_btn_rect
-
-    seed_y = save_btn_rect.bottom + S(20)
+    seed_y = S(20) + 60
     game.game_screen.blit(font_12.render(tr('ui', "World Seed (12-digit):"), False, WHITE), (preset_body.x + padding, seed_y))
     seed_input_rect = pygame.Rect(preset_body.x + padding, seed_y + S(25), preset_body.width - padding*2, S(30))
     

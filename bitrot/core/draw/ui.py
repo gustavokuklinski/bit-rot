@@ -318,29 +318,20 @@ def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
     view_radius_sq = (game.player_view_radius + TILE_SIZE) ** 2
     world_mouse_pos = game.screen_to_world((game._get_scaled_mouse_pos()[0] - game.viewport_left_offset, game._get_scaled_mouse_pos()[1]))
 
-    if game.hovered_container:
-        dx, dy = game.hovered_container.rect.centerx - game.player.rect.centerx, game.hovered_container.rect.centery - game.player.rect.centery
-        if (dx*dx + dy*dy) <= view_radius_sq: pygame.draw.rect(surface, YELLOW, game.hovered_container.rect.move(offset_x, offset_y), 2)
+    # Only draw yellow hover border for containers that are NOT vehicles
+    if game.hovered_container and getattr(game.hovered_container, 'item_type', '') != 'vehicle':
+        dx = game.hovered_container.rect.centerx - game.player.rect.centerx
+        dy = game.hovered_container.rect.centery - game.player.rect.centery
+        if (dx * dx + dy * dy) <= view_radius_sq:
+            pygame.draw.rect(surface, YELLOW, game.hovered_container.rect.move(offset_x, offset_y), 1)
 
-    for npc in game.npcs:
-        if screen_rect.colliderect(npc.rect) and npc.rect.collidepoint(world_mouse_pos):
-            pygame.draw.rect(surface, GRAY, npc.rect.move(offset_x, offset_y), 2)
-            break
-    
-    for zombie in game.active_zombies:
-        if screen_rect.colliderect(zombie.rect) and zombie.rect.collidepoint(world_mouse_pos):
-            pygame.draw.rect(surface, (128, 0, 128), zombie.rect.move(offset_x, offset_y), 2)
-            break
+    # (Hover borders for NPC, Zombie, and Animal have been removed)
 
-    for animal in game.active_animals:
-        if screen_rect.colliderect(animal.rect) and animal.rect.collidepoint(world_mouse_pos):
-            pygame.draw.rect(surface, (128, 0, 128), animal.rect.move(offset_x, offset_y), 2)
-            break
-
+    # Placed safe-radius items (e.g. active campfires / lamps)
     for item in game.visible_items:
         if getattr(item, 'is_placed', False) and getattr(item, 'safe_radius', 0) > 0:
             if screen_rect.colliderect(item.rect) and item.rect.collidepoint(world_mouse_pos):
-                pygame.draw.rect(surface, (50, 255, 50), item.rect.move(offset_x, offset_y), 2)
+                pygame.draw.rect(surface, (50, 255, 50), item.rect.move(offset_x, offset_y), 1)
 
                 cx = item.rect.centerx
                 cy = item.rect.centery
@@ -381,7 +372,7 @@ def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
                                 surface.blit(highlight_surf, (draw_x, draw_y))
 
     if game.hovered_interactable_tile_rect:
-        pygame.draw.rect(surface, BLUE, game.hovered_interactable_tile_rect.move(offset_x, offset_y), 2)
+        pygame.draw.rect(surface, BLUE, game.hovered_interactable_tile_rect.move(offset_x, offset_y), 1)
     
     target = get_targeted_interactable(game)
     target_world_rect = None
@@ -389,7 +380,7 @@ def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
     if target:
         if target['type'] in ['npc', 'vehicle', 'container']: target_world_rect = target['entity'].rect
         elif target['type'] in ['tile', 'stair', 'maptile_teleport']: target_world_rect = pygame.Rect(target['entity'][0] * TILE_SIZE, target['entity'][1] * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-        if target_world_rect: pygame.draw.rect(surface, (0, 255, 100), target_world_rect.move(offset_x, offset_y), 2)
+        if target_world_rect: pygame.draw.rect(surface, (0, 255, 100), target_world_rect.move(offset_x, offset_y), 1)
 
     return target_world_rect
 

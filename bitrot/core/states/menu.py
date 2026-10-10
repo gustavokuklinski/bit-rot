@@ -1,4 +1,5 @@
-# core/states/menu.py
+# In core/states/menu.py
+
 import os
 import glob
 import pygame
@@ -8,7 +9,7 @@ from core.data.config import get_writable_dir
 from core.ui.helpers.main_menu import draw_menu
 from core.ui.helpers.keybinds import keybinds_ui
 from core.ui.helpers.preferences import preferences_ui
-from core.ui.helpers.start_loading import draw_loading_screen
+from core.ui.helpers.help_menu import help_ui  # <-- Import the new Help UI
 
 def run_menu(game):
     if hasattr(game, 'discord_rpc'):
@@ -22,14 +23,12 @@ def run_menu(game):
 
     start_btn, load_btn, settings_btn, quit_btn, flag_rects, help_rect, controls_rect = draw_menu(game.game_screen, mouse_pos, has_save)
 
-    # Check if any overlay submenu is currently active
     is_sub_menu_open = (
         getattr(keybinds_ui, 'active', False) or 
         getattr(preferences_ui, 'active', False) or 
-        getattr(game, 'show_main_menu_help', False)
+        getattr(help_ui, 'active', False)
     )
 
-    # --- MAIN MENU BUTTON HOVER SOUND TRACKER (ONLY WHEN NO OVERLAY IS OPEN) ---
     if not is_sub_menu_open:
         menu_buttons = [b for b in [start_btn, load_btn if has_save else None, settings_btn, quit_btn, help_rect, controls_rect] if b is not None]
         for flag in flag_rects:
@@ -47,7 +46,6 @@ def run_menu(game):
         game._menu_hovered_btn_idx = hovered_idx
     else:
         game._menu_hovered_btn_idx = None
-    # ---------------------------------------------------------------------------
 
     if getattr(keybinds_ui, 'active', False):
         keybinds_ui.handle_events(events)
@@ -61,9 +59,12 @@ def run_menu(game):
         game._update_screen()
         return
 
-    back_btn = None
-    if getattr(game, 'show_main_menu_help', False):
-        back_btn = draw_loading_screen(game.game_screen, True, mouse_pos, events, is_main_menu_help=True, game=game)
+    # Draw Help UI when active
+    if getattr(help_ui, 'active', False):
+        help_ui.handle_events(game, events)
+        help_ui.draw(game.game_screen, mouse_pos, game=game)
+        game._update_screen()
+        return
 
     for event in events:
         if getattr(game, 'joystick_handler', None):
@@ -75,23 +76,14 @@ def run_menu(game):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
             pygame.display.toggle_fullscreen()
 
-        if getattr(game, 'show_main_menu_help', False):
-            if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
-                mouse_pos = game._get_scaled_mouse_pos()
-                if back_btn and back_btn.collidepoint(mouse_pos):
-                    if hasattr(game, 'sound_manager'):
-                        game.sound_manager.play_ui_hover()
-                    game.show_main_menu_help = False
-                    continue
-            continue 
-
         if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
             mouse_pos = game._get_scaled_mouse_pos()
             
+            # Toggle Help Menu
             if help_rect and help_rect.collidepoint(mouse_pos):
                 if hasattr(game, 'sound_manager'):
                     game.sound_manager.play_ui_hover()
-                game.show_main_menu_help = True
+                help_ui.toggle()
                 continue
 
             if controls_rect and controls_rect.collidepoint(mouse_pos):
