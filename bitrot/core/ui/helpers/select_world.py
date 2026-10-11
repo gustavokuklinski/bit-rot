@@ -19,24 +19,6 @@ from core.ui.helpers.trait_config_loader import load_config_data
 from core.ui.tooltip import draw_tooltip
 
 _world_icons_cache = {}
-_logo_cache = None
-
-def _get_logo_image(width):
-    global _logo_cache
-    if _logo_cache is not None and _logo_cache.get_width() == width:
-        return _logo_cache
-
-    logo_path = os.path.join(BASE_DIR, "data.rot", "icons", "logo.png")
-    if os.path.exists(logo_path):
-        try:
-            raw = pygame.image.load(logo_path).convert_alpha()
-            scale_factor = width / raw.get_width()
-            target_h = int(raw.get_height() * scale_factor)
-            _logo_cache = pygame.transform.scale(raw, (width, target_h))
-            return _logo_cache
-        except Exception as e:
-            print(f"[SelectWorld] Error loading logo: {e}")
-    return None
 
 def _get_mode_icon(filename_or_relpath, size=(48, 48)):
     if filename_or_relpath in _world_icons_cache:
@@ -166,15 +148,17 @@ def _apply_build_and_proceed(game, state, mode_id, filename):
         'name': 'All containers are opened',
         'default': 'false'
     }
-    world_data['game']['permadeath'] = {
-        'value': 'true' if state.get('permadeath', False) else 'false',
-        'name': 'Delete save when die',
-        'default': 'false'
-    }
+    
     world_data['game']['infinite_liquid'] = {
         'value': 'true' if state.get('infinite_liquid', True) else 'false',
         'name': 'Liquids are infinite',
         'default': 'true'
+    }
+
+    world_data['game']['permadeath'] = {
+        'value': 'true' if state.get('permadeath', False) else 'false',
+        'name': 'Delete save when die',
+        'default': 'false'
     }
 
     state['world_data'] = world_data
@@ -214,29 +198,44 @@ def draw_select_world_screen(game, state, mouse_pos):
     def S(val): return int(val * scale)
 
     center_x = GAME_WIDTH // 2
-    logo_w = S(240)
-    logo_img = _get_logo_image(logo_w)
-    
-    top_cursor_y = S(42)
-    if logo_img:
-        logo_rect = logo_img.get_rect(center=(center_x, top_cursor_y + (logo_img.get_height() // 2)))
-        game.game_screen.blit(logo_img, logo_rect)
-        top_cursor_y = logo_rect.bottom + S(10)
-    else:
-        top_cursor_y = S(45)
 
+    # Dimensions
     title_text = font_16.render(tr('ui', "SELECT GAME WORLD"), False, WHITE)
-    title_rect = title_text.get_rect(center=(center_x, top_cursor_y + S(40)))
-    game.game_screen.blit(title_text, title_rect)
-
     sub_text = font_12.render(tr('ui', "Choose your game mode to begin your journey"), False, (160, 160, 160))
-    sub_rect = sub_text.get_rect(center=(center_x, title_rect.bottom + S(12)))
-    game.game_screen.blit(sub_text, sub_rect)
 
     card_w = S(270)
     card_h = S(345)
     spacing = S(25)
-    
+
+    box_size = S(18)
+    cb_gap = S(30)
+
+    btn_w = S(200)
+    btn_h = S(42)
+    gap = S(20)
+
+    # --- VERTICAL CENTERING CALCULATION ---
+    total_screen_h = (
+        title_text.get_height()
+        + S(10)
+        + sub_text.get_height()
+        + S(16)
+        + card_h
+        + S(16)
+        + box_size
+        + S(16)
+        + btn_h
+    )
+    start_top_y = max(S(20), (GAME_HEIGHT - total_screen_h) // 2)
+
+    # Title & Subtitle
+    title_rect = title_text.get_rect(center=(center_x, start_top_y + (title_text.get_height() // 2)))
+    game.game_screen.blit(title_text, title_rect)
+
+    sub_rect = sub_text.get_rect(center=(center_x, title_rect.bottom + S(10) + (sub_text.get_height() // 2)))
+    game.game_screen.blit(sub_text, sub_rect)
+
+    # Cards Layout
     modes_count = len(WORLD_MODES)
     total_w = (card_w * modes_count) + (spacing * max(0, modes_count - 1))
     start_x = center_x - (total_w // 2)
@@ -280,37 +279,35 @@ def draw_select_world_screen(game, state, mouse_pos):
             game.game_screen.blit(b_surf, (card_rect.left + S(25), line_cursor_y))
             line_cursor_y += S(22)
 
-        btn_h = S(38)
-        btn_rect = pygame.Rect(card_rect.left + S(20), card_rect.bottom - btn_h - S(14), card_rect.width - S(40), btn_h)
+        card_btn_h = S(38)
+        card_btn_rect = pygame.Rect(card_rect.left + S(20), card_rect.bottom - card_btn_h - S(14), card_rect.width - S(40), card_btn_h)
         
-        btn_hovered = btn_rect.collidepoint(mouse_pos)
+        btn_hovered = card_btn_rect.collidepoint(mouse_pos)
         btn_bg = mode['accent'] if btn_hovered else (55, 55, 55)
         btn_text_col = (10, 10, 10) if btn_hovered else WHITE
-        pygame.draw.rect(game.game_screen, btn_bg, btn_rect, border_radius=S(5))
+        pygame.draw.rect(game.game_screen, btn_bg, card_btn_rect, border_radius=S(5))
 
         btn_txt = font_12.render(tr('ui', "Select Mode"), False, btn_text_col)
-        game.game_screen.blit(btn_txt, btn_txt.get_rect(center=btn_rect.center))
-        clickable_rects['cards'].append((mode, btn_rect))
+        game.game_screen.blit(btn_txt, btn_txt.get_rect(center=card_btn_rect.center))
+        clickable_rects['cards'].append((mode, card_btn_rect))
 
-    # --- 3.5. CHECKBOXES: ALL VISIBLE, PERMADEATH & INFINITE LIQUID ---
+    # --- CHECKBOXES: ALL VISIBLE, PERMADEATH & INFINITE LIQUID ---
     if 'all_visible' not in state:
         state['all_visible'] = False
+    if 'infinite_liquid' not in state:
+        state['infinite_liquid'] = False
     if 'permadeath' not in state:
         state['permadeath'] = False
-    if 'infinite_liquid' not in state:
-        state['infinite_liquid'] = True
 
-    box_size = S(18)
-    cb_gap = S(30)
     cb_y = card_y + card_h + S(16)
 
     txt_all_vis = tr('ui', "All visible")
-    txt_perma = tr('ui', "Permadeath")
     txt_inf_liq = tr('ui', "Infinite liquid")
+    txt_perma = tr('ui', "Permadeath")
 
     w1 = box_size + S(8) + font_12.size(txt_all_vis)[0]
-    w2 = box_size + S(8) + font_12.size(txt_perma)[0]
-    w3 = box_size + S(8) + font_12.size(txt_inf_liq)[0]
+    w2 = box_size + S(8) + font_12.size(txt_inf_liq)[0]
+    w3 = box_size + S(8) + font_12.size(txt_perma)[0]
     total_cb_w = w1 + cb_gap + w2 + cb_gap + w3
     cb_start_x = center_x - (total_cb_w // 2)
 
@@ -333,7 +330,7 @@ def draw_select_world_screen(game, state, mouse_pos):
     if is_hover_cb1:
         hovered_cb_tooltip = (txt_all_vis, tr('ui', "All containers are opened"))
 
-    # Checkbox 2: Permadeath
+    # Checkbox 2: Infinite liquid
     cb2_x = cb_start_x + w1 + cb_gap
     cb2_click_rect = pygame.Rect(cb2_x, cb_y, w2, box_size)
     cb2_box_rect = pygame.Rect(cb2_x, cb_y, box_size, box_size)
@@ -341,17 +338,17 @@ def draw_select_world_screen(game, state, mouse_pos):
 
     pygame.draw.rect(game.game_screen, (45, 45, 45), cb2_box_rect, border_radius=S(3))
     pygame.draw.rect(game.game_screen, WHITE if is_hover_cb2 else GRAY, cb2_box_rect, 1, border_radius=S(3))
-    if state.get('permadeath', False):
+    if state.get('infinite_liquid', True):
         inner_rect2 = cb2_box_rect.inflate(-S(6), -S(6))
         pygame.draw.rect(game.game_screen, GREEN, inner_rect2, border_radius=S(2))
 
-    lbl2 = font_12.render(txt_perma, False, YELLOW if is_hover_cb2 else WHITE)
+    lbl2 = font_12.render(txt_inf_liq, False, YELLOW if is_hover_cb2 else WHITE)
     game.game_screen.blit(lbl2, (cb2_box_rect.right + S(8), cb2_box_rect.centery - lbl2.get_height() // 2))
-    clickable_rects['checkbox_permadeath'] = cb2_click_rect
+    clickable_rects['checkbox_infinite_liquid'] = cb2_click_rect
     if is_hover_cb2:
-        hovered_cb_tooltip = (txt_perma, tr('ui', "Delete save when die"))
+        hovered_cb_tooltip = (txt_inf_liq, tr('ui', "Liquids are infinite"))
 
-    # Checkbox 3: Infinite liquid
+    # Checkbox 3: Permadeath
     cb3_x = cb2_x + w2 + cb_gap
     cb3_click_rect = pygame.Rect(cb3_x, cb_y, w3, box_size)
     cb3_box_rect = pygame.Rect(cb3_x, cb_y, box_size, box_size)
@@ -359,15 +356,15 @@ def draw_select_world_screen(game, state, mouse_pos):
 
     pygame.draw.rect(game.game_screen, (45, 45, 45), cb3_box_rect, border_radius=S(3))
     pygame.draw.rect(game.game_screen, WHITE if is_hover_cb3 else GRAY, cb3_box_rect, 1, border_radius=S(3))
-    if state.get('infinite_liquid', True):
+    if state.get('permadeath', False):
         inner_rect3 = cb3_box_rect.inflate(-S(6), -S(6))
         pygame.draw.rect(game.game_screen, GREEN, inner_rect3, border_radius=S(2))
 
-    lbl3 = font_12.render(txt_inf_liq, False, YELLOW if is_hover_cb3 else WHITE)
+    lbl3 = font_12.render(txt_perma, False, YELLOW if is_hover_cb3 else WHITE)
     game.game_screen.blit(lbl3, (cb3_box_rect.right + S(8), cb3_box_rect.centery - lbl3.get_height() // 2))
-    clickable_rects['checkbox_infinite_liquid'] = cb3_click_rect
+    clickable_rects['checkbox_permadeath'] = cb3_click_rect
     if is_hover_cb3:
-        hovered_cb_tooltip = (txt_inf_liq, tr('ui', "Liquids are infinite"))
+        hovered_cb_tooltip = (txt_perma, tr('ui', "Delete save when die"))
 
     # --- 4. BOTTOM BAR: BACK & SANDBOX ---
     btn_w = S(200)
@@ -387,9 +384,9 @@ def draw_select_world_screen(game, state, mouse_pos):
 
     sandbox_rect = pygame.Rect(back_rect.right + gap, bottom_y, btn_w, btn_h)
     is_sandbox_hover = sandbox_rect.collidepoint(mouse_pos)
-    sandbox_bg = (255, 200, 50) if is_sandbox_hover else (200, 150, 30)
+    sandbox_bg = (80, 80, 80) if is_sandbox_hover else (60, 60, 60)
     pygame.draw.rect(game.game_screen, sandbox_bg, sandbox_rect, border_radius=S(6))
-    sandbox_txt = font_16.render(tr('ui', "Sandbox Mode"), False, WHITE if is_sandbox_hover else BLACK)
+    sandbox_txt = font_16.render(tr('ui', "Sandbox"), False, WHITE)
     game.game_screen.blit(sandbox_txt, sandbox_txt.get_rect(center=sandbox_rect.center))
     clickable_rects['sandbox_button'] = sandbox_rect
 
@@ -434,12 +431,12 @@ def handle_select_world_events(game, state, event, mouse_pos, clickable_rects):
             state['all_visible'] = not state.get('all_visible', False)
             return
 
-        if clickable_rects.get('checkbox_permadeath') and clickable_rects['checkbox_permadeath'].collidepoint(mouse_pos):
-            state['permadeath'] = not state.get('permadeath', False)
-            return
-
         if clickable_rects.get('checkbox_infinite_liquid') and clickable_rects['checkbox_infinite_liquid'].collidepoint(mouse_pos):
             state['infinite_liquid'] = not state.get('infinite_liquid', True)
+            return
+        
+        if clickable_rects.get('checkbox_permadeath') and clickable_rects['checkbox_permadeath'].collidepoint(mouse_pos):
+            state['permadeath'] = not state.get('permadeath', False)
             return
 
         if clickable_rects.get('back_button') and clickable_rects['back_button'].collidepoint(mouse_pos):
@@ -460,14 +457,15 @@ def handle_select_world_events(game, state, event, mouse_pos, clickable_rects):
                 'name': 'All containers are opened',
                 'default': 'false'
             }
-            world_data['game']['permadeath'] = {
-                'value': 'true' if state.get('permadeath', False) else 'false',
-                'name': 'Delete save when die',
-                'default': 'false'
-            }
+            
             world_data['game']['infinite_liquid'] = {
                 'value': 'true' if state.get('infinite_liquid', True) else 'false',
                 'name': 'Liquids are infinite',
+                'default': 'false'
+            }
+            world_data['game']['permadeath'] = {
+                'value': 'true' if state.get('permadeath', False) else 'false',
+                'name': 'Delete save when die',
                 'default': 'false'
             }
 

@@ -2,6 +2,7 @@
 
 import pygame
 import math
+import re
 from core.data.config import *
 import core.data.config
 from core.entities.animal.animal import Animal
@@ -28,8 +29,8 @@ from core.data.localization import tr
 from core.ui.helpers.keybinds import keybind_manager
 from core.ui.notifications import draw_notifications
 from core.events.mouse_drag import check_recursive_containment
-from core.entities.item.item_helpers import does_allow_liquid, get_container_available_liquid, is_container_closed_or_locked, get_container_liquid_capacity_units
-
+from core.entities.item.item_helpers import does_allow_liquid, get_container_available_liquid, is_container_closed_or_locked, get_container_liquid_capacity_units, player_has_mobile
+from core.ui.mobile_map_tab import generate_minimap_cache, MINIMAP_PLAYER_COLOR
 
 # Hardcoded default English fallbacks for interaction tooltips
 DEFAULT_TOOLTIPS = {
@@ -384,6 +385,179 @@ def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
 
     return target_world_rect
 
+
+def draw_mini_gps_hud(surface, game, view_right, dynamic_h, mouse_pos):
+    """
+    Renders an enlarged, zoomed-in live GPS minimap of the current chunk at the bottom right
+    when the player carries a mobile phone and the mobile modal is closed.
+    """
+    player = getattr(game, 'player', None)
+    if not player or not player_has_mobile(player):
+        game.mini_gps_rect = None
+        return None
+
+    # Do not render if the full mobile modal is currently open
+    is_mobile_modal_open = any(m.get('type') == 'mobile' for m in getattr(game, 'modals', []))
+    if is_mobile_modal_open:
+        game.mini_gps_rect = None
+        return None
+
+    current_layer = getattr(game, 'current_layer_index', 1)
+    current_map_file = getattr(game.map_manager, 'current_map_filename', '')
+
+    # Cache chunk surface on game instance (invalidated on chunk transition or layer change)
+    if (getattr(game, '_hud_gps_cache', None) is None or
+        getattr(game, '_hud_gps_layer', None) != current_layer or
+        getattr(game, '_hud_gps_map_file', None) != current_map_file):
+
+        cache_surf = generate_minimap_cache(game, full_map=False, target_chunk=None, target_layer=current_layer)
+        game._hud_gps_cache = cache_surf
+        game._hud_gps_layer = current_layer
+        game._hud_gps_map_file = current_map_file
+
+    cache_surf = getattr(game, '_hud_gps_cache', None)
+    if not cache_surf:
+        game.mini_gps_rect = None
+        return None
+
+    # --- Enlarged Geometry (160x160 map area, 168x188 box) ---
+    map_size = 160
+    box_pad = 4
+    header_h = 20
+    box_w = map_size + (box_pad * 2)
+    box_h = header_h + map_size + (box_pad * 2)
+
+    start_x = view_right - box_w - 15
+    start_y = dynamic_h - box_h - 22  # Leaves breathing room for the FPS counter below
+
+    box_rect = pygame.Rect(start_x, start_y, box_w, box_h)
+    map_rect = pygame.Rect(start_x + box_pad, start_y + header_h + box_pad, map_size, map_size)
+    game.mini_gps_rect = box_rect
+
+    is_hovered = box_rect.collidepoint(mouse_pos)
+
+    # 1. Background Box & Border
+    bg_surf = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+    bg_surf.fill((20, 20, 20, 235))
+    surface.blit(bg_surf, (start_x, start_y))
+
+    border_color = YELLOW if is_hovered else (70, 70, 70)
+    pygame.draw.rect(surface, border_color, box_rect, 1, border_radius=4)
+
+    # 2. Header Bar with Signal LED & Coordinates
+    match = re.search(r'map_L\d+_(\d+)_(\d+)_map\.csv', current_map_file)
+    if match:
+        header_text = f"GPS L{current_layer}"
+    else:
+        header_text = f"GPS L{current_layer}"
+
+    # Green LED indicating active GPS lock
+    pygame.draw.circle(surface, (80, 255, 80), (start_x + 10, start_y + 10), 3)
+
+    title_surf = font_12.render(header_text, False, WHITE)
+    surface.blit(title_surf, (start_x + 18, start_y + 4))
+
+    # --- 3. Zoomed & Centered Viewport Calculation ---
+    # Zoom factor: 2.5x (displays ~64 tiles across instead of the entire 128-tile chunk)
+    map_zoom = 2.5
+
+    chunk_w, chunk_h = cache_surf.get_size()
+    tiles_in_view_w = map_size / map_zoom
+    tiles_in_view_h = map_size / map_zoom
+
+    # Player's tile coordinates in current chunk
+    p_tile_x = player.rect.centerx / float(TILE_SIZE)
+    p_tile_y = player.rect.centery / float(TILE_SIZE)
+
+    # Center camera on player and clamp to chunk boundaries
+    src_x = p_tile_x - (tiles_in_view_w / 2.0)
+    src_y = p_tile_y - (tiles_in_view_h / 2.0)
+
+    max_src_x = max(0.0, chunk_w - tiles_in_view_w)
+    max_src_y = max(0.0, chunk_h - tiles_in_view_h)
+    src_x = max(0.0, min(src_x, max_src_x))
+    src_y = max(0.0, min(src_y, max_src_y))
+
+    # Subsurface extraction and scaling
+    src_x_int = int(math.floor(src_x))
+    src_y_int = int(math.floor(src_y))
+    src_w_int = int(math.ceil(tiles_in_view_w)) + 1
+    src_h_int = int(math.ceil(tiles_in_view_h)) + 1
+
+    src_rect = pygame.Rect(src_x_int, src_y_int, src_w_int, src_h_int)
+    clipped_src = src_rect.clip(cache_surf.get_rect())
+
+    old_clip = surface.get_clip()
+    surface.set_clip(map_rect)
+
+    if clipped_src.width > 0 and clipped_src.height > 0:
+        sub_surf = cache_surf.subsurface(clipped_src)
+        dest_w = int(clipped_src.width * map_zoom)
+        dest_h = int(clipped_src.height * map_zoom)
+
+        if dest_w > 0 and dest_h > 0:
+            scaled_surf = pygame.transform.scale(sub_surf, (dest_w, dest_h))
+            draw_off_x = (clipped_src.x - src_x) * map_zoom
+            draw_off_y = (clipped_src.y - src_y) * map_zoom
+            surface.blit(scaled_surf, (map_rect.x + draw_off_x, map_rect.y + draw_off_y))
+
+    # --- 4. Entity Radar Dots (Active SD Card Apps) ---
+    active_caps = set()
+    for card in getattr(game, 'app_state', {}).get('slots', []):
+        if not card: continue
+        map_val = getattr(card, 'map_value', None)
+        if not map_val and hasattr(card, 'properties') and isinstance(card.properties, dict):
+            map_val = card.properties.get('map', {}).get('value')
+        if not map_val and hasattr(card, 'name') and card.name in ITEM_TEMPLATES:
+            map_val = ITEM_TEMPLATES[card.name].get('properties', {}).get('map', {}).get('value')
+        if map_val: active_caps.add(map_val.strip().lower())
+
+    def draw_zoomed_dot(tile_x, tile_y, color):
+        dx = map_rect.x + int((tile_x - src_x) * map_zoom)
+        dy = map_rect.y + int((tile_y - src_y) * map_zoom)
+        if map_rect.collidepoint(dx, dy):
+            pygame.draw.circle(surface, color, (dx, dy), 2)
+
+    if 'show_zombies' in active_caps:
+        for z in getattr(game, 'active_zombies', game.zombies):
+            if not getattr(z, 'is_dead', False) and getattr(z, 'layer', 1) == current_layer:
+                draw_zoomed_dot(z.rect.centerx / float(TILE_SIZE), z.rect.centery / float(TILE_SIZE), (220, 40, 40))
+
+    if 'show_animals' in active_caps:
+        for a in getattr(game, 'active_animals', []):
+            if not getattr(a, 'is_dead', False) and getattr(a, 'layer', 1) == current_layer:
+                draw_zoomed_dot(a.rect.centerx / float(TILE_SIZE), a.rect.centery / float(TILE_SIZE), (240, 220, 50))
+
+    if 'show_vehicles' in active_caps:
+        for v in getattr(game, 'vehicles', []):
+            draw_zoomed_dot(v.rect.centerx / float(TILE_SIZE), v.rect.centery / float(TILE_SIZE), (40, 140, 255))
+
+    if 'show_friendly_npc' in active_caps or 'show_static_npc' in active_caps:
+        for n in getattr(game, 'npcs', []):
+            if not getattr(n, 'is_dead', False) and getattr(n, 'is_friendly', True) and getattr(n, 'layer', 1) == current_layer:
+                draw_zoomed_dot(n.rect.centerx / float(TILE_SIZE), n.rect.centery / float(TILE_SIZE), (255, 140, 0))
+
+    if 'show_hostile_npc' in active_caps:
+        for n in getattr(game, 'npcs', []):
+            if not getattr(n, 'is_dead', False) and not getattr(n, 'is_friendly', True) and getattr(n, 'layer', 1) == current_layer:
+                draw_zoomed_dot(n.rect.centerx / float(TILE_SIZE), n.rect.centery / float(TILE_SIZE), (255, 50, 50))
+
+    # --- 5. Live Player Marker ---
+    px = map_rect.x + int((p_tile_x - src_x) * map_zoom)
+    py = map_rect.y + int((p_tile_y - src_y) * map_zoom)
+
+    p_dot = pygame.Rect(px - 2, py - 2, 5, 5)
+    if map_rect.colliderect(p_dot):
+        pygame.draw.rect(surface, MINIMAP_PLAYER_COLOR, p_dot)
+        pygame.draw.rect(surface, (0, 0, 0), p_dot, 1)
+
+    surface.set_clip(old_clip)
+
+    # Frame outline around the map display
+    pygame.draw.rect(surface, (50, 50, 50), map_rect, 1)
+
+    return (box_rect, f"{tr('ui', 'GPS Minimap')} ({tr('ui', 'Click to open')})")
+
 def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world_rect):
     from core.draw.camera import update_messages_modal_elastic_width
     update_messages_modal_elastic_width(game)
@@ -669,7 +843,10 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         # 2. Display mini messages HUD when the Messages modal is closed
         draw_mini_messages_hud(game.game_screen, game, view_left, dynamic_h)
 
-        # 3. When menu is opened, position it below the mini HUD if active
+        # 3. Display mini GPS minimap when Mobile modal is closed and player has mobile
+        mini_gps_item = draw_mini_gps_hud(game.game_screen, game, view_right, dynamic_h, mouse_pos)
+
+        # 4. When menu is opened, position it below the mini HUD if active
         show_hud_menus = getattr(game, 'show_hud_menus', False)
         
         if show_hud_menus:
@@ -706,6 +883,8 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             (getattr(game, 'help_button_rect', None), f"{tr('ui', 'Help and Tutorial')} ({get_key_name('help') or 'F1'})")
         ]
         tooltip_targets.extend(mini_status_hover_items)
+        if mini_gps_item:
+            tooltip_targets.append(mini_gps_item)
 
         for rect, label in tooltip_targets:
             if rect and rect.collidepoint(mouse_pos):

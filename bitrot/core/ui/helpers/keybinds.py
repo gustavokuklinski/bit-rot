@@ -507,7 +507,7 @@ class KeybindsMenuUI:
                 game.sound_manager.play_ui_hover()
         self._last_hovered_id = hovered_key_id
 
-        draw_btn(screen, reset_btn_rect, "Reset Default", mouse_pos, base_color=(200, 50, 50))
+        draw_btn(screen, reset_btn_rect, "Reset Default", mouse_pos, base_color=(80, 80, 80))
         draw_btn(screen, back_btn_rect, "Back", mouse_pos, base_color=(80, 80, 80))
 
         if self.error_message:

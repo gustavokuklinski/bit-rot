@@ -620,8 +620,8 @@ class PreferencesMenuUI:
             t_surf = font_16.render(tr('ui', text), False, WHITE)
             screen.blit(t_surf, (rect.centerx - t_surf.get_width()//2, rect.centery - t_surf.get_height()//2))
 
-        _draw_btn(apply_btn, "Apply & Restart", (23, 162, 184))
-        _draw_btn(reset_btn, "Reset Default", (200, 50, 50))
+        _draw_btn(apply_btn, "Apply & Restart", (80, 80, 80))
+        _draw_btn(reset_btn, "Reset Default", (80, 80, 80))
         _draw_btn(back_btn, "Back", (80, 80, 80))
 
 preferences_ui = PreferencesMenuUI()

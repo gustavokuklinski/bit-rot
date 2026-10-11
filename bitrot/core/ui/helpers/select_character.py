@@ -26,7 +26,6 @@ fake = Faker()
 _cloth_item_cache = {}
 _base_player_sprite = None
 _char_preview_cache = {}
-_logo_cache = None
 
 # Strictly allow ONLY these generic clothes to be tinted
 TINTABLE_CLOTHES = {"tshirt", "pants", "jacket", "shoes", "sneakers"}
@@ -41,23 +40,6 @@ NATURAL_HAIR_COLORS = [
     (150, 150, 150)   # Gray
 ]
 
-def _get_logo_image(width):
-    """Loads, scales, and caches the game logo."""
-    global _logo_cache
-    if _logo_cache is not None and _logo_cache.get_width() == width:
-        return _logo_cache
-
-    logo_path = os.path.join(BASE_DIR, "data.rot", "icons", "logo.png")
-    if os.path.exists(logo_path):
-        try:
-            raw = pygame.image.load(logo_path).convert_alpha()
-            scale_factor = width / raw.get_width()
-            target_h = int(raw.get_height() * scale_factor)
-            _logo_cache = pygame.transform.scale(raw, (width, target_h))
-            return _logo_cache
-        except Exception as e:
-            print(f"[SelectCharacter] Error loading logo: {e}")
-    return None
 
 
 def load_player_builds():
@@ -538,45 +520,52 @@ def draw_select_character_screen(game, state, mouse_pos):
     if 'player_name' not in state or not state['player_name']:
         state['player_name'] = fake.name_male()
 
-    # --- 1. GAME LOGO AT THE TOP ---
-    logo_w = S(240)
-    logo_img = _get_logo_image(logo_w)
-
-    top_cursor_y = S(42)
-    if logo_img:
-        logo_rect = logo_img.get_rect(center=(center_x, top_cursor_y + (logo_img.get_height() // 2)))
-        game.game_screen.blit(logo_img, logo_rect)
-        top_cursor_y = logo_rect.bottom + S(10)
-    else:
-        top_cursor_y = S(45)
-
-    # --- 2. SCREEN TITLE & SUBTITLE ---
+    # --- ELEMENT SIZES & VERTICAL CENTERING ---
     title_text = font_16.render(tr('ui', "CHOOSE YOUR CHARACTER"), False, WHITE)
-    title_rect = title_text.get_rect(center=(center_x, top_cursor_y + S(40)))
+    sub_text = font_12.render(tr('ui', "Select your origin or customize your survivor"), False, (160, 160, 160))
+
+    id_bar_h = S(28)
+    card_w = S(270)
+    card_h = S(350)
+    spacing = S(25)
+    btn_h = S(42)
+
+    total_screen_h = (
+        title_text.get_height()
+        + S(10)
+        + sub_text.get_height()
+        + S(14)
+        + id_bar_h
+        + S(14)
+        + card_h
+        + S(20)
+        + btn_h
+    )
+    start_top_y = max(S(20), (GAME_HEIGHT - total_screen_h) // 2)
+
+    # 1. Title & Subtitle
+    title_rect = title_text.get_rect(center=(center_x, start_top_y + (title_text.get_height() // 2)))
     game.game_screen.blit(title_text, title_rect)
 
-    sub_text = font_12.render(tr('ui', "Select your origin or customize your survivor"), False, (160, 160, 160))
-    sub_rect = sub_text.get_rect(center=(center_x, title_rect.bottom + S(12)))
+    sub_rect = sub_text.get_rect(center=(center_x, title_rect.bottom + S(10) + (sub_text.get_height() // 2)))
     game.game_screen.blit(sub_text, sub_rect)
 
-    # --- 3. IDENTITY BAR (WIDE NAME FIELD & SEX TOGGLES) ---
-    id_bar_y = sub_rect.bottom + S(10)
+    # 2. Identity Bar (Name Field & Sex Toggles)
+    id_bar_y = sub_rect.bottom + S(14)
     cur_sex = state['base_data'].get('sex', 'Male')
 
     start_bar_x = center_x - S(255)
     name_label = font_12.render(tr('ui', "Name:"), False, (180, 180, 180))
     game.game_screen.blit(name_label, (start_bar_x, id_bar_y + S(6)))
 
-    # Generous Name Field Width (S(230))
     name_box_w = S(230)
-    name_box = pygame.Rect(start_bar_x + S(55), id_bar_y, name_box_w, S(28))
+    name_box = pygame.Rect(start_bar_x + S(55), id_bar_y, name_box_w, id_bar_h)
     pygame.draw.rect(game.game_screen, (45, 45, 45), name_box, border_radius=S(4))
     pygame.draw.rect(game.game_screen, WHITE if state.get('name_input_active') else GRAY, name_box, width=1, border_radius=S(4))
 
     name_str = state.get('player_name', '')
     name_txt_surf = font_12.render(name_str, False, WHITE)
 
-    # Text Clipping inside Name Box
     old_clip = game.game_screen.get_clip()
     game.game_screen.set_clip(name_box.inflate(-S(8), -S(4)))
     game.game_screen.blit(name_txt_surf, (name_box.x + S(8), name_box.centery - name_txt_surf.get_height() // 2))
@@ -586,15 +575,13 @@ def draw_select_character_screen(game, state, mouse_pos):
         pygame.draw.line(game.game_screen, WHITE, (cursor_x, name_box.y + S(5)), (cursor_x, name_box.bottom - S(5)), S(2))
     game.game_screen.set_clip(old_clip)
 
-    # Random Name Dice Button
-    dice_btn = pygame.Rect(name_box.right + S(6), id_bar_y, S(28), S(28))
+    dice_btn = pygame.Rect(name_box.right + S(6), id_bar_y, id_bar_h, id_bar_h)
     pygame.draw.rect(game.game_screen, (60, 60, 60), dice_btn, border_radius=S(4))
     dice_txt = font_12.render("*", False, YELLOW)
     game.game_screen.blit(dice_txt, dice_txt.get_rect(center=dice_btn.center))
 
-    # Sex Toggles
-    male_rect = pygame.Rect(dice_btn.right + S(25), id_bar_y, S(100), S(28))
-    female_rect = pygame.Rect(male_rect.right + S(8), id_bar_y, S(100), S(28))
+    male_rect = pygame.Rect(dice_btn.right + S(25), id_bar_y, S(100), id_bar_h)
+    female_rect = pygame.Rect(male_rect.right + S(8), id_bar_y, S(100), id_bar_h)
 
     pygame.draw.rect(game.game_screen, (70, 70, 70) if cur_sex == 'Male' else (35, 35, 35), male_rect, border_radius=S(4))
     pygame.draw.rect(game.game_screen, (70, 70, 70) if cur_sex == 'Female' else (35, 35, 35), female_rect, border_radius=S(4))
@@ -606,13 +593,10 @@ def draw_select_character_screen(game, state, mouse_pos):
     game.game_screen.blit(m_surf, m_surf.get_rect(center=male_rect.center))
     game.game_screen.blit(f_surf, f_surf.get_rect(center=female_rect.center))
 
-    # --- 4. CARDS CAROUSEL LAYOUT ---
-    card_w = S(270)
-    card_h = S(350)
-    spacing = S(25)
+    # 3. Cards Carousel Layout
     total_w = (card_w * 3) + (spacing * 2)
     start_x = center_x - (total_w // 2)
-    card_y = id_bar_y + S(36)
+    card_y = id_bar_y + id_bar_h + S(14)
 
     clickable_rects = {
         'cards': [],
@@ -764,14 +748,12 @@ def draw_select_character_screen(game, state, mouse_pos):
     back_w = S(160)
     rand_w = S(180)
     custom_w = S(230)
-    btn_h = S(42)
     gap = S(20)
 
     total_bottom_w = back_w + rand_w + custom_w + (gap * 2)
     start_bottom_x = center_x - (total_bottom_w // 2)
-    bottom_y = card_y + card_h + S(36)
+    bottom_y = card_y + card_h + S(20)
 
-    # 1. Back Button
     back_rect = pygame.Rect(start_bottom_x, bottom_y, back_w, btn_h)
     is_back_hover = back_rect.collidepoint(mouse_pos)
     pygame.draw.rect(game.game_screen, (80, 80, 80) if is_back_hover else (60, 60, 60), back_rect, border_radius=S(6))
@@ -782,7 +764,7 @@ def draw_select_character_screen(game, state, mouse_pos):
     # 2. Random Button (re-rolls traits for all classes + sets new random colors, hair, head equips, name & sex)
     rand_rect = pygame.Rect(back_rect.right + gap, bottom_y, rand_w, btn_h)
     is_rand_hover = rand_rect.collidepoint(mouse_pos)
-    rand_bg = (0, 120, 170) if is_rand_hover else (0, 95, 140)
+    rand_bg = (80, 80, 80) if is_rand_hover else (60, 60, 60)
     pygame.draw.rect(game.game_screen, rand_bg, rand_rect, border_radius=S(6))
     rand_txt = font_16.render(tr('ui', "Random"), False, WHITE)
     game.game_screen.blit(rand_txt, rand_txt.get_rect(center=rand_rect.center))
@@ -791,9 +773,9 @@ def draw_select_character_screen(game, state, mouse_pos):
     # 3. Custom Character Button (opens full player builder)
     custom_btn_rect = pygame.Rect(rand_rect.right + gap, bottom_y, custom_w, btn_h)
     is_custom_hover = custom_btn_rect.collidepoint(mouse_pos)
-    custom_bg = (220, 160, 30) if is_custom_hover else (180, 130, 20)
+    custom_bg = (80, 80, 80) if is_custom_hover else (60, 60, 60)
     pygame.draw.rect(game.game_screen, custom_bg, custom_btn_rect, border_radius=S(6))
-    custom_txt = font_16.render(tr('ui', "Custom Character"), False, WHITE)
+    custom_txt = font_16.render(tr('ui', "Custom Build"), False, WHITE)
     game.game_screen.blit(custom_txt, custom_txt.get_rect(center=custom_btn_rect.center))
     clickable_rects['custom_button'] = custom_btn_rect
     

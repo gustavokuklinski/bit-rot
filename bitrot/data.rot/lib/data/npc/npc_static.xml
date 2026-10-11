@@ -1,4 +1,4 @@
-<npc type="static" spawn_weight="55" is_friendly="true" is_static="true" spawn_zombies_multiplier="3">
+<npc type="static" spawn_weight="55" is_friendly="true" is_static="true" spawn_zombies_multiplier="5">
     <name value="RANDOM" />
     <sex value="RANDOM" />
     

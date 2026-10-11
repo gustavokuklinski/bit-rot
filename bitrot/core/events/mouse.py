@@ -530,6 +530,37 @@ def handle_mouse_down(game, event, mouse_pos):
         if game.chat_active:
             game.chat_active = False
 
+        if getattr(game, 'mini_gps_rect', None) and game.mini_gps_rect.collidepoint(mouse_pos):
+            from core.entities.item.item_helpers import player_has_mobile
+            if player_has_mobile(game.player):
+                mobile_item = None
+                for it_list in [game.player.inventory, game.player.belt, list(game.player.clothes.values())]:
+                    for it in it_list:
+                        if it and 'Mobile' in getattr(it, 'name', ''):
+                            mobile_item = it
+                            break
+                    if mobile_item:
+                        break
+
+                if mobile_item:
+                    pos = getattr(game, 'last_modal_positions', {}).get(
+                        'mobile', (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT)
+                    )
+                    new_mobile = {
+                        'id': uuid.uuid4(),
+                        'type': 'mobile',
+                        'item': mobile_item,
+                        'position': pos,
+                        'rect': pygame.Rect(pos[0], pos[1], MOBILE_MODAL_WIDTH, MOBILE_MODAL_HEIGHT),
+                        'is_dragging': False,
+                        'drag_offset': (0, 0),
+                        'active_tab': 'Map'
+                    }
+                    game.modals.append(new_mobile)
+                    if hasattr(game, 'sound_manager'):
+                        game.sound_manager.play_ui_hover()
+            return
+
         if game.pause_button_rect and game.pause_button_rect.collidepoint(mouse_pos):
             toggle_pause(game); return
         
