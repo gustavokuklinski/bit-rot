@@ -375,8 +375,8 @@ def handle_right_click(game, mouse_pos):
                 def check_inventory_for_maps(inv):
                     for it in inv:
                         if not it: continue
-                        if it.name.startswith("Cartography for "):
-                            chunk_str = it.name.replace("Cartography for ", "").strip()
+                        if it.name.startswith("Cartography Sector "):
+                            chunk_str = it.name.replace("Cartography Sector ", "").strip()
                             owned_maps.add(chunk_str)
                         if hasattr(it, 'inventory') and it.inventory:
                             check_inventory_for_maps(it.inventory)

@@ -154,31 +154,52 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     template_name = item_name
 
     # Check if we are dealing with a dynamic cartography map
-    is_cartography = template_name.startswith("Cartography for ")
-    if is_cartography and "[MAP_POS]" not in template_name:
-        template_name = "Cartography for [MAP_POS]"
-
-    if "[MAP_POS]" in actual_name or (is_cartography and actual_name.strip() in ("Cartography for [MAP_POS]", "Cartography for")):
+    def _pick_random_world_chunk():
+        chosen = (0, 0)
         from core.messages import _game_instance
-        game = getattr(core.messages, '_game_instance', None)
-        chosen_chunk = (0, 0)
-        
-        # Pick a random active chunk to tie this map to (excluding military and lobby chunks)
-        if game and hasattr(game, 'generator') and hasattr(game.generator, 'active_chunks'):
+        g = getattr(core.messages, '_game_instance', None)
+        if g and hasattr(g, 'generator') and hasattr(g.generator, 'active_chunks'):
             excluded = set()
-            if hasattr(game.generator, 'military_chunk') and game.generator.military_chunk is not None:
-                excluded.add(tuple(game.generator.military_chunk))
-            if hasattr(game.generator, 'lobby_chunk') and game.generator.lobby_chunk is not None:
-                excluded.add(tuple(game.generator.lobby_chunk))
+            if hasattr(g.generator, 'military_chunk') and g.generator.military_chunk is not None:
+                excluded.add(tuple(g.generator.military_chunk))
+            if hasattr(g.generator, 'lobby_chunk') and g.generator.lobby_chunk is not None:
+                excluded.add(tuple(g.generator.lobby_chunk))
 
-            valid_chunks = [c for c in game.generator.active_chunks if tuple(c) not in excluded]
-            if valid_chunks:
-                chosen_chunk = random.choice(valid_chunks)
-            elif game.generator.active_chunks:
-                chosen_chunk = random.choice(list(game.generator.active_chunks))
-                
-        actual_name = f"Cartography for {chosen_chunk[0]}_{chosen_chunk[1]}"
-        template_name = "Cartography for [MAP_POS]"
+            valid = [c for c in g.generator.active_chunks if tuple(c) not in excluded]
+            if valid:
+                chosen = random.choice(valid)
+            elif g.generator.active_chunks:
+                chosen = random.choice(list(g.generator.active_chunks))
+        return chosen
+
+    # --- DYNAMIC MAP ITEMS RESOLUTION ---
+    is_cartography = actual_name.startswith("Cartography Sector ") or actual_name.strip() in ("Cartography Sector [MAP_POS]", "Cartography Sector")
+    is_island = actual_name.strip().lower() == "island map"
+    is_dungeon_map = actual_name.startswith("Dungeon Map ") or actual_name.strip() in ("Dungeon Map [LYR_N]", "Dungeon Map") or ("[LYR_N]" in actual_name and "Sector" not in actual_name)
+    is_dungeon_sector = actual_name.startswith("Dungeon Sector ") or actual_name.strip() in ("Dungeon Sector [LYR_N] [MAP_POS]", "Dungeon Sector") or ("[LYR_N]" in actual_name and "[MAP_POS]" in actual_name)
+
+    if is_cartography:
+        template_name = "Cartography Sector [MAP_POS]"
+        if "[MAP_POS]" in actual_name or actual_name.strip() in ("Cartography Sector [MAP_POS]", "Cartography Sector"):
+            chunk = _pick_random_world_chunk()
+            actual_name = f"Cartography Sector {chunk[0]}_{chunk[1]}"
+
+    elif is_island:
+        template_name = "Island Map"
+        actual_name = "Island Map"
+
+    elif is_dungeon_map:
+        template_name = "Dungeon Map [LYR_N]"
+        if "[LYR_N]" in actual_name or actual_name.strip() in ("Dungeon Map [LYR_N]", "Dungeon Map"):
+            chosen_layer = random.choice([2, 3])
+            actual_name = f"Dungeon Map {chosen_layer}"
+
+    elif is_dungeon_sector:
+        template_name = "Dungeon Sector [LYR_N] [MAP_POS]"
+        if "[LYR_N]" in actual_name or "[MAP_POS]" in actual_name or actual_name.strip() in ("Dungeon Sector [LYR_N] [MAP_POS]", "Dungeon Sector"):
+            chosen_layer = random.choice([2, 3])
+            chunk = _pick_random_world_chunk()
+            actual_name = f"Dungeon Sector {chosen_layer} {chunk[0]}_{chunk[1]}"
 
     # --- WILDCARD CONTAINER GENERATION ---
     if is_wildcard_item_spec(item_name):

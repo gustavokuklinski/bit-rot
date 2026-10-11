@@ -511,6 +511,13 @@ def handle_mouse_down(game, event, mouse_pos):
                 if topmost_modal.get('type') == 'mobile' and topmost_modal.get('active_tab', '') != 'Map':
                     pass
                 else:
+                    dd_rect = topmost_modal.get('map_dropdown_rect')
+                    dd_popup = topmost_modal.get('map_dropdown_popup_rect')
+                    if dd_rect and dd_rect.collidepoint(mouse_pos):
+                        return
+                    if dd_popup and dd_popup.collidepoint(mouse_pos):
+                        return
+
                     map_rect = topmost_modal.get('map_area_rect')
                     if map_rect and map_rect.collidepoint(mouse_pos):
                         topmost_modal['is_dragging_map'] = True

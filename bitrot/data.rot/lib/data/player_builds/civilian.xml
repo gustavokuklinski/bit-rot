@@ -13,6 +13,6 @@
         <item name="Wallet" />
         <item name="38 Revolver" />
         <item name="Ammo Box 38" />
-        <item name="Cartography for [MAP_POS]" />
+        <item name="Cartography Sector [MAP_POS]" />
     </items>
 </player_build>

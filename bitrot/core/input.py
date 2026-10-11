@@ -248,13 +248,20 @@ def handle_input(game):
                         modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll_offset))
 
                 elif modal.get('type') == 'mobile' and modal.get('active_tab') == 'Map':
-                    map_area = modal.get('map_area_rect')
-                    if map_area and map_area.collidepoint(mouse_pos):
-                        current_zoom = modal.get('map_zoom', 4)
-                        if event.y > 0: 
-                            modal['map_zoom'] = min(16, current_zoom + 1)
-                        elif event.y < 0: 
-                            modal['map_zoom'] = max(2, current_zoom - 1)
+                    dd_popup = modal.get('map_dropdown_popup_rect')
+                    # Scroll through the dropdown list if open and hovered
+                    if modal.get('mobile_map_dd_open') and dd_popup and dd_popup.collidepoint(mouse_pos):
+                        cur_scroll = modal.get('mobile_map_dd_scroll_y', 0.0)
+                        max_s = modal.get('mobile_map_dd_max_scroll', 0)
+                        modal['mobile_map_dd_scroll_y'] = max(0.0, min(cur_scroll - event.y * 20, float(max_s)))
+                    else:
+                        map_area = modal.get('map_area_rect')
+                        if map_area and map_area.collidepoint(mouse_pos):
+                            current_zoom = modal.get('map_zoom', 4)
+                            if event.y > 0: 
+                                modal['map_zoom'] = min(16, current_zoom + 1)
+                            elif event.y < 0: 
+                                modal['map_zoom'] = max(2, current_zoom - 1)
                 
                 elif modal.get('type') == 'big_map':
                     map_area = modal.get('map_area_rect')
