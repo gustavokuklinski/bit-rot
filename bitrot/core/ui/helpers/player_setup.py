@@ -153,20 +153,29 @@ def _draw_player_build_screen(game, state, mouse_pos):
     total_buttons_width = (btn_width * 3) + (btn_gap * 2)
     start_btn_x = preset_body_rect.x + (preset_body_rect.width - total_buttons_width) // 2
     
+    # Save Button
     save_btn_rect = pygame.Rect(start_btn_x, buttons_y, btn_width, S(30))
-    pygame.draw.rect(game.game_screen, GREEN, save_btn_rect, border_radius=4)
+    is_save_hovered = save_btn_rect.collidepoint(mouse_pos)
+    save_col = (80, 80, 80) if is_save_hovered else (60, 60, 60)
+    pygame.draw.rect(game.game_screen, save_col, save_btn_rect, border_radius=4)
     save_text = font_12.render(tr('ui', "Save"), False, WHITE)
     game.game_screen.blit(save_text, save_text.get_rect(center=save_btn_rect.center))
     clickable_rects['save_button'] = save_btn_rect
     
+    # Random Button
     random_btn_rect = pygame.Rect(save_btn_rect.right + btn_gap, buttons_y, btn_width, S(30))
-    pygame.draw.rect(game.game_screen, (0, 100, 150), random_btn_rect, border_radius=4)
+    is_rand_hovered = random_btn_rect.collidepoint(mouse_pos)
+    rand_col = (80, 80, 80) if is_rand_hovered else (60, 60, 60)
+    pygame.draw.rect(game.game_screen, rand_col, random_btn_rect, border_radius=4)
     random_text = font_12.render(tr('ui', "Random"), False, WHITE)
     game.game_screen.blit(random_text, random_text.get_rect(center=random_btn_rect.center))
     clickable_rects['random_button'] = random_btn_rect
 
+    # Delete Button
     delete_btn_rect = pygame.Rect(random_btn_rect.right + btn_gap, buttons_y, btn_width, S(30))
-    pygame.draw.rect(game.game_screen, RED, delete_btn_rect, border_radius=4)
+    is_del_hovered = delete_btn_rect.collidepoint(mouse_pos)
+    del_col = (80, 80, 80) if is_del_hovered else (60, 60, 60)
+    pygame.draw.rect(game.game_screen, del_col, delete_btn_rect, border_radius=4)
     delete_text = font_12.render(tr('ui', "Delete"), False, WHITE)
     game.game_screen.blit(delete_text, delete_text.get_rect(center=delete_btn_rect.center))
     clickable_rects['delete_button'] = delete_btn_rect
@@ -1231,17 +1240,22 @@ def run_player_setup(game):
         is_client = getattr(game, 'is_client', False)
 
         if not is_client:
-            s_col = GRAY_60 if state['current_tab'] == 'World' else (40, 40, 40)
+            is_world_active = (state['current_tab'] == 'World')
+            is_world_hovered = world_btn.collidepoint(mouse_pos)
+            s_col = (80, 80, 80) if (is_world_active or is_world_hovered) else (60, 60, 60)
             pygame.draw.rect(game.game_screen, s_col, world_btn, border_radius=4)
-            pygame.draw.rect(game.game_screen, WHITE, world_btn, 1, border_radius=4)
-            game.game_screen.blit(font_12.render(tr('tab', "World"), False, WHITE), (world_btn.x + S(10), world_btn.y + S(10)))
+            world_txt = font_12.render(tr('tab', "World"), False, WHITE)
+            game.game_screen.blit(world_txt, world_txt.get_rect(center=world_btn.center))
 
-        p_col = GRAY_60 if state['current_tab'] == 'Player' else (40, 40, 40)
+        is_player_active = (state['current_tab'] == 'Player')
+        is_player_hovered = player_btn.collidepoint(mouse_pos)
+        p_col = (80, 80, 80) if (is_player_active or is_player_hovered) else (60, 60, 60)
         pygame.draw.rect(game.game_screen, p_col, player_btn, border_radius=4)
-        pygame.draw.rect(game.game_screen, WHITE, player_btn, 1, border_radius=4)
-        game.game_screen.blit(font_12.render(tr('tab', "Player"), False, WHITE), (player_btn.x + S(10), player_btn.y + S(10)))
+        player_txt = font_12.render(tr('tab', "Player"), False, WHITE)
+        game.game_screen.blit(player_txt, player_txt.get_rect(center=player_btn.center))
 
-        b_col = GRAY_80
+        is_back_hovered = back_btn.collidepoint(mouse_pos)
+        b_col = (80, 80, 80) if is_back_hovered else (60, 60, 60)
         pygame.draw.rect(game.game_screen, b_col, back_btn, border_radius=4)
         back_txt = font_12.render(tr('ui', "Back"), False, WHITE)
         txt_rect = back_txt.get_rect(center=back_btn.center)

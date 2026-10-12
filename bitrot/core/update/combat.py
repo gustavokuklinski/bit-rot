@@ -6,6 +6,7 @@ from core.update.utils import get_nearby_obstacles
 from core.messages import display_message
 from core.data.localization import tr
 from core.entities.item.item import Item
+from core.entities.zombie.zombie import Zombie
 
 def create_blood_splatter(game, target_rect, damage, direction_vector=None):
     if not hasattr(game, 'blood_stains'):
@@ -84,16 +85,23 @@ def trigger_explosion(game, x, y, damage, radius, owner, explosion_sound=None):
     })
     
     hit_radius = radius * TILE_SIZE
-    hit_rect = pygame.Rect(x - hit_radius, y - hit_radius, hit_radius*2, hit_radius*2)
+    hit_rect = pygame.Rect(x - hit_radius, y - hit_radius, hit_radius * 2, hit_radius * 2)
     
+    is_hnpc_owner = (owner is not None and type(owner).__name__ == 'NPC' and not getattr(owner, 'is_friendly', True))
+    is_zombie_owner = (owner is not None and isinstance(owner, Zombie) and getattr(owner, 'type', '') != 'animal')
+    is_animal_owner = (owner is not None and (getattr(owner, 'type', '') == 'animal' or type(owner).__name__ == 'Animal'))
+
     dead_zombies = []
     for z in game.zombies:
+        if is_hnpc_owner:
+            continue  # HNPC explosions do not damage zombies
         if not getattr(z, 'is_dead', False) and hit_rect.colliderect(z.rect):
             dist = math.hypot(z.rect.centerx - x, z.rect.centery - y)
             if dist <= hit_radius:
                 z.last_hit_sound_time = current_time 
                 is_dead = z.take_damage(damage, game, attacker=owner)
-                if is_dead: dead_zombies.append(z)
+                if is_dead:
+                    dead_zombies.append(z)
                 else:
                     if dist > 0:
                         z.knockback_velocity = [((z.rect.centerx - x) / dist) * 15, ((z.rect.centery - y) / dist) * 15]
@@ -108,12 +116,15 @@ def trigger_explosion(game, x, y, damage, radius, owner, explosion_sound=None):
                 
     dead_animals = []
     for a in getattr(game, 'active_animals', []):
+        if is_hnpc_owner or is_zombie_owner:
+            continue  # Neither HNPC nor Zombie explosions damage animals
         if not getattr(a, 'is_dead', False) and hit_rect.colliderect(a.rect):
             dist = math.hypot(a.rect.centerx - x, a.rect.centery - y)
             if dist <= hit_radius:
                 a.last_hit_sound_time = current_time 
                 is_dead = a.take_damage(damage, game, attacker=owner)
-                if is_dead: dead_animals.append(a)
+                if is_dead:
+                    dead_animals.append(a)
                 else:
                     if dist > 0:
                         a.knockback_velocity = [((a.rect.centerx - x) / dist) * 15, ((a.rect.centery - y) / dist) * 15]
@@ -129,12 +140,21 @@ def trigger_explosion(game, x, y, damage, radius, owner, explosion_sound=None):
     dead_npcs = []
     if hasattr(game, 'npcs'):
         for n in game.npcs:
+            # FNPCs ignore explosions caused by Zombies, Animals, or HNPCs
+            if getattr(n, 'is_friendly', True) and (is_zombie_owner or is_animal_owner or is_hnpc_owner):
+                continue
+
+            # HNPCs ignore explosions caused by Zombies
+            if is_zombie_owner and not getattr(n, 'is_friendly', True):
+                continue
+
             if not getattr(n, 'is_dead', False) and hit_rect.colliderect(n.rect):
                 dist = math.hypot(n.rect.centerx - x, n.rect.centery - y)
                 if dist <= hit_radius:
                     n.last_hit_sound_time = current_time 
                     is_dead = n.take_damage(damage, game, attacker=owner)
-                    if is_dead: dead_npcs.append(n)
+                    if is_dead:
+                        dead_npcs.append(n)
                     else:
                         if dist > 0:
                             n.knockback_velocity = [((n.rect.centerx - x) / dist) * 15, ((n.rect.centery - y) / dist) * 15]

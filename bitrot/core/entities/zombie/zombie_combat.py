@@ -12,6 +12,10 @@ class ZombieCombat:
         if getattr(self, 'is_dead', False) or getattr(self, 'health', 0) <= 0:
             return False
 
+        # HNPCs do not damage or kill zombies
+        if attacker is not None and type(attacker).__name__ == 'NPC' and not getattr(attacker, 'is_friendly', True):
+            return False
+
         if getattr(game, 'is_client', False):
             from core.server.network import NetMsg, send_msg
             send_msg(game.client.socket, {
@@ -112,8 +116,14 @@ class ZombieCombat:
                 
         # 2. Target is an NPC, Animal, or other Zombie
         else:
+            # Zombies ignore animals
             if getattr(target_entity, 'type', '') == 'animal' or target_entity.__class__.__name__ == 'Animal':
                 return
+
+            # Zombies ignore all NPCs (both FNPC and HNPC)
+            if hasattr(game, 'npcs') and target_entity in game.npcs:
+                return
+
             is_dead = target_entity.take_damage(damage, game, attacker=self)
             if is_dead and hasattr(game, 'npcs') and target_entity in game.npcs:
                 print("A survivor has been killed by a zombie.")

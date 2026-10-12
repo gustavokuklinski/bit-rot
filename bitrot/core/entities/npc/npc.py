@@ -408,53 +408,25 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         # Store for debug visualization
         self.current_detection_range = search_range
 
-        potential_targets = []
-        
-        for z in game.zombies:
-            if not getattr(z, 'is_dead', False):
-                potential_targets.append(z)
-
         attacker = getattr(self, 'current_attacker', None)
         is_aggroed = self.aggro_timer > 0
 
-        weapon = getattr(self, 'equipped_weapon', None)
-        search_range = getattr(core.data.config, 'NPC_DETECTION_RADIUS', 5 * TILE_SIZE)
-
-        if not self.is_friendly and game.player:
-            if getattr(game.player, 'is_aiming', False):
-                search_range *= 0.5
-            elif getattr(game.player, 'is_running', False):
-                search_range *= 1.5
-
-        is_ranged_weapon = weapon and weapon.item_type == 'weapon_ranged'
-        if is_ranged_weapon:
-            search_range = search_range * 1.5
-
-        self.current_detection_range = search_range
         potential_targets = []
-        
-        for z in game.zombies:
-            if not getattr(z, 'is_dead', False):
-                potential_targets.append(z)
 
         if self.is_friendly:
-            for npc in game.npcs:
-                if npc != self and not npc.is_dead and not npc.is_friendly:
-                    potential_targets.append(npc)
+            # FNPCs defend against hostile NPCs if necessary
             if attacker == game.player and game.player and not game.player.is_dead:
                 potential_targets.append(game.player)
             for rp in getattr(game, 'remote_players', {}).values():
                 if attacker == rp and not getattr(rp, 'is_dead', False):
                     potential_targets.append(rp)
         else:
+            # HNPCs IGNORE FNPCs, Zombies, and Animals (they only fight players)
             if game.player and not game.player.is_dead:
                 potential_targets.append(game.player)
             for rp in getattr(game, 'remote_players', {}).values():
                 if not getattr(rp, 'is_dead', False):
                     potential_targets.append(rp)
-            for npc in game.npcs:
-                if npc != self and not npc.is_dead and npc.is_friendly:
-                    potential_targets.append(npc)
 
         min_dist_to_target = float('inf')
 
@@ -772,6 +744,18 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     elif type(target_entity).__name__ == 'RemotePlayer':
                         target_entity.take_damage(damage_to_deal, game, attacker=self)
                     else:
+                        # Neither HNPC nor zombies kill animals
+                        if getattr(target_entity, 'type', '') == 'animal' or type(target_entity).__name__ == 'Animal':
+                            return
+
+                        # HNPC does not attack or kill zombies
+                        if not self.is_friendly and isinstance(target_entity, Zombie):
+                            return
+
+                        # HNPC does not attack or kill FNPCs
+                        if not self.is_friendly and hasattr(game, 'npcs') and target_entity in game.npcs and getattr(target_entity, 'is_friendly', False):
+                            return
+
                         is_dead = target_entity.take_damage(damage_to_deal, game, attacker=self)
                         if is_dead:
                             target_entity.die(game)

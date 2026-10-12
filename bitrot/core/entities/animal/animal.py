@@ -98,6 +98,11 @@ class Animal(Zombie):
         # Prevent non-hostile animals from ever damaging players
         if not self.attack_player and (target_entity == getattr(game, 'player', None) or type(target_entity).__name__ == 'RemotePlayer'):
             return
+
+        # Animals ignore and never attack FNPCs
+        if hasattr(game, 'npcs') and target_entity in game.npcs and getattr(target_entity, 'is_friendly', False):
+            return
+
         super().attack(target_entity, game)
 
     def update(self, game):
@@ -166,6 +171,11 @@ class Animal(Zombie):
         for entity in other_zombies + list(getattr(game, 'npcs', [])):
             if entity is self or getattr(entity, 'is_dead', False): 
                 continue
+
+            # Animals ignore FNPCs (do not flee from them)
+            if hasattr(game, 'npcs') and entity in game.npcs and getattr(entity, 'is_friendly', False):
+                continue
+
             dx = entity.rect.centerx - self.rect.centerx
             dy = entity.rect.centery - self.rect.centery
             dist = math.hypot(dx, dy)
@@ -245,6 +255,13 @@ class Animal(Zombie):
             
         if getattr(self, 'is_dead', False):
             return False
+
+        # Neither Zombies nor HNPCs kill animals
+        if attacker is not None:
+            if isinstance(attacker, Zombie) and getattr(attacker, 'type', '') != 'animal':
+                return False
+            if type(attacker).__name__ == 'NPC' and not getattr(attacker, 'is_friendly', True):
+                return False
 
         self.health -= amount
         self.show_health_bar_timer = 120

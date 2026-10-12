@@ -5,6 +5,7 @@ from core.entities.item.item import Item
 from core.entities.zombie.corpse import Corpse
 from core.data.config import TILE_SIZE
 from core.ui.notifications import check_milestone_progress
+from core.entities.zombie.zombie import Zombie
 
 class NPCCombat:
     def check_line_of_sight(self, target, game):
@@ -75,14 +76,25 @@ class NPCCombat:
             if self.health <= 0: return True
             return False
             
-        player = getattr(game, 'player', None)
-        
-        # --- TRIGGER HIT STATIC NPC ---
-        if (attacker == player or attacker is None) and getattr(self, 'is_static', False):
-            check_milestone_progress(game, 'hit', 'static_npc')
-        # ------------------------------
-
         if self.is_dead: return True
+
+        # FNPCs are ignored and immune to Zombies, Animals, and HNPCs
+        if getattr(self, 'is_friendly', True) and attacker is not None:
+            # Zombies and Animals
+            if isinstance(attacker, Zombie):
+                return False
+            # Hostile NPCs
+            if type(attacker).__name__ == 'NPC' and not getattr(attacker, 'is_friendly', True):
+                return False
+
+        # Zombies and Animals do not damage or kill HNPCs
+        if not getattr(self, 'is_friendly', True) and attacker is not None:
+            if isinstance(attacker, Zombie) and getattr(attacker, 'type', '') != 'animal':
+                return False
+            if getattr(attacker, 'type', '') == 'animal' or type(attacker).__name__ == 'Animal':
+                return False
+
+        player = getattr(game, 'player', None)
         
         # --- Quest NPC Invulnerability & Hostility ---
         if getattr(self, 'quest_npc', False):

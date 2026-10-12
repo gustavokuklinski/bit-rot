@@ -70,6 +70,19 @@ def update_projectiles(game, GRID_SIZE, zombies_to_remove):
             owner = getattr(p, 'owner', None)
             damage = getattr(p, 'damage', 5)
 
+            is_hnpc_owner = (owner is not None and type(owner).__name__ == 'NPC' and not getattr(owner, 'is_friendly', True))
+            is_zombie_owner = (owner is not None and isinstance(owner, Zombie))
+
+            # HNPC shots do not hurt zombies
+            if is_hnpc_owner and not is_animal:
+                projectiles_to_remove.append(p)
+                continue
+
+            # Neither HNPC nor Zombie shots hurt animals
+            if (is_hnpc_owner or is_zombie_owner) and is_animal:
+                projectiles_to_remove.append(p)
+                continue
+
             if getattr(game, 'is_client', False):
                 from core.server.network import NetMsg, send_msg
                 dx = hit_zombie.rect.centerx - p.rect.centerx
@@ -132,12 +145,25 @@ def update_projectiles(game, GRID_SIZE, zombies_to_remove):
         hit_npc = next((n for n in potential_hits if n in getattr(game, 'npcs', []) and not n.is_dead and p.rect.colliderect(n.rect)), None)
 
         if hit_npc:
+             attacker = getattr(p, 'owner', game.player) or game.player
+             is_zombie_attacker = isinstance(attacker, Zombie)
+             is_animal_attacker = (getattr(attacker, 'type', '') == 'animal' or type(attacker).__name__ == 'Animal')
+             is_hnpc_attacker = (type(attacker).__name__ == 'NPC' and not getattr(attacker, 'is_friendly', True))
+
+             # FNPCs are ignored and immune to projectiles from Zombies, Animals, and HNPCs
+             if getattr(hit_npc, 'is_friendly', True) and (is_zombie_attacker or is_animal_attacker or is_hnpc_attacker):
+                 projectiles_to_remove.append(p)
+                 continue
+
+             # Zombie projectiles do not hurt HNPCs
+             if is_zombie_attacker and not getattr(hit_npc, 'is_friendly', True):
+                 projectiles_to_remove.append(p)
+                 continue
+
              damage = getattr(p, 'damage', game.player.get_attack_damage())
              dx, dy = hit_npc.rect.centerx - p.rect.centerx, hit_npc.rect.centery - p.rect.centery
              mag = math.hypot(dx, dy)
              create_blood_splatter(game, hit_npc.rect, damage, [dx/mag, dy/mag] if mag > 0 else None)
-
-             attacker = getattr(p, 'owner', game.player) or game.player
              if game.player and game.player.active_weapon and game.player.active_weapon.item_type == 'weapon_ranged':
                   knockback_force = getattr(game.player.active_weapon, 'knockback', 0)
                   dx, dy = hit_npc.rect.centerx - game.player.rect.centerx, hit_npc.rect.centery - game.player.rect.centery

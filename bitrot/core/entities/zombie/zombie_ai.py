@@ -260,30 +260,7 @@ class ZombieAI:
         else:
             dist_to_player_sq = min_target_dist_sq
 
-        nearest_target = None
-
-        for entity in nearby_entities:
-            if getattr(entity, 'is_dead', False): 
-                continue
-            is_npc = hasattr(game, 'npcs') and entity in game.npcs
-
-            if is_npc:
-                edx = entity.rect.centerx - self.rect.centerx
-                edy = entity.rect.centery - self.rect.centery
-                entity_dist_sq = edx * edx + edy * edy
-                if entity_dist_sq < min_target_dist_sq:
-                    if getattr(entity, 'is_static', False):
-                        if not self.has_line_of_sight(entity.rect, game, current_time):
-                            continue
-                    min_target_dist_sq = entity_dist_sq
-                    nearest_target = entity
-
-        if nearest_target:
-            target_rect = nearest_target.rect
-            target_entity = nearest_target
-            dist_to_target_sq = min_target_dist_sq
-        else:
-            dist_to_target_sq = dist_to_player_sq
+        dist_to_target_sq = dist_to_player_sq
 
         detection_radius = getattr(core.data.config, 'ZOMBIE_DETECTION_RADIUS', 5 * TILE_SIZE)
         if target_entity and target_entity == game.player and getattr(game.player, 'is_aiming', False):

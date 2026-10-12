@@ -183,12 +183,12 @@ def draw_load_game_screen(game, state, mouse_pos):
     back_btn_rect = pygame.Rect(delete_btn_rect.right + spacing, btn_y, btn_w, btn_h)
 
     # Draw Load Button (Teal / Cyan theme like Apply in preferences)
-    _draw_btn(game.game_screen, load_btn_rect, "Load", mouse_pos, enabled=has_selection, base_color=(23, 162, 184))
+    _draw_btn(game.game_screen, load_btn_rect, "Load", mouse_pos, enabled=has_selection, base_color=(80, 80, 80))
     if has_selection:
         clickable_rects['load_button'] = load_btn_rect
 
     # Draw Delete Button (Red theme like Reset in preferences/keybinds)
-    _draw_btn(game.game_screen, delete_btn_rect, "Delete", mouse_pos, enabled=has_selection, base_color=(200, 50, 50))
+    _draw_btn(game.game_screen, delete_btn_rect, "Delete", mouse_pos, enabled=has_selection, base_color=(80, 80, 80))
     if has_selection:
         clickable_rects['delete_button'] = delete_btn_rect
 
