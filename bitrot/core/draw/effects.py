@@ -308,14 +308,20 @@ def draw_screen_effects(game, offset_x, offset_y, zoom):
     if anxiety_level > 30:
         try:
             if not hasattr(game, 'crt_texture') or game.crt_texture.get_width() != dyn_w + 20:
-                game.crt_texture = pygame.transform.scale(game.assets.get('crt_texture'), (dyn_w + 20, dyn_h + 20)).convert_alpha()
+                raw_crt = game.assets.get('crt_texture')
+                if raw_crt:
+                    game.crt_texture = pygame.transform.scale(raw_crt, (dyn_w + 20, dyn_h + 20)).convert_alpha()
+                else:
+                    game.crt_texture = None
         except Exception: 
             game.crt_texture = None
             
         if game.crt_texture:
             game.game_screen.set_clip(game_viewport_rect)
             shake = int((anxiety_level / 100) * 5)
-            game.game_screen.blit(game.crt_texture, (v_left + random.randint(-shake, shake) - 10, random.randint(-shake, shake) - 10))
+            jitter_surf = game.crt_texture.copy()
+            jitter_surf.set_alpha(min(110, int(anxiety_level * 1.1)))
+            game.game_screen.blit(jitter_surf, (v_left + random.randint(-shake, shake) - 10, random.randint(-shake, shake) - 10))
             game.game_screen.set_clip(None)
 
     # --- GUN FLASH ---

@@ -71,7 +71,7 @@ def draw_clock_tab(surface, game, modal, assets):
     # --- 3. Stats (Kills) ---
     zombies_killed = game.zombies_killed
     kills_text = f"{tr('ui', 'Kills:')} {zombies_killed}"
-    kills_surf = font_14.render(kills_text, False, WHITE) 
+    kills_surf = font_12.render(kills_text, False, WHITE) 
     kills_rect = kills_surf.get_rect(center=(center_x, y_offset))
     surface.blit(kills_surf, kills_rect)
 
@@ -87,29 +87,10 @@ def draw_clock_tab(surface, game, modal, assets):
     except Exception:
         alive_text = f"{tr('ui', 'Survived:')} --"
         
-    alive_surf = font_14.render(alive_text, False, WHITE)
+    alive_surf = font_12.render(alive_text, False, WHITE)
     alive_rect = alive_surf.get_rect(center=(center_x, y_offset))
     surface.blit(alive_surf, alive_rect)
 
     y_offset += 20
 
-    # --- 5. Weather Info ---
-    try:
-        current_weather = getattr(game.world_time, 'weather', 'CLEAR')
-        current_state = getattr(game.world_time, 'state', 'DAY')
-        is_night = current_state in ["NIGHT", "TRANSITION_TO_NIGHT"]
-
-        if current_weather == 'RAIN':
-            weather_text = tr('ui', "Rain")
-        elif current_weather == 'FOG':
-            weather_text = tr('ui', "Fog")
-        elif current_weather == 'RAIN_FOG':
-            weather_text = tr('ui', "Rain with Fog")
-        else:
-            weather_text = tr('ui', "Night") if is_night else tr('ui', "Day")
-    except Exception:
-        weather_text = tr('ui', "Day")
-        
-    weather_surf = font_12.render(weather_text, False, WHITE)
-    weather_rect = weather_surf.get_rect(center=(center_x, y_offset))
-    surface.blit(weather_surf, weather_rect)
+    

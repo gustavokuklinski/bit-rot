@@ -773,7 +773,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
     chunk_trans = get_available_chunk_transition(game)
     if chunk_trans:
         target_obj = game.player.vehicle if getattr(game.player, 'vehicle', None) else game.player
-        tip_text = get_tooltip_tr('chunk_travel', "Travel [{key}]").replace('{key}', get_key_name('interact'))
+        tip_text = get_tooltip_tr('chunk_travel', "Go to sector [{key}]").replace('{key}', get_key_name('interact'))
         interactables.append({'rect': target_obj.rect, 'tip': tip_text})
 
     for obj in find_nearby_containers(game):

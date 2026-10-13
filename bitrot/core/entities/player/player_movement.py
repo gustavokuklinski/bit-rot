@@ -17,7 +17,7 @@ from core.data.localization import tr
 from core.systems.utils import resolve_stuck_in_obstacle
 
 def get_available_chunk_transition(game):
-    """Checks if player or vehicle is at an active chunk exit boundary."""
+    """Checks if player or vehicle is at an active chunk exit boundary and positioned at the connection."""
     if not getattr(game, 'player', None) or getattr(game, 'is_giant_map', False):
         return None
 
@@ -48,6 +48,17 @@ def get_available_chunk_transition(game):
     else:
         return None
 
+    # Connection corridor geometry (centered along each boundary)
+    cx_px = chunk_width_px // 2
+    cy_px = chunk_height_px // 2
+    corridor_tolerance = 4.5 * TILE_SIZE  # Must be within corridor opening
+
+    # Only allow teleportation when player reaches the connection opening
+    if dir_x != 0 and abs(target.rect.centery - cy_px) > corridor_tolerance:
+        return None
+    if dir_y != 0 and abs(target.rect.centerx - cx_px) > corridor_tolerance:
+        return None
+
     new_gx = gx + dir_x
     new_gy = gy + dir_y
 
@@ -59,8 +70,16 @@ def get_available_chunk_transition(game):
             if 0 <= gy < len(cg) and 0 <= gx < len(cg[0]):
                 if not cg[gy][gx].get(conn_key, False):
                     return None
+        else:
+            return None
     elif layer in (2, 3):
-        if hasattr(game, 'generator') and hasattr(game.generator, 'active_chunks'):
+        conn_key = f'l{layer}_' + ('right' if dir_x == 1 else ('left' if dir_x == -1 else ('bottom' if dir_y == 1 else ('top' if dir_y == -1 else ''))))
+        if hasattr(game, 'generator') and hasattr(game.generator, 'connections_grid'):
+            cg = game.generator.connections_grid
+            if 0 <= gy < len(cg) and 0 <= gx < len(cg[0]):
+                if not cg[gy][gx].get(conn_key, False):
+                    return None
+        elif hasattr(game, 'generator') and hasattr(game.generator, 'active_chunks'):
             if (new_gx, new_gy) not in game.generator.active_chunks:
                 return None
 
@@ -124,17 +143,17 @@ def perform_chunk_transition(game, dir_x, dir_y, new_map, layer):
     cy_px = new_height // 2
 
     if dir_x == 1:
-        dest_x = 2 * TILE_SIZE
+        dest_x = 3 * TILE_SIZE
         dest_y = cy_px if layer in (2, 3) else (cy_px + (target.y - old_height / 2.0))
     elif dir_x == -1:
-        dest_x = new_width - (3 * TILE_SIZE)
+        dest_x = new_width - (4 * TILE_SIZE)
         dest_y = cy_px if layer in (2, 3) else (cy_px + (target.y - old_height / 2.0))
     elif dir_y == 1:
         dest_x = cx_px if layer in (2, 3) else (cx_px + (target.x - old_width / 2.0))
-        dest_y = 2 * TILE_SIZE
+        dest_y = 3 * TILE_SIZE
     elif dir_y == -1:
         dest_x = cx_px if layer in (2, 3) else (cx_px + (target.x - old_width / 2.0))
-        dest_y = new_height - (3 * TILE_SIZE)
+        dest_y = new_height - (4 * TILE_SIZE)
     else:
         dest_x = cx_px
         dest_y = cy_px

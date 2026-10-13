@@ -89,6 +89,13 @@ def load_assets():
 
     try:
         # This image should be a white circle fading to transparent
+        assets['ui_crt_texture'] = pygame.image.load(SPRITE_PATH + 'ui/ui_crt_overlay.png').convert_alpha()
+    except pygame.error as e:
+        print(f"Error loading UI CRT texture: {e}")
+        assets['ui_crt_texture'] = None
+
+    try:
+        # This image should be a white circle fading to transparent
         assets['cone_texture'] = pygame.image.load(os.path.join(SPRITE_PATH, 'ui', 'cone_light.png')).convert_alpha()
     except pygame.error as e:
         print(f"Error loading Cone texture: {e}")

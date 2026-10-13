@@ -338,6 +338,10 @@ class PreferencesMenuUI:
                         for key, setting_obj in settings.items():
                             if 'default' in setting_obj:
                                 setting_obj['value'] = setting_obj['default']
+                                if key in ('ui_crt_filter', 'crt_filter'):
+                                    bool_state = str(setting_obj['default']).lower() == 'true'
+                                    setattr(core.data.config, 'UI_CRT_FILTER', bool_state)
+                                    setattr(core.data.config, 'CRT_FILTER', bool_state)
                                 if 'volume' in key:
                                     try:
                                         def_val = float(setting_obj['default'])
@@ -400,6 +404,12 @@ class PreferencesMenuUI:
                                 if is_bool:
                                     new_val = "false" if str_val == "true" else "true"
                                     self.settings_data[block][key]['value'] = new_val
+
+                                    if key in ('ui_crt_filter', 'crt_filter'):
+                                        bool_state = (new_val == 'true')
+                                        setattr(core.data.config, 'UI_CRT_FILTER', bool_state)
+                                        setattr(core.data.config, 'CRT_FILTER', bool_state)
+
                                     if game and hasattr(game, 'sound_manager'):
                                         game.sound_manager.play_ui_hover()
                                 elif is_cycle:
@@ -493,6 +503,8 @@ class PreferencesMenuUI:
                 raw_label = val_data.get('name', key)
                 if key in ['ui_resolution', 'resolution']:
                     raw_label = "Resolution"
+                elif key in ['ui_crt_filter', 'crt_filter']:
+                    raw_label = "CRT Filter"
                 display_label = tr('ui', raw_label)
                 lbl = font_12.render(display_label + ":", False, WHITE)
                 screen.blit(lbl, (row_rect.x + S(10), row_rect.centery - lbl.get_height()//2))

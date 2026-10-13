@@ -24,6 +24,7 @@ from core.ui.helpers.player_setup import run_player_setup
 # The newly refactored systems
 from core.systems.spatial_manager import SpatialManager
 from core.systems.discord_manager import DiscordManager
+from core.states.splash import run_splash
 from core.states.menu import run_menu
 from core.states.load_game_menu import run_load_game_menu
 from core.states.loading import run_loading
@@ -71,7 +72,8 @@ class Game:
         self.dt_mult = 1.0
         self.zoom_level = getattr(core.data.config, 'START_ZOOM', 1.0)
         self.assets = load_assets()
-        self.game_state = 'MENU'
+
+        self.game_state = 'SPLASH'
         self.running = True
         
         self.CHUNK_SIZE = CHUNK_SIZE if 'CHUNK_SIZE' in globals() else 128
@@ -218,8 +220,8 @@ class Game:
         self.player_view_radius = BASE_PLAYER_VIEW_RADIUS
         self.sound_manager = SoundManager()
         
-        if core.data.config.UI_BACKGROUND_MUSIC:
-            self.sound_manager.play_music('data.rot/lib/sfx/ui/music.ogg', volume=core.data.config.VOLUME_MUSIC)
+        #if core.data.config.UI_BACKGROUND_MUSIC:
+        #    self.sound_manager.play_music('data.rot/lib/sfx/ui/music.ogg', volume=core.data.config.VOLUME_MUSIC)
 
         self.world_min_x = 0
         self.world_min_y = 0
@@ -458,7 +460,9 @@ class Game:
                         break
 
                 # The State Machine Dispatcher
-                if self.game_state == 'MENU':
+                if self.game_state == 'SPLASH':
+                    run_splash(self)
+                elif self.game_state == 'MENU':
                     run_menu(self)
                 elif self.game_state == 'LOAD_GAME_MENU':
                     run_load_game_menu(self)
@@ -484,7 +488,42 @@ class Game:
                 self.client.disconnect()
             self.logger.info("Game Execution Ended safely.")
 
+    def _draw_crt_filter(self):
+        """Draws the CRT overlay across the entire display screen."""
+        screen_w, screen_h = self.game_screen.get_size()
+
+        # Cache/rescale CRT overlay whenever resolution changes
+        if (not hasattr(self, '_crt_overlay_surface') or 
+            self._crt_overlay_surface is None or 
+            self._crt_overlay_surface.get_size() != (screen_w, screen_h)):
+            
+            raw_texture = self.assets.get('ui_crt_texture') if hasattr(self, 'assets') and self.assets else None
+            if raw_texture:
+                self._crt_overlay_surface = pygame.transform.scale(raw_texture, (screen_w, screen_h)).convert_alpha()
+            else:
+                self._crt_overlay_surface = self._create_fallback_crt_surface(screen_w, screen_h)
+
+        if self._crt_overlay_surface:
+            self.game_screen.blit(self._crt_overlay_surface, (0, 0))
+
+    def _create_fallback_crt_surface(self, width, height):
+        """Procedural CRT scanlines and vignette fallback if texture asset is missing."""
+        surf = pygame.Surface((width, height), pygame.SRCALPHA)
+        # Scanlines (alternating subtle dark lines)
+        scanline_color = (0, 0, 0, 50)
+        for y in range(0, height, 2):
+            pygame.draw.line(surf, scanline_color, (0, y), (width, y), 1)
+        # Vignette edge darkening
+        vignette_color = (0, 0, 0, 110)
+        pygame.draw.rect(surf, vignette_color, (0, 0, width, height), 4)
+        return surf
+
     def _update_screen(self):
+        # Draw CRT filter if enabled in preferences
+        if getattr(core.data.config, 'UI_CRT_FILTER', getattr(core.data.config, 'CRT_FILTER', True)):
+            if self.game_state != 'SPLASH':
+                self._draw_crt_filter()
+
         pygame.display.flip()
         self.dt_ms = self.clock.tick(60)
         if self.dt_ms > 100: 

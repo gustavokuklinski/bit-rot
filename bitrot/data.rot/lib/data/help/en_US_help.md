@@ -83,6 +83,10 @@ Special thanks for the players:
 * OpenGameArt.org - Music
 
 **Software**
-Aseprite
-Python 3.11
+* Aseprite
+* GIMP
+* PhotoCraft
+* Python 3.11
+* VSCode
+* Gemma/Gemini
 

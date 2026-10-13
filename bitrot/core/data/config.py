@@ -138,6 +138,8 @@ ANIMAL_RESPAWN = True
 # PREFERENCES DEFAULTS
 UI_BACKGROUND_MUSIC = True
 UI_SHOW_TUTORIAL_DEFAULT = True
+UI_CRT_FILTER = True
+CRT_FILTER = True
 RESOLUTION = "1280x720"
 WINDOW_MODE = "fullscreen"
 UI_SCALE = 1
@@ -286,6 +288,7 @@ def load_settings(world_preset="world"):
     global NPC_MAX_CHUNK, NPCS_PER_SPAWN, NPC_RESPAWN, ZOMBIE_MAX_CHUNK
     global MAP_CHUNKS, CHUNK_SIZE, WORLD_SEED
     global UI_BACKGROUND_MUSIC, UI_SHOW_TUTORIAL_DEFAULT, RESOLUTION, WINDOW_MODE
+    global UI_CRT_FILTER, CRT_FILTER
     global ANIMAL_MAX_CHUNK, ANIMALS_PER_SPAWN, ANIMAL_RESPAWN, ANIMAL_SPAWN_COUNT
     global VOLUME_MUSIC, VOLUME_BACKGROUND, VOLUME_ATMOSPHERIC, VOLUME_ANIMAL, VOLUME_NPC, VOLUME_ZOMBIE, VOLUME_PLAYER, VOLUME_VEHICLE, VOLUME_ITEMS, VOLUME_MAP
     global GAME_LANGUAGE 
@@ -306,6 +309,13 @@ def load_settings(world_preset="world"):
                 if val_lang is not None: GAME_LANGUAGE = val_lang.get('value', 'en_US')
                 val_mode = ui_config.find('window_mode')
                 if val_mode is not None: WINDOW_MODE = val_mode.get('value', 'windowed')
+
+                val_crt = ui_config.find('ui_crt_filter')
+                if val_crt is None:
+                    val_crt = ui_config.find('crt_filter')
+                if val_crt is not None:
+                    UI_CRT_FILTER = str(val_crt.get('value')).lower() == 'true'
+                    CRT_FILTER = UI_CRT_FILTER
 
                 # Load and apply custom game resolution
                 val_res = ui_config.find('ui_resolution')

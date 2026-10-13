@@ -3,7 +3,7 @@ import random
 import os
 
 # --- CONFIGURATION ---
-OUTPUT_PATH = './vhs_glitch_overlay.png' 
+OUTPUT_PATH = './crt_overlay.png' 
 IMAGE_SIZE = (800, 800) 
 
 def generate_vhs_texture():

@@ -1031,65 +1031,52 @@ class ProceduralGeneratorChunk:
                     if ground_tile != road_tile and ground_tile != sand_tile and ground_tile != dirt_tile and ground_tile != getattr(self, 'water_tile', 'water_01'):
                          layers['ground'][y][x] = 'bg_grass'
 
-        # Border enforcement
-        pathway_tiles = [road_tile, dirt_tile, sand_tile]
-        clear_radius = 2 
-        
+        # Border enforcement on Layer 1: '@' walls on top of sand, only on land
+        sand_border_tile = getattr(self, 'sand_tile', 'beach_sand_01')
+        water_tile_name = getattr(self, 'water_tile', 'water_01')
+
         def apply_border_wall(bx, by, is_horizontal):
-            if is_in_connector_zone(bx, by):
+            # Check if this perimeter tile is part of an active connection corridor
+            is_connection_open = False
+            if is_horizontal:
+                if (by == 0 and conns['top']) or (by == h - 1 and conns['bottom']):
+                    if abs(bx - cx) <= connector_radius:
+                        is_connection_open = True
+            else:
+                if (bx == 0 and conns['left']) or (bx == w - 1 and conns['right']):
+                    if abs(by - cy) <= connector_radius:
+                        is_connection_open = True
+
+            # If it is the active connection corridor, keep passage open for road
+            if is_connection_open or is_in_connector_zone(bx, by):
                 layers['base'][by][bx] = ' '
                 return
 
+            # Keep templates/structures protected (e.g. port docks)
             if layers.get('protected_mask') and layers['protected_mask'][by][bx] == 1:
                 return
             if any(pr.collidepoint(bx, by) for pr in placed_rects):
                 return
 
-            ground = layers['ground'][by][bx]
-            if ground == getattr(self, 'water_tile', 'water_01') or 'sand' in ground or 'beach' in ground:
+            ground_char = layers['ground'][by][bx]
+
+            # "Only place the border if the chunk is land" -> If water, do not place '@'
+            if ground_char == water_tile_name or 'water' in str(ground_char).lower():
+                layers['base'][by][bx] = ' '
                 return
 
-            if is_horizontal:
-                if (by == 0 and coast_top) or (by == h - 1 and coast_bottom):
-                    return
-            else:
-                if (bx == 0 and coast_left) or (bx == w - 1 and coast_right):
-                    return
+            # "Place the border on the top of sand" -> Set ground to sand, base to '@'
+            layers['ground'][by][bx] = sand_border_tile
+            layers['base'][by][bx] = '@'
+            occupied_mask[by][bx] = 1
 
-            is_near_path = False
-            if is_horizontal:
-                if abs(bx - cx) <= clear_radius:
-                    if (by == 0 and conns['top']) or (by == h - 1 and conns['bottom']):
-                        is_near_path = True
-            else:
-                if abs(by - cy) <= clear_radius:
-                    if (bx == 0 and conns['left']) or (bx == w - 1 and conns['right']):
-                        is_near_path = True
-                        
-            if not is_near_path:
-                # Remove '@' wall borders on Layer 1: keep perimeter open
-                if layers['base'][by][bx] == '@':
-                    layers['base'][by][bx] = ' '
-            else:
-                layers['base'][by][bx] = ' '
-                if layers['ground'][by][bx] not in pathway_tiles:
-                    layers['ground'][by][bx] = dirt_tile
-                
         for x in range(w):
             apply_border_wall(x, 0, True)
-            apply_border_wall(x, h-1, True)
-            
+            apply_border_wall(x, h - 1, True)
+
         for y in range(h):
             apply_border_wall(0, y, False)
-            apply_border_wall(w-1, y, False)
-
-        # Clear any remaining '@' on Layer 1 outer perimeter
-        for x in range(w):
-            if layers['base'][0][x] == '@': layers['base'][0][x] = ' '
-            if layers['base'][h - 1][x] == '@': layers['base'][h - 1][x] = ' '
-        for y in range(h):
-            if layers['base'][y][0] == '@': layers['base'][y][0] = ' '
-            if layers['base'][y][w - 1] == '@': layers['base'][y][w - 1] = ' '
+            apply_border_wall(w - 1, y, False)
 
         # 9. Spawns
         if hasattr(self, '_scatter_zombies'):

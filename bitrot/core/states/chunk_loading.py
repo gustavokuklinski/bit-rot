@@ -97,16 +97,16 @@ def run_chunk_loading(game):
 
     if not is_ready:
         # 3. Loading Dots at Center-Bottom
-        dots = "." * ((current_time // 350) % 4)
+        dots = "." * ((current_time // 350) % 5)
         loading_text = f"{loading_title}{dots}"
         
         # Pill backing
         text_surf = font_16.render(loading_text, False, WHITE)
         pill_rect = text_surf.get_rect(center=(center_x, bottom_y)).inflate(40, 16)
         pill_surf = pygame.Surface((pill_rect.width, pill_rect.height), pygame.SRCALPHA)
-        pill_surf.fill((0, 0, 0, 180))
+        pill_surf.fill((0, 0, 0, 0.0))
         game.game_screen.blit(pill_surf, pill_rect.topleft)
-        pygame.draw.rect(game.game_screen, (80, 80, 80), pill_rect, 1, border_radius=6)
+        #pygame.draw.rect(game.game_screen, (80, 80, 80), pill_rect, 1, border_radius=6)
 
         game.game_screen.blit(text_surf, text_surf.get_rect(center=pill_rect.center))
     else:
@@ -125,11 +125,11 @@ def run_chunk_loading(game):
         elif not is_hovered:
             game._chunk_btn_hovered = False
 
-        bg_color = (0, 150, 0) if is_hovered else (0, 110, 0)
-        border_color = (120, 255, 120) if is_hovered else WHITE
+        bg_color = (80, 80, 80) if is_hovered else (60, 60, 60)
+        #border_color = (120, 255, 120) if is_hovered else WHITE
 
         pygame.draw.rect(game.game_screen, bg_color, btn_rect, border_radius=6)
-        pygame.draw.rect(game.game_screen, border_color, btn_rect, 1, border_radius=6)
+        #pygame.draw.rect(game.game_screen, border_color, btn_rect, 1, border_radius=6)
 
         btn_txt = font_16.render(tr('ui', "Click to go"), False, WHITE)
         game.game_screen.blit(btn_txt, btn_txt.get_rect(center=btn_rect.center))
