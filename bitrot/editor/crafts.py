@@ -3,8 +3,14 @@ import os
 import re
 import xml.etree.ElementTree as ET
 from editor.config import GAME_ROOT
-from editor.ui import UITextBox, UIDropdown, UIAttributeList, UITheme, draw_styled_button
+from editor.ui import (
+    UITextBox, UIDropdown, UIAttributeList, UITheme, 
+    draw_styled_button, FocusManager
+)
 
+# ----------------------------------------------------------------------
+# CRAFT EDITOR WITH TAB SYSTEM & IN-PLACE SYNC
+# ----------------------------------------------------------------------
 class CraftEditor:
     def __init__(self, y_offset, width, height, font, item_tiles):
         self.y_offset = y_offset
@@ -13,30 +19,35 @@ class CraftEditor:
         self.font = font
         self.item_tiles = item_tiles
         
+        self.tab_bar_h = 36
+        self.sidebar_w = 300
         self.craft_dir = os.path.join(GAME_ROOT, 'lib', 'data', 'craft')
         self.recipes = {} 
-        self.selected_file = None
-        
-        self.form_scroll = 0
-        self.max_scroll = 0
-        self.dragging_form = False
-        self.form_start_y = 0
-        self.form_start_offset = 0
-        self.form_thumb_rect = None
-        self.form_track_rect = None
-        
-        self.sidebar_w = 300
+
+        # Multi-tab system
+        self.open_tabs = []
+        self.active_tab_idx = -1
+        self.tab_scroll_x = 0
+        self.max_tab_scroll = 0
+        self.dragging_tab_scroll = False
+        self.tab_scroll_start_x = 0
+        self.tab_scroll_start_offset = 0
+        self.tab_thumb_rect = None
+        self.close_confirm_dialog = None
+
+        # Sidebar Scroll
         self.sidebar_scroll = 0
         self.max_sidebar_scroll = 0
         self.dragging_sidebar = False
         self.sidebar_start_y = 0
         self.sidebar_start_offset = 0
         self.sidebar_thumb_rect = None
-        self.sidebar_track_rect = None
-        
-        self.base_inputs = {}
-        self.ing_rows = [] 
-        self.res_rows = []
+
+        # Form Scroll Dragging
+        self.dragging_form = False
+        self.form_start_y = 0
+        self.form_start_offset = 0
+        self.form_thumb_rect = None
         
         self.save_btn = pygame.Rect(0, 0, 130, 35)
         self.duplicate_btn = pygame.Rect(0, 0, 130, 35)
@@ -45,7 +56,6 @@ class CraftEditor:
         self.add_ing_btn = pygame.Rect(0, 0, 90, 28)
         self.add_res_btn = pygame.Rect(0, 0, 90, 28)
         
-        # Sidebar UI: Search bar and + New Craft button
         self.search_input = UITextBox(10, self.y_offset + 38, self.sidebar_w - 20, 28, self.font, "")
         self.new_btn = pygame.Rect(10, self.y_offset + 72, self.sidebar_w - 20, 30)
 
@@ -54,6 +64,8 @@ class CraftEditor:
         self.magazine_opts = []
 
         self.load_xmls()
+        if self.recipes:
+            self.open_tab_recipe(sorted(self.recipes.keys())[0])
         
     @property
     def filtered_recipes(self):
@@ -65,8 +77,7 @@ class CraftEditor:
     def resize(self, width, height):
         self.width = width
         self.height = height
-        if self.selected_file is not None:
-            self.layout_form()
+        self.layout_form()
 
     def build_dynamic_options(self):
         types = set()
@@ -99,7 +110,6 @@ class CraftEditor:
                     opts_dict[n] = {"label": n, "value": n}
                 
         self.item_opts = list(opts_dict.values())
-        
         self.magazine_opts = [{"label": "None", "value": ""}]
         item_xml_dir = os.path.join(GAME_ROOT, 'lib', 'data', 'items')
         
@@ -114,16 +124,11 @@ class CraftEditor:
                             if name:
                                 icon = self.item_tiles.get(name)
                                 self.magazine_opts.append({"label": name, "value": name, "icon": icon})
-                    except Exception as e: pass
-                        
-        if "type" in self.base_inputs: self.base_inputs["type"].options = self.type_opts
-        if "output" in self.base_inputs: self.base_inputs["output"].options = self.item_opts
-        if "magazine" in self.base_inputs: self.base_inputs["magazine"].options = self.magazine_opts
+                    except: pass
 
     def load_xmls(self):
         self.recipes.clear()
-        if not os.path.exists(self.craft_dir): 
-            os.makedirs(self.craft_dir)
+        if not os.path.exists(self.craft_dir): os.makedirs(self.craft_dir)
             
         for filename in sorted(os.listdir(self.craft_dir)):
             if filename.endswith(".xml"):
@@ -139,9 +144,11 @@ class CraftEditor:
                         
                     ings = []
                     for ing in root.findall('ingredient'):
+                        # Ensure destroy boolean is accurately parsed
+                        d_val = ing.get('destroy', 'false').lower() in ['true', '1', 'yes']
                         ings.append({
                             "name": ing.get('name', ''),
-                            "destroy": ing.get('destroy', 'false').lower() == 'true',
+                            "destroy": d_val,
                             "amount": ing.get('amount', '1')
                         })
                     data["ingredients"] = ings
@@ -154,126 +161,165 @@ class CraftEditor:
                             "chance": res.get('chance', '')
                         })
                     data["results"] = ress
-                    
                     self.recipes[filename] = {"data": data}
-                        
-                except Exception as e: pass
+                except: pass
                     
         self.build_dynamic_options()
 
-    def generate_auto_filename(self):
-        if self.selected_file is False:
-            c = self.base_inputs.get("craft").text.lower() if "craft" in self.base_inputs else ""
-            t = self.base_inputs.get("type").text.lower().replace(" ", "_") if "type" in self.base_inputs else ""
-            o = self.base_inputs.get("output").text.lower().replace(" ", "_").strip("[]") if "output" in self.base_inputs else ""
-            
-            parts = [x for x in [c, t, o] if x]
-            if not parts:
-                auto_name = "new_craft.xml"
-            else:
-                auto_name = "_".join(parts) + ".xml"
-                
-            self.base_inputs["filename"].text = auto_name
+    def get_current_tab(self):
+        if 0 <= self.active_tab_idx < len(self.open_tabs):
+            return self.open_tabs[self.active_tab_idx]
+        return None
 
-    def select_recipe(self, filename):
-        self.selected_file = filename
-        self.form_scroll = 0
-        self.base_inputs.clear()
-        self.ing_rows.clear()
-        self.res_rows.clear()
-        
-        data = self.recipes.get(filename, {}).get("data", {}) if filename else {}
-        
-        self.base_inputs["filename"] = UITextBox(0, 0, 480, 30, self.font, filename or "")
-        
+    def get_tab_snapshot(self, tab):
+        return {
+            "fname": tab["base_inputs"]["filename"].text.strip(),
+            "craft": tab["base_inputs"]["craft"].text,
+            "type": tab["base_inputs"]["type"].text,
+            "output": tab["base_inputs"]["output"].text,
+            "magazine": tab["base_inputs"]["magazine"].text,
+            "req_level": tab["base_inputs"]["req_level"].text,
+            "gain_xp": tab["base_inputs"]["gain_xp"].text,
+            "time": tab["base_inputs"]["time"].text.strip(),
+            "amount": tab["base_inputs"]["amount"].text.strip(),
+            "ings": [(r["item"].text, r["destroy"], r["amount"].text.strip(), r["group"]) for r in tab["ing_rows"]],
+            "ress": [(r["item"].text, r["amount"].text.strip(), r["chance"].text.strip(), r["group"]) for r in tab["res_rows"]]
+        }
+
+    def is_tab_modified(self, tab):
+        if not tab.get("saved_snapshot"): return False
+        return self.get_tab_snapshot(tab) != tab["saved_snapshot"]
+
+    def create_tab_structure(self, filename, data):
+        base_inputs = {}
+        base_inputs["filename"] = UITextBox(0, 0, 480, 30, self.font, filename or "new_craft.xml")
         craft_opts = [{"label": "Create", "value": "create"}, {"label": "Repair", "value": "repair"}, {"label": "Dismantle", "value": "dismantle"}]
-        self.base_inputs["craft"] = UIDropdown(0, 0, 480, 30, self.font, craft_opts, data.get("craft", "create"))
-        self.base_inputs["type"] = UIDropdown(0, 0, 480, 30, self.font, self.type_opts, data.get("type", ""), searchable=True)
-        self.base_inputs["output"] = UIDropdown(0, 0, 480, 30, self.font, self.item_opts, data.get("output", ""), searchable=True)
-        
-        self.base_inputs["magazine"] = UIDropdown(0, 0, 480, 30, self.font, self.magazine_opts, data.get("magazine", ""), searchable=True)
+        base_inputs["craft"] = UIDropdown(0, 0, 480, 30, self.font, craft_opts, data.get("craft", "create"))
+        base_inputs["type"] = UIDropdown(0, 0, 480, 30, self.font, self.type_opts, data.get("type", ""), searchable=True)
+        base_inputs["output"] = UIDropdown(0, 0, 480, 30, self.font, self.item_opts, data.get("output", ""), searchable=True)
+        base_inputs["magazine"] = UIDropdown(0, 0, 480, 30, self.font, self.magazine_opts, data.get("magazine", ""), searchable=True)
         
         for f in ["time", "amount"]:
-            self.base_inputs[f] = UITextBox(0, 0, 480, 30, self.font, data.get(f, ""))
+            base_inputs[f] = UITextBox(0, 0, 480, 30, self.font, data.get(f, ""))
             
-        self.base_inputs["req_level"] = UIAttributeList(0, 0, 480, 145, self.font, data.get("req_level", ""))
-        self.base_inputs["gain_xp"] = UIAttributeList(0, 0, 480, 145, self.font, data.get("gain_xp", ""))
-            
-        if self.selected_file is False:
-            self.generate_auto_filename()
-            
+        base_inputs["req_level"] = UIAttributeList(0, 0, 480, 145, self.font, data.get("req_level", ""))
+        base_inputs["gain_xp"] = UIAttributeList(0, 0, 480, 145, self.font, data.get("gain_xp", ""))
+
+        ing_rows = []
         for ing in data.get("ingredients", []):
             n = ing["name"]
+            d_val = ing["destroy"]
+            is_destroy = d_val.lower() in ["true", "1", "yes"] if isinstance(d_val, str) else bool(d_val)
+            
             if n.startswith('[') and n.endswith(']'):
                 items = [x.strip() for x in n[1:-1].split(',')]
                 if items:
-                    self.add_ing_row(items[0], ing["destroy"], ing["amount"], group=False)
+                    ing_rows.append(self._build_ing_row(items[0], is_destroy, ing["amount"], group=False))
                     for item in items[1:]:
-                        self.add_ing_row(item, ing["destroy"], ing["amount"], group=True)
+                        ing_rows.append(self._build_ing_row(item, is_destroy, ing["amount"], group=True))
             else:
-                self.add_ing_row(n, ing["destroy"], ing["amount"], group=False)
+                ing_rows.append(self._build_ing_row(n, is_destroy, ing["amount"], group=False))
             
+        res_rows = []
         for res in data.get("results", []):
             n = res["name"]
             if n.startswith('[') and n.endswith(']'):
                 items = [x.strip() for x in n[1:-1].split(',')]
                 if items:
-                    self.add_res_row(items[0], res["amount"], res.get("chance", ""), group=False)
+                    res_rows.append(self._build_res_row(items[0], res["amount"], res.get("chance", ""), group=False))
                     for item in items[1:]:
-                        self.add_res_row(item, res["amount"], res.get("chance", ""), group=True)
+                        res_rows.append(self._build_res_row(item, res["amount"], res.get("chance", ""), group=True))
             else:
-                self.add_res_row(n, res["amount"], res.get("chance", ""), group=False)
-            
-        self.layout_form()
+                res_rows.append(self._build_res_row(n, res["amount"], res.get("chance", ""), group=False))
 
-    def add_ing_row(self, name="", destroy=False, amount="1", group=False):
-        row = {
+        tab = {
+            "filename": filename,
+            "base_inputs": base_inputs,
+            "ing_rows": ing_rows,
+            "res_rows": res_rows,
+            "form_scroll": 0,
+            "max_scroll": 0
+        }
+        tab["saved_snapshot"] = self.get_tab_snapshot(tab)
+        return tab
+
+    def _build_ing_row(self, name="", destroy=False, amount="1", group=False):
+        is_dest = destroy.lower() in ["true", "1", "yes"] if isinstance(destroy, str) else bool(destroy)
+        return {
             "group": group,
             "group_btn": pygame.Rect(0, 0, 65, 28),
             "item": UIDropdown(0, 0, 290, 28, self.font, self.item_opts, name, searchable=True),
-            "destroy": destroy,
+            "destroy": is_dest,
             "destroy_btn": pygame.Rect(0, 0, 80, 28),
-            "amount": UITextBox(0, 0, 50, 28, self.font, amount),
+            "amount": UITextBox(0, 0, 50, 28, self.font, str(amount)),
             "del_btn": pygame.Rect(0, 0, 28, 28)
         }
-        self.ing_rows.append(row)
-        self.layout_form()
 
-    def add_res_row(self, name="", amount="1", chance="", group=False):
-        row = {
+    def _build_res_row(self, name="", amount="1", chance="", group=False):
+        return {
             "group": group,
             "group_btn": pygame.Rect(0, 0, 60, 28),
             "item": UIDropdown(0, 0, 290, 28, self.font, self.item_opts, name, searchable=True),
-            "amount": UITextBox(0, 0, 60, 28, self.font, amount),
-            "chance": UITextBox(0, 0, 60, 28, self.font, chance),
+            "amount": UITextBox(0, 0, 60, 28, self.font, str(amount)),
+            "chance": UITextBox(0, 0, 60, 28, self.font, str(chance)),
             "del_btn": pygame.Rect(0, 0, 28, 28)
         }
-        self.res_rows.append(row)
+
+    def open_tab_recipe(self, filename):
+        for i, tab in enumerate(self.open_tabs):
+            if tab["filename"] == filename:
+                self.active_tab_idx = i
+                self.layout_form()
+                return
+
+        data = self.recipes.get(filename, {}).get("data", {}) if filename else {}
+        new_tab = self.create_tab_structure(filename, data)
+        self.open_tabs.append(new_tab)
+        self.active_tab_idx = len(self.open_tabs) - 1
+        self.layout_form()
+
+    def request_close_tab(self, idx):
+        if not (0 <= idx < len(self.open_tabs)): return
+        tab = self.open_tabs[idx]
+        if self.is_tab_modified(tab):
+            self.close_confirm_dialog = {
+                "idx": idx,
+                "name": tab["filename"] or tab["base_inputs"]["filename"].text
+            }
+        else:
+            self._force_close_tab(idx)
+
+    def _force_close_tab(self, idx):
+        self.open_tabs.pop(idx)
+        if self.active_tab_idx == idx:
+            self.active_tab_idx = len(self.open_tabs) - 1 if self.open_tabs else -1
+        elif self.active_tab_idx > idx:
+            self.active_tab_idx -= 1
         self.layout_form()
 
     def layout_form(self):
-        if self.selected_file is None: return
+        content_h = len(self.filtered_recipes) * 30 + 10
+        self.max_sidebar_scroll = max(0, content_h - (self.height - self.y_offset - 110))
+
+        tab = self.get_current_tab()
+        if not tab: return
         
         form_x = self.sidebar_w
         start_x = form_x + 150 
-        current_y = self.y_offset + 20 - self.form_scroll
+        current_y = self.y_offset + self.tab_bar_h + 20 - tab["form_scroll"]
         
         for f in ["filename", "craft", "type", "output", "magazine", "req_level", "gain_xp", "time", "amount"]:
-            self.base_inputs[f].rect.x = start_x
-            self.base_inputs[f].rect.y = current_y
-            
-            if hasattr(self.base_inputs[f], '_relayout'):
-                self.base_inputs[f]._relayout()
-                
-            if isinstance(self.base_inputs[f], UIDropdown):
-                self.base_inputs[f].list_rect.x = self.base_inputs[f].rect.x
-                self.base_inputs[f].list_rect.y = self.base_inputs[f].rect.bottom
-                
-            current_y += self.base_inputs[f].rect.height + 10
+            tab["base_inputs"][f].rect.x = start_x
+            tab["base_inputs"][f].rect.y = current_y
+            if hasattr(tab["base_inputs"][f], '_relayout'):
+                tab["base_inputs"][f]._relayout()
+            if isinstance(tab["base_inputs"][f], UIDropdown):
+                tab["base_inputs"][f].list_rect.x = tab["base_inputs"][f].rect.x
+                tab["base_inputs"][f].list_rect.y = tab["base_inputs"][f].rect.bottom
+            current_y += tab["base_inputs"][f].rect.height + 10
             
         current_y += 50 
-        
-        for row in self.ing_rows:
+        for row in tab["ing_rows"]:
             row["group_btn"].topleft = (form_x + 20, current_y)
             row["item"].rect.topleft = (form_x + 90, current_y)
             row["item"].list_rect.topleft = (form_x + 90, current_y + 28)
@@ -285,11 +331,10 @@ class CraftEditor:
         self.add_ing_btn.topleft = (form_x + 20, current_y)
         current_y += 35 
         
-        is_dismantle = self.base_inputs.get("craft") and self.base_inputs["craft"].text.lower() == "dismantle"
-        
+        is_dismantle = tab["base_inputs"]["craft"].text.lower() == "dismantle"
         if is_dismantle:
             current_y += 50
-            for row in self.res_rows:
+            for row in tab["res_rows"]:
                 row["group_btn"].topleft = (form_x + 20, current_y)
                 row["item"].rect.topleft = (form_x + 90, current_y)
                 row["item"].list_rect.topleft = (form_x + 90, current_y + 28)
@@ -307,32 +352,52 @@ class CraftEditor:
         self.delete_btn.topleft = (form_x + 310, current_y)
         self.code_btn.topleft = (form_x + 435, current_y)
         
-        self.max_scroll = max(0, current_y + self.form_scroll - self.height + 40)
-        content_h = len(self.filtered_recipes) * 30 + 10
-        self.max_sidebar_scroll = max(0, content_h - (self.height - self.y_offset - 110))
+        tab["max_scroll"] = max(0, current_y + tab["form_scroll"] - self.height + 40)
 
-    def duplicate_current(self):
-        if not self.selected_file: return
+    def get_tab_rects(self):
+        tab_rects = []
+        cur_x = self.sidebar_w - self.tab_scroll_x
+        tabs_y = self.y_offset
         
-        base_name = self.selected_file
-        if base_name.endswith(".xml"):
-            base_name = base_name[:-4]
+        for i, tab in enumerate(self.open_tabs):
+            fname = tab["filename"] or tab["base_inputs"]["filename"].text or "new_craft.xml"
+            modified = self.is_tab_modified(tab)
+            display_name = f"*{fname}" if modified else fname
             
-        base_no_idx = re.sub(r'_\d+$', '', base_name)
-        
-        counter = 1
-        while True:
-            dup_filename = f"{base_no_idx}_{counter}.xml"
-            if dup_filename not in self.recipes and not os.path.exists(os.path.join(self.craft_dir, dup_filename)):
-                break
-            counter += 1
+            text_w = self.font.size(display_name)[0]
+            tab_w = max(90, text_w + 44)
+            
+            tab_rect = pygame.Rect(cur_x, tabs_y, tab_w, self.tab_bar_h)
+            close_rect = pygame.Rect(tab_rect.right - 20, tab_rect.y + 10, 16, 16)
+            tab_rects.append({
+                "index": i,
+                "tab": tab,
+                "rect": tab_rect,
+                "close_rect": close_rect,
+                "display_name": display_name,
+                "modified": modified
+            })
+            cur_x += tab_w + 2
+            
+        total_w = (cur_x + self.tab_scroll_x) - self.sidebar_w
+        view_w = self.width - self.sidebar_w
+        self.max_tab_scroll = max(0, total_w - view_w)
+        return tab_rects
 
+    def save_current_tab(self):
+        tab = self.get_current_tab()
+        if not tab: return
+
+        new_file = tab["base_inputs"]["filename"].text.strip()
+        if not new_file: return
+        if not new_file.endswith(".xml"): new_file += ".xml"
+        
         data = {}
         for attr in ["type", "craft", "output", "magazine", "req_level", "gain_xp", "time", "amount"]:
-            data[attr] = self.base_inputs[attr].text if attr in self.base_inputs else ""
+            data[attr] = tab["base_inputs"][attr].text
 
         merged_ings = []
-        for r in self.ing_rows:
+        for r in tab["ing_rows"]:
             item_val = r["item"].text.strip()
             if not item_val: continue
             if r["group"] and merged_ings:
@@ -340,7 +405,7 @@ class CraftEditor:
             else:
                 merged_ings.append({
                     "names": [item_val],
-                    "destroy": str(r["destroy"]).lower(),
+                    "destroy": "true" if r["destroy"] else "false",
                     "amount": r["amount"].text
                 })
                 
@@ -349,12 +414,11 @@ class CraftEditor:
             name_str = f"[{', '.join(m['names'])}]" if len(m['names']) > 1 else m['names'][0]
             data["ingredients"].append({"name": name_str, "destroy": m["destroy"], "amount": m["amount"]})
 
-        is_dismantle = self.base_inputs.get("craft") and self.base_inputs["craft"].text.lower() == "dismantle"
+        is_dismantle = tab["base_inputs"]["craft"].text.lower() == "dismantle"
         data["results"] = []
-        
         if is_dismantle:
             merged_res = []
-            for r in self.res_rows:
+            for r in tab["res_rows"]:
                 item_val = r["item"].text.strip()
                 if not item_val: continue
                 if r["group"] and merged_res:
@@ -365,28 +429,15 @@ class CraftEditor:
                         "amount": r["amount"].text,
                         "chance": r["chance"].text
                     })
-                    
             for m in merged_res:
                 name_str = f"[{', '.join(m['names'])}]" if len(m['names']) > 1 else m['names'][0]
                 data["results"].append({"name": name_str, "amount": m["amount"], "chance": m["chance"]})
-
-        self.recipes[dup_filename] = {"data": data}
-        self.save_xml(dup_filename, data)
-        self.build_dynamic_options()
-        self.select_recipe(dup_filename)
-
-    def save_xml(self, filename, data):
-        if not os.path.exists(self.craft_dir): os.makedirs(self.craft_dir)
-        path = os.path.join(self.craft_dir, filename)
         
         root = ET.Element("recipe")
         for attr in ["type", "craft", "output", "magazine", "req_level", "gain_xp", "amount", "time"]:
             if data.get(attr): root.set(attr, data[attr])
-                
         for ing in data.get("ingredients", []):
-            if ing["name"]:
-                ET.SubElement(root, "ingredient", {"name": ing["name"], "destroy": ing["destroy"], "amount": ing["amount"]})
-                    
+            if ing["name"]: ET.SubElement(root, "ingredient", {"name": ing["name"], "destroy": ing["destroy"], "amount": ing["amount"]})
         for res in data.get("results", []):
             if res["name"]:
                 res_attr = {"name": res["name"], "amount": res["amount"]}
@@ -395,12 +446,91 @@ class CraftEditor:
                     
         tree = ET.ElementTree(root)
         ET.indent(tree, space="    ", level=0)
+        path = os.path.join(self.craft_dir, new_file)
         tree.write(path, encoding="utf-8", xml_declaration=True)
 
+        if tab["filename"] and tab["filename"] != new_file and tab["filename"] in self.recipes:
+            old_path = os.path.join(self.craft_dir, tab["filename"])
+            if os.path.exists(old_path):
+                try: os.remove(old_path)
+                except: pass
+            del self.recipes[tab["filename"]]
+
+        self.recipes[new_file] = {"data": data}
+        tab["filename"] = new_file
+        tab["saved_snapshot"] = self.get_tab_snapshot(tab)
+        self.build_dynamic_options()
+
+    def duplicate_current_tab(self):
+        tab = self.get_current_tab()
+        if not tab or tab["filename"] is False: return
+
+        base_name = tab["filename"]
+        if base_name.endswith(".xml"): base_name = base_name[:-4]
+        base_no_idx = re.sub(r'_\d+$', '', base_name)
+        
+        counter = 1
+        while True:
+            dup_fname = f"{base_no_idx}_{counter}.xml"
+            if dup_fname not in self.recipes and not os.path.exists(os.path.join(self.craft_dir, dup_fname)):
+                break
+            counter += 1
+
+        self.save_current_tab()
+        with open(os.path.join(self.craft_dir, tab["filename"]), 'r', encoding='utf-8') as src:
+            with open(os.path.join(self.craft_dir, dup_fname), 'w', encoding='utf-8') as dst:
+                dst.write(src.read())
+
+        self.load_xmls()
+        self.open_tab_recipe(dup_fname)
+
+    def delete_current_tab(self):
+        tab = self.get_current_tab()
+        if not tab: return
+        if tab["filename"] and tab["filename"] in self.recipes:
+            path = os.path.join(self.craft_dir, tab["filename"])
+            if os.path.exists(path):
+                try: os.remove(path)
+                except: pass
+            del self.recipes[tab["filename"]]
+        self._force_close_tab(self.active_tab_idx)
+        self.build_dynamic_options()
+
     def handle_event(self, event):
+        # 1. Close Confirmation Modal
+        if self.close_confirm_dialog:
+            modal_rect = pygame.Rect(self.width//2 - 280, self.height//2 - 95, 560, 190)
+            btn_y = modal_rect.bottom - 46
+            save_close_btn = pygame.Rect(modal_rect.x + 20, btn_y, 150, 34)
+            close_nosave_btn = pygame.Rect(modal_rect.x + 185, btn_y, 240, 34)
+            cancel_btn = pygame.Rect(modal_rect.x + 440, btn_y, 100, 34)
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                idx = self.close_confirm_dialog["idx"]
+                if save_close_btn.collidepoint(event.pos):
+                    self.save_current_tab()
+                    self._force_close_tab(idx)
+                    self.close_confirm_dialog = None
+                    return True
+                elif close_nosave_btn.collidepoint(event.pos):
+                    self._force_close_tab(idx)
+                    self.close_confirm_dialog = None
+                    return True
+                elif cancel_btn.collidepoint(event.pos):
+                    self.close_confirm_dialog = None
+                    return True
+            return True
+
+        if event.type == pygame.KEYDOWN:
+            if (event.mod & pygame.KMOD_CTRL) and event.key == pygame.K_w:
+                if 0 <= self.active_tab_idx < len(self.open_tabs):
+                    self.request_close_tab(self.active_tab_idx)
+                    return True
+
         if event.type == pygame.MOUSEBUTTONUP:
             self.dragging_sidebar = False
             self.dragging_form = False
+            self.dragging_tab_scroll = False
             
         if event.type == pygame.MOUSEMOTION:
             if self.dragging_sidebar and self.sidebar_thumb_rect and self.max_sidebar_scroll > 0:
@@ -409,80 +539,101 @@ class CraftEditor:
                 thumb_h = self.sidebar_thumb_rect.height
                 track_space = track_h - thumb_h
                 if track_space > 0:
-                    scroll_per_pixel = self.max_sidebar_scroll / track_space
-                    self.sidebar_scroll = max(0, min(self.max_sidebar_scroll, self.sidebar_start_offset + dy * scroll_per_pixel))
+                    self.sidebar_scroll = max(0, min(self.max_sidebar_scroll, self.sidebar_start_offset + dy * (self.max_sidebar_scroll / track_space)))
                 return True
                 
-            if self.dragging_form and self.form_thumb_rect and self.max_scroll > 0:
+            tab = self.get_current_tab()
+            if tab and self.dragging_form and self.form_thumb_rect and tab["max_scroll"] > 0:
                 dy = event.pos[1] - self.form_start_y
                 track_h = self.form_track_rect.height
                 thumb_h = self.form_thumb_rect.height
                 track_space = track_h - thumb_h
                 if track_space > 0:
-                    scroll_per_pixel = self.max_scroll / track_space
-                    self.form_scroll = max(0, min(self.max_scroll, self.form_start_offset + dy * scroll_per_pixel))
+                    tab["form_scroll"] = max(0, min(tab["max_scroll"], self.form_start_offset + dy * (tab["max_scroll"] / track_space)))
                     self.layout_form()
                 return True
 
+            if self.dragging_tab_scroll and self.max_tab_scroll > 0:
+                dx = event.pos[0] - self.tab_scroll_start_x
+                track_w = self.width - self.sidebar_w
+                thumb_w = self.tab_thumb_rect.width if self.tab_thumb_rect else 40
+                movable = track_w - thumb_w
+                if movable > 0:
+                    self.tab_scroll_x = max(0, min(self.max_tab_scroll, self.tab_scroll_start_offset + (dx / movable) * self.max_tab_scroll))
+                return True
+
         if self.search_input.handle_event(event):
-            content_h = len(self.filtered_recipes) * 30 + 10
-            list_h = self.height - self.y_offset - 110
-            self.max_sidebar_scroll = max(0, content_h - list_h)
+            self.max_sidebar_scroll = max(0, len(self.filtered_recipes) * 30 + 10 - (self.height - self.y_offset - 110))
             self.sidebar_scroll = max(0, min(self.sidebar_scroll, self.max_sidebar_scroll))
             return True
 
-        if self.selected_file is not None:
-            old_craft = self.base_inputs.get("craft").text.lower() if "craft" in self.base_inputs else ""
-            is_dismantle = old_craft == "dismantle"
-            
-            dropdowns = [f for f in self.base_inputs.values() if isinstance(f, UIDropdown)]
-            dropdowns += [r["item"] for r in self.ing_rows]
-            if is_dismantle:
-                dropdowns += [r["item"] for r in self.res_rows]
+        # Tab Strip Selection
+        tabs_view_rect = pygame.Rect(self.sidebar_w, self.y_offset, self.width - self.sidebar_w, self.tab_bar_h)
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if tabs_view_rect.collidepoint(event.pos):
+                if event.button == 4:
+                    self.tab_scroll_x = max(0, self.tab_scroll_x - 40)
+                    return True
+                elif event.button == 5:
+                    self.tab_scroll_x = min(self.max_tab_scroll, self.tab_scroll_x + 40)
+                    return True
+                elif event.button == 1:
+                    if self.tab_thumb_rect and self.tab_thumb_rect.collidepoint(event.pos):
+                        self.dragging_tab_scroll = True
+                        self.tab_scroll_start_x = event.pos[0]
+                        self.tab_scroll_start_offset = self.tab_scroll_x
+                        return True
+                    tab_rects = self.get_tab_rects()
+                    for t_info in tab_rects:
+                        if t_info["close_rect"].collidepoint(event.pos):
+                            self.request_close_tab(t_info["index"])
+                            return True
+                        elif t_info["rect"].collidepoint(event.pos):
+                            self.active_tab_idx = t_info["index"]
+                            self.layout_form()
+                            return True
+
+        tab = self.get_current_tab()
+        if tab:
+            is_dismantle = tab["base_inputs"]["craft"].text.lower() == "dismantle"
+            dropdowns = [f for f in tab["base_inputs"].values() if isinstance(f, UIDropdown)]
+            dropdowns += [r["item"] for r in tab["ing_rows"]]
+            if is_dismantle: dropdowns += [r["item"] for r in tab["res_rows"]]
             
             for d in dropdowns:
                 if getattr(d, 'expanded', False):
                     if d.handle_event(event):
-                        if d == self.base_inputs.get("craft"): self.layout_form()
-                        if self.selected_file is False and d in [self.base_inputs.get("craft"), self.base_inputs.get("type"), self.base_inputs.get("output")]:
-                            self.generate_auto_filename()
+                        if d == tab["base_inputs"]["craft"]: self.layout_form()
                         return True
                                   
             consumed = False
-            for k, c in self.base_inputs.items():
-                if c.handle_event(event): 
-                    consumed = True
-                    if self.selected_file is False and k in ["craft", "type", "output"]:
-                        self.generate_auto_filename()
-                        
-            for r in self.ing_rows:
+            for c in tab["base_inputs"].values():
+                if c.handle_event(event): consumed = True
+            for r in tab["ing_rows"]:
                 if r["item"].handle_event(event): consumed = True
                 if not r["group"] and r["amount"].handle_event(event): consumed = True
-                
             if is_dismantle:
-                for r in self.res_rows:
+                for r in tab["res_rows"]:
                     if r["item"].handle_event(event): consumed = True
                     if not r["group"]:
                         if r["amount"].handle_event(event): consumed = True
                         if r["chance"].handle_event(event): consumed = True
                               
-            if consumed: 
-                new_craft = self.base_inputs.get("craft").text.lower() if "craft" in self.base_inputs else ""
-                if old_craft != new_craft:
-                    self.layout_form()
+            if consumed:
+                self.layout_form()
                 return True
             
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                FocusManager.clear_focus()
                 mx, my = event.pos
                 if mx > self.sidebar_w:
-                    
                     if self.form_thumb_rect and self.form_thumb_rect.collidepoint(mx, my):
                         self.dragging_form = True
                         self.form_start_y = my
-                        self.form_start_offset = self.form_scroll
+                        self.form_start_offset = tab["form_scroll"]
                         return True
                         
-                    for i, row in enumerate(self.ing_rows):
+                    for i, row in enumerate(tab["ing_rows"]):
                         if row["group_btn"].collidepoint(mx, my):
                             row["group"] = not row["group"]
                             return True
@@ -490,47 +641,49 @@ class CraftEditor:
                             row["destroy"] = not row["destroy"]
                             return True
                         if row["del_btn"].collidepoint(mx, my):
-                            self.ing_rows.pop(i)
+                            tab["ing_rows"].pop(i)
                             self.layout_form()
                             return True
                             
                     if is_dismantle:
-                        for i, row in enumerate(self.res_rows):
+                        for i, row in enumerate(tab["res_rows"]):
                             if row["group_btn"].collidepoint(mx, my):
                                 row["group"] = not row["group"]
                                 return True
                             if row["del_btn"].collidepoint(mx, my):
-                                self.res_rows.pop(i)
+                                tab["res_rows"].pop(i)
                                 self.layout_form()
                                 return True
                             
                     if self.add_ing_btn.collidepoint(mx, my):
-                        self.add_ing_row()
+                        tab["ing_rows"].append(self._build_ing_row())
+                        self.layout_form()
                         return True
                     if is_dismantle and self.add_res_btn.collidepoint(mx, my):
-                        self.add_res_row()
+                        tab["res_rows"].append(self._build_res_row())
+                        self.layout_form()
                         return True
                     if self.save_btn.collidepoint(mx, my):
-                        self.save_current()
+                        self.save_current_tab()
                         return True
-                    if self.selected_file and self.duplicate_btn.collidepoint(mx, my):
-                        self.duplicate_current()
+                    if self.duplicate_btn.collidepoint(mx, my):
+                        self.duplicate_current_tab()
                         return True
-                    if self.selected_file and self.delete_btn.collidepoint(mx, my):
-                        self.delete_current()
+                    if self.delete_btn.collidepoint(mx, my):
+                        self.delete_current_tab()
                         return True
-                    if self.selected_file and self.code_btn.collidepoint(mx, my):
-                        self.save_current()
-                        path = os.path.join(self.craft_dir, self.selected_file)
+                    if self.code_btn.collidepoint(mx, my):
+                        self.save_current_tab()
+                        path = os.path.join(self.craft_dir, tab["filename"])
                         return {"action": "open_in_code", "path": path}
                         
             if event.type == pygame.MOUSEBUTTONDOWN and event.pos[0] > self.sidebar_w:
                 if event.button == 4:
-                    self.form_scroll = max(0, self.form_scroll - 40)
+                    tab["form_scroll"] = max(0, tab["form_scroll"] - 40)
                     self.layout_form()
                     return True
                 elif event.button == 5:
-                    self.form_scroll = min(self.max_scroll, self.form_scroll + 40)
+                    tab["form_scroll"] = min(tab["max_scroll"], tab["form_scroll"] + 40)
                     self.layout_form()
                     return True
 
@@ -542,108 +695,40 @@ class CraftEditor:
                     self.sidebar_start_y = my
                     self.sidebar_start_offset = self.sidebar_scroll
                     return True
-                
                 if event.button == 4:
                     self.sidebar_scroll = max(0, self.sidebar_scroll - 40)
                     return True
                 elif event.button == 5:
                     self.sidebar_scroll = min(self.max_sidebar_scroll, self.sidebar_scroll + 40)
                     return True
-                
                 if event.button == 1:
                     if self.new_btn.collidepoint(mx, my):
-                        self.select_recipe(False)
+                        self.open_tab_recipe(False)
                         return True
-                    
                     list_y = self.y_offset + 115 - self.sidebar_scroll
                     for fname in self.filtered_recipes:
                         if pygame.Rect(10, list_y, self.sidebar_w - 30, 25).collidepoint(mx, my):
                             if list_y > self.y_offset + 110:
-                                self.select_recipe(fname)
+                                self.open_tab_recipe(fname)
                             return True
                         list_y += 30
-                    
         return False
-
-    def save_current(self):
-        new_file = self.base_inputs["filename"].text.strip()
-        if not new_file: return
-        if not new_file.endswith(".xml"): new_file += ".xml"
-        
-        data = {}
-        for attr in ["type", "craft", "output", "magazine", "req_level", "gain_xp", "time", "amount"]:
-            data[attr] = self.base_inputs[attr].text
-
-        merged_ings = []
-        for r in self.ing_rows:
-            item_val = r["item"].text.strip()
-            if not item_val: continue
-            if r["group"] and merged_ings:
-                merged_ings[-1]["names"].append(item_val)
-            else:
-                merged_ings.append({
-                    "names": [item_val],
-                    "destroy": str(r["destroy"]).lower(),
-                    "amount": r["amount"].text
-                })
-                
-        data["ingredients"] = []
-        for m in merged_ings:
-            name_str = f"[{', '.join(m['names'])}]" if len(m['names']) > 1 else m['names'][0]
-            data["ingredients"].append({"name": name_str, "destroy": m["destroy"], "amount": m["amount"]})
-
-        is_dismantle = self.base_inputs.get("craft") and self.base_inputs["craft"].text.lower() == "dismantle"
-        data["results"] = []
-        
-        if is_dismantle:
-            merged_res = []
-            for r in self.res_rows:
-                item_val = r["item"].text.strip()
-                if not item_val: continue
-                if r["group"] and merged_res:
-                    merged_res[-1]["names"].append(item_val)
-                else:
-                    merged_res.append({
-                        "names": [item_val],
-                        "amount": r["amount"].text,
-                        "chance": r["chance"].text
-                    })
-                    
-            for m in merged_res:
-                name_str = f"[{', '.join(m['names'])}]" if len(m['names']) > 1 else m['names'][0]
-                data["results"].append({"name": name_str, "amount": m["amount"], "chance": m["chance"]})
-        
-        if self.selected_file and self.selected_file != new_file and self.selected_file in self.recipes:
-            old_path = os.path.join(self.craft_dir, self.selected_file)
-            if os.path.exists(old_path): os.remove(old_path)
-            del self.recipes[self.selected_file]
-            
-        self.recipes[new_file] = {"data": data}
-        self.save_xml(new_file, data)
-        self.build_dynamic_options()
-        self.select_recipe(new_file)
-
-    def delete_current(self):
-        if self.selected_file and self.selected_file in self.recipes:
-            path = os.path.join(self.craft_dir, self.selected_file)
-            if os.path.exists(path): os.remove(path)
-            del self.recipes[self.selected_file]
-            self.selected_file = None
-            self.build_dynamic_options()
 
     def draw(self, surface):
         bg_rect = pygame.Rect(0, self.y_offset, self.width, self.height - self.y_offset)
         pygame.draw.rect(surface, UITheme.BG, bg_rect) 
+        mouse_pos = pygame.mouse.get_pos()
         
-        # Sidebar View (List of recipes)
+        # 1. Sidebar List
         list_view_rect = pygame.Rect(0, self.y_offset + 110, self.sidebar_w, self.height - self.y_offset - 110)
         surface.set_clip(list_view_rect)
+        active_tab = self.get_current_tab()
+        selected_fname = active_tab["filename"] if active_tab else None
         
-        mouse_pos = pygame.mouse.get_pos()
         list_y = self.y_offset + 115 - self.sidebar_scroll
         for fname in self.filtered_recipes:
             r = pygame.Rect(10, list_y, self.sidebar_w - 30, 25)
-            if fname == self.selected_file:
+            if fname == selected_fname:
                 pygame.draw.rect(surface, UITheme.LIST_HOVER, r, border_radius=4)
             elif r.collidepoint(mouse_pos):
                 pygame.draw.rect(surface, UITheme.HOVER_BG, r, border_radius=4)
@@ -651,24 +736,20 @@ class CraftEditor:
             lbl = (fname[:25] + '..') if len(fname) > 27 else fname
             surface.blit(self.font.render(lbl, True, UITheme.TEXT), (15, list_y + 5))
             list_y += 30
-            
         surface.set_clip(None)
         
-        # Sidebar Header Area
+        # 2. Sidebar Header
         sidebar_header_rect = pygame.Rect(0, self.y_offset, self.sidebar_w, 110)
         pygame.draw.rect(surface, UITheme.PANEL_BG, sidebar_header_rect)
         pygame.draw.line(surface, UITheme.BORDER, (self.sidebar_w, self.y_offset), (self.sidebar_w, self.height), 2)
         surface.blit(self.font.render("Crafting Recipes", True, UITheme.WARNING), (20, self.y_offset + 12))
         
-        # Draw Search Box & Placeholder
         self.search_input.draw(surface)
         if not self.search_input.text and not self.search_input.active:
             surface.blit(self.font.render("Search crafts...", True, UITheme.TEXT_DIM), (self.search_input.rect.x + 8, self.search_input.rect.y + 6))
         
-        btn_color = UITheme.SUCCESS if self.selected_file is False else UITheme.BG
-        draw_styled_button(surface, self.new_btn, "+ New Craft", self.font, mouse_pos, btn_color, UITheme.SUCCESS_HOVER)
+        draw_styled_button(surface, self.new_btn, "+ New Craft", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
 
-        self.max_sidebar_scroll = max(0, len(self.filtered_recipes) * 30 + 10 - list_view_rect.height)
         if self.max_sidebar_scroll > 0:
             track_rect = pygame.Rect(self.sidebar_w - 8, list_view_rect.y, 8, list_view_rect.height)
             self.sidebar_track_rect = track_rect
@@ -676,31 +757,79 @@ class CraftEditor:
             thumb_y = list_view_rect.y + (self.sidebar_scroll / self.max_sidebar_scroll) * (list_view_rect.height - thumb_h)
             self.sidebar_thumb_rect = pygame.Rect(track_rect.x, thumb_y, 8, thumb_h)
             pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.sidebar_thumb_rect, border_radius=4)
+
+        # 3. Tab Bar Strip
+        tabs_view_rect = pygame.Rect(self.sidebar_w, self.y_offset, self.width - self.sidebar_w, self.tab_bar_h)
+        pygame.draw.rect(surface, UITheme.PANEL_BG, tabs_view_rect)
+        pygame.draw.line(surface, UITheme.BORDER, (self.sidebar_w, self.y_offset + self.tab_bar_h - 1), (self.width, self.y_offset + self.tab_bar_h - 1))
+
+        prev_clip = surface.get_clip()
+        surface.set_clip(tabs_view_rect.clip(prev_clip) if prev_clip else tabs_view_rect)
+
+        tab_rects = self.get_tab_rects()
+        for t_info in tab_rects:
+            tab_rect = t_info["rect"]
+            close_rect = t_info["close_rect"]
+            is_active = (t_info["index"] == self.active_tab_idx)
+            is_modified = t_info["modified"]
+            hovered = tab_rect.collidepoint(mouse_pos)
+            
+            if is_modified:
+                color = (55, 48, 15) if is_active else ((48, 42, 18) if hovered else (38, 35, 18))
+                border_color = UITheme.WARNING
+                txt_color = UITheme.WARNING
+            else:
+                color = UITheme.BG if is_active else (UITheme.HOVER_BG if hovered else UITheme.PANEL_BG)
+                border_color = UITheme.BORDER
+                txt_color = UITheme.TEXT if is_active or hovered else UITheme.TEXT_DIM
+
+            pygame.draw.rect(surface, color, tab_rect)
+            pygame.draw.rect(surface, border_color, tab_rect, 1)
+
+            if is_active:
+                accent_bar = UITheme.WARNING if is_modified else UITheme.ACCENT
+                pygame.draw.rect(surface, accent_bar, (tab_rect.x, tab_rect.y, tab_rect.width, 3))
+
+            txt = self.font.render(t_info["display_name"], True, txt_color)
+            surface.blit(txt, (tab_rect.x + 8, tab_rect.centery - txt.get_height()//2))
+
+            c_hover = close_rect.collidepoint(mouse_pos)
+            pygame.draw.rect(surface, UITheme.DANGER if c_hover else border_color, close_rect, border_radius=3)
+            surface.blit(self.font.render("x", True, UITheme.TEXT), (close_rect.x + 4, close_rect.y + 1))
+        surface.set_clip(prev_clip)
+
+        if self.max_tab_scroll > 0:
+            track_rect = pygame.Rect(self.sidebar_w, self.y_offset + self.tab_bar_h - 4, self.width - self.sidebar_w, 4)
+            pygame.draw.rect(surface, UITheme.PANEL_BG, track_rect)
+            thumb_w = max(30, int((tabs_view_rect.width / (tabs_view_rect.width + self.max_tab_scroll)) * track_rect.width))
+            thumb_x = track_rect.x + (self.tab_scroll_x / self.max_tab_scroll) * (track_rect.width - thumb_w)
+            self.tab_thumb_rect = pygame.Rect(thumb_x, track_rect.y, thumb_w, 4)
+            pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.tab_thumb_rect, border_radius=2)
         else:
-            self.sidebar_thumb_rect = None
-            self.sidebar_track_rect = None
-            
-        if self.selected_file is not None:
-            form_view_rect = pygame.Rect(self.sidebar_w, self.y_offset, self.width - self.sidebar_w, self.height - self.y_offset)
+            self.tab_thumb_rect = None
+
+        # 4. Active Tab Form
+        tab = self.get_current_tab()
+        if tab:
+            form_view_rect = pygame.Rect(self.sidebar_w, self.y_offset + self.tab_bar_h, self.width - self.sidebar_w, self.height - self.y_offset - self.tab_bar_h)
             surface.set_clip(form_view_rect)
-            
             form_x = self.sidebar_w
-            is_dismantle = self.base_inputs.get("craft") and self.base_inputs["craft"].text.lower() == "dismantle"
+            is_dismantle = tab["base_inputs"]["craft"].text.lower() == "dismantle"
             
             for f in ["filename", "craft", "type", "output", "magazine", "req_level", "gain_xp", "time", "amount"]:
                 lbl = f.replace("_", " ").title() + ":"
-                y_pos = self.base_inputs[f].rect.y
+                y_pos = tab["base_inputs"][f].rect.y
                 surface.blit(self.font.render(lbl, True, UITheme.TEXT_DIM), (form_x + 20, y_pos + 6))
-                self.base_inputs[f].draw(surface)
+                tab["base_inputs"][f].draw(surface)
                 
-            ing_title_y = self.base_inputs["amount"].rect.bottom + 15
+            ing_title_y = tab["base_inputs"]["amount"].rect.bottom + 15
             surface.blit(self.font.render("Ingredients:", True, UITheme.WARNING), (form_x + 20, ing_title_y))
             surface.blit(self.font.render("Link", True, UITheme.TEXT_DIM), (form_x + 20, ing_title_y + 25))
             surface.blit(self.font.render("Item", True, UITheme.TEXT_DIM), (form_x + 90, ing_title_y + 25))
             surface.blit(self.font.render("Destroy", True, UITheme.TEXT_DIM), (form_x + 400, ing_title_y + 25))
             surface.blit(self.font.render("Amount", True, UITheme.TEXT_DIM), (form_x + 480, ing_title_y + 25))
             
-            for row in self.ing_rows:
+            for row in tab["ing_rows"]:
                 g_txt = "|_ OR" if row["group"] else "---"
                 g_color = UITheme.WARNING if row["group"] else UITheme.BG
                 draw_styled_button(surface, row["group_btn"], g_txt, self.font, mouse_pos, g_color, UITheme.WARNING_HOVER)
@@ -725,7 +854,7 @@ class CraftEditor:
                 surface.blit(self.font.render("Amount", True, UITheme.TEXT_DIM), (form_x + 400, res_title_y + 25))
                 surface.blit(self.font.render("Chance", True, UITheme.TEXT_DIM), (form_x + 470, res_title_y + 25))
                 
-                for row in self.res_rows:
+                for row in tab["res_rows"]:
                     g_txt = "└ OR" if row["group"] else "---"
                     g_color = UITheme.WARNING if row["group"] else UITheme.BG
                     draw_styled_button(surface, row["group_btn"], g_txt, self.font, mouse_pos, g_color, UITheme.WARNING_HOVER)
@@ -736,30 +865,48 @@ class CraftEditor:
                         row["chance"].draw(surface)
                     else:
                         pygame.draw.line(surface, UITheme.BORDER_ACTIVE, (form_x + 50, row["group_btn"].y - 7), (form_x + 50, row["group_btn"].y), 2)
-                        
                     draw_styled_button(surface, row["del_btn"], "X", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
                     
                 draw_styled_button(surface, self.add_res_btn, "+ Add", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
                 
             draw_styled_button(surface, self.save_btn, "Save XML", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
-            if self.selected_file:
+            if tab["filename"] is not False:
                 draw_styled_button(surface, self.duplicate_btn, "Duplicate", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
                 draw_styled_button(surface, self.delete_btn, "Delete", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
                 draw_styled_button(surface, self.code_btn, "Code", self.font, mouse_pos, UITheme.PANEL_BG, UITheme.HOVER_BG)
                 
-            for f in self.base_inputs.values():
+            for f in tab["base_inputs"].values():
                 if isinstance(f, UIDropdown): f.draw_list(surface)
-            for row in self.ing_rows: row["item"].draw_list(surface)
+            for row in tab["ing_rows"]: row["item"].draw_list(surface)
             if is_dismantle:
-                for row in self.res_rows: row["item"].draw_list(surface)
+                for row in tab["res_rows"]: row["item"].draw_list(surface)
                 
             surface.set_clip(None)
             
-            if self.max_scroll > 0:
+            if tab["max_scroll"] > 0:
                 track_rect = pygame.Rect(self.width - 8, form_view_rect.y, 8, form_view_rect.height)
                 self.form_track_rect = track_rect
-                content_h = form_view_rect.height + self.max_scroll
-                thumb_h = max(20, (form_view_rect.height / content_h) * form_view_rect.height)
-                thumb_y = form_view_rect.y + (self.form_scroll / self.max_scroll) * (form_view_rect.height - thumb_h)
+                thumb_h = max(20, (form_view_rect.height / (form_view_rect.height + tab["max_scroll"])) * form_view_rect.height)
+                thumb_y = form_view_rect.y + (tab["form_scroll"] / tab["max_scroll"]) * (form_view_rect.height - thumb_h)
                 self.form_thumb_rect = pygame.Rect(track_rect.x, thumb_y, 8, thumb_h)
                 pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.form_thumb_rect, border_radius=4)
+
+        # 5. Unsaved Changes Modal
+        if self.close_confirm_dialog:
+            overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 150))
+            surface.blit(overlay, (0, 0))
+            
+            modal_rect = pygame.Rect(self.width//2 - 280, self.height//2 - 95, 560, 190)
+            pygame.draw.rect(surface, UITheme.PANEL_BG, modal_rect, border_radius=8)
+            pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, modal_rect, 2, border_radius=8)
+            surface.blit(self.font.render("Unsaved Changes", True, UITheme.WARNING), (modal_rect.x + 20, modal_rect.y + 15))
+            pygame.draw.line(surface, UITheme.BORDER, (modal_rect.x, modal_rect.y + 40), (modal_rect.right, modal_rect.y + 40))
+
+            surface.blit(self.font.render("You have unsaved changes in:", True, UITheme.TEXT), (modal_rect.x + 25, modal_rect.y + 55))
+            surface.blit(self.font.render(self.close_confirm_dialog["name"][:45], True, UITheme.WARNING), (modal_rect.x + 25, modal_rect.y + 82))
+
+            btn_y = modal_rect.bottom - 46
+            draw_styled_button(surface, pygame.Rect(modal_rect.x + 20, btn_y, 150, 34), "Save & Close", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
+            draw_styled_button(surface, pygame.Rect(modal_rect.x + 185, btn_y, 240, 34), "Close Without Save", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
+            draw_styled_button(surface, pygame.Rect(modal_rect.x + 440, btn_y, 100, 34), "Cancel", self.font, mouse_pos, UITheme.BORDER, UITheme.BORDER_ACTIVE)
