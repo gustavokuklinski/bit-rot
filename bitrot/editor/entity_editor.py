@@ -3,7 +3,10 @@ import os
 import re
 import xml.etree.ElementTree as ET
 from editor.config import GAME_ROOT, TILE_SIZE
-from editor.ui import UITextBox, UIDropdown, UITheme, draw_styled_button, register_tooltip
+from editor.ui import (
+    UITextBox, UIDropdown, UITextArea, UITheme, 
+    draw_styled_button, register_tooltip, FocusManager
+)
 
 # ----------------------------------------------------------------------
 # CUSTOM UI COMPONENTS FOR ENTITY EDITOR
@@ -114,6 +117,18 @@ BOILERPLATES = {
     <sound><hit src="zombie_hit.ogg" /><wander src="zombie_wandering.ogg" /><dead src="zombie_dead.ogg" /><attack src="zombie_attack.ogg" /><steps src="zombie_steps.ogg" /></sound>
 </zombie>"""
 }
+BOILERPLATES["Radio"] = """<radio name="New Radio" frequency="100.0" stream="[general]">
+    <stream text="[STATIC]..." />
+</radio>"""
+
+BOILERPLATES["Items"] = """<item name="New Item" type="general" allow_belt="false">
+    <properties>
+        <weight weight="0.01" />
+        <sprite file="" />
+        <description text="" />
+    </properties>
+    <spawn chance="1" />
+</item>"""
 
 # ----------------------------------------------------------------------
 # MAIN EDITOR CLASS
@@ -131,7 +146,9 @@ class EntityEditor:
             "Vehicle": os.path.join(GAME_ROOT, 'lib', 'data', 'vehicle'),
             "Clothes": os.path.join(GAME_ROOT, 'lib', 'data', 'clothes'),
             "Animal": os.path.join(GAME_ROOT, 'lib', 'data', 'animals'),
-            "NPC": os.path.join(GAME_ROOT, 'lib', 'data', 'npc')
+            "NPC": os.path.join(GAME_ROOT, 'lib', 'data', 'npc'),
+            "Radio": os.path.join(GAME_ROOT, 'lib', 'data', 'radio'),
+            "Items": os.path.join(GAME_ROOT, 'lib', 'data', 'items')
         }
         
         for path in self.categories.values():
@@ -169,15 +186,20 @@ class EntityEditor:
         
         # Sidebar UI
         cat_opts = [{"label": c, "value": c} for c in self.categories.keys()]
-        self.category_dropdown = UIDropdown(10, self.y_offset + 40, self.sidebar_w - 20, 32, self.font, cat_opts, self.active_category)
-        self.new_btn = pygame.Rect(10, self.y_offset + 80, self.sidebar_w - 20, 32)
+        self.category_dropdown = UIDropdown(10, self.y_offset + 38, self.sidebar_w - 20, 30, self.font, cat_opts, self.active_category)
+        
+        # Search Box placed right above the "+ New Entity" button
+        self.search_input = UITextBox(10, self.y_offset + 74, self.sidebar_w - 20, 28, self.font, "")
+        self.new_btn = pygame.Rect(10, self.y_offset + 108, self.sidebar_w - 20, 30)
         
         # Form UI
         self.filename_input = UITextBox(0, 0, 200, 30, self.font, "")
         self.root_tag_input = UITextBox(0, 0, 150, 30, self.font, "")
         
-        self.save_btn = pygame.Rect(0, 0, 110, 35)
+        self.save_btn = pygame.Rect(0, 0, 130, 35)
+        self.duplicate_btn = pygame.Rect(0, 0, 130, 35)
         self.delete_btn = pygame.Rect(0, 0, 110, 35)
+        self.code_btn = pygame.Rect(0, 0, 110, 35)
         self.add_loot_btn = pygame.Rect(0, 0, 110, 30)
         
         self.fields = [] 
@@ -218,6 +240,13 @@ class EntityEditor:
         if self.selected_file is not None:
             self.layout_form()
 
+    @property
+    def filtered_files(self):
+        query = self.search_input.text.strip().lower()
+        if not query:
+            return self.files
+        return [f for f in self.files if query in f.lower()]
+
     def refresh_files(self):
         cat_dir = self.categories[self.active_category]
         if os.path.exists(cat_dir):
@@ -232,10 +261,13 @@ class EntityEditor:
         self.fields.clear()
         self.loot_rows.clear()
         
-        if self.files:
+        # Select first available match if any exist
+        if self.filtered_files:
+            self.select_file(self.filtered_files[0])
+        elif self.files:
             self.select_file(self.files[0])
         else:
-            self.layout_form() 
+            self.layout_form()
 
     def flatten_xml(self, root):
         self.fields.clear()
@@ -250,9 +282,13 @@ class EntityEditor:
         def create_field(path, attr, val, opts=None):
             t_val = str(val).lower()
             tag_name = path.split('/')[-1].split('[')[0] if path else root.tag
+            is_text_attr = attr.lower() in ["text", "#text", "description", "message"]
 
             if opts:
                 ui_elem = UIDropdown(0, 0, 300, 28, self.font, opts, val, searchable=True)
+            elif is_text_attr:
+                # Large text field with scrollbar for text / descriptions / stream text / messages
+                ui_elem = UITextArea(0, 0, 360, 85, self.font, val)
             elif t_val in ["true", "false"]:
                 ui_elem = UIToggle(0, 0, 100, 28, self.font, t_val == "true")
             elif tag_name == "health":
@@ -331,8 +367,8 @@ class EntityEditor:
         self.layout_form()
 
     def layout_form(self):
-        content_h = len(self.files) * 30 + 130
-        self.max_sidebar_scroll = max(0, content_h - (self.height - self.y_offset))
+        content_h = len(self.filtered_files) * 30 + 10
+        self.max_sidebar_scroll = max(0, content_h - (self.height - self.y_offset - 145))
         
         if self.selected_file is None: 
             self.max_form_scroll = 0
@@ -348,16 +384,19 @@ class EntityEditor:
         col_y = current_y
         current_y += 30
         
+        # Position inputs at form_x + 460; advance Y dynamically based on each component's height
         for row in self.fields:
-            row["input"].rect.topleft = (form_x + 440, current_y)
+            row["input"].rect.topleft = (form_x + 460, current_y)
             if hasattr(row["input"], 'list_rect'):
-                row["input"].list_rect.topleft = (form_x + 440, current_y + 28)
-            current_y += 35
+                row["input"].list_rect.topleft = (form_x + 460, current_y + 28)
+            current_y += row["input"].rect.height + 8
             
-        if self.loot_rows or self.active_category in ["Animal", "Zombie", "Vehicle", "NPC", "Clothes"]:
+        has_loot = bool(self.loot_rows or self.active_category in ["Animal", "Zombie", "Vehicle", "NPC", "Clothes"])
+        if has_loot:
             current_y += 20
             self.loot_header_y = current_y
-            current_y += 30
+            # 55px provides clean vertical clearance for "Loot Drops:" + "Item"/"Chance" labels
+            current_y += 55
             
             for row in self.loot_rows:
                 row["item"].rect.topleft = (form_x + 20, current_y)
@@ -368,12 +407,80 @@ class EntityEditor:
                 
             self.add_loot_btn.topleft = (form_x + 20, current_y)
             current_y += 45
+        else:
+            self.loot_header_y = None
             
         current_y += 10
         self.save_btn.topleft = (form_x + 20, current_y)
-        self.delete_btn.topleft = (form_x + 140, current_y)
+        self.duplicate_btn.topleft = (form_x + 165, current_y)
+        self.delete_btn.topleft = (form_x + 310, current_y)
+        self.code_btn.topleft = (form_x + 435, current_y)
         
         self.max_form_scroll = max(0, current_y + self.form_scroll - self.height + 40)
+
+    def duplicate_xml(self):
+        if not self.selected_file or self.selected_file is False:
+            return
+
+        base_name = self.selected_file
+        if base_name.endswith(".xml"):
+            base_name = base_name[:-4]
+
+        base_no_idx = re.sub(r'_\d+$', '', base_name)
+        cat_dir = self.categories[self.active_category]
+
+        counter = 1
+        while True:
+            dup_filename = f"{base_no_idx}_{counter}.xml"
+            if dup_filename not in self.files and not os.path.exists(os.path.join(cat_dir, dup_filename)):
+                break
+            counter += 1
+
+        root = self.original_tree.getroot()
+        root.tag = self.root_tag_input.text.strip() or self.root_tag
+
+        def get_node(parent, path_str):
+            if not path_str: return parent
+            curr = parent
+            for p in path_str.split('/'):
+                tag = p.split('[')[0]
+                idx = int(p.split('[')[1][:-1]) - 1
+                found = curr.findall(tag)
+                if len(found) > idx:
+                    curr = found[idx]
+            return curr
+
+        for f in self.fields:
+            node = get_node(root, f["path"])
+            if node is not None:
+                val = f["input"].text.strip()
+                if f["attr"] == "cloth_name":
+                    node.clear()
+                    if val: ET.SubElement(node, "cloth", {"name": val})
+                elif f["attr"] == "#text":
+                    node.text = val
+                else:
+                    node.set(f["attr"], val)
+
+        if self.loot_rows or self.active_category in ["Animal", "Zombie", "Vehicle", "NPC", "Clothes"]:
+            loot_node = root.find("loot")
+            if loot_node is not None:
+                loot_node.clear()
+            else:
+                loot_node = ET.SubElement(root, "loot")
+
+            for row in self.loot_rows:
+                attr_key = row.get("attr_name", "item" if self.active_category != "Clothes" else "name")
+                ET.SubElement(loot_node, "item", {attr_key: row["item"].text, "chance": row["chance"].text})
+
+        tree = ET.ElementTree(root)
+        ET.indent(tree, space="    ", level=0)
+
+        path = os.path.join(cat_dir, dup_filename)
+        tree.write(path, encoding="utf-8", xml_declaration=True)
+
+        self.refresh_files()
+        self.select_file(dup_filename)
 
     def save_xml(self):
         fname = self.filename_input.text.strip()
@@ -443,31 +550,66 @@ class EntityEditor:
         
         if self.original_tree:
             root = self.original_tree.getroot()
+            
+            # 1. Search for <visuals/sprite> (Zombies, Animals, Vehicles, NPC)
             for sprite in root.findall(".//visuals/sprite"):
                 if sprite.get("id") in ["center", "top", "body"] or base_img is None:
                     base_img = sprite.get("file")
                     if sprite.get("id") in ["center", "top", "body"]: break
-            if not base_img and self.active_category == "Clothes":
-                sprite_node = root.find("properties/sprite")
-                if sprite_node is not None: base_img = sprite_node.get("file")
+            
+            # 2. Search for <properties/sprite> or any <sprite> (Items, Clothes)
+            if not base_img:
+                sprite_node = root.find(".//sprite")
+                if sprite_node is not None:
+                    base_img = sprite_node.get("file")
+
+            # 3. Fallback: use XML file stem if no sprite tag is specified
+            if not base_img and self.selected_file and self.selected_file is not False:
+                base_img = os.path.splitext(self.selected_file)[0]
                     
         def load_img(fname):
             if not fname: return None
-            c_name = os.path.splitext(fname)[0]
-            if c_name in self.all_sprites: return self.all_sprites[c_name]
+            
+            base_fname = os.path.basename(fname)
+            stem = os.path.splitext(base_fname)[0]
+            
+            # Check by stem or full filename in all_sprites
+            if stem in self.all_sprites: return self.all_sprites[stem]
+            if base_fname in self.all_sprites: return self.all_sprites[base_fname]
+            
             s_dir = os.path.join(GAME_ROOT, 'lib', 'sprites')
-            for sub in ['clothes', 'zombie', 'player', 'npc', 'animals', 'vehicle']:
-                p = os.path.join(s_dir, sub, fname)
-                if os.path.exists(p):
-                    try:
-                        img = pygame.image.load(p).convert_alpha()
-                        return pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
-                    except: pass
+            # Added 'items' and 'map' to the subdirectories search list
+            subdirs = ['items', 'clothes', 'zombie', 'player', 'npc', 'animals', 'vehicle', 'map']
+            
+            candidate_files = [base_fname]
+            if not base_fname.endswith('.png'):
+                candidate_files.append(f"{stem}.png")
+                
+            for sub in subdirs:
+                for c_file in candidate_files:
+                    p = os.path.join(s_dir, sub, c_file)
+                    if os.path.exists(p):
+                        try:
+                            img = pygame.image.load(p).convert_alpha()
+                            return pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
+                        except Exception:
+                            pass
             return None
 
-        img = load_img(base_img)
-        if img: surf.blit(img, (0,0))
+        # Check if item/entity is already loaded in all_sprites by its XML name
+        img = None
+        if self.original_tree:
+            item_name = self.original_tree.getroot().get("name")
+            if item_name and item_name in self.all_sprites:
+                img = self.all_sprites[item_name]
+
+        if not img:
+            img = load_img(base_img)
+
+        if img:
+            surf.blit(img, (0, 0))
                 
+        # Draw clothing layers (for NPCs, Zombies, Players)
         layer_order = ['legs', 'feet', 'body', 'arms', 'head', 'facial', 'hair', 'util', 'hand']
         clothes_to_draw = []
         
@@ -478,12 +620,12 @@ class EntityEditor:
                     cloth_name = f["input"].text.strip()
                     if cloth_name and cloth_name in self.cloth_sprites:
                         s_file = self.cloth_sprites[cloth_name]
-                        img = load_img(s_file)
-                        if img: clothes_to_draw.append((layer_order.index(tag), img))
+                        c_img = load_img(s_file)
+                        if c_img: clothes_to_draw.append((layer_order.index(tag), c_img))
                                 
         clothes_to_draw.sort(key=lambda x: x[0]) 
         for _, c_img in clothes_to_draw:
-            surf.blit(c_img, (0,0))
+            surf.blit(c_img, (0, 0))
             
         return surf
 
@@ -495,7 +637,7 @@ class EntityEditor:
         if event.type == pygame.MOUSEMOTION:
             if self.dragging_sidebar and self.sidebar_thumb_rect and self.max_sidebar_scroll > 0:
                 dy = event.pos[1] - self.sidebar_start_y
-                track_h = self.height - self.y_offset - 125
+                track_h = self.height - self.y_offset - 145
                 thumb_h = self.sidebar_thumb_rect.height
                 track_space = track_h - thumb_h
                 if track_space > 0:
@@ -518,10 +660,19 @@ class EntityEditor:
             if self.category_dropdown.handle_event(event):
                 if self.category_dropdown.text != self.active_category:
                     self.active_category = self.category_dropdown.text
+                    self.search_input.text = ""  # Clear search query on category switch
                     self.refresh_files()
                 return True
 
         if self.category_dropdown.handle_event(event): return True
+
+        # Handle Search Input typing / clicks
+        if self.search_input.handle_event(event):
+            content_h = len(self.filtered_files) * 30 + 10
+            list_h = self.height - self.y_offset - 145
+            self.max_sidebar_scroll = max(0, content_h - list_h)
+            self.sidebar_scroll = max(0, min(self.sidebar_scroll, self.max_sidebar_scroll))
+            return True
 
         if self.selected_file is not None:
             dropdowns = [row["input"] for row in self.fields if isinstance(row["input"], UIDropdown)]
@@ -530,6 +681,7 @@ class EntityEditor:
             for d in dropdowns:
                 if getattr(d, 'expanded', False):
                     if d.handle_event(event): return True
+            
             
             if self.filename_input.handle_event(event): return True
             if self.root_tag_input.handle_event(event): return True
@@ -541,6 +693,9 @@ class EntityEditor:
                 if row["chance"].handle_event(event): return True
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                # Any click not consumed by an input clears current field focus
+                FocusManager.clear_focus()
+                
                 mx, my = event.pos
                 if mx > self.sidebar_w:
                     if self.form_thumb_rect and self.form_thumb_rect.collidepoint(mx, my):
@@ -568,9 +723,16 @@ class EntityEditor:
                     if self.save_btn.collidepoint(mx, my):
                         self.save_xml()
                         return True
+                    if self.selected_file and self.duplicate_btn.collidepoint(mx, my):
+                        self.duplicate_xml()
+                        return True
                     if self.selected_file and self.delete_btn.collidepoint(mx, my):
                         self.delete_xml()
                         return True
+                    if self.selected_file and self.code_btn.collidepoint(mx, my):
+                        self.save_xml()
+                        path = os.path.join(self.categories[self.active_category], self.selected_file)
+                        return {"action": "open_in_code", "path": path}
                         
             if event.type == pygame.MOUSEBUTTONDOWN and event.pos[0] > self.sidebar_w:
                 if event.button == 4:
@@ -603,10 +765,10 @@ class EntityEditor:
                         self.select_file(False)
                         return True
                     
-                    list_y = self.y_offset + 125 - self.sidebar_scroll
-                    for fname in self.files:
+                    list_y = self.y_offset + 150 - self.sidebar_scroll
+                    for fname in self.filtered_files:
                         if pygame.Rect(10, list_y, self.sidebar_w - 30, 25).collidepoint(mx, my):
-                            if list_y > self.y_offset + 120:
+                            if list_y > self.y_offset + 145:
                                 self.select_file(fname)
                             return True
                         list_y += 30
@@ -618,12 +780,12 @@ class EntityEditor:
         pygame.draw.rect(surface, UITheme.BG, bg_rect)
         
         # Sidebar View
-        list_view_rect = pygame.Rect(0, self.y_offset + 125, self.sidebar_w, self.height - self.y_offset - 125)
+        list_view_rect = pygame.Rect(0, self.y_offset + 145, self.sidebar_w, self.height - self.y_offset - 145)
         surface.set_clip(list_view_rect)
         
         mouse_pos = pygame.mouse.get_pos()
-        list_y = self.y_offset + 130 - self.sidebar_scroll
-        for fname in self.files:
+        list_y = self.y_offset + 150 - self.sidebar_scroll
+        for fname in self.filtered_files:
             r = pygame.Rect(10, list_y, self.sidebar_w - 30, 25)
             if fname == self.selected_file:
                 pygame.draw.rect(surface, UITheme.LIST_HOVER, r, border_radius=4)
@@ -637,15 +799,22 @@ class EntityEditor:
         surface.set_clip(None)
         
         # Sidebar Header
-        sidebar_header_rect = pygame.Rect(0, self.y_offset, self.sidebar_w, 125)
+        sidebar_header_rect = pygame.Rect(0, self.y_offset, self.sidebar_w, 145)
         pygame.draw.rect(surface, UITheme.PANEL_BG, sidebar_header_rect)
         pygame.draw.line(surface, UITheme.BORDER, (self.sidebar_w, self.y_offset), (self.sidebar_w, self.height), 2)
-        surface.blit(self.font.render("Entity Manager", True, UITheme.WARNING), (20, self.y_offset + 15))
+        surface.blit(self.font.render("Entity Manager", True, UITheme.WARNING), (20, self.y_offset + 12))
         
         self.category_dropdown.draw(surface)
+        
+        # Draw Search Box & Placeholder
+        self.search_input.draw(surface)
+        if not self.search_input.text and not self.search_input.active:
+            surface.blit(self.font.render("Search entities...", True, UITheme.TEXT_DIM), (self.search_input.rect.x + 8, self.search_input.rect.y + 6))
+        
         btn_color = UITheme.SUCCESS if self.selected_file is False else UITheme.BG
         draw_styled_button(surface, self.new_btn, "+ New Entity", self.font, mouse_pos, btn_color, UITheme.SUCCESS_HOVER)
 
+        self.max_sidebar_scroll = max(0, len(self.filtered_files) * 30 + 10 - list_view_rect.height)
         if self.max_sidebar_scroll > 0:
             track_rect = pygame.Rect(self.sidebar_w - 8, list_view_rect.y, 8, list_view_rect.height)
             thumb_h = max(20, (list_view_rect.height / (list_view_rect.height + self.max_sidebar_scroll)) * list_view_rect.height)
@@ -681,32 +850,61 @@ class EntityEditor:
             # Fields Headers
             col_y = self.filename_input.rect.bottom + 15
             surface.blit(self.font.render("Node Path", True, UITheme.WARNING), (form_x + 20, col_y))
-            surface.blit(self.font.render("Attribute", True, UITheme.WARNING), (form_x + 280, col_y))
-            surface.blit(self.font.render("Value", True, UITheme.WARNING), (form_x + 440, col_y))
+            surface.blit(self.font.render("Attribute", True, UITheme.WARNING), (form_x + 240, col_y))
+            surface.blit(self.font.render("Value", True, UITheme.WARNING), (form_x + 460, col_y))
             
+            path_x = form_x + 20
+            attr_x = form_x + 240
+            max_path_w = 210
+            max_attr_w = 210
+
             for row in self.fields:
-                path_str = row["path"] or f"<{self.root_tag}>"
-                display_path = path_str.replace("/", " > ")
-                display_path = re.sub(r'\[\d+\]', '', display_path)
-                if len(display_path) > 22: display_path = "..." + display_path[-19:]
+                full_path = row["path"] or f"<{self.root_tag}>"
+                clean_path = re.sub(r'\[\d+\]', '', full_path).replace("/", " > ")
                 
-                attr_str = row["attr"]
-                if attr_str == "#text":
-                    attr_str = "[Content]"
-                elif attr_str == "cloth_name":
-                    attr_str = "[Cloth Item]"
-                    
-                if len(attr_str) > 16: attr_str = attr_str[:13] + "..."
-                
+                # Truncate Node Path dynamically based on rendered pixel width
+                display_path = clean_path
+                path_truncated = False
+                if self.font.size(display_path)[0] > max_path_w:
+                    path_truncated = True
+                    while display_path and self.font.size(display_path + "...")[0] > max_path_w:
+                        display_path = display_path[:-1]
+                    display_path += "..."
+
+                # Truncate Attribute dynamically based on rendered pixel width
+                raw_attr = row["attr"]
+                if raw_attr == "#text":
+                    full_attr = "[Content]"
+                elif raw_attr == "cloth_name":
+                    full_attr = "[Cloth Item]"
+                else:
+                    full_attr = raw_attr
+
+                display_attr = full_attr
+                attr_truncated = False
+                if self.font.size(display_attr)[0] > max_attr_w:
+                    attr_truncated = True
+                    while display_attr and self.font.size(display_attr + "...")[0] > max_attr_w:
+                        display_attr = display_attr[:-1]
+                    display_attr += "..."
+
                 p_text = self.font.render(display_path, True, UITheme.TEXT_DIM)
-                a_text = self.font.render(attr_str, True, UITheme.ACCENT)
+                a_text = self.font.render(display_attr, True, UITheme.ACCENT)
                 
-                surface.blit(p_text, (form_x + 20, row["input"].rect.y + 6))
-                surface.blit(a_text, (form_x + 280, row["input"].rect.y + 6))
+                surface.blit(p_text, (path_x, row["input"].rect.y + 6))
+                surface.blit(a_text, (attr_x, row["input"].rect.y + 6))
                 row["input"].draw(surface)
+
+                # Tooltips on hover if the text was truncated
+                p_rect = pygame.Rect(path_x, row["input"].rect.y, max_path_w, 28)
+                a_rect = pygame.Rect(attr_x, row["input"].rect.y, max_attr_w, 28)
+                if path_truncated and p_rect.collidepoint(mouse_pos):
+                    register_tooltip(mouse_pos, f"Node: {clean_path}")
+                elif attr_truncated and a_rect.collidepoint(mouse_pos):
+                    register_tooltip(mouse_pos, f"Attribute: {full_attr}")
                 
             # Loot UI 
-            if hasattr(self, 'loot_header_y'):
+            if getattr(self, 'loot_header_y', None) is not None:
                 surface.blit(self.font.render("Loot Drops:", True, UITheme.WARNING), (form_x + 20, self.loot_header_y))
                 surface.blit(self.font.render("Item", True, UITheme.TEXT_DIM), (form_x + 20, self.loot_header_y + 25))
                 surface.blit(self.font.render("Chance", True, UITheme.TEXT_DIM), (form_x + 320, self.loot_header_y + 25))
@@ -717,10 +915,12 @@ class EntityEditor:
                     draw_styled_button(surface, row["del_btn"], "X", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
                     
                 draw_styled_button(surface, self.add_loot_btn, "+ Loot", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
-                
+
             draw_styled_button(surface, self.save_btn, "Save XML", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
             if self.selected_file:
+                draw_styled_button(surface, self.duplicate_btn, "Duplicate", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
                 draw_styled_button(surface, self.delete_btn, "Delete", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
+                draw_styled_button(surface, self.code_btn, "Code", self.font, mouse_pos, UITheme.PANEL_BG, UITheme.HOVER_BG)
                 
             # Draw Overlays (Dropdowns last so they sit on top)
             for row in self.fields:

@@ -29,6 +29,15 @@ pygame.font.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Rot Engine - Game Editor")
 
+# Start maximized using SDL2 window controller
+try:
+    from pygame._sdl2 import Window
+    window = Window.from_display_module()
+    window.maximize()
+except Exception:
+    info = pygame.display.Info()
+    screen = pygame.display.set_mode((info.current_w, info.current_h), pygame.RESIZABLE)
+
 try:
     pygame.scrap.init()
 except Exception:
@@ -149,8 +158,11 @@ def paste_building_on_map(game_map, building_name, building_dir, target_x, targe
                      except Exception as e: print(f"Error pasting building layer {suffix}: {e}")
 
 def editor():
-    current_screen_width = SCREEN_WIDTH
-    current_screen_height = SCREEN_HEIGHT
+    pygame.event.pump()
+    current_screen_width, current_screen_height = screen.get_size()
+    #current_screen_width = SCREEN_WIDTH
+    #current_screen_height = SCREEN_HEIGHT
+    
 
     xml_path = os.path.join(GAME_ROOT, 'lib', 'data', 'map')
     sprite_path = os.path.join(GAME_ROOT, 'lib', 'sprites', 'map')
@@ -304,7 +316,12 @@ def editor():
                 continue
             # --> NEW: Route events to Entity Editor
             if editor_mode == "Entities":
-                entity_editor.handle_event(event)
+                res = entity_editor.handle_event(event)
+                if isinstance(res, dict) and res.get("action") == "open_in_code":
+                    code_editor.open_file(res["path"])
+                    editor_mode = "CODE"
+                    menu_bar.active_mode = "CODE"
+                    log_console.add_message(f"Opened {os.path.basename(res['path'])} in Code Editor")
                 continue
             if editor_mode == "CODE":
                 code_editor.handle_event(event)

@@ -78,6 +78,32 @@ def draw_tooltips(surface, font):
         _active_tooltip = None
 
 # ----------------------------------------------------------------------
+# GLOBAL FOCUS MANAGER
+# ----------------------------------------------------------------------
+class FocusManager:
+    focused_widget = None
+
+    @classmethod
+    def set_focus(cls, widget):
+        if cls.focused_widget is not None and cls.focused_widget is not widget:
+            cls.focused_widget.active = False
+            if hasattr(cls.focused_widget, 'sel_start'):
+                cls.focused_widget.sel_start = None
+        cls.focused_widget = widget
+
+    @classmethod
+    def clear_focus(cls):
+        if cls.focused_widget is not None:
+            cls.focused_widget.active = False
+            if hasattr(cls.focused_widget, 'sel_start'):
+                cls.focused_widget.sel_start = None
+        cls.focused_widget = None
+
+    @classmethod
+    def is_focused(cls, widget):
+        return cls.focused_widget is widget
+
+# ----------------------------------------------------------------------
 # COMPONENTS
 # ----------------------------------------------------------------------
 class UITextBox:
@@ -91,37 +117,40 @@ class UITextBox:
         self.scroll_x = 0
         self.blink_timer = 0
         self.dragging = False
+        self.history = [text]
+        self.history_index = 0
+        self.undo_redo_suspended = False
 
-    def delete_selection(self):
-        if self.sel_start is not None and self.sel_start != self.cursor_pos:
-            s, e = min(self.sel_start, self.cursor_pos), max(self.sel_start, self.cursor_pos)
-            self.text = self.text[:s] + self.text[e:]
-            self.cursor_pos = s
-            self.sel_start = None
-            return True
-        return False
-
-    def _get_idx_from_x(self, x):
-        rel_x = x - self.rect.x + self.scroll_x
-        for i in range(len(self.text)):
-            w = self.font.size(self.text[:i])[0]
-            cw = self.font.size(self.text[i])[0]
-            if rel_x < w + cw / 2: return i
-        return len(self.text)
+    def _push_history(self):
+        if self.undo_redo_suspended: return
+        if self.history_index < len(self.history) - 1:
+            self.history = self.history[:self.history_index + 1]
+        if self.history and self.history[-1] == self.text: return
+        self.history.append(self.text)
+        self.history_index = len(self.history) - 1
+        if len(self.history) > 100:
+            self.history = self.history[-100:]
+            self.history_index = len(self.history) - 1
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.rect.collidepoint(event.pos):
+                FocusManager.set_focus(self)
                 self.active = True
                 self.cursor_pos = self._get_idx_from_x(event.pos[0])
                 self.sel_start = self.cursor_pos
                 self.dragging = True
                 return True
             else:
-                self.active = False
+                if self.active:
+                    self.active = False
+                    if FocusManager.focused_widget is self:
+                        FocusManager.clear_focus()
                 return False
                 
-        if not self.active: return False
+        if not self.active or FocusManager.focused_widget is not self:
+            self.active = False
+            return False
 
         if event.type == pygame.MOUSEMOTION:
             if self.dragging:
@@ -134,11 +163,14 @@ class UITextBox:
             ctrl = event.mod & pygame.KMOD_CTRL
             shift = event.mod & pygame.KMOD_SHIFT
             
+            # COPY
             if ctrl and event.key == pygame.K_c:
                 if self.sel_start is not None and self.sel_start != self.cursor_pos:
                     s, e = min(self.sel_start, self.cursor_pos), max(self.sel_start, self.cursor_pos)
                     try: pygame.scrap.put(pygame.SCRAP_TEXT, self.text[s:e].encode('utf-8'))
                     except: pass
+                return True
+            # PASTE
             elif ctrl and event.key == pygame.K_v:
                 try:
                     t = pygame.scrap.get(pygame.SCRAP_TEXT).decode('utf-8').strip('\x00')
@@ -146,13 +178,38 @@ class UITextBox:
                     self.text = self.text[:self.cursor_pos] + t + self.text[self.cursor_pos:]
                     self.cursor_pos += len(t)
                     self.sel_start = None
+                    self._push_history()
                 except: pass
+                return True
+            # CUT
             elif ctrl and event.key == pygame.K_x:
                 if self.sel_start is not None and self.sel_start != self.cursor_pos:
                     s, e = min(self.sel_start, self.cursor_pos), max(self.sel_start, self.cursor_pos)
                     try: pygame.scrap.put(pygame.SCRAP_TEXT, self.text[s:e].encode('utf-8'))
                     except: pass
                     self.delete_selection()
+                    self._push_history()
+                return True
+            # UNDO (CTRL+Z)
+            elif ctrl and not shift and event.key == pygame.K_z:
+                if self.history_index > 0:
+                    self.undo_redo_suspended = True
+                    self.history_index -= 1
+                    self.text = self.history[self.history_index]
+                    self.cursor_pos = min(self.cursor_pos, len(self.text))
+                    self.sel_start = None
+                    self.undo_redo_suspended = False
+                return True
+            # REDO (CTRL+Y or CTRL+SHIFT+Z)
+            elif ctrl and (event.key == pygame.K_y or (shift and event.key == pygame.K_z)):
+                if self.history_index < len(self.history) - 1:
+                    self.undo_redo_suspended = True
+                    self.history_index += 1
+                    self.text = self.history[self.history_index]
+                    self.cursor_pos = min(self.cursor_pos, len(self.text))
+                    self.sel_start = None
+                    self.undo_redo_suspended = False
+                return True
             elif event.key == pygame.K_LEFT:
                 if shift:
                     if self.sel_start is None: self.sel_start = self.cursor_pos
@@ -168,10 +225,12 @@ class UITextBox:
                     if self.cursor_pos > 0:
                         self.text = self.text[:self.cursor_pos-1] + self.text[self.cursor_pos:]
                         self.cursor_pos -= 1
+                self._push_history()
             elif event.key == pygame.K_DELETE:
                 if not self.delete_selection():
                     if self.cursor_pos < len(self.text):
                         self.text = self.text[:self.cursor_pos] + self.text[self.cursor_pos+1:]
+                self._push_history()
             elif event.key == pygame.K_HOME:
                 if shift:
                     if self.sel_start is None: self.sel_start = self.cursor_pos
@@ -187,6 +246,7 @@ class UITextBox:
                     self.delete_selection()
                     self.text = self.text[:self.cursor_pos] + event.unicode + self.text[self.cursor_pos:]
                     self.cursor_pos += len(event.unicode)
+                    self._push_history()
             return True
         return False
 
@@ -200,7 +260,12 @@ class UITextBox:
         border_color = UITheme.ACCENT if self.active else UITheme.BORDER
         pygame.draw.rect(surface, border_color, self.rect, max(1, 2 if self.active else 1), border_radius=4)
         
-        surface.set_clip(self.rect.inflate(-8, -4))
+        # Save previous clip rect and restore it so it does not reset panel clipping
+        prev_clip = surface.get_clip()
+        box_clip = self.rect.inflate(-8, -4)
+        if prev_clip:
+            box_clip = box_clip.clip(prev_clip)
+        surface.set_clip(box_clip)
         
         if self.sel_start is not None and self.sel_start != self.cursor_pos:
             s, e = min(self.sel_start, self.cursor_pos), max(self.sel_start, self.cursor_pos)
@@ -217,7 +282,7 @@ class UITextBox:
                 cx = self.rect.x + 8 + cursor_x - self.scroll_x
                 pygame.draw.line(surface, UITheme.TEXT, (cx, self.rect.y + 6), (cx, self.rect.bottom - 6), 2)
                 
-        surface.set_clip(None)
+        surface.set_clip(prev_clip)
 
 class UIDropdown:
     def __init__(self, x, y, width, height, font, options, selected_value="", searchable=False):
@@ -560,13 +625,17 @@ class UITextArea:
                     return True
 
                 if self.rect.collidepoint(event.pos):
+                    FocusManager.set_focus(self)
                     self.active = True
                     self.cursor_pos = self._get_idx_from_pos(*event.pos)
                     self.sel_start = self.cursor_pos
                     self.dragging = True
                     return True
                 else:
-                    self.active = False
+                    if self.active:
+                        self.active = False
+                        if FocusManager.focused_widget is self:
+                            FocusManager.clear_focus()
                     return False
                     
             elif event.button in (4, 5) and self.rect.collidepoint(event.pos):
@@ -574,7 +643,9 @@ class UITextArea:
                 else: self.scroll_y = min(self._max_scroll, self.scroll_y + 20)
                 return True
 
-        if not self.active and not self.dragging_scroll: return False
+        if not self.active or FocusManager.focused_widget is not self:
+            self.active = False
+            if not self.dragging_scroll: return False
 
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self.dragging = False
@@ -597,11 +668,14 @@ class UITextArea:
             ctrl = event.mod & pygame.KMOD_CTRL
             shift = event.mod & pygame.KMOD_SHIFT
             
+            # COPY
             if ctrl and event.key == pygame.K_c:
                 if self.sel_start is not None and self.sel_start != self.cursor_pos:
                     s, e = min(self.sel_start, self.cursor_pos), max(self.sel_start, self.cursor_pos)
                     try: pygame.scrap.put(pygame.SCRAP_TEXT, self.text[s:e].encode('utf-8'))
                     except: pass
+                return True
+            # PASTE
             elif ctrl and event.key == pygame.K_v:
                 try:
                     t = pygame.scrap.get(pygame.SCRAP_TEXT).decode('utf-8').strip('\x00')
@@ -610,33 +684,40 @@ class UITextArea:
                     self.cursor_pos += len(t)
                     self.sel_start = None
                     self._update_lines()
+                    self._push_history()
                 except: pass
+                return True
+            # CUT
             elif ctrl and event.key == pygame.K_x:
                 if self.sel_start is not None and self.sel_start != self.cursor_pos:
                     s, e = min(self.sel_start, self.cursor_pos), max(self.sel_start, self.cursor_pos)
                     try: pygame.scrap.put(pygame.SCRAP_TEXT, self.text[s:e].encode('utf-8'))
                     except: pass
                     self.delete_selection()
-            elif ctrl and event.key == pygame.K_z:
+                    self._push_history()
+                return True
+            # UNDO (CTRL+Z)
+            elif ctrl and not shift and event.key == pygame.K_z:
                 if self.history_index > 0:
                     self.undo_redo_suspended = True
                     self.history_index -= 1
                     self.text = self.history[self.history_index]
-                    self.cursor_pos = len(self.text)
+                    self.cursor_pos = min(self.cursor_pos, len(self.text))
                     self.sel_start = None
                     self._update_lines()
                     self.undo_redo_suspended = False
-                    return True
-            elif ctrl and event.key == pygame.K_u:
+                return True
+            # REDO (CTRL+Y or CTRL+SHIFT+Z)
+            elif ctrl and (event.key == pygame.K_y or (shift and event.key == pygame.K_z)):
                 if self.history_index < len(self.history) - 1:
                     self.undo_redo_suspended = True
                     self.history_index += 1
                     self.text = self.history[self.history_index]
-                    self.cursor_pos = len(self.text)
+                    self.cursor_pos = min(self.cursor_pos, len(self.text))
                     self.sel_start = None
                     self._update_lines()
                     self.undo_redo_suspended = False
-                    return True
+                return True
             elif event.key == pygame.K_LEFT:
                 if shift:
                     if self.sel_start is None: self.sel_start = self.cursor_pos
@@ -684,21 +765,25 @@ class UITextArea:
                     self.text = self.text[:self.cursor_pos-1] + self.text[self.cursor_pos:]
                     self.cursor_pos -= 1
                     self._update_lines()
+                self._push_history()
             elif event.key == pygame.K_DELETE:
                 if not self.delete_selection() and self.cursor_pos < len(self.text):
                     self.text = self.text[:self.cursor_pos] + self.text[self.cursor_pos+1:]
                     self._update_lines()
+                self._push_history()
             elif event.key == pygame.K_RETURN:
                 self.delete_selection()
                 self.text = self.text[:self.cursor_pos] + "\n" + self.text[self.cursor_pos:]
                 self.cursor_pos += 1
                 self._update_lines()
+                self._push_history()
             else:
                 if event.unicode and event.unicode.isprintable():
                     self.delete_selection()
                     self.text = self.text[:self.cursor_pos] + event.unicode + self.text[self.cursor_pos:]
                     self.cursor_pos += len(event.unicode)
                     self._update_lines()
+                    self._push_history()
             return True
         return False
 
@@ -707,7 +792,11 @@ class UITextArea:
         border_color = UITheme.ACCENT if self.active else UITheme.BORDER
         pygame.draw.rect(surface, border_color, self.rect, max(1, 2 if self.active else 1), border_radius=4)
         
-        surface.set_clip(self.rect.inflate(-8, -4))
+        prev_clip = surface.get_clip()
+        area_clip = self.rect.inflate(-8, -4)
+        if prev_clip:
+            area_clip = area_clip.clip(prev_clip)
+        surface.set_clip(area_clip)
         
         cursor_y, cursor_x = 0, 0
         for i, (l_text, s_idx, e_idx) in enumerate(self.lines):
@@ -748,7 +837,7 @@ class UITextArea:
                 cy = self.rect.y + 8 + cursor_y - self.scroll_y
                 pygame.draw.line(surface, UITheme.TEXT, (cx, cy), (cx, cy + self.line_height - 2), 2)
                 
-        surface.set_clip(None)
+        surface.set_clip(prev_clip)
         
         if self._max_scroll > 0:
             sb_rect = pygame.Rect(self.rect.right - 8, self.rect.y + 2, 6, self.rect.height - 4)

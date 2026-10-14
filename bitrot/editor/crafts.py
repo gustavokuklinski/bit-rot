@@ -1,5 +1,6 @@
 import pygame
 import os
+import re
 import xml.etree.ElementTree as ET
 from editor.config import GAME_ROOT
 from editor.ui import UITextBox, UIDropdown, UIAttributeList, UITheme, draw_styled_button
@@ -37,17 +38,29 @@ class CraftEditor:
         self.ing_rows = [] 
         self.res_rows = []
         
-        self.save_btn = pygame.Rect(0, 0, 120, 35)
-        self.delete_btn = pygame.Rect(0, 0, 100, 35)
-        self.add_ing_btn = pygame.Rect(0, 0, 80, 28)
-        self.add_res_btn = pygame.Rect(0, 0, 80, 28)
+        self.save_btn = pygame.Rect(0, 0, 130, 35)
+        self.duplicate_btn = pygame.Rect(0, 0, 130, 35)
+        self.delete_btn = pygame.Rect(0, 0, 110, 35)
+        self.add_ing_btn = pygame.Rect(0, 0, 90, 28)
+        self.add_res_btn = pygame.Rect(0, 0, 90, 28)
         
+        # Sidebar UI: Search bar and + New Craft button
+        self.search_input = UITextBox(10, self.y_offset + 38, self.sidebar_w - 20, 28, self.font, "")
+        self.new_btn = pygame.Rect(10, self.y_offset + 72, self.sidebar_w - 20, 30)
+
         self.type_opts = []
         self.item_opts = []
         self.magazine_opts = []
 
         self.load_xmls()
         
+    @property
+    def filtered_recipes(self):
+        query = self.search_input.text.strip().lower()
+        if not query:
+            return list(self.recipes.keys())
+        return [f for f in self.recipes.keys() if query in f.lower()]
+
     def resize(self, width, height):
         self.width = width
         self.height = height
@@ -215,10 +228,10 @@ class CraftEditor:
     def add_ing_row(self, name="", destroy=False, amount="1", group=False):
         row = {
             "group": group,
-            "group_btn": pygame.Rect(0, 0, 60, 28),
+            "group_btn": pygame.Rect(0, 0, 65, 28),
             "item": UIDropdown(0, 0, 290, 28, self.font, self.item_opts, name, searchable=True),
             "destroy": destroy,
-            "destroy_btn": pygame.Rect(0, 0, 70, 28),
+            "destroy_btn": pygame.Rect(0, 0, 80, 28),
             "amount": UITextBox(0, 0, 50, 28, self.font, amount),
             "del_btn": pygame.Rect(0, 0, 28, 28)
         }
@@ -289,11 +302,76 @@ class CraftEditor:
             
         current_y += 25 
         self.save_btn.topleft = (form_x + 20, current_y)
-        self.delete_btn.topleft = (form_x + 160, current_y)
+        self.duplicate_btn.topleft = (form_x + 165, current_y)
+        self.delete_btn.topleft = (form_x + 310, current_y)
         
         self.max_scroll = max(0, current_y + self.form_scroll - self.height + 40)
-        content_h = len(self.recipes) * 30 + 80
-        self.max_sidebar_scroll = max(0, content_h - (self.height - self.y_offset))
+        content_h = len(self.filtered_recipes) * 30 + 10
+        self.max_sidebar_scroll = max(0, content_h - (self.height - self.y_offset - 110))
+
+    def duplicate_current(self):
+        if not self.selected_file: return
+        
+        base_name = self.selected_file
+        if base_name.endswith(".xml"):
+            base_name = base_name[:-4]
+            
+        base_no_idx = re.sub(r'_\d+$', '', base_name)
+        
+        counter = 1
+        while True:
+            dup_filename = f"{base_no_idx}_{counter}.xml"
+            if dup_filename not in self.recipes and not os.path.exists(os.path.join(self.craft_dir, dup_filename)):
+                break
+            counter += 1
+
+        data = {}
+        for attr in ["type", "craft", "output", "magazine", "req_level", "gain_xp", "time", "amount"]:
+            data[attr] = self.base_inputs[attr].text if attr in self.base_inputs else ""
+
+        merged_ings = []
+        for r in self.ing_rows:
+            item_val = r["item"].text.strip()
+            if not item_val: continue
+            if r["group"] and merged_ings:
+                merged_ings[-1]["names"].append(item_val)
+            else:
+                merged_ings.append({
+                    "names": [item_val],
+                    "destroy": str(r["destroy"]).lower(),
+                    "amount": r["amount"].text
+                })
+                
+        data["ingredients"] = []
+        for m in merged_ings:
+            name_str = f"[{', '.join(m['names'])}]" if len(m['names']) > 1 else m['names'][0]
+            data["ingredients"].append({"name": name_str, "destroy": m["destroy"], "amount": m["amount"]})
+
+        is_dismantle = self.base_inputs.get("craft") and self.base_inputs["craft"].text.lower() == "dismantle"
+        data["results"] = []
+        
+        if is_dismantle:
+            merged_res = []
+            for r in self.res_rows:
+                item_val = r["item"].text.strip()
+                if not item_val: continue
+                if r["group"] and merged_res:
+                    merged_res[-1]["names"].append(item_val)
+                else:
+                    merged_res.append({
+                        "names": [item_val],
+                        "amount": r["amount"].text,
+                        "chance": r["chance"].text
+                    })
+                    
+            for m in merged_res:
+                name_str = f"[{', '.join(m['names'])}]" if len(m['names']) > 1 else m['names'][0]
+                data["results"].append({"name": name_str, "amount": m["amount"], "chance": m["chance"]})
+
+        self.recipes[dup_filename] = {"data": data}
+        self.save_xml(dup_filename, data)
+        self.build_dynamic_options()
+        self.select_recipe(dup_filename)
 
     def save_xml(self, filename, data):
         if not os.path.exists(self.craft_dir): os.makedirs(self.craft_dir)
@@ -343,6 +421,13 @@ class CraftEditor:
                     self.form_scroll = max(0, min(self.max_scroll, self.form_start_offset + dy * scroll_per_pixel))
                     self.layout_form()
                 return True
+
+        if self.search_input.handle_event(event):
+            content_h = len(self.filtered_recipes) * 30 + 10
+            list_h = self.height - self.y_offset - 110
+            self.max_sidebar_scroll = max(0, content_h - list_h)
+            self.sidebar_scroll = max(0, min(self.sidebar_scroll, self.max_sidebar_scroll))
+            return True
 
         if self.selected_file is not None:
             old_craft = self.base_inputs.get("craft").text.lower() if "craft" in self.base_inputs else ""
@@ -426,6 +511,9 @@ class CraftEditor:
                     if self.save_btn.collidepoint(mx, my):
                         self.save_current()
                         return True
+                    if self.selected_file and self.duplicate_btn.collidepoint(mx, my):
+                        self.duplicate_current()
+                        return True
                     if self.selected_file and self.delete_btn.collidepoint(mx, my):
                         self.delete_current()
                         return True
@@ -457,14 +545,14 @@ class CraftEditor:
                     return True
                 
                 if event.button == 1:
-                    if pygame.Rect(10, self.y_offset + 40, 230, 30).collidepoint(mx, my):
+                    if self.new_btn.collidepoint(mx, my):
                         self.select_recipe(False)
                         return True
                     
-                    list_y = self.y_offset + 85 - self.sidebar_scroll
-                    for fname in self.recipes.keys():
+                    list_y = self.y_offset + 115 - self.sidebar_scroll
+                    for fname in self.filtered_recipes:
                         if pygame.Rect(10, list_y, self.sidebar_w - 30, 25).collidepoint(mx, my):
-                            if list_y > self.y_offset + 70:
+                            if list_y > self.y_offset + 110:
                                 self.select_recipe(fname)
                             return True
                         list_y += 30
@@ -541,22 +629,13 @@ class CraftEditor:
         bg_rect = pygame.Rect(0, self.y_offset, self.width, self.height - self.y_offset)
         pygame.draw.rect(surface, UITheme.BG, bg_rect) 
         
-        sidebar_rect = pygame.Rect(0, self.y_offset, self.sidebar_w, self.height - self.y_offset)
-        pygame.draw.rect(surface, UITheme.PANEL_BG, sidebar_rect)
-        pygame.draw.line(surface, UITheme.BORDER, (self.sidebar_w, self.y_offset), (self.sidebar_w, self.height), 2)
-        
-        surface.blit(self.font.render("Crafting Recipes", True, UITheme.WARNING), (10, self.y_offset + 10))
-        
-        mouse_pos = pygame.mouse.get_pos()
-        new_btn_rect = pygame.Rect(10, self.y_offset + 40, self.sidebar_w - 20, 32)
-        btn_color = UITheme.SUCCESS if self.selected_file is False else UITheme.BG
-        draw_styled_button(surface, new_btn_rect, "+ New Craft", self.font, mouse_pos, btn_color, UITheme.SUCCESS_HOVER)
-        
-        list_view_rect = pygame.Rect(0, self.y_offset + 80, self.sidebar_w, self.height - self.y_offset - 80)
+        # Sidebar View (List of recipes)
+        list_view_rect = pygame.Rect(0, self.y_offset + 110, self.sidebar_w, self.height - self.y_offset - 110)
         surface.set_clip(list_view_rect)
         
-        list_y = self.y_offset + 85 - self.sidebar_scroll
-        for fname in self.recipes.keys():
+        mouse_pos = pygame.mouse.get_pos()
+        list_y = self.y_offset + 115 - self.sidebar_scroll
+        for fname in self.filtered_recipes:
             r = pygame.Rect(10, list_y, self.sidebar_w - 30, 25)
             if fname == self.selected_file:
                 pygame.draw.rect(surface, UITheme.LIST_HOVER, r, border_radius=4)
@@ -569,14 +648,31 @@ class CraftEditor:
             
         surface.set_clip(None)
         
+        # Sidebar Header Area
+        sidebar_header_rect = pygame.Rect(0, self.y_offset, self.sidebar_w, 110)
+        pygame.draw.rect(surface, UITheme.PANEL_BG, sidebar_header_rect)
+        pygame.draw.line(surface, UITheme.BORDER, (self.sidebar_w, self.y_offset), (self.sidebar_w, self.height), 2)
+        surface.blit(self.font.render("Crafting Recipes", True, UITheme.WARNING), (20, self.y_offset + 12))
+        
+        # Draw Search Box & Placeholder
+        self.search_input.draw(surface)
+        if not self.search_input.text and not self.search_input.active:
+            surface.blit(self.font.render("Search crafts...", True, UITheme.TEXT_DIM), (self.search_input.rect.x + 8, self.search_input.rect.y + 6))
+        
+        btn_color = UITheme.SUCCESS if self.selected_file is False else UITheme.BG
+        draw_styled_button(surface, self.new_btn, "+ New Craft", self.font, mouse_pos, btn_color, UITheme.SUCCESS_HOVER)
+
+        self.max_sidebar_scroll = max(0, len(self.filtered_recipes) * 30 + 10 - list_view_rect.height)
         if self.max_sidebar_scroll > 0:
             track_rect = pygame.Rect(self.sidebar_w - 8, list_view_rect.y, 8, list_view_rect.height)
             self.sidebar_track_rect = track_rect
-            content_h = len(self.recipes) * 30 + 80
-            thumb_h = max(20, (list_view_rect.height / content_h) * list_view_rect.height)
+            thumb_h = max(20, (list_view_rect.height / (list_view_rect.height + self.max_sidebar_scroll)) * list_view_rect.height)
             thumb_y = list_view_rect.y + (self.sidebar_scroll / self.max_sidebar_scroll) * (list_view_rect.height - thumb_h)
             self.sidebar_thumb_rect = pygame.Rect(track_rect.x, thumb_y, 8, thumb_h)
             pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.sidebar_thumb_rect, border_radius=4)
+        else:
+            self.sidebar_thumb_rect = None
+            self.sidebar_track_rect = None
             
         if self.selected_file is not None:
             form_view_rect = pygame.Rect(self.sidebar_w, self.y_offset, self.width - self.sidebar_w, self.height - self.y_offset)
@@ -599,7 +695,7 @@ class CraftEditor:
             surface.blit(self.font.render("Amount", True, UITheme.TEXT_DIM), (form_x + 480, ing_title_y + 25))
             
             for row in self.ing_rows:
-                g_txt = "└ OR" if row["group"] else "---"
+                g_txt = "|_ OR" if row["group"] else "---"
                 g_color = UITheme.WARNING if row["group"] else UITheme.BG
                 draw_styled_button(surface, row["group_btn"], g_txt, self.font, mouse_pos, g_color, UITheme.WARNING_HOVER)
                 row["item"].draw(surface)
@@ -641,6 +737,7 @@ class CraftEditor:
                 
             draw_styled_button(surface, self.save_btn, "Save XML", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
             if self.selected_file:
+                draw_styled_button(surface, self.duplicate_btn, "Duplicate", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
                 draw_styled_button(surface, self.delete_btn, "Delete", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
                 
             for f in self.base_inputs.values():

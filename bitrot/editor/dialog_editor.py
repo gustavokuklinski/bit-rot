@@ -17,9 +17,10 @@ class FormModal:
         self.inputs = {}
         self.context = {}
 
-        self.save_btn = pygame.Rect(0, 0, 90, 30)
-        self.delete_btn = pygame.Rect(0, 0, 90, 30)
-        self.cancel_btn = pygame.Rect(0, 0, 90, 30)
+        # Expanded button widths to prevent text clipping
+        self.save_btn = pygame.Rect(0, 0, 110, 32)
+        self.delete_btn = pygame.Rect(0, 0, 110, 32)
+        self.cancel_btn = pygame.Rect(0, 0, 110, 32)
 
         self.scroll_y = 0
         self.max_scroll = 0
@@ -36,7 +37,12 @@ class FormModal:
         self.scroll_y = 0
         
         current_y = 45
-        self.rect.width = 800
+        self.rect.width = 860
+        
+        # Dedicated column space for labels
+        label_col_w = 230
+        input_x = label_col_w + 20
+        input_w = self.rect.width - input_x - 30
         
         for f in self.fields:
             val = str(values_dict.get(f, ""))
@@ -51,7 +57,7 @@ class FormModal:
             else:
                 f_height = 28
                 
-            f_rect = pygame.Rect(140, current_y, self.rect.width - 160, f_height)
+            f_rect = pygame.Rect(input_x, current_y, input_w, f_height)
             
             if f == "_tag":
                 opts = [
@@ -59,7 +65,8 @@ class FormModal:
                     {"label": "player_question", "value": "player_question"},
                     {"label": "npc_awnser", "value": "npc_awnser"},
                     {"label": "npc_rqst", "value": "npc_rqst"},
-                    {"label": "player_award", "value": "player_award"}
+                    {"label": "player_award", "value": "player_award"},
+                    {"label": "milestone", "value": "milestone"}
                 ]
                 self.inputs[f] = UIDropdown(0, 0, f_rect.width, f_rect.height, self.font, opts, val)
                 
@@ -104,8 +111,8 @@ class FormModal:
 
         btn_y = self.rect.bottom - 45
         self.save_btn.topleft = (self.rect.x + 50, btn_y)
-        self.delete_btn.topleft = (self.rect.x + 160, btn_y)
-        self.cancel_btn.topleft = (self.rect.x + 270, btn_y)
+        self.delete_btn.topleft = (self.rect.x + 180, btn_y)
+        self.cancel_btn.topleft = (self.rect.x + 310, btn_y)
 
     def handle_event(self, event):
         if not self.active: return None
@@ -220,17 +227,17 @@ class FormModal:
         for f in self.fields:
             box = self.inputs[f]
             if f == "req_level":
-                content_surf.blit(self.font.render("Required Level:", True, UITheme.WARNING), (10, box.rect.y - 25))
+                content_surf.blit(self.font.render("Required Level:", True, UITheme.WARNING), (15, box.rect.y - 25))
             elif f == "gain_xp":
-                content_surf.blit(self.font.render("Gain XP:", True, UITheme.WARNING), (10, box.rect.y - 25))
+                content_surf.blit(self.font.render("Gain XP:", True, UITheme.WARNING), (15, box.rect.y - 25))
             
             if f in ["req_level", "gain_xp"]:
                 lbl = "" 
             else:
-                lbl = f.replace("_", " ").title()[:15] + ":"
+                lbl = f.replace("_", " ").title() + ":"
                 
             if lbl: 
-                content_surf.blit(self.font.render(lbl, True, UITheme.TEXT_DIM), (10, box.rect.y + 5))
+                content_surf.blit(self.font.render(lbl, True, UITheme.TEXT_DIM), (15, box.rect.y + 5))
             
             box.draw(content_surf)
 
@@ -288,7 +295,7 @@ class DialogEditor:
         if not os.path.exists(self.xml_dir):
             os.makedirs(self.xml_dir)
             
-        default_files = ["chat.xml", "item_quests.xml", "quests.xml", "tips.xml"]
+        default_files = ["chat.xml", "quests.xml", "tips.xml"]
         for df in default_files:
             df_path = os.path.join(self.xml_dir, df)
             if not os.path.exists(df_path):
@@ -299,7 +306,7 @@ class DialogEditor:
         
         self.file_dropdown = UIDropdown(10, self.y_offset + 35, self.sidebar_w - 20, 30, self.font, [])
         self.new_node_btn = pygame.Rect(10, self.y_offset + 75, self.sidebar_w - 20, 32)
-        self.save_xml_btn = pygame.Rect(self.sidebar_w + 300, y_offset + 12, 120, 35)
+        self.save_xml_btn = pygame.Rect(self.width - 325, y_offset + 12, 140, 35)
         
         self.opt_fields = [
             "_tag", "player_question", "npc_answer", "unlock_flag", "priority", "dialog_type", 
@@ -312,6 +319,7 @@ class DialogEditor:
     def resize(self, width, height):
         self.width = width
         self.height = height
+        self.save_xml_btn.topleft = (self.width - 325, self.y_offset + 12)
 
     def refresh_files(self):
         self.files = sorted([f for f in os.listdir(self.xml_dir) if f.endswith('.xml')])
@@ -378,18 +386,18 @@ class DialogEditor:
         if not self.selected_node: return [], None, None, 0
         
         current_y = self.y_offset + 70 - self.form_scroll
-        del_node_btn = pygame.Rect(self.width - 150, self.y_offset + 12, 130, 35)
+        del_node_btn = pygame.Rect(self.width - 170, self.y_offset + 12, 150, 35)
         
         rects = []
         for i, opt in enumerate(self.nodes[self.selected_node]["options"]):
             card_rect = pygame.Rect(self.sidebar_w + 20, current_y, self.width - self.sidebar_w - 60, 75)
-            edit_btn = pygame.Rect(card_rect.right - 150, card_rect.y + 22, 60, 30)
-            del_btn = pygame.Rect(card_rect.right - 80, card_rect.y + 22, 60, 30)
+            edit_btn = pygame.Rect(card_rect.right - 150, card_rect.y + 22, 65, 30)
+            del_btn = pygame.Rect(card_rect.right - 75, card_rect.y + 22, 65, 30)
             
             rects.append({"card": card_rect, "edit": edit_btn, "delete": del_btn, "idx": i})
             current_y += 85
             
-        add_btn = pygame.Rect(self.sidebar_w + 20, current_y, 140, 35)
+        add_btn = pygame.Rect(self.sidebar_w + 20, current_y, 160, 35)
         return rects, add_btn, del_node_btn, current_y + 50
 
     def handle_event(self, event):
