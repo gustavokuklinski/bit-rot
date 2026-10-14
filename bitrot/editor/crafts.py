@@ -41,6 +41,7 @@ class CraftEditor:
         self.save_btn = pygame.Rect(0, 0, 130, 35)
         self.duplicate_btn = pygame.Rect(0, 0, 130, 35)
         self.delete_btn = pygame.Rect(0, 0, 110, 35)
+        self.code_btn = pygame.Rect(0, 0, 110, 35)
         self.add_ing_btn = pygame.Rect(0, 0, 90, 28)
         self.add_res_btn = pygame.Rect(0, 0, 90, 28)
         
@@ -304,6 +305,7 @@ class CraftEditor:
         self.save_btn.topleft = (form_x + 20, current_y)
         self.duplicate_btn.topleft = (form_x + 165, current_y)
         self.delete_btn.topleft = (form_x + 310, current_y)
+        self.code_btn.topleft = (form_x + 435, current_y)
         
         self.max_scroll = max(0, current_y + self.form_scroll - self.height + 40)
         content_h = len(self.filtered_recipes) * 30 + 10
@@ -517,6 +519,10 @@ class CraftEditor:
                     if self.selected_file and self.delete_btn.collidepoint(mx, my):
                         self.delete_current()
                         return True
+                    if self.selected_file and self.code_btn.collidepoint(mx, my):
+                        self.save_current()
+                        path = os.path.join(self.craft_dir, self.selected_file)
+                        return {"action": "open_in_code", "path": path}
                         
             if event.type == pygame.MOUSEBUTTONDOWN and event.pos[0] > self.sidebar_w:
                 if event.button == 4:
@@ -739,6 +745,7 @@ class CraftEditor:
             if self.selected_file:
                 draw_styled_button(surface, self.duplicate_btn, "Duplicate", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
                 draw_styled_button(surface, self.delete_btn, "Delete", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
+                draw_styled_button(surface, self.code_btn, "Code", self.font, mouse_pos, UITheme.PANEL_BG, UITheme.HOVER_BG)
                 
             for f in self.base_inputs.values():
                 if isinstance(f, UIDropdown): f.draw_list(surface)

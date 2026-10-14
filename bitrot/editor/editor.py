@@ -312,7 +312,12 @@ def editor():
                 dialog_editor.handle_event(event)
                 continue
             if editor_mode == "Crafts":
-                craft_editor.handle_event(event)
+                res = craft_editor.handle_event(event)
+                if isinstance(res, dict) and res.get("action") == "open_in_code":
+                    code_editor.open_file(res["path"])
+                    editor_mode = "CODE"
+                    menu_bar.active_mode = "CODE"
+                    log_console.add_message(f"Opened {os.path.basename(res['path'])} in Code Editor")
                 continue
             # --> NEW: Route events to Entity Editor
             if editor_mode == "Entities":

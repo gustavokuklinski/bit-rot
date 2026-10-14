@@ -106,6 +106,9 @@ class FocusManager:
 # ----------------------------------------------------------------------
 # COMPONENTS
 # ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+# COMPONENTS
+# ----------------------------------------------------------------------
 class UITextBox:
     def __init__(self, x, y, width, height, font, text=""):
         self.rect = pygame.Rect(x, y, width, height)
@@ -131,6 +134,26 @@ class UITextBox:
         if len(self.history) > 100:
             self.history = self.history[-100:]
             self.history_index = len(self.history) - 1
+
+    def delete_selection(self):
+        if self.sel_start is not None and self.sel_start != self.cursor_pos:
+            s, e = min(self.sel_start, self.cursor_pos), max(self.sel_start, self.cursor_pos)
+            self.text = self.text[:s] + self.text[e:]
+            self.cursor_pos = s
+            self.sel_start = None
+            return True
+        return False
+
+    def _get_idx_from_x(self, x):
+        rel_x = x - (self.rect.x + 8) + self.scroll_x
+        if rel_x <= 0:
+            return 0
+        for i in range(len(self.text)):
+            w = self.font.size(self.text[:i])[0]
+            cw = self.font.size(self.text[i])[0]
+            if rel_x < w + cw / 2:
+                return i
+        return len(self.text)
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
