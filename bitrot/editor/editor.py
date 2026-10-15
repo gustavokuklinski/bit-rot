@@ -133,7 +133,7 @@ def editor():
     }
     all_render_tiles = {**map_tiles, **item_tiles}
 
-    menu_bar = MenuBar(current_screen_width, TAB_BAR_HEIGHT, FONT, ["Building", "NPC Dialog", "Crafts", "Entities", "CODE", "Art"])
+    menu_bar = MenuBar(current_screen_width, TAB_BAR_HEIGHT, FONT, ["Building", "NPC Dialog", "Crafts", "Entities", "Code", "Art"])
     editor_mode = "Building" 
 
     # Hidden Log: File tree extends to screen bottom
@@ -267,29 +267,29 @@ def editor():
                 res = dialog_editor.handle_event(event)
                 if isinstance(res, dict) and res.get("action") == "open_in_code":
                     code_editor.open_file(res["path"])
-                    editor_mode = "CODE"
-                    menu_bar.active_mode = "CODE"
+                    editor_mode = "Code"
+                    menu_bar.active_mode = "Code"
                 continue
             elif editor_mode == "Crafts":
                 res = craft_editor.handle_event(event)
                 if isinstance(res, dict) and res.get("action") == "open_in_code":
                     code_editor.open_file(res["path"])
-                    editor_mode = "CODE"
-                    menu_bar.active_mode = "CODE"
+                    editor_mode = "Code"
+                    menu_bar.active_mode = "Code"
                 continue
             elif editor_mode == "Entities":
                 res = entity_editor.handle_event(event)
                 if isinstance(res, dict):
                     if res.get("action") == "open_in_code":
                         code_editor.open_file(res["path"])
-                        editor_mode = "CODE"
-                        menu_bar.active_mode = "CODE"
+                        editor_mode = "Code"
+                        menu_bar.active_mode = "Code"
                     elif res.get("action") == "open_in_art":
                         sprite_editor.open_tab_sprite(res["path"])
                         editor_mode = "Art"
                         menu_bar.active_mode = "Art"
                 continue
-            elif editor_mode == "CODE":
+            elif editor_mode == "Code":
                 code_editor.handle_event(event)
                 continue
             elif editor_mode == "Art":
@@ -489,7 +489,7 @@ def editor():
         if editor_mode == "NPC Dialog": dialog_editor.draw(screen)
         elif editor_mode == "Crafts": craft_editor.draw(screen)
         elif editor_mode == "Entities": entity_editor.draw(screen)
-        elif editor_mode == "CODE": code_editor.draw(screen)
+        elif editor_mode == "Code": code_editor.draw(screen)
         elif editor_mode == "Art": sprite_editor.draw(screen)
         else:
             # Map Rendering inside viewport

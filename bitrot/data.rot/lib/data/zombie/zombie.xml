@@ -1,40 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
 <zombie type="common" spawn_weight="70">
     <name value="RANDOM" />
     <sex value="RANDOM" />
-
-    <xp min="1" max="15" />
-    
+    <xp min="1" max="10" />
     <stats>
         <health min="10" max="50" />
         <speed min="1" max="2" />
-        <attack min="1" max="15" />
+        <attack min="1" max="10" />
         <infection min="1" max="5" />
     </stats>
-    
     <clothes>
-        <head></head>
-        <util></util>
-        <hair></hair>
-        <facial></facial>
-        <feet></feet>
-        <hand></hand>
-        <body></body>
-        <arms></arms>
-        <legs></legs>
+        <head />
+        <util />
+        <hair />
+        <facial />
+        <feet />
+        <hand />
+        <body />
+        <arms />
+        <legs />
     </clothes>
-
     <visuals>
         <sprite id="center" file="zombie.png" />
         <sprite id="left" file="zombie_left.png" />
         <sprite id="right" file="zombie_right.png" />
     </visuals>
-    
     <loot>
-        <item item="Money WBRL" chance="1.0" />
-        <item item="Rot Meat" chance="1.0" />
-        <item item="Kukaroach (Bit Rot publisher)" chance="0.5" />
+        <item item="Money WBRL" min="1" max="1" chance="1.0" />
+        <item item="Rot Meat" min="1" max="1" chance="1.0" />
+        <item item="Kukaroach (Bit Rot publisher)" min="1" max="1" chance="0.5" />
     </loot>
-
     <sound>
         <hit src="zombie_hit.ogg" />
         <wander src="zombie_wandering.ogg" />

@@ -786,11 +786,7 @@ class ProceduralGeneratorChunk:
             else:
                 if "petrol" in low and "building" in low: potential_l2_names.append("Petrol_Building_L2")
                 elif "petrol" in low: potential_l2_names.append("Petrol_L2")
-                if "heli" in low: potential_l2_names.append("Heli_rescue_L2")
-                if "shed" in low: potential_l2_names.append("Shed_L2")
-                if "store" in low: potential_l2_names.append("Stores_L2")
-                if "warehouse" in low: potential_l2_names.append("Warehouse_L2")
-                if "building" in low or "condo" in low or "house" in low: potential_l2_names.append("Building_L2")
+                if "building" in low: potential_l2_names.append("Building_L2")
 
             for pot in potential_l2_names:
                 for k in self.templates.keys():
@@ -890,6 +886,8 @@ class ProceduralGeneratorChunk:
                             return False
             return True
 
+        petrol_pos = None
+
         if allow_buildings and assigned_templates:
             sorted_templates = []
             for t_name in assigned_templates:
@@ -925,15 +923,19 @@ class ProceduralGeneratorChunk:
                         placed = True
 
                 if not placed and not is_cave:
-                    candidates = get_tetris_candidates(fit_w, fit_h, gap=2)
-                    for tx, ty in candidates:
-                        if is_area_free(tx, ty, fit_w, fit_h, gap=2):
-                            self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile, draw_secondary_maze_road)
-                            placed = True
+                    # Tight packing: test gap=1 first for maximum urban building density
+                    for g in [1, 2]:
+                        candidates = get_tetris_candidates(fit_w, fit_h, gap=g)
+                        for tx, ty in candidates:
+                            if is_area_free(tx, ty, fit_w, fit_h, gap=g):
+                                self._finalize_placement(layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile, draw_secondary_maze_road)
+                                placed = True
+                                break
+                        if placed:
                             break
 
                 if not placed:
-                    for _ in range(80): 
+                    for _ in range(120): 
                         tx = random.randint(4, max(4, w - fit_w - 4))
                         ty = random.randint(4, max(4, h - fit_h - 4))
                         if is_area_free(tx, ty, fit_w, fit_h, gap=1):
@@ -942,6 +944,9 @@ class ProceduralGeneratorChunk:
                             break
                 
                 if placed:
+                    if 'petrol' in tmpl_name.lower() or 'gas' in tmpl_name.lower():
+                        petrol_pos = (tx + tw // 2, ty + th // 2)
+
                     if tmpl_l2:
                         self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
                         l2_w, l2_h = tmpl_l2['width'], tmpl_l2['height']
@@ -962,66 +967,65 @@ class ProceduralGeneratorChunk:
                             for lx in range(max(0, tx - pad), min(w, tx + l3_w + pad)):
                                 occupied_mask_L3[ly][lx] = 1
 
-        # 7. Forest / Nature Rooms
+        # 7. Forest Areas & Nature Placement
+        # 7. Forest Areas & Nature Placement
         if force_forest:
             self._generate_confusing_asphalt_maze(layers, occupied_mask, w, h, cx, cy)
-            
-            if assigned_templates:
-              for tmpl_name in assigned_templates:
-                if tmpl_name in self.templates:
-                  tmpl = self.templates[tmpl_name]
-                  tw, th = tmpl['width'], tmpl['height']
-                  for _ in range(25):
-                    tx = random.randint(3, max(4, w - tw - 3))
-                    ty = random.randint(3, max(4, h - th - 3))
-                    if is_area_free(tx, ty, tw, th, gap=2):
-                      self._blit_template(layers, tmpl, tx, ty, w, h, clear_base=True)
-                      for ry in range(ty, ty + th):
-                        for rx in range(tx, tx + tw):
-                          if 0 <= rx < w and 0 <= ry < h:
-                            occupied_mask[ry][rx] = 1
-                      break
 
-        if hasattr(self, 'forest_templates') and self.forest_templates and not force_forest:
-            num_forest_patches = max(4, min(14, (w * h) // 400))
-            for _ in range(num_forest_patches): 
+        # Densely place Forest_ templates in forest chunks (and near Petrol_)
+        if hasattr(self, 'forest_templates') and self.forest_templates:
+            # Much denser allocation for forest chunks: 25-40 patches, clustering near Petrol
+            num_forest_patches = random.randint(25, 40) if force_forest else max(4, min(14, (w * h) // 400))
+            for _ in range(num_forest_patches):
                 tmpl_name = random.choice(self.forest_templates)
                 tmpl = self.templates[tmpl_name]
                 tw, th = tmpl['width'], tmpl['height']
-                tx = random.randint(2, max(3, w - tw - 2))
-                ty = random.randint(2, max(3, h - th - 2))
-                
-                if is_area_free(tx, ty, tw, th, gap=2):
-                    self._blit_template(layers, tmpl, tx, ty, w, h, clear_base=True)
-                    
-                    found_l2_key = get_l2_counterpart(tmpl_name, is_forest=True)
-                    if found_l2_key:
-                        tmpl_l2 = self.templates[found_l2_key]
-                        self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
-                        l2_w, l2_h = tmpl_l2.get('width', 10), tmpl_l2.get('height', 10)
-                        if hasattr(self, '_apply_l2_border'):
-                            self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h, suffix='_L2', margin=4)
-                        pad = 4
-                        for ly in range(max(0, ty - pad), min(h, ty + l2_h + pad)):
-                            for lx in range(max(0, tx - pad), min(w, tx + l2_w + pad)):
-                                occupied_mask_L2[ly][lx] = 1
 
-                    found_l3_key = get_l3_counterpart(tmpl_name, is_forest=True)
-                    if found_l3_key:
-                        tmpl_l3 = self.templates[found_l3_key]
-                        self._blit_template_mapped(layers, tmpl_l3, tx, ty, w, h, suffix='_L3')
-                        l3_w, l3_h = tmpl_l3.get('width', 10), tmpl_l3.get('height', 10)
-                        if hasattr(self, '_apply_l2_border'):
-                            self._apply_l2_border(layers, tx, ty, l3_w, l3_h, w, h, suffix='_L3', margin=4)
-                        pad = 4
-                        for ly in range(max(0, ty - pad), min(h, ty + l3_h + pad)):
-                            for lx in range(max(0, tx - pad), min(w, tx + l3_w + pad)):
-                                occupied_mask_L3[ly][lx] = 1
+                placed_patch = False
+                for _ in range(30):
+                    # If Petrol is present, 60% chance to place Forest_ directly in its vicinity (radius 10-25 tiles)
+                    if petrol_pos and random.random() < 0.60:
+                        angle = random.uniform(0, 2 * math.pi)
+                        dist = random.uniform(8, 24)
+                        tx = int(petrol_pos[0] + dist * math.cos(angle) - tw // 2)
+                        ty = int(petrol_pos[1] + dist * math.sin(angle) - th // 2)
+                    else:
+                        tx = random.randint(2, max(3, w - tw - 2))
+                        ty = random.randint(2, max(3, h - th - 2))
 
-                    placed_rects.append(pygame.Rect(tx, ty, tw, th))
-                    for ry in range(ty, ty + th):
-                        for rx in range(tx, tx + tw): 
-                            occupied_mask[ry][rx] = 1
+                    if is_area_free(tx, ty, tw, th, gap=1):
+                        self._blit_template(layers, tmpl, tx, ty, w, h, clear_base=True)
+
+                        found_l2_key = get_l2_counterpart(tmpl_name, is_forest=True)
+                        if found_l2_key:
+                            tmpl_l2 = self.templates[found_l2_key]
+                            self._blit_template_mapped(layers, tmpl_l2, tx, ty, w, h, suffix='_L2')
+                            l2_w, l2_h = tmpl_l2.get('width', 10), tmpl_l2.get('height', 10)
+                            if hasattr(self, '_apply_l2_border'):
+                                self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h, suffix='_L2', margin=4)
+                            pad = 4
+                            for ly in range(max(0, ty - pad), min(h, ty + l2_h + pad)):
+                                for lx in range(max(0, tx - pad), min(w, tx + l2_w + pad)):
+                                    occupied_mask_L2[ly][lx] = 1
+
+                        found_l3_key = get_l3_counterpart(tmpl_name, is_forest=True)
+                        if found_l3_key:
+                            tmpl_l3 = self.templates[found_l3_key]
+                            self._blit_template_mapped(layers, tmpl_l3, tx, ty, w, h, suffix='_L3')
+                            l3_w, l3_h = tmpl_l3.get('width', 10), tmpl_l3.get('height', 10)
+                            if hasattr(self, '_apply_l2_border'):
+                                self._apply_l2_border(layers, tx, ty, l3_w, l3_h, w, h, suffix='_L3', margin=4)
+                            pad = 4
+                            for ly in range(max(0, ty - pad), min(h, ty + l3_h + pad)):
+                                for lx in range(max(0, tx - pad), min(w, tx + l3_w + pad)):
+                                    occupied_mask_L3[ly][lx] = 1
+
+                        placed_rects.append(pygame.Rect(tx, ty, tw, th))
+                        for ry in range(ty, ty + th):
+                            for rx in range(tx, tx + tw):
+                                occupied_mask[ry][rx] = 1
+                        placed_patch = True
+                        break
 
         # 8. Ground Formatting
         if force_forest:

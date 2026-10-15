@@ -16,12 +16,8 @@ class ProceduralGeneratorTemplate:
 
         # 2. Identify & Categorize Templates
         self.categorized_templates = {
-            'Warehouse': [],
-            'Stores': [],
-            'Shed': [],
             'Building': [],
             'Petrol': [],
-            'Heli': [],
             'Military': [],
             'Cave': [],
             'Lobby': [],
@@ -102,24 +98,14 @@ class ProceduralGeneratorTemplate:
                 continue
 
             assigned = False
-            if "heli" in lower_name:
-                self.categorized_templates['Heli'].append(name)
-                assigned = True
-            elif "cave" in lower_name: 
+            
+            if "cave" in lower_name: 
                 self.categorized_templates['Cave'].append(name)
                 assigned = True
             elif "military" in lower_name:
                 self.categorized_templates['Military'].append(name)
                 assigned = True
-            elif "warehouse" in lower_name:
-                self.categorized_templates['Warehouse'].append(name)
-                assigned = True
-            elif "store" in lower_name:
-                self.categorized_templates['Stores'].append(name)
-                assigned = True
-            elif "shed" in lower_name:
-                self.categorized_templates['Shed'].append(name)
-                assigned = True
+            
             elif "petrol" in lower_name or "gas" in lower_name:
                 self.categorized_templates['Petrol'].append(name)
                 assigned = True

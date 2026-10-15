@@ -508,11 +508,7 @@ class ProceduralGenerator(
     num_urban = max(1, len(self.urban_chunks))
 
     self.global_building_limits = {
-        'Building': num_urban * 3,
-        'Stores': num_urban * 2,
-        'Warehouse': num_urban * 2,
-        'Shed': num_urban * 2,
-        'Petrol': max(1, num_urban // 2),
+        'Building': num_urban * 14,
     }
 
     self.global_l2_limits = {
@@ -615,6 +611,16 @@ class ProceduralGenerator(
       for coord in all_cells:
         self.chunk_priority_map[coord].append(random.choice(cave_temps))
 
+    # Spawn Petrol far from Urban areas: 1 per Forest chunk (never in Lobby or Urban)
+    petrol_temps = [
+        t for t in self.categorized_templates.get('Petrol', [])
+        if 'military' not in t.lower() and 'lobby' not in t.lower()
+    ]
+    if petrol_temps:
+      for f_coord in self.forest_chunks:
+        if f_coord != self.lobby_chunk and f_coord != mil_coord:
+          self.chunk_priority_map[f_coord].append(random.choice(petrol_temps))
+
     if self.military_deck:
       self.chunk_priority_map[mil_coord].extend(self.military_deck)
     if self.heli_template:
@@ -622,6 +628,7 @@ class ProceduralGenerator(
     if self.mil_petrol_template:
       self.chunk_priority_map[mil_coord].append(self.mil_petrol_template)
 
+    # Pure Urban buildings assigned densely to urban chunks
     urban_list = [c for c in self.urban_chunks if c != mil_coord]
     if urban_list and global_deck:
       idx = 0

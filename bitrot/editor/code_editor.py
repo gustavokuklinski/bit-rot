@@ -762,7 +762,7 @@ class CodeEditor:
         pygame.draw.rect(surface, UITheme.PANEL_BG, toolbar_rect)
         pygame.draw.line(surface, UITheme.BORDER, (0, toolbar_rect.bottom - 1), (self.width, toolbar_rect.bottom - 1))
 
-        surface.blit(self.font.render("Code & Docs", True, UITheme.WARNING), (20, self.y_offset + 12))
+        surface.blit(self.font.render("Code", True, UITheme.WARNING), (20, self.y_offset + 12))
         draw_styled_button(surface, self.new_file_btn, "+ New File", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
         draw_styled_button(surface, self.save_btn, "Save File", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
         draw_styled_button(surface, self.delete_btn, "Delete", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
