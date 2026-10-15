@@ -20,24 +20,24 @@
   <small><i>Donations will help to make the project reach Steam. All donors will get a Steam Key of the game.</i></small>
 </p>
 
-# 🧟 Bit Rot
+# Bit Rot
 
 **Bit Rot** is a zombie survivor game where you fight, survive, and navigate through a post-apocalyptic island overrun by the undead.
 
 ---
 
 ## 📖 Table of Contents
-- [📋 Minimum Requirements](#-minimum-requirements)
-- [🎮 Controls and Keybinds](#-controls-and-keybinds)
-- [🛠️ Installation](#-installation)
-- [📦 Building Executables](#-building-executables)
-- [🔑 Windows Signing and Certificates](#-windows-signing-and-certificates)
-- [☁️ Cloud Builds](#-cloud-builds)
-- [📬 Contact](#-contact)
+- [Minimum Requirements](#minimum-requirements)
+- [Controls and Keybinds](#controls-and-keybinds)
+- [Install and Play](#install-and-play)
+- [Building Executables](#building-executables)
+- [Windows Signing and Certificates](#windows-signing-and-certificates)
+- [Cloud Builds](#cloud-builds)
+- [Contact](#contact)
 
 ---
 
-## 📋 Minimum Requirements
+## Minimum Requirements
 
 Before diving in, ensure your system meets the following minimum specifications:
 
@@ -53,7 +53,7 @@ Before diving in, ensure your system meets the following minimum specifications:
 
 ---
 
-## 🎮 Controls and Keybinds
+## Controls and Keybinds
 
 | Action               | Keyboard / Mouse      | Joystick (Xbox-style) | Joystick Compatible |
 | :------------------- | :-------------------- | :-------------------- | :-----------------: |
@@ -93,7 +93,7 @@ Before diving in, ensure your system meets the following minimum specifications:
 
 ---
 
-## 🛠️ Installation
+## Install and Play
 
 Prepare development:
 
@@ -108,13 +108,18 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+### 3. Play
+```bash
+python bitrot/bitrot.py
+```
+
 ---
 
-## 📦 Building Executables
+## Building Executables
 
 We use [Nuitka](https://nuitka.net/) to compile Python code into machine-code executables for maximum performance.
 
-### 🐧 Generating a Linux AppImage
+### Generating a Linux AppImage
 For a truly portable "single-file" experience on Linux, you can build an **AppImage**. This packages the standalone build into a read-only filesystem that runs on most distributions.
 
 **1. Install `appimagetool`:**
@@ -191,10 +196,10 @@ sudo pacman -S fuse2 # Arch based
 
 ---
 
-### 🛠️ Manual Build (Raw Commands)
+### Manual Build (Raw Commands)
 If you prefer to run the compilation manually or customize the build flags, use the following commands. Ensure you have `nuitka` installed via pip.
 
-#### 🐧 Linux
+#### Linux
 ```bash
 # Build the game as a standalone directory
 nuitka --standalone --assume-yes-for-downloads --output-dir=./build --static-libpython=yes --include-data-dir=bitrot/data.rot=data.rot bitrot/bitrot.py
@@ -203,7 +208,7 @@ nuitka --standalone --assume-yes-for-downloads --output-dir=./build --static-lib
 nuitka --standalone --assume-yes-for-downloads --output-dir=./build --static-libpython=yes --include-data-dir=bitrot/data.rot=data.rot bitrot/editor.py
 ```
 
-#### 🪟 Windows
+#### Windows
 ```bash
 # Build the game with a custom icon and no console window
 nuitka --standalone --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --output-dir=./build ./bitrot/bitrot.py
@@ -212,7 +217,7 @@ nuitka --standalone --windows-console-mode=disable --windows-icon-from-ico=./bit
 nuitka --standalone --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --output-dir=./build ./bitrot/editor.py
 ```
 
-#### 🍎 macOS
+#### macOS
 ```bash
 # Build the game as an application bundle
 nuitka --standalone --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --output-dir=./build ./bitrot/bitrot.py
@@ -225,11 +230,11 @@ nuitka --standalone --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot
 
 ---
 
-## 🔑 Windows Signing and Certificates
+## Windows Signing and Certificates
 
 Windows Defender often flags unsigned Python executables as "Trojan" or "Unknown Malware." To prevent this, Bit Rot binaries are digitally signed.
 
-### 🛠️ Local Signing Requirements
+### Local Signing Requirements
 To build and sign binaries locally on Windows, you must have the **Windows SDK** installed (specifically `signtool.exe`).
 
 **Signing Command:**
@@ -239,11 +244,11 @@ signtool sign /f cert.pfx /p "bitrot&Certificate@Windows912026" /tr http://times
 
 ---
 
-## ☁️ Cloud Builds
+## Cloud Builds
 
 If you don't have the Windows SDK or Nuitka installed locally, you can use our **GitHub Actions Pipeline** to build the project in the cloud.
 
-### 🚀 How to trigger a build:
+### How to trigger a build:
 1. Go to the **Actions** tab in this GitHub repository.
 2. Select the **"Build Project"** workflow from the left sidebar.
 3. Click the **"Run workflow"** dropdown.
@@ -254,16 +259,16 @@ If you don't have the Windows SDK or Nuitka installed locally, you can use our *
 | :--- | :--- | :--- | :--- |
 | <a href="https://github.com/gustavokuklinski/bit-rot/actions/workflows/bitrot-linux.yml"><img src="https://img.shields.io/github/actions/workflow/status/gustavokuklinski/bit-rot/bitrot-linux.yml?branch=main&style=flat-square&label=Linux" alt="GH Action" /></a> | <a href="https://github.com/gustavokuklinski/bit-rot/actions/workflows/bitrot-linux-appimage.yml"><img src="https://img.shields.io/github/actions/workflow/status/gustavokuklinski/bit-rot/bitrot-linux-appimage.yml?branch=main&style=flat-square&label=Linux" alt="GH Action" /></a> | <a href="https://github.com/gustavokuklinski/bit-rot/actions/workflows/bitrot-macos.yml"><img src="https://img.shields.io/github/actions/workflow/status/gustavokuklinski/bit-rot/bitrot-macos.yml?branch=main&style=flat-square&label=MacOS" alt="GH Action" /></a> | <a href="https://github.com/gustavokuklinski/bit-rot/actions/workflows/bitrot-windows.yml"><img src="https://img.shields.io/github/actions/workflow/status/gustavokuklinski/bit-rot/bitrot-windows.yml?branch=main&style=flat-square&label=Windows" alt="GH Action" /></a> |
 
-### 📦 Downloading the Build:
+### Downloading the Build:
 Once the process is complete, GitHub will upload the compiled binaries as **Artifacts**. You can find them at the bottom of the specific Action run summary.
 
 **Note for Maintainers:** The GitHub Action uses **Repository Secrets** to store the certificate password and signing keys, ensuring that the public releases are signed without exposing sensitive passwords in the code.
 
 ---
 
-## 📬 Contact
+## Contact
 
 The best way to reach us is through [GitHub Discussions](https://github.com/gustavokuklinski/bit-rot/discussions) or [Discord](https://discord.gg/SK4s7V6mEZ).
 
 ---
-**Survive. Adapt. Fight the Rot. 🧟**
+**Survive. Adapt. Fight the Rot.**
