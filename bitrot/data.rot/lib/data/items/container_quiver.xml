@@ -3,7 +3,7 @@
     <properties>
         <capacity value="3" />
         <sprite file="container_quiver.png" />
-        <weight weight="0.7" reduction="5%" />
+        
     </properties>
     <loot>
         <item name="Arrow" min="1" max="1" chance="1.0" />

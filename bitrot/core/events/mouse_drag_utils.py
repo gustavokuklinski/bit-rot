@@ -23,43 +23,6 @@ def check_recursive_containment(dragged_item, target_container):
     return False
 
 def check_container_weight_limit(container, incoming_item, item_to_remove=None):
-    """Checks if adding incoming item exceeds the container's max weight limit."""
-    if not container or not incoming_item:
-        return True
-
-    # If the item is already inside this container, its weight is already counted
-    if hasattr(container, 'inventory') and incoming_item in container.inventory:
-        return True
-
-    # For liquids entering a liquid container, only test the weight of the liquid that fits
-    if does_allow_liquid(container) and is_item_liquid(incoming_item):
-        unit_w = getattr(incoming_item, 'weight', 0.0) or 0.0
-        avail_vol = get_container_available_liquid(container)
-        incoming_load = float(getattr(incoming_item, 'load', 1) or 1)
-        if avail_vol != float('inf'):
-            transfer_qty = min(avail_vol, incoming_load)
-        else:
-            transfer_qty = incoming_load
-        incoming_weight = transfer_qty * unit_w
-    else:
-        incoming_weight = incoming_item.get_total_weight() if hasattr(incoming_item, 'get_total_weight') else getattr(incoming_item, 'weight', 0.0)
-
-    # 1. Vehicle max_weight check
-    if hasattr(container, 'max_weight'):
-        try:
-            cur_weight = float(getattr(container, 'current_weight', 0.0) or 0.0)
-        except Exception:
-            cur_weight = 0.0
-        return (cur_weight + incoming_weight) <= container.max_weight
-
-    # 2. Container and clothes pocket check (weight * 5.0)
-    if hasattr(container, 'weight') and container.weight > 0.0:
-        current_weight = sum(i.get_total_weight() for i in getattr(container, 'inventory', []))
-        if item_to_remove and item_to_remove in container.inventory:
-            current_weight -= item_to_remove.get_total_weight()
-        max_weight = container.weight * 5.0
-        return (current_weight + incoming_weight) <= max_weight
-
     return True
 
 def check_player_weight(incoming_item):

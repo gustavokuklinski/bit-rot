@@ -2,7 +2,7 @@
     <properties>
         <capacity value="1" />
         <sprite file="container_liquid_red_wine_bottle.png" />
-        <weight weight="0.04" reduction="1%" />
+        
         <max_liquid value="10" />
     </properties>
     <loot>

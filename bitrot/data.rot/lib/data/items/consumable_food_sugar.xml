@@ -5,7 +5,7 @@
         <restore status="[stamina]" value="1" />
         <load value="50" />
         <capacity value="100" />
-        <weight weight="0.001"/>
+        
         <sprite file="consumable_food_sugar.png" />
     </properties>
     <spawn chance="1" />

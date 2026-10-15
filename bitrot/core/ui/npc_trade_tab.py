@@ -132,10 +132,8 @@ def get_unit_price(item):
         return 1
 
     if itype in ['consumable']:
-        weight = getattr(item, 'weight', 0.01) or 0.01
-        return max(1, int(weight * 80))
-
-    if itype == 'weapon_ranged':
+        base_price = 15
+    elif itype == 'weapon_ranged':
         base_price = 50
     elif itype == 'weapon_melee':
         base_price = 35

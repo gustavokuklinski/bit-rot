@@ -6,7 +6,7 @@
         <reduce status="[stamina]" value="10" />
         <load min="1" max="100" />
         <capacity value="100" />
-        <weight weight="0.001" />
+        
         <sprite file="liquid_dirty_water_unit.png" />
     </properties>
     <spawn chance="1.0" />

@@ -139,36 +139,7 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
         lines.append(f"{tr('tooltip', 'Load:')} {item.load:.0f}/{item.capacity:.0f}")
     elif item.load is not None:
         lines.append(f"{tr('tooltip', 'Load:')} {item.load:.0f}")
-    
-    # --- Weight Info (Updated) ---
-    total_weight = 0
-    if hasattr(item, 'get_total_weight'):
-        total_weight = item.get_total_weight()
-        weight_str = f"{tr('tooltip', 'Weight:')} {total_weight:.2f}"
-        
-        # Only show unit weight if the item is stackable
-        if item.is_stackable() and hasattr(item, 'weight'):
-             weight_str += f" ({tr('tooltip', 'unit:')} {item.weight:.2f})"
-             
-        # Add reduction to the same line if it exists
-        if hasattr(item, 'weight_reduction') and item.weight_reduction > 0:
-            weight_str += f" ({tr('tooltip', 'Reduction:')} {int(item.weight_reduction * 100)}%)"
-        
-        lines.append(weight_str)
-    elif hasattr(item, 'weight'):
-        # Fallback if get_total_weight doesn't exist for some reason
-        total_weight = item.weight
-        weight_str = f"{tr('tooltip', 'Weight:')} {item.weight:.2f}"
-        if hasattr(item, 'weight_reduction') and item.weight_reduction > 0:
-            weight_str += f" ({tr('tooltip', 'Reduction:')} {int(item.weight_reduction * 100)}%)"
-        lines.append(weight_str)
 
-    # Calculate and display max weight based on base weight x 5
-    if hasattr(item, 'inventory') and item.item_type in ['container', 'cloth'] and hasattr(item, 'weight'):
-        max_weight = item.weight * 5.0
-        if max_weight > 0:
-            lines.append(f"{tr('tooltip', 'Max weight:')} {max_weight:.2f}")
-    
     # Fixed allow_belt checking (moved out of elif structure so it doesn't get skipped)
     if hasattr(item, 'allow_belt') and item.allow_belt:
         lines.append(f"{tr('tooltip', 'Allow belt:')} {tr('tooltip', str(item.allow_belt))}")

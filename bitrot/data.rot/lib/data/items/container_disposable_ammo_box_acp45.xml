@@ -2,7 +2,7 @@
     <properties>
         <capacity value="3" />
         <sprite file="container_ammo_box_multi.png" />
-        <weight weight="0.5" reduction="10%" />
+        
     </properties>
     <loot>
         <item name="ACP45 Ammo" chance="1.0" />

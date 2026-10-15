@@ -1,10 +1,10 @@
-<item name="Kukaroach (Bit Rot publisher)" type="consumable_food" allow_belt="false">
+<item name="Kukaroach (Bit Rot publisher)" type="consumable_food" allow_belt="false" consume_time="3.0">
     <properties>
         <restore status="[food]" value="5" />
         <restore status="[infection]" value="50" />
         <reduce status="[stamina]" value="30" />
         <restore status="[anxiety]" value="20" />
-        <weight weight="0.001" />
+        
         <load value="1" />
         <capacity value="100" />
         <sprite file="consumable_food_kukaroach.png" />

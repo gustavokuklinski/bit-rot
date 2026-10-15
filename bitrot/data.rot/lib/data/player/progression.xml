@@ -68,14 +68,6 @@
             <param name="decay_amount" value="0.15" />
             <param name="alert_threshold" value="20.0" />
         </stat>
-
-        <stat id="weight">
-            <param name="alert_threshold" value="0.75" /> 
-            <param name="penalty_threshold_1" value="0.75" />
-            <param name="penalty_value_1" value="0.75" /> 
-            <param name="overweight_health_penalty" value="0.02" /> 
-            <param name="overweight_stamina_penalty" value="0.025" /> 
-        </stat>
         
         <stat id="anxiety">
             <param name="horde_gain" value="0.05" />

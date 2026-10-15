@@ -7,7 +7,7 @@
         <trait id="Profession_Nurse" name="Nurse" cost="2" tooltip="Knows basic medicine and is light on their feet." disable="[Profession_Maintenance, Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Scientist, Profession_Unemployed, Profession_Police_Officer]">
             <attributes level="[strength:1, fitness:2, agility: 3, maintenance: 1, intelligence: 3, lucky: 1]" />
             <recipe magazine="Survivor Guide Basic" />
-            <recipe magazine="Medicine Vol.1" />
+            
         </trait>
         
         <trait id="Profession_Police_Officer" name="Police Officer" cost="4" tooltip="Proficient with firearms and moderately fit." disable="[Profession_Maintenance, Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Scientist, Profession_Unemployed, Profession_Nurse]">
@@ -18,22 +18,19 @@
         <trait id="Profession_Scientist" name="Scientist" cost="3" tooltip="High intelligence, but severely lacking in physical prowess." disable="[Profession_Maintenance, Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
             <attributes level="[strength:1, fitness:1, agility: 1, lucky: 2, maintenance: 2, intelligence: 5]" />
             <recipe magazine="Survivor Guide Basic" />
-            <recipe magazine="Medicine Vol.1" />
+            
         </trait>
         
         <trait id="Profession_Mechanic" name="Mechanic" cost="3" tooltip="Knows how vehicles work and maintains tools well." disable="[Profession_Maintenance, Profession_Scientist, Profession_CEO_assistant, Profession_Unemployed, Profession_Spy, Profession_Nurse, Profession_Police_Officer]">
             <attributes level="[strength:3, fitness:2, agility: 2, maintenance: 4, intelligence: 2]" />
             <recipe magazine="Survivor Guide Basic" />
-            <recipe magazine="Vehicle Engineering Vol.1" />
-            <recipe magazine="Vehicle Engineering Vol.2" />
-            <recipe magazine="Vehicle Engineering Vol.3" />
+            
         </trait>
         
         <trait id="Profession_Spy" name="Spy" cost="4" tooltip="Highly agile and incredibly lucky." disable="[Profession_Maintenance, Profession_Scientist, Profession_CEO_assistant, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
             <attributes level="[strength:2, fitness:3, agility: 4, lucky: 4, maintenance: 1, intelligence: 2]" />
             <recipe magazine="Survivor Guide Basic" />
-            <recipe magazine="Medicine Vol.1" />
-            <recipe magazine="Vehicle Engineering Vol.1" />
+            
         </trait>
         
         <trait id="Profession_CEO_assistant" name="CEO Assistant" cost="1" tooltip="Organized but inexperienced in combat." disable="[Profession_Maintenance, Profession_Spy, Profession_Scientist, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
@@ -44,8 +41,7 @@
         <trait id="Profession_Maintenance" name="Maintenance" cost="2" tooltip="Handy with tools and physical labor." disable="[Profession_Spy, Profession_Scientist, Profession_Mechanic, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer, Profession_CEO_assistant]">
             <attributes level="[strength:3, fitness:2, agility: 2, lucky: 1, maintenance: 3, intelligence: 2]" />
             <recipe magazine="Survivor Guide Basic" />
-            <recipe magazine="Carpentry Vol.1" />
-            <recipe magazine="Vehicle Engineering Vol.1" />
+            
         </trait>
     </profession>
 

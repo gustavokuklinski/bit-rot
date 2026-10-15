@@ -12,7 +12,7 @@ SPRITE_CACHE = {}
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, weight=0.0, weight_reduction=0.0, allow_belt=False, tip=None, consume_time=1.0, safe_radius=0, max_liquid=None, map_value=None, barricade_health=0, remove_items=None, remove_time=1.5, place_items=None, place_time=1.5, ammo_drop_capsule=None):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, allow_belt=False, tip=None, consume_time=1.0, safe_radius=0, max_liquid=None, map_value=None, barricade_health=0, remove_items=None, remove_time=1.5, place_items=None, place_time=1.5, ammo_drop_capsule=None, **kwargs):
         self.name = name
         self.item_type = item_type
         self.id = str(uuid.uuid4())
@@ -70,9 +70,6 @@ class Item:
         self.allow_liquid = str(allow_liquid).lower() == 'true' if isinstance(allow_liquid, str) else bool(allow_liquid)
 
         self.require = require
-        # Weight System
-        self.weight = weight
-        self.weight_reduction = weight_reduction
         
         self.allow_belt = allow_belt
         self.in_belt = False
@@ -92,22 +89,6 @@ class Item:
         self.place_time = place_time
         self.layer = 1
         self.map_filename = None
-
-    def get_total_weight(self):
-        """Calculates total weight including contents and reductions."""
-        total = self.weight
-        
-        if self.is_stackable() and self.load is not None:
-            total = self.weight * self.load
-
-        if self.inventory:
-            contents_weight = sum(item.get_total_weight() for item in self.inventory)
-            total += contents_weight * (1.0 - self.weight_reduction)
-            
-        if getattr(self, 'in_belt', False):
-            total *= 0.90
-            
-        return total
 
     def update_dynamic_text(self, player):
         """Replaces placeholders in the item's original text dynamically."""

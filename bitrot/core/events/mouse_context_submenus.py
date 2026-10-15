@@ -263,15 +263,12 @@ def build_send_to_submenu(clicked_item, click_source, click_container_item, game
                 if has_different_liquid:
                     continue
 
-            # First calculate available units based on weight, then volume
             avail_units = get_container_liquid_capacity_units(c, clicked_item)
             if avail_units <= 0:
                 continue
             can_fit = True
         else:
             if c_cap is None or c_cap <= 0:
-                continue
-            if not check_container_weight_limit(c, clicked_item):
                 continue
             can_fit = (len(getattr(c, 'inventory', [])) < c_cap)
             if not can_fit and getattr(clicked_item, 'is_stackable', lambda: False)():

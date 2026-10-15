@@ -58,16 +58,6 @@ def draw_player_alerts(surface, player):
     if player.infection >= PROGRESSION_CONFIG.get_stat('infection', 'alert_threshold', 70.0): 
         active_alerts.append(("ui/infection.png", YELLOW, tr('alert', "Are you feeling sick or infected?")))
 
-    if player.max_carry_weight > 0:
-        weight_ratio = player.current_weight / player.max_carry_weight
-        alert_threshold = PROGRESSION_CONFIG.get_stat('weight', 'alert_threshold', 0.75)
-        
-        if weight_ratio >= alert_threshold:
-            if weight_ratio >= 1.0:
-                active_alerts.append(("ui/weight.png", (205, 127, 50), tr('alert', "You are carrying too much weight.")))
-            else:
-                active_alerts.append(("ui/weight.png", (205, 127, 50), tr('alert', "You are carrying a heavy load.")))
-
     if not active_alerts:
         return None
 

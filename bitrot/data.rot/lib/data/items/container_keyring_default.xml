@@ -2,7 +2,7 @@
     <properties>
         <capacity value="5" />
         <sprite file="container_keyring_default.png" />
-        <weight weight="0.01" reduction="15%" />
+        
     </properties>
     <loot>
         <item name="Car Key Jeep" chance="0.3" />

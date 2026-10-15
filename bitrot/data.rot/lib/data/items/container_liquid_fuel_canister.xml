@@ -2,7 +2,7 @@
     <properties>
         <capacity value="1" />
         <sprite file="container_liquid_fuel_canister.png" />
-        <weight weight="2.0" reduction="5%" />
+        
         <max_liquid value="25" />
     </properties>
     <loot>

@@ -1,6 +1,5 @@
 <item name="Camp Tent" type="camp" allow_belt="false" safe_radius="3" tip="Place item to create a safezone radius">
     <properties>
-        <weight weight="1.5" />
         <sprite file="camp_tent.png" />
     </properties>
     <spawn chance="1" />

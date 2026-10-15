@@ -7,7 +7,7 @@
     spawn_maptile="[house_small_library]"
     spawn_layer="[1]">
     <properties>
-        <weight weight="1.5" />
+        
         <sprite file="quest_laptop.png" />
     </properties>
 </item>

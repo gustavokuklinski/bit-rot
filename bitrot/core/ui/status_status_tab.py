@@ -27,13 +27,12 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         "HP": SPRITE_PATH + "ui/hp.png", "STM": SPRITE_PATH + "ui/stamina.png",
         "WTR": SPRITE_PATH + "ui/water.png", "FOD": SPRITE_PATH + "ui/food.png", 
         "INF": SPRITE_PATH + "ui/infection.png", "XP": SPRITE_PATH + "ui/xp.png", 
-        "ANX": SPRITE_PATH + "ui/axiety.png", "DEF": SPRITE_PATH + "ui/defence.png", 
-        "WGT": SPRITE_PATH + "ui/weight.png"
+        "ANX": SPRITE_PATH + "ui/axiety.png", "DEF": SPRITE_PATH + "ui/defence.png"
     }
     
     stat_names = {
         "HP": "Health", "STM": "Stamina", "WTR": "Water", "FOD": "Food", 
-        "INF": "Sickness", "ANX": "Anxiety", "DEF": "Defence", "WGT": "Weight"
+        "INF": "Sickness", "ANX": "Anxiety", "DEF": "Defence"
     }
 
     for k, path in icon_files.items():
@@ -49,8 +48,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         ("FOD", player.food, 100, GRAY),
         ("INF", player.infection, 100, GRAY),
         ("ANX", player.anxiety, 100, GRAY),
-        ("DEF", player.get_total_defence(), 100, GRAY), 
-        ("WGT", player.current_weight, player.max_carry_weight, GRAY)
+        ("DEF", player.get_total_defence(), 100, GRAY)
     ]
     
     for i, (name, value, max_value, color) in enumerate(stats):
@@ -67,7 +65,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
 
         bar_x = label_x + 10
         ratio = value / max_value if max_value > 0 else 0
-        draw_color = RED if name == "WGT" and ratio > 1.0 else color
+        draw_color = color
             
         max_bar_width = int(col_width - (label_x - col1_x) - 10)
         bar_width = int(max_bar_width * min(1.0, ratio))
@@ -80,8 +78,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
 
         if border_rect.collidepoint(mouse_pos):
              translated_name = tr('tooltip', stat_names.get(name, name))
-             if name == "WGT": val_str = f"{value:.2f} / {max_value:.2f}"
-             else: val_str = f"{int(value)}%"
+             val_str = f"{int(value)}%"
              active_tooltip_item = StatusTooltipItem(f"{translated_name}: {val_str}")
 
     if active_tooltip_item:

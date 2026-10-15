@@ -1,7 +1,7 @@
 <item name="Cup" type="container" allow_liquid="true" allow_belt="false" tip="Use to craft.\nOnly liquids allowed">
     <properties>
         <load value="1" />
-        <weight weight="0.01" reduction="10%" />
+        
         <capacity value="1" />
         <sprite file="container_liquid_cup.png" />
         <max_liquid value="2" />

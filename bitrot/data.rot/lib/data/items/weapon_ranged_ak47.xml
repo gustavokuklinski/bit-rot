@@ -2,7 +2,7 @@
     <properties>
         <durability min="1" max="100" />
         <load min="0" max="30" />
-        <weight weight="1.7"/>
+        
         <capacity value="30" />
         <ammo type="762 Ammo" />
         <ammo_drop_capsule type="762 Capsule" />

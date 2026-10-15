@@ -889,22 +889,6 @@ class Vehicle:
              self.car_state = "Off"
              display_message(tr('msg', "Engine stopped (Battery removed)."))
 
-    @property
-    def current_weight(self):
-        total = 0.0
-        for item in self.inventory:
-            if not item:
-                continue
-            if hasattr(item, 'get_total_weight'):
-                total += item.get_total_weight()
-            else:
-                total += float(getattr(item, 'load', 1) or 1)
-        return total
-
-    @property
-    def max_weight(self):
-        return self.capacity * 10
-
     def draw(self, surface, offset_x, offset_y):
         if self.image:
             surface.blit(self.image, (self.rect.x + offset_x, self.rect.y + offset_y))

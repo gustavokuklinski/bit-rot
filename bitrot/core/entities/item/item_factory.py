@@ -392,10 +392,6 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     if require and require.startswith('[') and require.endswith(']'):
         require = [t.strip() for t in require[1:-1].split(',')]
     
-    weight = float(get_prop_val(props, 'weight', 'weight', '0.0'))
-    reduction_str = get_prop_val(props, 'weight', 'reduction', '0%').replace('%', '')
-    weight_reduction = float(reduction_str) / 100.0
-    
     consume_time = template.get('consume_time', 1.0)
     safe_radius = int(template.get('safe_radius', 0))
 
@@ -422,7 +418,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
         knockback=knockback, machine_gun=machine_gun, firing_second=firing_second, 
         allow_sleep=allow_sleep, key_id=key_id, firing_distance=firing_distance, 
         disposable=disposable, liquid=liquid, allow_liquid=allow_liquid, 
-        require=require, weight=weight, weight_reduction=weight_reduction, 
+        require=require, 
         allow_belt=allow_belt, tip=tip, consume_time=consume_time,
         safe_radius=safe_radius, max_liquid=max_liquid, map_value=map_value,
         barricade_health=barricade_health, remove_items=remove_items, remove_time=remove_time,
@@ -472,13 +468,6 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
                             fits = False
                         
                         if fits and new_item.item_type in ['container', 'cloth']:
-                            current_weight = sum(i.get_total_weight() for i in new_item.inventory)
-                            item_weight = loot_item.get_total_weight()
-                            max_weight = new_item.weight * 5.0
-                             
-                            if current_weight + item_weight > max_weight:
-                                fits = False
-
                             if getattr(new_item, 'allow_liquid', False) != getattr(loot_item, 'liquid', False):
                                 fits = False
 

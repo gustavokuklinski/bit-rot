@@ -272,11 +272,6 @@ class PlayerProgression:
         base = base_run_cost if is_running else 0.0
         _, flat_red = self.get_derived_bonus('stamina_consumption_reduction')
         modifier = max(0.1, 1.0 - flat_red) 
-
-        if hasattr(player, 'max_carry_weight') and player.max_carry_weight > 0:
-            weight_ratio = player.current_weight / player.max_carry_weight
-            if weight_ratio > 1.0:
-                base *= weight_ratio
         return base * modifier
 
     def get_stamina_regeneration(self, player):

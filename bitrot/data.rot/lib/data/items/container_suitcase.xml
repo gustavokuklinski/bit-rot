@@ -1,7 +1,7 @@
 <item name="Suitcase" type="container" allow_belt="false">
     <properties>
         <capacity value="3" />
-        <weight weight="1.0" reduction="50%" />
+        
         <sprite file="container_suitcase.png" />
     </properties>
     <loot>

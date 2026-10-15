@@ -94,7 +94,6 @@ def draw_health_tab(surface, player, modal, assets, game=None):
         "STM": SPRITE_PATH + "ui/stamina.png",
         "WTR": SPRITE_PATH + "ui/water.png", 
         "FOD": SPRITE_PATH + "ui/food.png", 
-        "WGT": SPRITE_PATH + "ui/weight.png",
         "DEF": SPRITE_PATH + "ui/defence.png"
     }
     stat_names = { 
@@ -102,7 +101,6 @@ def draw_health_tab(surface, player, modal, assets, game=None):
         "STM": "Stamina", 
         "WTR": "Water",
         "FOD": "Food", 
-        "WGT": "Weight", 
         "DEF": "Defence" 
     }
 
@@ -117,7 +115,6 @@ def draw_health_tab(surface, player, modal, assets, game=None):
         ("STM", player.stamina, player.max_stamina, GRAY),
         ("FOD", player.food, 100, GRAY),
         ("WTR", player.water, 100, GRAY),
-        ("WGT", player.current_weight, player.max_carry_weight, GRAY),
         ("DEF", player.get_total_defence(), 100, GRAY)
     ]
     
@@ -134,7 +131,7 @@ def draw_health_tab(surface, player, modal, assets, game=None):
             
         bar_x = label_x + 5
         ratio = value / max_value if max_value > 0 else 0
-        draw_color = RED if name == "WGT" and ratio > 1.0 else color
+        draw_color = color
             
         max_bar_width = int(content_width - (bar_x - start_x))
         bar_width = int(max_bar_width * min(1.0, ratio))
@@ -147,8 +144,7 @@ def draw_health_tab(surface, player, modal, assets, game=None):
 
         if border_rect.collidepoint(mouse_pos):
             translated_name = tr('tooltip', stat_names.get(name, name))
-            if name == "WGT": val_str = f"{value:.2f} / {max_value:.2f}"
-            else: val_str = f"{int(value)}%"
+            val_str = f"{int(value)}%"
             active_tooltip_item = StatusTooltipItem(f"{translated_name}: {val_str}")
             
     current_y += len(stats) * 27 + 20

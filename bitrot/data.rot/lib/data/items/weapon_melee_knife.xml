@@ -1,7 +1,7 @@
 <item name="Knife" type="weapon_melee" allow_belt="true">
     <properties>
         <durability min="1" max="100" />
-        <weight weight="0.5"/>
+        
         <damage min="7" max="10" />
         <skill type="melee" />
         <sprite file="weapon_melee_knife.png" />

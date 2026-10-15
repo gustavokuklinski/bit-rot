@@ -35,13 +35,24 @@ def is_item_liquid(item):
         return True
     return getattr(item, 'name', '') == 'Fuel Unit'
 
+def get_transfer_time(player, base_time=0.8, min_time=0.2):
+    """
+    Calculates dynamic action duration scaled by player Agility level (0 to 10).
+    At Agility 0: takes 0.8s.
+    At Agility 10: takes 0.2s.
+    """
+    if not player or not hasattr(player, 'progression'):
+        return base_time
+    agility = max(0, min(10, player.progression.get_level('agility')))
+    duration = base_time - (agility * ((base_time - min_time) / 10.0))
+    return max(min_time, round(duration, 2))
+
 def get_container_liquid_capacity_units(container, liquid_item, target_item=None):
     """
     Calculates how many units of liquid_item can fit inside container:
-    1. Checks available volume (max_liquid - current_liquid).
-    2. Calculates remaining weight capacity and converts it to liquid units.
-    3. Always floors down to the nearest integer (e.g. 1.5 -> 1, 1.9 -> 1).
-    4. Safely handles float('inf') without raising OverflowError.
+    Checks available volume (max_liquid - current_liquid).
+    Always floors down to the nearest integer (e.g. 1.5 -> 1, 1.9 -> 1).
+    Safely handles float('inf') without raising OverflowError.
     """
     if not container or not liquid_item:
         return 0
@@ -49,38 +60,16 @@ def get_container_liquid_capacity_units(container, liquid_item, target_item=None
     if not does_allow_liquid(container):
         return 0
 
-    # 1. Volume Capacity (max_liquid)
     avail_vol = get_container_available_liquid(container, target_item=target_item)
     if avail_vol <= 0 or (isinstance(avail_vol, float) and math.isnan(avail_vol)):
         return 0
 
-    # 2. Weight Capacity
-    unit_weight = getattr(liquid_item, 'weight', 0.0) or 0.0
-
-    if hasattr(container, 'max_weight'):
-        max_w = float(getattr(container, 'max_weight', 0.0) or 0.0)
-    elif hasattr(container, 'weight') and container.weight > 0.0:
-        max_w = float(container.weight * 5.0)
-    else:
-        max_w = float('inf')
-
-    if max_w != float('inf') and unit_weight > 0:
-        cur_w = sum(i.get_total_weight() for i in getattr(container, 'inventory', []) if i is not target_item)
-        rem_w = max(0.0, max_w - cur_w)
-        avail_weight_units = rem_w / unit_weight
-    else:
-        avail_weight_units = float('inf')
-
-    # Float comparison handles float('inf') correctly before integer conversion
-    units = min(avail_vol, avail_weight_units)
-
-    if math.isinf(units):
+    if math.isinf(avail_vol):
         return 999999
-    if math.isnan(units) or units <= 0:
+    if math.isnan(avail_vol) or avail_vol <= 0:
         return 0
 
-    # Always floor down to integer (1.5 -> 1, 1.9 -> 1)
-    return int(math.floor(units))
+    return int(math.floor(avail_vol))
 
 
 def is_valid_send_to_container(obj):
@@ -481,10 +470,6 @@ def add_item_to_container_inventory(container, item_to_add, target_index=-1, is_
         return trans, remaining, True
 
     else:
-        from core.events.mouse_drag_utils import check_container_weight_limit
-        if not check_container_weight_limit(container, item_to_add):
-            return 0.0, current_load, False
-
         c_cap = getattr(container, 'capacity', 0) or 0
         if len(container.inventory) >= c_cap:
             return 0.0, current_load, False

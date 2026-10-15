@@ -13,7 +13,8 @@ from core.events.keyboard import (
 from core.entities.item.item_helpers import (
     get_container_available_liquid, is_container_on_player,
     item_allows_belt, is_valid_send_to_container, does_allow_liquid,
-    is_item_liquid, get_container_liquid_capacity_units, is_infinite_liquid_source
+    is_item_liquid, get_container_liquid_capacity_units, is_infinite_liquid_source,
+    get_transfer_time
 )
 from core.events.mouse_drag_utils import check_container_weight_limit
 from core.events.mouse_context_helpers import (
@@ -292,8 +293,7 @@ def handle_context_menu_click(game, mouse_pos):
                                 game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
                             display_message(f"{tr('msg', 'Sent')} {tr('item', removed.name)} {tr('msg', 'to inventory.')}")
 
-                    item_weight = item.get_total_weight() if hasattr(item, 'get_total_weight') else getattr(item, 'weight', 1.0)
-                    transfer_time = max(0.5, item_weight * 0.4)
+                    transfer_time = get_transfer_time(game.player)
                     if is_external:
                         action_label = f"{tr('ui', 'Removing')} {tr('item', item.name)}" if source == 'vehicle_equipment' else tr('msg', "Looting")
                         game.player.start_action(action_label, transfer_time, do_send_inv, xp_reward=0.5)
@@ -333,8 +333,7 @@ def handle_context_menu_click(game, mouse_pos):
                                 game.sound_manager.play_sound('drop.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
                             display_message(f"{tr('msg', 'Dropped')} {tr('item', removed.name)} {tr('msg', 'on ground.')}")
 
-                    item_weight = item.get_total_weight() if hasattr(item, 'get_total_weight') else getattr(item, 'weight', 1.0)
-                    transfer_time = max(0.5, item_weight * 0.4)
+                    transfer_time = get_transfer_time(game.player)
                     action_label = f"{tr('ui', 'Removing')} {tr('item', item.name)}"
                     game.player.start_action(action_label, transfer_time, do_send_ground, xp_reward=0.5)
                 
@@ -400,15 +399,7 @@ def handle_context_menu_click(game, mouse_pos):
                         if is_item_liquid(item) and does_allow_liquid(target_container):
                             avail_units = get_container_liquid_capacity_units(target_container, item)
                             if avail_units <= 0:
-                                if get_container_available_liquid(target_container) <= 0:
-                                    display_message(tr('msg', "Container is full of liquid."))
-                                else:
-                                    display_message(f"{tr('item', target_container.name)} {tr('msg', 'cannot carry that much weight.')}")
-                                game.context_menu['active'] = False
-                                return
-                        else:
-                            if not check_container_weight_limit(target_container, item):
-                                display_message(f"{tr('item', target_container.name)} {tr('msg', 'cannot carry that much weight.')}")
+                                display_message(tr('msg', "Container is full of liquid."))
                                 game.context_menu['active'] = False
                                 return
 
@@ -527,7 +518,7 @@ def handle_context_menu_click(game, mouse_pos):
                                 game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
                             display_message(f"{tr('msg', 'Sent to')} {target_container.name}.")
 
-                        transfer_time = max(0.1, item.get_total_weight() * 0.2)
+                        transfer_time = get_transfer_time(game.player)
                         if is_external:
                             game.player.start_action(f"Transferring to {target_container.name}", transfer_time, do_send_cont, xp_reward=0.5)
                         else:
@@ -701,8 +692,7 @@ def handle_context_menu_click(game, mouse_pos):
                                 game.sound_manager.play_sound('repair.ogg', subdir='craft', game=game, source_pos=game.player.rect.center)
                             display_message(f"{tr('msg', 'Installed')} {tr('item', removed.name)} {tr('msg', 'into vehicle.')}")
 
-                    item_weight = item.get_total_weight() if hasattr(item, 'get_total_weight') else getattr(item, 'weight', 1.0)
-                    install_time = max(0.4, item_weight * 0.4)
+                    install_time = 0.5
                     game.player.start_action(f"{tr('ui', 'Installing')} {tr('item', item.name)}", install_time, do_install_action, xp_reward=0.5)
 
                 clicked_on_menu = True
@@ -745,8 +735,7 @@ def handle_context_menu_click(game, mouse_pos):
                             game.sound_manager.play_sound('repair.ogg', subdir='craft', game=game, source_pos=game.player.rect.center)
                         display_message(f"{tr('msg', 'Installed')} {tr('item', removed.name)} {tr('msg', 'into vehicle.')}")
 
-                item_weight = item.get_total_weight() if hasattr(item, 'get_total_weight') else getattr(item, 'weight', 1.0)
-                install_time = max(0.4, item_weight * 0.4)
+                install_time = 0.5
                 action_name = f"{tr('ui', 'Installing')} {tr('item', item.name)}"
                 game.player.start_action(action_name, install_time, do_install_part, xp_reward=0.5)
                 clicked_on_menu = True
@@ -1403,13 +1392,6 @@ def handle_context_menu_click(game, mouse_pos):
                 target_capacity = game.player.get_total_inventory_slots()
 
                 if len(target_inventory) < target_capacity:
-                    weight_multiplier = 1.0
-                    if hasattr(item, 'load') and item.load and item.load > 0:
-                        if option == 'Grab One':
-                            weight_multiplier = 1.0 / item.load
-                        elif option == 'Grab Half':
-                            weight_multiplier = max(1, item.load // 2) / item.load
-
                     def do_grab():
                         grabbed = False
                         item_to_grab = item
@@ -1490,8 +1472,7 @@ def handle_context_menu_click(game, mouse_pos):
                                     })
 
                     if source == 'nearby':
-                        grab_weight = item.get_total_weight() * weight_multiplier
-                        grab_time = max(0.1, grab_weight * 0.2)
+                        grab_time = 0.3
                         game.player.start_action(tr('msg', "Looting"), grab_time, do_grab, xp_reward=0.5)
                     else:
                         do_grab()

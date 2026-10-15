@@ -548,7 +548,6 @@ def _draw_player_build_screen(game, state, mouse_pos):
                         current_attrs[attr] = max(0, curr_val + value)
 
     total_defence = 0
-    total_weight = 0.0
     for slot, item_name in state['chosen_clothes'].items():
         if item_name != "None":
             template = ITEM_TEMPLATES.get(item_name, {})
@@ -558,14 +557,8 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 def_str = str(props['defence'].get('value', '0')).replace('%', '')
                 try: total_defence += int(float(def_str))
                 except ValueError: pass
-                
-            if 'weight' in props:
-                w_str = props['weight'].get('weight', '0.0')
-                try: total_weight += float(w_str)
-                except ValueError: pass
 
     current_stats['defence'] = min(100, total_defence + display_modifiers.get('defence', 0))
-    current_stats['weight'] = total_weight + display_modifiers.get('weight', 0)
 
     state['final_stats'] = current_stats
     state['final_attrs'] = current_attrs
@@ -599,19 +592,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
                 y_offset += line_height
                 continue
                 
-            elif stat == 'weight':
-                text_surf = font_12.render(f"{tr('ui', 'Weight')}:", False, WHITE)
-                str_val = current_attrs.get('strength', 5)
-                str_level = str_val.get('level', 5) if isinstance(str_val, dict) else int(str_val)
-                final_str = str_level + level_modifiers.get('strength', 0)
-                max_wgt = state['base_data'].get('max_carry_weight', 10.0 + final_str)
-                
-                val_surf = font_12.render(f"{value:.2f} / {max_wgt:.2f}", False, WHITE)
-                
-                content_surface.blit(text_surf, (text_x, y_offset + S(3)))
-                content_surface.blit(val_surf, (text_x + text_surf.get_width() + S(5), y_offset + S(3)))
-                y_offset += line_height
-                continue
+            
 
             base_value = state['base_data']['stats'].get(stat, 100.0)
             trait_mod = display_modifiers.get(stat, 0)

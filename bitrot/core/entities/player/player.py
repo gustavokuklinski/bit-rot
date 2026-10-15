@@ -234,24 +234,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
             display_message(tr('msg', "Action cancelled."))
 
-    @property
-    def current_weight(self):
-        total = 0.0
-        for item in self.belt:
-             if item: # FIX: Check if item exists before calling method
-                total += item.get_total_weight()* 0.85
-        for item in self.inventory:
-             if item: # FIX: Check if item exists before calling method
-                total += item.get_total_weight() 
-        for item in self.clothes.values():
-             if item: total += item.get_total_weight()* 0.85
-        return total
-
-    @property
-    def max_carry_weight(self):
-        _, flat_bonus = self.progression.get_derived_bonus('carry_weight')
-        return 5.0 + flat_bonus
-
     def update_stats(self, game):
         current_time = time.time()
 
@@ -436,42 +418,6 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                             _update_items_text(item.inventory)
                             
             _update_items_text(self.inventory + self.belt + list(self.clothes.values()))
-
-        # --- Overweight Logic ---
-        overweight_amount = self.current_weight - self.max_carry_weight
-        
-        if overweight_amount > 0:
-            health_pen_rate = PROGRESSION_CONFIG.get_stat('weight', 'overweight_health_penalty', 0.05)
-            stamina_pen_rate = PROGRESSION_CONFIG.get_stat('weight', 'overweight_stamina_penalty', 0.025)
-
-            health_reduction = health_pen_rate * overweight_amount
-            stamina_reduction = stamina_pen_rate * overweight_amount
-
-            current_max_health = self.max_health * max(0.1, 1.0 - health_reduction)
-            current_max_stamina = self.max_stamina * max(0.1, 1.0 - stamina_reduction)
-
-            if self.health > current_max_health:
-                self.health -= 0.05 * game.dt_mult
-                self.health = max(current_max_health, self.health)
-
-            if self.stamina > current_max_stamina:
-                self.stamina = current_max_stamina
-                
-            if self.is_running and is_moving:
-                self.progression.add_xp(self, 'fitness', 0.001)
-        else:
-            overweight_ratio = 0
-            if self.max_carry_weight > 0:
-                overweight_ratio = self.current_weight / self.max_carry_weight
-                
-            t1 = PROGRESSION_CONFIG.get_stat('weight', 'penalty_threshold_1', 0.75)
-            stamina_cap_mult = 1.0
-            if overweight_ratio >= t1:
-                stamina_cap_mult = PROGRESSION_CONFIG.get_stat('weight', 'penalty_value_1', 0.75)
-                
-            current_max_stamina = self.max_stamina * stamina_cap_mult
-            if self.stamina > current_max_stamina:
-                self.stamina = current_max_stamina
 
         all_inventories = [self.belt, self.inventory]
             

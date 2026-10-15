@@ -297,10 +297,6 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                     if spr_node is not None:
                         template['properties']['sprite'] = {'file': spr_node.attrib.get('file')}
 
-                    weight_node = props_node.find('weight')
-                    if weight_node is not None:
-                        template['properties']['weight'] = {k: v for k, v in weight_node.attrib.items()}
-
                 # NEW: Parse loot for clothes
                 loot_node = root.find('loot')
                 if loot_node is not None:
