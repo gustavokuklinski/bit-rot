@@ -1011,65 +1011,168 @@ class LogConsole:
         return False
 
 class NewBuildingModal:
+    """Modal to create a new building with Category, Layer, and Size."""
     def __init__(self, x, y, width, height, font):
-        self.rect = pygame.Rect(x, y, width, height)
         self.font = font
         self.active = False
+        self.rect = pygame.Rect(x, y, 520, 290)
+        self.buildings_dir = ""
+
+        # Category / Type Dropdown
+        self.categories = [
+            "Building",
+            "Bunker",
+            "Cave",
+            "Dungeon",
+            "Forest",
+            "Military_base"
+        ]
+        cat_opts = [{"label": c, "value": c} for c in self.categories]
+        self.category_dropdown = UIDropdown(0, 0, 160, 30, self.font, cat_opts, "Building")
+
+        # Layer Dropdown
+        layer_opts = [
+            {"label": "L1", "value": "L1"},
+            {"label": "L2", "value": "L2"},
+            {"label": "L3", "value": "L3"}
+        ]
+        self.layer_dropdown = UIDropdown(0, 0, 100, 30, self.font, layer_opts, "L1")
         
-        self.name_input = UITextBox(x + 70, y + 50, 200, 30, font, "Building")
-        self.width_input = UITextBox(x + 70, y + 100, 80, 30, font, "10")
-        self.height_input = UITextBox(x + 70, y + 150, 80, 30, font, "10")
+        self.next_number_str = "01"
+        self.width_input = UITextBox(0, 0, 100, 30, font, "10")
+        self.height_input = UITextBox(0, 0, 100, 30, font, "10")
         
-        self.create_btn = pygame.Rect(x + 50, y + 220, 80, 35)
-        self.cancel_btn = pygame.Rect(x + 170, y + 220, 80, 35)
+        self.create_btn = pygame.Rect(0, 0, 130, 34)
+        self.cancel_btn = pygame.Rect(0, 0, 110, 34)
+
+    def _calc_next_number(self):
+        category = self.category_dropdown.text or "Building"
+        max_num = 0
+        if self.buildings_dir and os.path.exists(self.buildings_dir):
+            pattern = re.compile(rf"^{re.escape(category)}_L\d+_(\d+)", re.IGNORECASE)
+            for root, dirs, files in os.walk(self.buildings_dir):
+                for f in files:
+                    m = pattern.search(f)
+                    if m:
+                        try:
+                            n = int(m.group(1))
+                            if n > max_num: max_num = n
+                        except ValueError: pass
+        self.next_number_str = f"{max_num + 1:02d}"
+
+    def open(self, buildings_dir, center_x, center_y):
+        self.buildings_dir = buildings_dir
+        self.rect.center = (center_x, center_y)
+        
+        self.category_dropdown.selected_value = "Building"
+        self.category_dropdown._update_label()
+        self.layer_dropdown.selected_value = "L1"
+        self.layer_dropdown._update_label()
+        
+        self._calc_next_number()
+
+        # Layout positions
+        self.category_dropdown.rect.topleft = (self.rect.x + 85, self.rect.y + 60)
+        self.category_dropdown.list_rect.topleft = (self.rect.x + 85, self.rect.y + 90)
+
+        self.layer_dropdown.rect.topleft = (self.rect.x + 360, self.rect.y + 60)
+        self.layer_dropdown.list_rect.topleft = (self.rect.x + 360, self.rect.y + 90)
+        
+        self.width_input.rect.topleft = (self.rect.x + 85, self.rect.y + 115)
+        self.height_input.rect.topleft = (self.rect.x + 360, self.rect.y + 115)
+        
+        btn_y = self.rect.bottom - 48
+        self.create_btn.topleft = (self.rect.x + 130, btn_y)
+        self.cancel_btn.topleft = (self.rect.x + 280, btn_y)
+        self.active = True
+
+    def get_generated_name(self):
+        category = self.category_dropdown.text or "Building"
+        layer = self.layer_dropdown.text or "L1"
+        return f"{category}_{layer}_{self.next_number_str}"
 
     def handle_event(self, event):
         if not self.active: return None
         
-        if self.name_input.handle_event(event): return None
-        if self.width_input.handle_event(event): return None
-        if self.height_input.handle_event(event): return None
+        # Dropdown priority
+        if self.category_dropdown.expanded:
+            if self.category_dropdown.handle_event(event):
+                self._calc_next_number()
+                return True
+        if self.layer_dropdown.expanded:
+            if self.layer_dropdown.handle_event(event):
+                return True
+            
+        old_cat = self.category_dropdown.text
+        if self.category_dropdown.handle_event(event):
+            if self.category_dropdown.text != old_cat:
+                self._calc_next_number()
+            return True
+
+        if self.layer_dropdown.handle_event(event): return True
+        if self.width_input.handle_event(event): return True
+        if self.height_input.handle_event(event): return True
         
-        if event.type == pygame.MOUSEBUTTONDOWN:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.create_btn.collidepoint(event.pos):
                 try:
                     w = int(self.width_input.text)
                     h = int(self.height_input.text)
                     self.active = False
-                    return {"action": "create_building", "name": self.name_input.text, "width": w, "height": h}
+                    return {
+                        "action": "create_building", 
+                        "name": self.get_generated_name(), 
+                        "width": w, 
+                        "height": h
+                    }
                 except ValueError:
                     print("Invalid dimensions")
             elif self.cancel_btn.collidepoint(event.pos):
                 self.active = False
-        return None
+                return True
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            self.active = False
+            return True
+        return True
 
     def draw(self, surface):
         if not self.active: return
-        
-        # Shadow
-        shadow = self.rect.copy()
-        shadow.y += 10
-        pygame.draw.rect(surface, (0, 0, 0, 150), shadow, border_radius=8)
-        
-        # Modal Background
+        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 150))
+        surface.blit(overlay, (0, 0))
+
         pygame.draw.rect(surface, UITheme.PANEL_BG, self.rect, border_radius=8)
         pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.rect, 2, border_radius=8)
-        
-        # Title
-        surface.blit(self.font.render("New Building", True, UITheme.TEXT), (self.rect.x + 20, self.rect.y + 15))
+        surface.blit(self.font.render("New Building", True, UITheme.WARNING), (self.rect.x + 20, self.rect.y + 15))
         pygame.draw.line(surface, UITheme.BORDER, (self.rect.x, self.rect.y + 40), (self.rect.right, self.rect.y + 40))
-        
-        # Inputs
-        surface.blit(self.font.render("Name:", True, UITheme.TEXT_DIM), (self.rect.x + 10, self.name_input.rect.y + 5))
-        self.name_input.draw(surface)
-        surface.blit(self.font.render("W:", True, UITheme.TEXT_DIM), (self.rect.x + 10, self.width_input.rect.y + 5))
+
+        # Row 1: Type (Category) & Layer
+        surface.blit(self.font.render("Type:", True, UITheme.TEXT_DIM), (self.rect.x + 20, self.rect.y + 66))
+        self.category_dropdown.draw(surface)
+
+        surface.blit(self.font.render("Layer:", True, UITheme.TEXT_DIM), (self.rect.x + 280, self.rect.y + 66))
+        self.layer_dropdown.draw(surface)
+
+        # Row 2: Dimensions
+        surface.blit(self.font.render("Size W:", True, UITheme.TEXT_DIM), (self.rect.x + 20, self.rect.y + 121))
         self.width_input.draw(surface)
-        surface.blit(self.font.render("H:", True, UITheme.TEXT_DIM), (self.rect.x + 10, self.height_input.rect.y + 5))
+        
+        surface.blit(self.font.render("Size H:", True, UITheme.TEXT_DIM), (self.rect.x + 280, self.rect.y + 121))
         self.height_input.draw(surface)
+
+        # Row 3: Live Generated Name Preview
+        gen_name = self.get_generated_name()
+        surface.blit(self.font.render(f"Generated Name: {gen_name}", True, UITheme.WARNING), (self.rect.x + 20, self.rect.y + 172))
 
         mouse_pos = pygame.mouse.get_pos()
         draw_styled_button(surface, self.create_btn, "Create", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
         draw_styled_button(surface, self.cancel_btn, "Cancel", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
+
+        # Draw dropdown popup lists last on top
+        if self.category_dropdown.expanded:
+            self.category_dropdown.draw_list(surface)
+        if self.layer_dropdown.expanded:
+            self.layer_dropdown.draw_list(surface)
 
 class NewMapModal:
     def __init__(self, x, y, width, height, font, current_map_name):
@@ -1193,68 +1296,127 @@ class Toolbar:
         self.height = height
         self.font = font
         self.buttons = []
+        self.active_tool = None
 
-        icon_path = os.path.join(SPRITE_ROOT, 'editor')
-        self.icons = load_editor_icons(icon_path)
-
-        self.default_icon = pygame.Surface((ICON_SIZE, ICON_SIZE), pygame.SRCALPHA)
-        self.default_icon.fill((100, 100, 100))
-        pygame.draw.rect(self.default_icon, (200, 200, 200), self.default_icon.get_rect(), 2)
-
-        button_definitions = [
-            {"label": "NEW BUILDING", "icon": "building", "action": "NEW BUILDING"},
-            {"label": "SAVE", "icon": "save", "action": "SAVE MAP"},
-            {"label": "EXPORT", "icon": "export", "action": "EXPORT PNG"},
-            {"label": "DELETE", "icon": "delete", "action": "DELETE MAP"},
-            {"label": "ERASER", "icon": "eraser", "action": "ERASER"},
-            {"label": "SELECT", "icon": "selection", "action": "SELECTION"},
-            {"label": "FILL", "icon": "fill", "action": "FILL"},
-            {"label": "UNDO", "icon": "undo", "action": "UNDO"},
-            {"label": "COPY", "icon": "copy", "action": "COPY"},
-            {"label": "PASTE", "icon": "paste", "action": "PASTE"},
-            {"label": "CLEAR", "icon": "clear", "action": "CLEAR"},
+        self.button_defs = [
+            {"label": "+ New Building", "action": "NEW BUILDING", "color": UITheme.SUCCESS},
+            {"label": "Rename", "action": "RENAME", "color": UITheme.PANEL_BG},
+            {"label": "Save Map", "action": "SAVE MAP", "color": UITheme.ACCENT},
+            {"label": "Select", "action": "SELECTION", "color": UITheme.PANEL_BG},
+            {"label": "Fill", "action": "FILL", "color": UITheme.PANEL_BG},
+            {"label": "Eraser", "action": "ERASER", "color": UITheme.PANEL_BG},
+            {"label": "Undo", "action": "UNDO", "color": UITheme.PANEL_BG},
+            {"label": "Clear", "action": "CLEAR", "color": UITheme.DANGER},
+            {"label": "Copy", "action": "COPY", "color": UITheme.PANEL_BG},
+            {"label": "Paste", "action": "PASTE", "color": UITheme.PANEL_BG},
         ]
-        
-        button_width = ICON_SIZE + 8
-        button_height = ICON_SIZE + 8
-        padding = 6
-        current_x = x + padding
+        self._rebuild_buttons()
 
-        for btn_def in button_definitions:
-            rect = pygame.Rect(current_x, y + (height - button_height) // 2, button_width, button_height)
+    def _rebuild_buttons(self):
+        self.buttons = []
+        padding = 8
+        cur_x = self.x + padding
+        for b_def in self.button_defs:
+            w = self.font.size(b_def["label"])[0] + 24
+            rect = pygame.Rect(cur_x, self.y + 6, w, self.height - 12)
             self.buttons.append({
                 "rect": rect,
-                "label": btn_def["label"],
-                "icon": self.icons.get(btn_def["icon"], self.default_icon),
-                "action": btn_def["action"]
+                "label": b_def["label"],
+                "action": b_def["action"],
+                "color": b_def["color"]
             })
-            current_x += button_width + padding
+            cur_x += w + padding
 
     def resize(self, width):
         self.width = width
+        self._rebuild_buttons()
 
     def draw(self, surface):
         pygame.draw.rect(surface, UITheme.PANEL_BG, (self.x, self.y, self.width, self.height))
         pygame.draw.line(surface, UITheme.BORDER, (self.x, self.y + self.height - 1), (self.x + self.width, self.y + self.height - 1))
 
         mouse_pos = pygame.mouse.get_pos()
-        for button in self.buttons:
-            hovered = button["rect"].collidepoint(mouse_pos)
-            bg = UITheme.HOVER_BG if hovered else UITheme.BG
-            
-            pygame.draw.rect(surface, bg, button["rect"], border_radius=4)
-            if hovered:
-                pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, button["rect"], 1, border_radius=4)
-                register_tooltip((button["rect"].centerx, button["rect"].bottom), button["label"])
-                
-            surface.blit(button["icon"], (button["rect"].x + 4, button["rect"].y + 4))
+        for b in self.buttons:
+            is_active_tool = (self.active_tool == b["action"])
+            base_col = UITheme.ACCENT if is_active_tool else b["color"]
+            hover_col = UITheme.ACCENT_HOVER if is_active_tool else (UITheme.HOVER_BG if base_col == UITheme.PANEL_BG else UITheme.SUCCESS_HOVER)
+            draw_styled_button(surface, b["rect"], b["label"], self.font, mouse_pos, base_col, hover_col)
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            for button in self.buttons:
-                if button["rect"].collidepoint(event.pos):
-                    return button["action"]
+            for b in self.buttons:
+                if b["rect"].collidepoint(event.pos):
+                    return b["action"]
         return None
+
+class RenameBuildingModal:
+    """Modal to rename all files associated with a building."""
+    def __init__(self, font):
+        self.font = font
+        self.active = False
+        self.old_name = ""
+        self.folder = ""
+        self.root_dir = ""
+        self.box = None
+        self.rect = pygame.Rect(0, 0, 440, 170)
+        self.rename_btn = pygame.Rect(0, 0, 130, 34)
+        self.cancel_btn = pygame.Rect(0, 0, 110, 34)
+
+    def open(self, old_name, folder, root_dir, center_x, center_y):
+        self.old_name = old_name
+        self.folder = folder
+        self.root_dir = root_dir
+        self.rect.center = (center_x, center_y)
+        self.box = UITextBox(self.rect.x + 20, self.rect.y + 65, self.rect.width - 40, 30, self.font, old_name)
+        self.box.active = True
+        FocusManager.set_focus(self.box)
+
+        btn_y = self.rect.bottom - 48
+        self.rename_btn.topleft = (self.rect.x + 85, btn_y)
+        self.cancel_btn.topleft = (self.rect.x + 235, btn_y)
+        self.active = True
+
+    def handle_event(self, event):
+        if not self.active: return None
+        if self.box.handle_event(event): return True
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.rename_btn.collidepoint(event.pos):
+                new_n = self.box.text.strip()
+                self.active = False
+                if new_n and new_n != self.old_name:
+                    return {
+                        "action": "rename_building",
+                        "old_name": self.old_name,
+                        "new_name": new_n,
+                        "folder": self.folder,
+                        "root_dir": self.root_dir
+                    }
+                return True
+            elif self.cancel_btn.collidepoint(event.pos):
+                self.active = False
+                return True
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            self.active = False
+            return True
+        return True
+
+    def draw(self, surface):
+        if not self.active: return
+        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 150))
+        surface.blit(overlay, (0, 0))
+
+        pygame.draw.rect(surface, UITheme.PANEL_BG, self.rect, border_radius=8)
+        pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.rect, 2, border_radius=8)
+        surface.blit(self.font.render(f"Rename Building: {self.old_name[:20]}", True, UITheme.WARNING), (self.rect.x + 20, self.rect.y + 15))
+        pygame.draw.line(surface, UITheme.BORDER, (self.rect.x, self.rect.y + 40), (self.rect.right, self.rect.y + 40))
+
+        surface.blit(self.font.render("New Building Name:", True, UITheme.TEXT_DIM), (self.rect.x + 20, self.rect.y + 46))
+        self.box.draw(surface)
+
+        mouse_pos = pygame.mouse.get_pos()
+        draw_styled_button(surface, self.rename_btn, "Rename", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
+        draw_styled_button(surface, self.cancel_btn, "Cancel", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
 
 class Sidebar:
     def __init__(self, x, y, tiles, items, font):

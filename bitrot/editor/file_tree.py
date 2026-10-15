@@ -1,13 +1,35 @@
 import pygame
 import re
 import os
-
 from editor.assets import load_editor_icons
-from editor.config import GAME_ROOT, SPRITE_ROOT, ICON_SIZE
-from editor.ui import UITheme
+from editor.config import SPRITE_ROOT, ICON_SIZE
+from editor.ui import UITheme, UITextBox
+
+def parse_building_sort_key(map_name):
+    """
+    Sorts by:
+    1) Prefix (e.g., 'Building')
+    2) Building number (e.g., 6) so that L1_06 and L2_06 appear consecutively
+    3) Layer number (e.g., L1 -> 1, L2 -> 2)
+    """
+    m = re.match(r"^(?P<prefix>.+?)_L(?P<layer>\d+)_(?P<num>\d+)(?P<suffix>.*)$", map_name, re.IGNORECASE)
+    if m:
+        prefix = m.group("prefix").lower()
+        layer_num = int(m.group("layer"))
+        try:
+            b_num = int(m.group("num"))
+        except ValueError:
+            b_num = m.group("num")
+        suffix = m.group("suffix").lower()
+        return (prefix, b_num, layer_num, suffix)
+    
+    m2 = re.match(r"^(.+?)_L(\d+)(.*)$", map_name, re.IGNORECASE)
+    if m2:
+        return (m2.group(1).lower(), 999999, int(m2.group(2)), m2.group(3).lower())
+    return (map_name.lower(), 999999, 999999, "")
 
 class FileTree:
-    def __init__(self, x, y, width, height, root_dir, file_pattern, font, show_saves=True):
+    def __init__(self, x, y, width, height, root_dir, file_pattern, font, show_saves=False):
         self.x = x
         self.y = y
         self.width = width
@@ -15,7 +37,7 @@ class FileTree:
         self.font = font
         self.root_dir = root_dir
         self.file_pattern = file_pattern
-        self.line_height = 28
+        self.line_height = 26
         self.scroll_offset = 0
         self.show_saves = show_saves 
         
@@ -27,12 +49,17 @@ class FileTree:
         pygame.draw.rect(self.default_icon, (200, 200, 200), self.default_icon.get_rect(), 1)
         
         self.folders = []          
-        self.map_data = {}         
+        self.map_data = {}
+        self.grouped_maps = {}    # {folder: {group_name: [map_names]}}
         self.expanded_folders = {} 
-        self.expanded_maps = {}    
-        self.layer_properties = {} 
+        self.expanded_groups = {}  # {(folder, group_name): bool}
+        self.expanded_maps = {}    # {(folder, map_name): bool}
+        self.layer_properties = {} # {(folder, map_name, layer_name): {"visible": bool}}
         
         self.selected_map = None   
+        
+        # Search Box
+        self.search_input = UITextBox(self.x + 10, self.y + 68, self.width - 20, 26, self.font, "")
         
         self.max_scroll = 0
         self.dragging_scroll = False
@@ -46,17 +73,29 @@ class FileTree:
     def resize(self, height):
         self.height = height
 
+    def _determine_group(self, map_name):
+        """Extracts prefix before _L\\d+ (e.g. Building_L1_01 -> Buildings)."""
+        match = re.match(r"^(.+?)_L\d+.*$", map_name, re.IGNORECASE)
+        if match:
+            prefix = match.group(1)
+            if prefix.lower() == "building":
+                return "Buildings"
+            return f"{prefix}s" if not prefix.endswith("s") else prefix
+        if "_" in map_name:
+            prefix = map_name.split("_")[0]
+            return f"{prefix}s" if not prefix.endswith("s") else prefix
+        return "General"
+
     def refresh(self):
         if not os.path.exists(self.root_dir):
             os.makedirs(self.root_dir)
             
         self.folders = []
         self.map_data = {}
+        self.grouped_maps = {}
         
-        try:
-            items = sorted(os.listdir(self.root_dir))
-        except OSError:
-            items = []
+        try: items = sorted(os.listdir(self.root_dir))
+        except OSError: items = []
             
         root_files = [f for f in items if os.path.isfile(os.path.join(self.root_dir, f)) and self.file_pattern.match(f)]
         if root_files:
@@ -75,40 +114,29 @@ class FileTree:
                         self.map_data[item] = self._group_maps(sub_files)
                         if item not in self.expanded_folders:
                             self.expanded_folders[item] = False
-                except OSError:
-                    continue
+                except OSError: continue
 
-        if self.show_saves:
-            save_root = os.path.join(GAME_ROOT, 'save', 'game')
-            if os.path.exists(save_root):
-                try:
-                    save_folders = sorted(os.listdir(save_root), reverse=True)
-                    for sf in save_folders:
-                        sf_path = os.path.join(save_root, sf)
-                        map_sub = os.path.join(sf_path, 'map')
-                        if os.path.isdir(map_sub):
-                            try:
-                                save_maps = sorted([f for f in os.listdir(map_sub) if self.file_pattern.match(f)])
-                                if save_maps:
-                                    folder_key = os.path.abspath(map_sub)
-                                    self.folders.append(folder_key)
-                                    self.map_data[folder_key] = self._group_maps(save_maps)
-                                    if folder_key not in self.expanded_folders:
-                                        self.expanded_folders[folder_key] = False
-                            except OSError:
-                                pass
-                except OSError:
-                    pass
-
+        # Group and sort maps by number and layer
         for folder in self.folders:
-            for map_name, files in self.map_data[folder].items():
-                map_key = (folder, map_name)
-                if map_key not in self.expanded_maps:
-                    self.expanded_maps[map_key] = False
-                for f in files:
-                    rel_path = os.path.join(folder, f) if folder else f
-                    if rel_path not in self.layer_properties:
-                        self.layer_properties[rel_path] = {"visible": True, "opacity": 255}
+            self.grouped_maps[folder] = {}
+            for map_name in self.map_data[folder].keys():
+                grp = self._determine_group(map_name)
+                if grp not in self.grouped_maps[folder]:
+                    self.grouped_maps[folder][grp] = []
+                    # Collapsed by default
+                    if (folder, grp) not in self.expanded_groups:
+                        self.expanded_groups[(folder, grp)] = False
+                self.grouped_maps[folder][grp].append(map_name)
+
+            # Sort maps within the group so L1_06 and L2_06 are consecutive
+            for grp in self.grouped_maps[folder]:
+                self.grouped_maps[folder][grp].sort(key=parse_building_sort_key)
+
+            for map_name in self.map_data[folder].keys():
+                for layer_name in ['light', 'roof', 'map', 'spawn', 'ground']:
+                    l_key = (folder, map_name, layer_name)
+                    if l_key not in self.layer_properties:
+                        self.layer_properties[l_key] = {"visible": True, "opacity": 255}
 
         if self.selected_map:
             sf, sm = self.selected_map
@@ -117,11 +145,9 @@ class FileTree:
         
         if not self.selected_map and self.folders:
             first_folder = self.folders[0]
-            maps = sorted(self.map_data[first_folder].keys())
+            maps = sorted(self.map_data[first_folder].keys(), key=parse_building_sort_key)
             if maps:
                 self.selected_map = (first_folder, maps[0])
-                if first_folder != "":
-                    self.expanded_folders[first_folder] = True
 
     def _group_maps(self, file_list):
         grouped = {}
@@ -129,218 +155,193 @@ class FileTree:
             match = self.file_pattern.match(f)
             if match:
                 base_name = match.group(1)
-                if base_name not in grouped:
-                    grouped[base_name] = []
+                if base_name not in grouped: grouped[base_name] = []
                 grouped[base_name].append(f)
         return grouped
 
-    def _get_content_height(self):
-        h = 0
+    def _get_visible_rows(self):
+        query = self.search_input.text.strip().lower()
+        rows = []
         for folder in self.folders:
             if folder != "":
-                h += self.line_height
+                rows.append({"type": "folder", "folder": folder, "indent": 10})
             if folder == "" or self.expanded_folders.get(folder):
-                if folder in self.map_data:
-                    for map_name in self.map_data[folder]:
-                        h += self.line_height
-                        if self.expanded_maps.get((folder, map_name)):
-                            h += 5 * self.line_height 
-        return h
+                groups = self.grouped_maps.get(folder, {})
+                for grp_name, map_list in groups.items():
+                    filtered_maps = [m for m in map_list if not query or query in m.lower() or query in grp_name.lower()]
+                    if not filtered_maps and query:
+                        continue
+                    
+                    rows.append({"type": "group", "folder": folder, "group": grp_name, "indent": 20 if folder else 10})
+                    # Collapsed by default unless expanded by user or search query is active
+                    if self.expanded_groups.get((folder, grp_name)) or query:
+                        for map_name in filtered_maps:
+                            rows.append({"type": "map", "folder": folder, "map_name": map_name, "indent": 35 if folder else 25})
+                            if self.expanded_maps.get((folder, map_name)):
+                                for layer_name in ['light', 'roof', 'map', 'spawn', 'ground']:
+                                    rows.append({"type": "layer", "folder": folder, "map_name": map_name, "layer_name": layer_name, "indent": 50 if folder else 40})
+        return rows
 
     def draw(self, surface, current_map_name, current_folder, active_layer_name, modified_maps=None):
-        if modified_maps is None:
-            modified_maps = set()
+        if modified_maps is None: modified_maps = set()
             
         pygame.draw.rect(surface, UITheme.PANEL_BG, (self.x, self.y, self.width, self.height))
         pygame.draw.line(surface, UITheme.BORDER, (self.x + self.width - 1, self.y), (self.x + self.width - 1, self.y + self.height))
 
-        map_info_y = self.y + 10
-        display_current_folder = current_folder
-        if os.path.isabs(current_folder) and current_folder.endswith("map"):
-             try:
-                 display_current_folder = os.path.basename(os.path.dirname(current_folder))
-             except: pass
+        # 1. Active Header info
+        surface.blit(self.font.render(f"Active: {current_map_name[:20]}", True, UITheme.TEXT), (self.x + 10, self.y + 12))
+        surface.blit(self.font.render(f"Layer: {active_layer_name}", True, UITheme.TEXT_DIM), (self.x + 10, self.y + 36))
 
-        disp_name = f"{display_current_folder}/{current_map_name}" if display_current_folder else current_map_name
-        surface.blit(self.font.render(f"Active: {disp_name}", True, UITheme.TEXT), (self.x + 10, map_info_y))
-        surface.blit(self.font.render(f"Layer: {active_layer_name}", True, UITheme.TEXT_DIM), (self.x + 10, map_info_y + self.line_height))
+        # 2. Search Box
+        self.search_input.draw(surface)
+        if not self.search_input.text and not self.search_input.active:
+            surface.blit(self.font.render("Search buildings...", True, UITheme.TEXT_DIM), (self.search_input.rect.x + 6, self.search_input.rect.y + 5))
 
-        list_rect = pygame.Rect(self.x, self.y + (self.line_height * 2.5), self.width, self.height - (self.line_height * 2.5))
-        content_height = self._get_content_height()
+        list_start_y = self.y + 105
+        list_rect = pygame.Rect(self.x, list_start_y, self.width, self.height - 105)
+        surface.set_clip(list_rect)
+
+        rows = self._get_visible_rows()
+        content_height = len(rows) * self.line_height + 10
         self.max_scroll = max(0, content_height - list_rect.height)
         self.scroll_offset = max(0, min(self.scroll_offset, self.max_scroll))
 
-        surface.set_clip(list_rect)
-        display_y = list_rect.y - self.scroll_offset
         mouse_pos = pygame.mouse.get_pos()
-        
-        for folder in self.folders:
-            indent = 10
-            if folder != "":
-                display_folder = folder
-                if os.path.isabs(folder) and folder.endswith("map"):
-                    try:
-                        parent = os.path.dirname(folder)
-                        display_folder = os.path.basename(parent)
-                    except: pass
+        display_y = list_start_y - self.scroll_offset
+
+        for row in rows:
+            if display_y + self.line_height > list_rect.y and display_y < list_rect.bottom:
+                r_rect = pygame.Rect(self.x, display_y, self.width, self.line_height)
                 
-                icon = "[-]" if self.expanded_folders.get(folder) else "[+]"
-                if display_y + self.line_height > list_rect.y and display_y < list_rect.bottom:
-                    row_rect = pygame.Rect(self.x, display_y, self.width, self.line_height)
-                    if row_rect.collidepoint(mouse_pos): pygame.draw.rect(surface, UITheme.HOVER_BG, row_rect)
-                    surface.blit(self.font.render(f"{icon} {display_folder}", True, UITheme.TEXT), (self.x + 10, display_y + 4))
-                display_y += self.line_height
-                indent = 25
+                if row["type"] == "folder":
+                    icon = "[-]" if self.expanded_folders.get(row["folder"]) else "[+]"
+                    surface.blit(self.font.render(f"{icon} {row['folder']}", True, UITheme.TEXT), (self.x + row["indent"], display_y + 4))
+                
+                elif row["type"] == "group":
+                    grp_key = (row["folder"], row["group"])
+                    icon = "[-]" if self.expanded_groups.get(grp_key) else "[+]"
+                    surface.blit(self.font.render(f"{icon} {row['group']}", True, UITheme.WARNING), (self.x + row["indent"], display_y + 4))
 
-            if folder == "" or self.expanded_folders.get(folder):
-                maps = self.map_data.get(folder, {})
-                for map_name in sorted(maps.keys()):
-                    map_key = (folder, map_name)
-                    is_modified = map_key in modified_maps
-                    modified_indicator = "*" if is_modified else ""
-                    
-                    if display_y + self.line_height > list_rect.y and display_y < list_rect.bottom:
-                        row_rect = pygame.Rect(self.x, display_y, self.width, self.line_height)
-                        if map_name == current_map_name and folder == current_folder: 
-                            pygame.draw.rect(surface, UITheme.LIST_HOVER, row_rect)
-                        elif row_rect.collidepoint(mouse_pos):
-                            pygame.draw.rect(surface, UITheme.HOVER_BG, row_rect)
-                    
+                elif row["type"] == "map":
+                    map_key = (row["folder"], row["map_name"])
+                    is_active = (row["map_name"] == current_map_name and row["folder"] == current_folder)
+                    if is_active:
+                        pygame.draw.rect(surface, UITheme.LIST_HOVER, r_rect)
+                    elif r_rect.collidepoint(mouse_pos):
+                        pygame.draw.rect(surface, UITheme.HOVER_BG, r_rect)
+
+                    is_mod = map_key in modified_maps
+                    mod_tag = "*" if is_mod else ""
                     icon = "[-]" if self.expanded_maps.get(map_key) else "[+]"
-                    if display_y + self.line_height > list_rect.y and display_y < list_rect.bottom:
-                        surface.blit(self.font.render(f"{icon} {map_name}{modified_indicator}", True, UITheme.TEXT), (self.x + indent, display_y + 4))
-                    display_y += self.line_height
+                    surface.blit(self.font.render(f"{icon} {row['map_name']}{mod_tag}", True, UITheme.TEXT), (self.x + row["indent"], display_y + 4))
 
-                    if self.expanded_maps.get(map_key):
-                        layer_order = ['light', 'roof', 'map', 'spawn', 'ground']
-                        layer_file_lookup = {}
-                        for lf in maps[map_name]:
-                            for suffix in layer_order:
-                                if lf.endswith(f"_{suffix}.csv"):
-                                    layer_file_lookup[suffix] = lf
-                                    break
-                        
-                        for layer_name in layer_order:
-                            layer_file = layer_file_lookup.get(layer_name)
-                            if not layer_file: continue
-                            rel_path = os.path.join(folder, layer_file) if folder else layer_file
-                            if rel_path not in self.layer_properties:
-                                self.layer_properties[rel_path] = {"visible": True, "opacity": 255}
-                            prop = self.layer_properties[rel_path]
-                            
-                            if display_y + self.line_height > list_rect.y and display_y < list_rect.bottom:
-                                row_rect = pygame.Rect(self.x, display_y, self.width, self.line_height)
-                                if layer_name == active_layer_name and map_name == current_map_name and folder == current_folder:
-                                    pygame.draw.rect(surface, UITheme.ACCENT, row_rect)
-                                elif row_rect.collidepoint(mouse_pos):
-                                    pygame.draw.rect(surface, UITheme.HOVER_BG, row_rect)
+                elif row["type"] == "layer":
+                    l_key = (row["folder"], row["map_name"], row["layer_name"])
+                    prop = self.layer_properties.get(l_key, {"visible": True})
+                    is_active_layer = (row["layer_name"] == active_layer_name and row["map_name"] == current_map_name and row["folder"] == current_folder)
+                    if is_active_layer:
+                        pygame.draw.rect(surface, UITheme.ACCENT, r_rect)
+                    elif r_rect.collidepoint(mouse_pos):
+                        pygame.draw.rect(surface, UITheme.HOVER_BG, r_rect)
 
-                                surface.blit(self.font.render(f"    {layer_name}", True, UITheme.TEXT_DIM), (self.x + indent + 5, display_y + 4))
+                    surface.blit(self.font.render(row["layer_name"], True, UITheme.TEXT_DIM), (self.x + row["indent"] + 20, display_y + 4))
+                    
+                    eye_icon = self.icons.get("hide" if prop["visible"] else "view", self.default_icon)
+                    vh_rect = pygame.Rect(self.x + self.width - ICON_SIZE - 10, display_y + 2, ICON_SIZE - 4, ICON_SIZE - 4)
+                    surface.blit(pygame.transform.scale(eye_icon, (ICON_SIZE - 4, ICON_SIZE - 4)), vh_rect)
 
-                                icon_img = self.icons.get("hide" if prop["visible"] else "view", self.default_icon)
-                                vh_rect = pygame.Rect(self.x + self.width - ICON_SIZE - 10, display_y, ICON_SIZE, ICON_SIZE)
-                                surface.blit(icon_img, vh_rect)
+            display_y += self.line_height
 
-                            display_y += self.line_height
-        
         surface.set_clip(None)
 
         if self.max_scroll > 0:
             track_rect = pygame.Rect(self.x + self.width - 8, list_rect.y, 8, list_rect.height)
             self.scrollbar_track_rect = track_rect
-            thumb_height = max(20, (list_rect.height / content_height) * list_rect.height)
-            scroll_ratio = self.scroll_offset / self.max_scroll
-            thumb_y = list_rect.y + scroll_ratio * (list_rect.height - thumb_height)
-            thumb_rect = pygame.Rect(track_rect.x, thumb_y, 8, thumb_height)
-            self.scrollbar_thumb_rect = thumb_rect
-            pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, thumb_rect, border_radius=4)
+            thumb_height = max(20, int((list_rect.height / content_height) * list_rect.height))
+            thumb_y = list_rect.y + (self.scroll_offset / self.max_scroll) * (list_rect.height - thumb_height)
+            self.scrollbar_thumb_rect = pygame.Rect(track_rect.x, thumb_y, 8, thumb_height)
+            pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.scrollbar_thumb_rect, border_radius=4)
         else:
             self.scrollbar_track_rect = None
             self.scrollbar_thumb_rect = None
 
     def handle_event(self, event):
+        if self.search_input.handle_event(event):
+            self.scroll_offset = 0
+            return True
+
         if event.type == pygame.MOUSEBUTTONUP:
             self.dragging_scroll = False
-        if event.type == pygame.MOUSEMOTION:
-            if self.dragging_scroll and self.scrollbar_thumb_rect and self.max_scroll > 0:
-                dy = event.pos[1] - self.scroll_start_mouse_y
-                track_h = self.scrollbar_track_rect.height
-                thumb_h = self.scrollbar_thumb_rect.height
-                movable_space = track_h - thumb_h
-                if movable_space > 0:
-                    scroll_per_pixel = self.max_scroll / movable_space
-                    self.scroll_offset = self.scroll_start_offset + (dy * scroll_per_pixel)
-                    self.scroll_offset = max(0, min(self.scroll_offset, self.max_scroll))
-                return True
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            mx, my = event.pos
-            if self.scrollbar_thumb_rect and self.scrollbar_thumb_rect.collidepoint(mx, my):
-                self.dragging_scroll = True
-                self.scroll_start_mouse_y = my
-                self.scroll_start_offset = self.scroll_offset
+        if event.type == pygame.MOUSEMOTION and self.dragging_scroll and self.scrollbar_thumb_rect and self.max_scroll > 0:
+            dy = event.pos[1] - self.scroll_start_mouse_y
+            track_h = self.scrollbar_track_rect.height
+            thumb_h = self.scrollbar_thumb_rect.height
+            movable = track_h - thumb_h
+            if movable > 0:
+                self.scroll_offset = max(0, min(self.max_scroll, self.scroll_start_offset + (dy * self.max_scroll / movable)))
+            return True
+
+        list_start_y = self.y + 105
+        list_rect = pygame.Rect(self.x, list_start_y, self.width, self.height - 105)
+
+        if event.type == pygame.MOUSEBUTTONDOWN and list_rect.collidepoint(event.pos):
+            if event.button == 4:
+                self.scroll_offset = max(0, self.scroll_offset - self.line_height * 2)
                 return True
-            elif self.scrollbar_track_rect and self.scrollbar_track_rect.collidepoint(mx, my):
-                if my < self.scrollbar_thumb_rect.y:
-                    self.scroll_offset = max(0, self.scroll_offset - self.height)
-                else:
-                    self.scroll_offset = min(self.max_scroll, self.scroll_offset + self.height)
+            elif event.button == 5:
+                self.scroll_offset = min(self.max_scroll, self.scroll_offset + self.line_height * 2)
                 return True
 
             if event.button == 1:
-                if self.x <= mx <= self.x + self.width and self.y <= my <= self.y + self.height:
-                    list_start_y = self.y + (self.line_height * 2.5)
-                    if my < list_start_y: return None 
-                    current_y = list_start_y - self.scroll_offset
-                    for folder in self.folders:
-                        if folder != "":
-                            folder_rect = pygame.Rect(self.x, current_y, self.width - 15, self.line_height)
-                            if folder_rect.collidepoint(mx, my):
-                                self.expanded_folders[folder] = not self.expanded_folders.get(folder, False)
+                mx, my = event.pos
+                if self.scrollbar_thumb_rect and self.scrollbar_thumb_rect.collidepoint(mx, my):
+                    self.dragging_scroll = True
+                    self.scroll_start_mouse_y = my
+                    self.scroll_start_offset = self.scroll_offset
+                    return True
+
+                rows = self._get_visible_rows()
+                display_y = list_start_y - self.scroll_offset
+
+                for row in rows:
+                    row_rect = pygame.Rect(self.x, display_y, self.width - 15, self.line_height)
+                    if row_rect.collidepoint(mx, my):
+                        # Exact [+] hitbox matching icon render location
+                        icon_hitbox = pygame.Rect(self.x + row["indent"], display_y, 30, self.line_height)
+                        clicked_expand = icon_hitbox.collidepoint(mx, my)
+
+                        if row["type"] == "folder":
+                            self.expanded_folders[row["folder"]] = not self.expanded_folders.get(row["folder"], False)
+                            return True
+
+                        elif row["type"] == "group":
+                            grp_key = (row["folder"], row["group"])
+                            self.expanded_groups[grp_key] = not self.expanded_groups.get(grp_key, False)
+                            return True
+
+                        elif row["type"] == "map":
+                            map_key = (row["folder"], row["map_name"])
+                            if clicked_expand:
+                                self.expanded_maps[map_key] = not self.expanded_maps.get(map_key, False)
                                 return True
-                            current_y += self.line_height
-                        if folder == "" or self.expanded_folders.get(folder):
-                            maps = self.map_data[folder]
-                            for map_name in sorted(maps.keys()):
-                                map_key = (folder, map_name)
-                                map_rect = pygame.Rect(self.x, current_y, self.width - 15, self.line_height)
-                                if map_rect.collidepoint(mx, my):
-                                    toggle_width = 40 if folder else 30
-                                    if mx < self.x + toggle_width: 
-                                        self.expanded_maps[map_key] = not self.expanded_maps.get(map_key, False)
-                                        return True
-                                    else:
-                                        self.selected_map = map_key
-                                        return {"action": "select_map", "folder": folder, "map_name": map_name}
-                                current_y += self.line_height
-                                if self.expanded_maps.get(map_key):
-                                    layer_order = ['light', 'roof', 'map', 'spawn', 'ground']
-                                    layer_file_lookup = {}
-                                    for lf in maps[map_name]:
-                                        for suffix in layer_order:
-                                            if lf.endswith(f"_{suffix}.csv"):
-                                                layer_file_lookup[suffix] = lf
-                                                break
-                                    for layer_name in layer_order:
-                                        layer_file = layer_file_lookup.get(layer_name)
-                                        if not layer_file: continue
-                                        rel_path = os.path.join(folder, layer_file) if folder else layer_file
-                                        if rel_path not in self.layer_properties:
-                                            self.layer_properties[rel_path] = {"visible": True, "opacity": 255}
-                                        layer_rect = pygame.Rect(self.x, current_y, self.width - 15, self.line_height)
-                                        if layer_rect.collidepoint(mx, my):
-                                            vh_rect = pygame.Rect(self.x + self.width - ICON_SIZE - 10, current_y, ICON_SIZE, ICON_SIZE)
-                                            if vh_rect.collidepoint(mx, my):
-                                                self.layer_properties[rel_path]["visible"] = not self.layer_properties[rel_path]["visible"]
-                                                return {"action": "toggle_visibility", "layer_name": layer_name, "properties": self.layer_properties[rel_path]}
-                                            return {"action": "set_active_layer", "layer_name": layer_name}
-                                        current_y += self.line_height
-            elif event.button == 4:
-                if self.x <= mx <= self.x + self.width and self.y <= my <= self.y + self.height:
-                    self.scroll_offset = max(0, self.scroll_offset - (self.line_height * 2))
-                    return True
-            elif event.button == 5:
-                if self.x <= mx <= self.x + self.width and self.y <= my <= self.y + self.height:
-                    self.scroll_offset = min(self.max_scroll, self.scroll_offset + (self.line_height * 2))
-                    return True
+                            else:
+                                self.selected_map = map_key
+                                return {"action": "select_map", "folder": row["folder"], "map_name": row["map_name"]}
+
+                        elif row["type"] == "layer":
+                            vh_rect = pygame.Rect(self.x + self.width - ICON_SIZE - 10, display_y, ICON_SIZE, ICON_SIZE)
+                            l_key = (row["folder"], row["map_name"], row["layer_name"])
+                            if vh_rect.collidepoint(mx, my):
+                                self.layer_properties[l_key]["visible"] = not self.layer_properties[l_key]["visible"]
+                                return {
+                                    "action": "toggle_visibility", 
+                                    "folder": row["folder"], 
+                                    "map_name": row["map_name"], 
+                                    "layer_name": row["layer_name"], 
+                                    "visible": self.layer_properties[l_key]["visible"]
+                                }
+                            return {"action": "set_active_layer", "layer_name": row["layer_name"]}
+
+                    display_y += self.line_height
         return None

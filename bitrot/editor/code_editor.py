@@ -341,6 +341,40 @@ class CodeEditor:
             return self.text_area.text != self.file_data[path]["saved_content"]
         return self.file_data[path]["content"] != self.file_data[path]["saved_content"]
 
+    def ensure_tab_visible(self, idx):
+        if not (0 <= idx < len(self.open_files)):
+            return
+
+        start_x = 250
+        view_w = self.width - start_x
+        rel_x = 0
+        target_left = 0
+        target_right = 0
+
+        for i, path in enumerate(self.open_files):
+            fname = os.path.basename(path)
+            modified = self.is_file_modified(path)
+            display_name = f"*{fname}" if modified else fname
+            text_w = self.font.size(display_name)[0]
+            tab_w = max(90, text_w + 44)
+
+            if i == idx:
+                target_left = rel_x
+                target_right = rel_x + tab_w
+
+            rel_x += tab_w + 2
+
+        total_w = rel_x - 2 if rel_x > 0 else 0
+        self.max_tab_scroll = max(0, total_w - view_w)
+
+        # Auto-scroll horizontally if tab is outside the visible view
+        if target_right > self.tab_scroll_x + view_w:
+            self.tab_scroll_x = (target_right + 15) - view_w
+        elif target_left < self.tab_scroll_x:
+            self.tab_scroll_x = max(0, target_left - 15)
+
+        self.tab_scroll_x = max(0, min(self.max_tab_scroll, self.tab_scroll_x))
+
     def open_file(self, path):
         # Save active tab state before switching
         if 0 <= self.active_tab_idx < len(self.open_files):
@@ -367,6 +401,8 @@ class CodeEditor:
         
         self.active_tab_idx = self.open_files.index(path)
         self._sync_text_area(is_new_open=True)
+        self.ensure_tab_visible(self.active_tab_idx)
+
 
     def _sync_text_area(self, is_new_open=False):
         if 0 <= self.active_tab_idx < len(self.open_files):
@@ -375,7 +411,6 @@ class CodeEditor:
             if data:
                 self.text_area.text = data["content"]
                 self.text_area._update_lines()
-                # Clear selection & reset cursor on opening a file
                 self.text_area.sel_start = None
                 self.text_area.dragging = False
                 self.text_area.cursor_pos = 0 if is_new_open else data.get("cursor_pos", 0)
@@ -384,6 +419,10 @@ class CodeEditor:
                 self.text_area.history_index = 0
                 self.text_area.active = True
                 FocusManager.set_focus(self.text_area)
+        else:
+            self.text_area.text = ""
+            self.text_area._update_lines()
+            self.text_area.active = False
 
     def _save_current_file(self):
         if 0 <= self.active_tab_idx < len(self.open_files):
@@ -415,11 +454,17 @@ class CodeEditor:
         path = self.open_files.pop(idx)
         if path in self.file_data:
             del self.file_data[path]
-        if self.active_tab_idx == idx:
-            self.active_tab_idx = len(self.open_files) - 1 if self.open_files else -1
+            
+        if not self.open_files:
+            self.active_tab_idx = -1
+        elif self.active_tab_idx == idx:
+            # Focus the adjacent tab to the left (or index 0 if the first tab was closed)
+            self.active_tab_idx = max(0, idx - 1)
         elif self.active_tab_idx > idx:
             self.active_tab_idx -= 1
+
         self._sync_text_area()
+        self.ensure_tab_visible(self.active_tab_idx)
 
     def get_tab_rects(self):
         tab_rects = []
@@ -625,6 +670,7 @@ class CodeEditor:
                                         self.file_data[old_path]["content"] = self.text_area.text
                                 self.active_tab_idx = tab_info["index"]
                                 self._sync_text_area(is_new_open=False)
+                            self.ensure_tab_visible(self.active_tab_idx)
                             return True
 
         # Left File Tree

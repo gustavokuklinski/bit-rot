@@ -1,7 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
 <item name="556 Ammo" type="consumable_ammo" allow_belt="false">
     <properties>
         <status value="ammo" />
-        <weight weight="0.02"/>
+        <weight weight="0.02" />
         <load min="10" max="50" />
         <capacity value="100" />
         <sprite file="consumable_ammo_556_ammo.png" />

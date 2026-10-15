@@ -166,6 +166,40 @@ class CraftEditor:
                     
         self.build_dynamic_options()
 
+    def ensure_tab_visible(self, idx):
+        if not (0 <= idx < len(self.open_tabs)):
+            return
+
+        start_x = self.sidebar_w
+        view_w = self.width - start_x
+        rel_x = 0
+        target_left = 0
+        target_right = 0
+
+        for i, tab in enumerate(self.open_tabs):
+            fname = tab["filename"] or tab["base_inputs"]["filename"].text or "new_craft.xml"
+            modified = self.is_tab_modified(tab)
+            display_name = f"*{fname}" if modified else fname
+            text_w = self.font.size(display_name)[0]
+            tab_w = max(90, text_w + 44)
+
+            if i == idx:
+                target_left = rel_x
+                target_right = rel_x + tab_w
+
+            rel_x += tab_w + 2
+
+        total_w = rel_x - 2 if rel_x > 0 else 0
+        self.max_tab_scroll = max(0, total_w - view_w)
+
+        # Auto-scroll horizontally if tab is outside the visible view
+        if target_right > self.tab_scroll_x + view_w:
+            self.tab_scroll_x = (target_right + 15) - view_w
+        elif target_left < self.tab_scroll_x:
+            self.tab_scroll_x = max(0, target_left - 15)
+
+        self.tab_scroll_x = max(0, min(self.max_tab_scroll, self.tab_scroll_x))
+
     def get_current_tab(self):
         if 0 <= self.active_tab_idx < len(self.open_tabs):
             return self.open_tabs[self.active_tab_idx]
@@ -270,13 +304,15 @@ class CraftEditor:
             if tab["filename"] == filename:
                 self.active_tab_idx = i
                 self.layout_form()
+                self.ensure_tab_visible(self.active_tab_idx)
                 return
-
         data = self.recipes.get(filename, {}).get("data", {}) if filename else {}
+        
         new_tab = self.create_tab_structure(filename, data)
         self.open_tabs.append(new_tab)
         self.active_tab_idx = len(self.open_tabs) - 1
         self.layout_form()
+        self.ensure_tab_visible(self.active_tab_idx)
 
     def request_close_tab(self, idx):
         if not (0 <= idx < len(self.open_tabs)): return
@@ -291,11 +327,16 @@ class CraftEditor:
 
     def _force_close_tab(self, idx):
         self.open_tabs.pop(idx)
-        if self.active_tab_idx == idx:
-            self.active_tab_idx = len(self.open_tabs) - 1 if self.open_tabs else -1
+        if not self.open_tabs:
+            self.active_tab_idx = -1
+        elif self.active_tab_idx == idx:
+            # Focus the adjacent tab to the left (or index 0 if the first tab was closed)
+            self.active_tab_idx = max(0, idx - 1)
         elif self.active_tab_idx > idx:
             self.active_tab_idx -= 1
+
         self.layout_form()
+        self.ensure_tab_visible(self.active_tab_idx)
 
     def layout_form(self):
         content_h = len(self.filtered_recipes) * 30 + 10
@@ -526,6 +567,9 @@ class CraftEditor:
                 if 0 <= self.active_tab_idx < len(self.open_tabs):
                     self.request_close_tab(self.active_tab_idx)
                     return True
+            if (event.mod & pygame.KMOD_CTRL) and event.key == pygame.K_s:
+                self.save_current_tab()
+                return True
 
         if event.type == pygame.MOUSEBUTTONUP:
             self.dragging_sidebar = False
@@ -591,6 +635,7 @@ class CraftEditor:
                         elif t_info["rect"].collidepoint(event.pos):
                             self.active_tab_idx = t_info["index"]
                             self.layout_form()
+                            self.ensure_tab_visible(self.active_tab_idx)
                             return True
 
         tab = self.get_current_tab()

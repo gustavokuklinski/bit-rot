@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <npc_dialog>
     <node id="Quest: Mobile phone">
-        <options stage="offer" player_question="I have my ID, how to get faster to the helipoint?" npc_answer="Helipoint? That area is a mess kiddo! Best you can do is survive here." req_item="[ID]" priority="100" gain_xp="[lucky:100]" dialog_type="once" unlock_flag="Quest: Mobile phone" />
+        <options stage="offer" player_question="I have my ID, how to get faster to the helipoint?" npc_answer="Helipoint? That area is a mess kiddo! Best you can do is survive here." unlock_flag="Quest: Mobile phone" req_item="[ID]" dialog_type="once" priority="100" gain_xp="[lucky:100]" />
         <options stage="turn_in" player_question="If I have a mobile I could try to call someone..." npc_answer="Lucky for you, take my Mobile. It's useless right now." req_item="[ID]" gain_xp="[lucky:100]" dialog_type="once" award_item="[Mobile off, Personal Data]" tip="Your ID may save your life" complete_flag="Quest: Mobile phone" />
     </node>
     <node id="Quest: Fuel Canister">
