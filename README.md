@@ -244,6 +244,14 @@ signtool sign /f cert.pfx /p "bitrot&Certificate@Windows912026" /tr http://times
 
 ---
 
+## Cache cleaner (`__pycache__`)
+
+Cache cleanup for Linux
+
+```bash
+find ./bitrot -type d -name "__pycache__" -exec rm -rf {} +
+```
+
 ## Cloud Builds
 
 If you don't have the Windows SDK or Nuitka installed locally, you can use our **GitHub Actions Pipeline** to build the project in the cloud.
