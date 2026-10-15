@@ -279,10 +279,15 @@ def editor():
                 continue
             elif editor_mode == "Entities":
                 res = entity_editor.handle_event(event)
-                if isinstance(res, dict) and res.get("action") == "open_in_code":
-                    code_editor.open_file(res["path"])
-                    editor_mode = "CODE"
-                    menu_bar.active_mode = "CODE"
+                if isinstance(res, dict):
+                    if res.get("action") == "open_in_code":
+                        code_editor.open_file(res["path"])
+                        editor_mode = "CODE"
+                        menu_bar.active_mode = "CODE"
+                    elif res.get("action") == "open_in_art":
+                        sprite_editor.open_tab_sprite(res["path"])
+                        editor_mode = "Art"
+                        menu_bar.active_mode = "Art"
                 continue
             elif editor_mode == "CODE":
                 code_editor.handle_event(event)

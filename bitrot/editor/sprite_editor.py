@@ -3,7 +3,7 @@ import pygame
 from editor.config import SPRITE_ROOT, TILE_SIZE
 from editor.ui import (
     UITextBox, UIDropdown, UITheme, 
-    draw_styled_button, register_tooltip, FocusManager
+    draw_styled_button, FocusManager
 )
 
 # 10 Base Colors
@@ -62,27 +62,12 @@ class SpriteEditor:
         self.toolbar_h = 42
         self.tab_bar_h = 36
         self.sidebar_w = 280
-        self.palette_panel_w = 280  # Widened Right Bar
-        self.canvas_size = 16       # Fixed 16x16 size
+        self.palette_panel_w = 280
+        self.canvas_size = 16
 
-        # Categories matching module folders
-        self.categories = {
-            "Items": os.path.join(self.sprite_root, 'items'),
-            "Clothes": os.path.join(self.sprite_root, 'clothes'),
-            "Map": os.path.join(self.sprite_root, 'map'),
-            "Zombie": os.path.join(self.sprite_root, 'zombie'),
-            "Player": os.path.join(self.sprite_root, 'player'),
-            "NPC": os.path.join(self.sprite_root, 'npc'),
-            "Animals": os.path.join(self.sprite_root, 'animals'),
-            "Vehicle": os.path.join(self.sprite_root, 'vehicle'),
-            "Editor": os.path.join(self.sprite_root, 'editor')
-        }
-        for path in self.categories.values():
-            if not os.path.exists(path):
-                try: os.makedirs(path)
-                except: pass
-
-        self.active_category = "Items"
+        # Robust category path resolution checking both singular and plural forms
+        self.categories = self._resolve_categories()
+        self.active_category = "Items" if "Items" in self.categories else list(self.categories.keys())[0]
         self.files = []
 
         # Tabs
@@ -97,7 +82,7 @@ class SpriteEditor:
         self.close_confirm_dialog = None
         self.new_sprite_dialog = None
 
-        # Sidebar Controls (Dropdown, Search, New Button)
+        # Sidebar Controls
         cat_opts = [{"label": c, "value": c} for c in self.categories.keys()]
         self.category_dropdown = UIDropdown(10, self.y_offset + 38, self.sidebar_w - 20, 30, self.font, cat_opts, self.active_category)
         self.search_input = UITextBox(10, self.y_offset + 74, self.sidebar_w - 20, 28, self.font, "")
@@ -112,39 +97,90 @@ class SpriteEditor:
 
         # Zoom & Pan State
         self.zoom_levels = [4.0, 8.0, 12.0, 16.0, 20.0, 24.0, 32.0, 40.0]
-        self.zoom_idx = 4  # 20x default
+        self.zoom_idx = 4
         self.pan_x = 0
         self.pan_y = 0
         self.dragging_pan = False
         self.pan_start = (0, 0)
         self.drawing_stroke = False
 
-        # Tools & Palette
-        self.tool = "pencil"  # "pencil", "bucket", "eraser"
+        # Tools: "pencil", "fill", "eraser", "select"
+        self.tool = "pencil"
         self.selected_color = (220, 50, 50)
         self.palette = PALETTE_GRID
 
+        # Selection, Copy & Paste state
+        self.sel_rect = None
+        self.sel_start = None
+        self.is_selecting = False
+        self.clipboard_surf = None
+
         # Top Toolbar Buttons
-        self.save_btn = pygame.Rect(self.sidebar_w + 10, y_offset + 6, 120, 30)
-        self.undo_btn = pygame.Rect(self.sidebar_w + 140, y_offset + 6, 75, 30)
-        self.redo_btn = pygame.Rect(self.sidebar_w + 225, y_offset + 6, 75, 30)
+        self.save_btn = pygame.Rect(self.sidebar_w + 10, y_offset + 6, 110, 30)
+        self.undo_btn = pygame.Rect(self.sidebar_w + 128, y_offset + 6, 70, 30)
+        self.redo_btn = pygame.Rect(self.sidebar_w + 206, y_offset + 6, 70, 30)
         
-        # Tool selectors
-        self.tool_pencil_btn = pygame.Rect(self.sidebar_w + 320, y_offset + 6, 85, 30)
-        self.tool_bucket_btn = pygame.Rect(self.sidebar_w + 415, y_offset + 6, 85, 30)
-        self.tool_eraser_btn = pygame.Rect(self.sidebar_w + 510, y_offset + 6, 85, 30)
+        # Tool selectors: Pencil, Fill, Eraser, Select, Copy, Paste
+        self.tool_pencil_btn = pygame.Rect(self.sidebar_w + 284, y_offset + 6, 80, 30)
+        self.tool_fill_btn = pygame.Rect(self.sidebar_w + 372, y_offset + 6, 70, 30)
+        self.tool_eraser_btn = pygame.Rect(self.sidebar_w + 450, y_offset + 6, 80, 30)
+        self.tool_select_btn = pygame.Rect(self.sidebar_w + 538, y_offset + 6, 80, 30)
+        self.tool_copy_btn = pygame.Rect(self.sidebar_w + 626, y_offset + 6, 70, 30)
+        self.tool_paste_btn = pygame.Rect(self.sidebar_w + 704, y_offset + 6, 70, 30)
 
         self.refresh_file_list()
         if self.files:
             self.open_tab_sprite(os.path.join(self.categories[self.active_category], self.files[0]))
+
+    def _resolve_categories(self):
+        """Scans and resolves directory paths supporting singular/plural folder variants."""
+        aliases = [
+            ("Items", ["items", "item"]),
+            ("Clothes", ["clothes", "cloth"]),
+            ("Map", ["map", "maps"]),
+            ("Zombie", ["zombie", "zombies"]),
+            ("Player", ["player", "players"]),
+            ("NPC", ["npc", "npcs"]),
+            ("Animals", ["animals", "animal"]),
+            ("Vehicle", ["vehicle", "vehicles"]),
+        ]
+        resolved = {}
+        for label, variants in aliases:
+            for v in variants:
+                p = os.path.join(self.sprite_root, v)
+                if os.path.exists(p) and os.path.isdir(p):
+                    resolved[label] = p
+                    break
+            if label not in resolved:
+                p = os.path.join(self.sprite_root, variants[0])
+                os.makedirs(p, exist_ok=True)
+                resolved[label] = p
+
+        # Dynamically discover any other folders in SPRITE_ROOT
+        if os.path.exists(self.sprite_root):
+            for entry in sorted(os.listdir(self.sprite_root)):
+                full_p = os.path.join(self.sprite_root, entry)
+                if os.path.isdir(full_p):
+                    lbl = entry.capitalize()
+                    if lbl not in resolved:
+                        resolved[lbl] = full_p
+        return resolved
 
     def resize(self, width, height):
         self.width = width
         self.height = height
 
     def refresh_file_list(self):
+        """Recursively scans the active category using os.walk to find all PNGs in subdirectories."""
         cat_dir = self.categories[self.active_category]
-        self.files = sorted([f for f in os.listdir(cat_dir) if f.lower().endswith('.png')]) if os.path.exists(cat_dir) else []
+        self.files = []
+        if cat_dir and os.path.exists(cat_dir):
+            for root, dirs, files in os.walk(cat_dir):
+                for f in sorted(files):
+                    if f.lower().endswith('.png'):
+                        full_p = os.path.join(root, f)
+                        rel_p = os.path.relpath(full_p, cat_dir).replace('\\', '/')
+                        self.files.append(rel_p)
 
     @property
     def filtered_files(self):
@@ -274,11 +310,29 @@ class SpriteEditor:
                         visited.add((nx, ny))
                         queue.append((nx, ny))
 
+    def copy_selection(self):
+        tab = self.get_current_tab()
+        if not tab or not self.sel_rect: return
+        rect = self.sel_rect.clip(pygame.Rect(0, 0, 16, 16))
+        if rect.width <= 0 or rect.height <= 0: return
+        self.clipboard_surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+        self.clipboard_surf.blit(tab["surf"], (0, 0), rect)
+
+    def paste_selection(self):
+        tab = self.get_current_tab()
+        if not tab or not self.clipboard_surf: return
+        self.push_undo_state()
+        px = self.sel_rect.x if self.sel_rect else 0
+        py = self.sel_rect.y if self.sel_rect else 0
+        tab["surf"].blit(self.clipboard_surf, (px, py))
+        w, h = self.clipboard_surf.get_size()
+        self.sel_rect = pygame.Rect(px, py, w, h)
+
     def apply_pixel_draw(self, px, py, is_first=False):
         tab = self.get_current_tab()
         if not tab or not (0 <= px < 16 and 0 <= py < 16): return
 
-        if self.tool == "bucket" and is_first:
+        if self.tool == "fill" and is_first:
             self.flood_fill(tab["surf"], px, py, (*self.selected_color, 255))
             return
 
@@ -289,9 +343,6 @@ class SpriteEditor:
                     self.push_undo_state()
                 tab["surf"].set_at((px, py), color)
 
-    # ------------------------------------------------------------------
-    # PALETTE SWATCH GEOMETRY (SINGLE SOURCE OF TRUTH FOR ACCURATE CLICKS)
-    # ------------------------------------------------------------------
     def get_swatch_rect(self, col_idx, row_idx):
         palette_x = self.width - self.palette_panel_w
         start_y = self.y_offset + self.toolbar_h + 50
@@ -412,6 +463,15 @@ class SpriteEditor:
             elif ctrl and (event.key == pygame.K_y or (shift and event.key == pygame.K_z)):
                 self.redo_current()
                 return True
+            elif ctrl and event.key == pygame.K_c:
+                self.copy_selection()
+                return True
+            elif ctrl and event.key == pygame.K_v:
+                self.paste_selection()
+                return True
+            elif event.key == pygame.K_ESCAPE:
+                self.sel_rect = None
+                return True
 
         # Sidebar Category Dropdown
         if self.category_dropdown.expanded:
@@ -419,6 +479,7 @@ class SpriteEditor:
                 if self.category_dropdown.text != self.active_category:
                     self.active_category = self.category_dropdown.text
                     self.search_input.text = ""
+                    self.sidebar_scroll = 0
                     self.refresh_file_list()
                 return True
 
@@ -437,15 +498,27 @@ class SpriteEditor:
                 return True
             elif self.tool_pencil_btn.collidepoint(event.pos):
                 self.tool = "pencil"
+                self.sel_rect = None
                 return True
-            elif self.tool_bucket_btn.collidepoint(event.pos):
-                self.tool = "bucket"
+            elif self.tool_fill_btn.collidepoint(event.pos):
+                self.tool = "fill"
+                self.sel_rect = None
                 return True
             elif self.tool_eraser_btn.collidepoint(event.pos):
                 self.tool = "eraser"
+                self.sel_rect = None
+                return True
+            elif self.tool_select_btn.collidepoint(event.pos):
+                self.tool = "select"
+                return True
+            elif self.tool_copy_btn.collidepoint(event.pos):
+                self.copy_selection()
+                return True
+            elif self.tool_paste_btn.collidepoint(event.pos):
+                self.paste_selection()
                 return True
 
-        # Palette Clicks (using exact matching rects)
+        # Palette Clicks
         palette_x = self.width - self.palette_panel_w
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and event.pos[0] >= palette_x:
             for col_idx, tones in enumerate(self.palette):
@@ -453,7 +526,7 @@ class SpriteEditor:
                     rect = self.get_swatch_rect(col_idx, row_idx)
                     if rect.collidepoint(event.pos):
                         self.selected_color = tone
-                        if self.tool == "eraser": self.tool = "pencil"
+                        if self.tool in ["eraser", "select"]: self.tool = "pencil"
                         return True
 
         # Tab Strip Interaction
@@ -477,11 +550,28 @@ class SpriteEditor:
                         self.center_canvas()
                         return True
 
-        # Sidebar Interactions (Search, New Button, File Selection)
+        # Sidebar Search & Dragging
         if self.search_input.handle_event(event):
-            self.max_sidebar_scroll = max(0, len(self.filtered_files) * 26 + 10 - (self.height - self.y_offset - 145))
+            list_h = self.height - self.y_offset - 145
+            self.max_sidebar_scroll = max(0, len(self.filtered_files) * 26 + 10 - list_h)
             self.sidebar_scroll = max(0, min(self.sidebar_scroll, self.max_sidebar_scroll))
             return True
+
+        if event.type == pygame.MOUSEBUTTONUP:
+            self.dragging_sidebar = False
+            self.dragging_pan = False
+            self.drawing_stroke = False
+            self.is_selecting = False
+
+        if event.type == pygame.MOUSEMOTION:
+            if self.dragging_sidebar and self.sidebar_thumb_rect and self.max_sidebar_scroll > 0:
+                dy = event.pos[1] - self.sidebar_start_y
+                list_h = self.height - self.y_offset - 145
+                thumb_h = self.sidebar_thumb_rect.height
+                track_space = list_h - thumb_h
+                if track_space > 0:
+                    self.sidebar_scroll = max(0, min(self.max_sidebar_scroll, self.sidebar_start_offset + dy * (self.max_sidebar_scroll / track_space)))
+                return True
 
         sidebar_list_rect = pygame.Rect(0, self.y_offset + 145, self.sidebar_w, self.height - self.y_offset - 145)
         if event.type == pygame.MOUSEBUTTONDOWN and event.pos[0] < self.sidebar_w:
@@ -492,6 +582,11 @@ class SpriteEditor:
                 self.sidebar_scroll = min(self.max_sidebar_scroll, self.sidebar_scroll + 30)
                 return True
             elif event.button == 1:
+                if self.sidebar_thumb_rect and self.sidebar_thumb_rect.collidepoint(event.pos):
+                    self.dragging_sidebar = True
+                    self.sidebar_start_y = event.pos[1]
+                    self.sidebar_start_offset = self.sidebar_scroll
+                    return True
                 if self.new_btn.collidepoint(event.pos):
                     folder_opts = [{"label": c, "value": p} for c, p in self.categories.items()]
                     modal_rect = pygame.Rect(self.width//2 - 260, self.height//2 - 120, 520, 240)
@@ -504,45 +599,52 @@ class SpriteEditor:
 
                 list_y = sidebar_list_rect.y + 5 - self.sidebar_scroll
                 for fname in self.filtered_files:
-                    r = pygame.Rect(10, list_y, self.sidebar_w - 20, 24)
+                    r = pygame.Rect(10, list_y, self.sidebar_w - 24, 24)
                     if r.collidepoint(event.pos):
                         self.open_tab_sprite(os.path.join(self.categories[self.active_category], fname))
                         return True
                     list_y += 26
 
-        # Canvas Interactions (Smooth Zoom, Right-Click Drag Pan, Left-Click Drawing)
+        # Canvas Interactions
         canvas_rect = pygame.Rect(self.sidebar_w, self.y_offset + self.toolbar_h + self.tab_bar_h, self.width - self.sidebar_w - self.palette_panel_w, self.height - self.y_offset - self.toolbar_h - self.tab_bar_h)
         if event.type == pygame.MOUSEBUTTONDOWN and canvas_rect.collidepoint(event.pos):
+            scale = self.zoom_levels[self.zoom_idx]
+            px = int((event.pos[0] - self.pan_x) // scale)
+            py = int((event.pos[1] - self.pan_y) // scale)
+
             if event.button == 3:  # Pan
                 self.dragging_pan = True
                 self.pan_start = event.pos
                 return True
-            elif event.button in (4, 5):  # Smooth Zoom centered at mouse cursor
+            elif event.button in (4, 5):  # Smooth Zoom toward mouse
                 old_zoom = self.zoom_levels[self.zoom_idx]
                 if event.button == 4:
                     self.zoom_idx = min(len(self.zoom_levels) - 1, self.zoom_idx + 1)
                 else:
                     self.zoom_idx = max(0, self.zoom_idx - 1)
                 new_zoom = self.zoom_levels[self.zoom_idx]
-                
-                # Zoom toward mouse position
                 mx, my = event.pos
                 self.pan_x = mx - (mx - self.pan_x) * (new_zoom / old_zoom)
                 self.pan_y = my - (my - self.pan_y) * (new_zoom / old_zoom)
                 return True
-            elif event.button == 1:  # Draw
-                self.drawing_stroke = True
-                scale = self.zoom_levels[self.zoom_idx]
-                px = int((event.pos[0] - self.pan_x) // scale)
-                py = int((event.pos[1] - self.pan_y) // scale)
-                self.apply_pixel_draw(px, py, is_first=True)
-                return True
-
-        if event.type == pygame.MOUSEBUTTONUP:
-            if event.button == 3: self.dragging_pan = False
-            elif event.button == 1: self.drawing_stroke = False
+            elif event.button == 1:
+                if self.tool == "select":
+                    self.is_selecting = True
+                    c_px = max(0, min(15, px))
+                    c_py = max(0, min(15, py))
+                    self.sel_start = (c_px, c_py)
+                    self.sel_rect = pygame.Rect(c_px, c_py, 1, 1)
+                    return True
+                else:
+                    self.drawing_stroke = True
+                    self.apply_pixel_draw(px, py, is_first=True)
+                    return True
 
         if event.type == pygame.MOUSEMOTION:
+            scale = self.zoom_levels[self.zoom_idx]
+            px = int((event.pos[0] - self.pan_x) // scale)
+            py = int((event.pos[1] - self.pan_y) // scale)
+
             if self.dragging_pan:
                 dx = event.pos[0] - self.pan_start[0]
                 dy = event.pos[1] - self.pan_start[1]
@@ -550,10 +652,12 @@ class SpriteEditor:
                 self.pan_y += dy
                 self.pan_start = event.pos
                 return True
+            elif self.is_selecting and pygame.mouse.get_pressed()[0]:
+                x1, y1 = self.sel_start
+                x2, y2 = max(0, min(15, px)), max(0, min(15, py))
+                self.sel_rect = pygame.Rect(min(x1, x2), min(y1, y2), abs(x2 - x1) + 1, abs(y2 - y1) + 1)
+                return True
             elif self.drawing_stroke and pygame.mouse.get_pressed()[0]:
-                scale = self.zoom_levels[self.zoom_idx]
-                px = int((event.pos[0] - self.pan_x) // scale)
-                py = int((event.pos[1] - self.pan_y) // scale)
                 self.apply_pixel_draw(px, py, is_first=False)
                 return True
 
@@ -564,23 +668,25 @@ class SpriteEditor:
         bg_rect = pygame.Rect(0, self.y_offset, self.width, self.height - self.y_offset)
         pygame.draw.rect(surface, UITheme.BG, bg_rect)
 
-        # 1. Top Toolbar
+        # 1. Top Toolbar (Pencil, Fill, Eraser, Select, Copy, Paste)
         toolbar_rect = pygame.Rect(0, self.y_offset, self.width, self.toolbar_h)
         pygame.draw.rect(surface, UITheme.PANEL_BG, toolbar_rect)
         pygame.draw.line(surface, UITheme.BORDER, (0, toolbar_rect.bottom - 1), (self.width, toolbar_rect.bottom - 1))
-        surface.blit(self.font.render("Sprite Editor", True, UITheme.WARNING), (20, self.y_offset + 12))
+        surface.blit(self.font.render("Art", True, UITheme.WARNING), (20, self.y_offset + 12))
 
         draw_styled_button(surface, self.save_btn, "Save PNG", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
         draw_styled_button(surface, self.undo_btn, "Undo", self.font, mouse_pos, UITheme.PANEL_BG, UITheme.HOVER_BG)
         draw_styled_button(surface, self.redo_btn, "Redo", self.font, mouse_pos, UITheme.PANEL_BG, UITheme.HOVER_BG)
 
         draw_styled_button(surface, self.tool_pencil_btn, "Pencil", self.font, mouse_pos, UITheme.ACCENT if self.tool == "pencil" else UITheme.PANEL_BG, UITheme.ACCENT_HOVER)
-        draw_styled_button(surface, self.tool_bucket_btn, "Bucket", self.font, mouse_pos, UITheme.ACCENT if self.tool == "bucket" else UITheme.PANEL_BG, UITheme.ACCENT_HOVER)
+        draw_styled_button(surface, self.tool_fill_btn, "Fill", self.font, mouse_pos, UITheme.ACCENT if self.tool == "fill" else UITheme.PANEL_BG, UITheme.ACCENT_HOVER)
         draw_styled_button(surface, self.tool_eraser_btn, "Eraser", self.font, mouse_pos, UITheme.DANGER if self.tool == "eraser" else UITheme.PANEL_BG, UITheme.DANGER_HOVER)
+        draw_styled_button(surface, self.tool_select_btn, "Select", self.font, mouse_pos, UITheme.WARNING if self.tool == "select" else UITheme.PANEL_BG, UITheme.WARNING_HOVER)
+        draw_styled_button(surface, self.tool_copy_btn, "Copy", self.font, mouse_pos, UITheme.PANEL_BG, UITheme.HOVER_BG)
+        draw_styled_button(surface, self.tool_paste_btn, "Paste", self.font, mouse_pos, UITheme.PANEL_BG, UITheme.HOVER_BG)
 
-        # Zoom level indicator
         zoom_text = f"Zoom: {int(self.zoom_levels[self.zoom_idx])}x"
-        surface.blit(self.font.render(zoom_text, True, UITheme.TEXT_DIM), (self.sidebar_w + 615, self.y_offset + 12))
+        surface.blit(self.font.render(zoom_text, True, UITheme.TEXT_DIM), (self.sidebar_w + 785, self.y_offset + 12))
 
         # 2. Left Sidebar (Folder Dropdown, Search, New Button, Files)
         sidebar_rect = pygame.Rect(0, self.y_offset + self.toolbar_h, self.sidebar_w, self.height - self.y_offset - self.toolbar_h)
@@ -602,7 +708,7 @@ class SpriteEditor:
         list_y = list_clip.y + 5 - self.sidebar_scroll
         for fname in self.filtered_files:
             full_p = os.path.join(self.categories[self.active_category], fname)
-            r = pygame.Rect(8, list_y, self.sidebar_w - 16, 24)
+            r = pygame.Rect(8, list_y, self.sidebar_w - 20, 24)
             if full_p == active_path:
                 pygame.draw.rect(surface, UITheme.LIST_HOVER, r, border_radius=4)
             elif r.collidepoint(mouse_pos):
@@ -611,9 +717,19 @@ class SpriteEditor:
             list_y += 26
         surface.set_clip(None)
 
+        # 3. Sidebar Scrollbar Track and Thumb
         self.max_sidebar_scroll = max(0, len(self.filtered_files) * 26 + 10 - list_clip.height)
+        if self.max_sidebar_scroll > 0:
+            track_rect = pygame.Rect(self.sidebar_w - 8, list_clip.y, 8, list_clip.height)
+            content_h = len(self.filtered_files) * 26 + 10
+            thumb_h = max(20, int((list_clip.height / content_h) * list_clip.height))
+            thumb_y = list_clip.y + (self.sidebar_scroll / self.max_sidebar_scroll) * (list_clip.height - thumb_h)
+            self.sidebar_thumb_rect = pygame.Rect(track_rect.x, thumb_y, 8, thumb_h)
+            pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.sidebar_thumb_rect, border_radius=4)
+        else:
+            self.sidebar_thumb_rect = None
 
-        # 3. Tab Bar
+        # 4. Tab Bar
         tabs_y = self.y_offset + self.toolbar_h
         tabs_w = self.width - self.sidebar_w - self.palette_panel_w
         tabs_view_rect = pygame.Rect(self.sidebar_w, tabs_y, tabs_w, self.tab_bar_h)
@@ -655,15 +771,14 @@ class SpriteEditor:
 
         surface.set_clip(prev_clip)
 
-        # 4. Right Palette Bar (Widened & Accurate Clicks, No Tutorial)
+        # 5. Right Palette Bar
         palette_x = self.width - self.palette_panel_w
         palette_panel_y = tabs_y
         palette_rect = pygame.Rect(palette_x, palette_panel_y, self.palette_panel_w, self.height - palette_panel_y)
         pygame.draw.rect(surface, UITheme.PANEL_BG, palette_rect)
         pygame.draw.line(surface, UITheme.BORDER, (palette_rect.left, palette_rect.top), (palette_rect.left, palette_rect.bottom))
 
-        # Current Color
-        surface.blit(self.font.render("Color:", True, UITheme.TEXT_DIM), (palette_x + 20, palette_panel_y + 14))
+        surface.blit(self.font.render("Selected:", True, UITheme.TEXT_DIM), (palette_x + 20, palette_panel_y + 14))
         cur_swatch = pygame.Rect(palette_x + 180, palette_panel_y + 10, 75, 26)
         if self.tool == "eraser":
             pygame.draw.rect(surface, UITheme.DANGER, cur_swatch, border_radius=4)
@@ -672,19 +787,18 @@ class SpriteEditor:
             pygame.draw.rect(surface, self.selected_color, cur_swatch, border_radius=4)
             pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, cur_swatch, 1, border_radius=4)
 
-        # 10 x 5 Tones Swatches (Using identical get_swatch_rect)
         for col_idx, tones in enumerate(self.palette):
             for row_idx, tone in enumerate(tones):
                 rect = self.get_swatch_rect(col_idx, row_idx)
                 pygame.draw.rect(surface, tone, rect, border_radius=3)
-                if self.selected_color == tone and self.tool != "eraser":
+                if self.selected_color == tone and self.tool not in ["eraser", "select"]:
                     pygame.draw.rect(surface, (255, 255, 255), rect, 2, border_radius=3)
                 else:
                     pygame.draw.rect(surface, (45, 45, 50), rect, 1, border_radius=3)
 
         # Previews (1x, 2x, 4x)
         preview_y = palette_panel_y + 50 + 10 * 29 + 15
-        surface.blit(self.font.render("Preview:", True, UITheme.WARNING), (palette_x + 20, preview_y))
+        surface.blit(self.font.render("Preview (1x, 2x, 4x):", True, UITheme.WARNING), (palette_x + 20, preview_y))
         
         tab = self.get_current_tab()
         if tab:
@@ -704,7 +818,7 @@ class SpriteEditor:
             pygame.draw.rect(surface, UITheme.BORDER, p_box16, 1)
             surface.blit(p_surf, (p_box16.x, p_box16.y))
 
-        # 5. Canvas Drawing Area (Clear Outlines, No Alternating Transparency Colors)
+        # 6. Canvas Drawing Area (Clear Outline, No Alternating Transparency Colors)
         canvas_view = pygame.Rect(self.sidebar_w, tabs_y + self.tab_bar_h, self.width - self.sidebar_w - self.palette_panel_w, self.height - tabs_y - self.tab_bar_h)
         surface.set_clip(canvas_view)
 
@@ -713,11 +827,9 @@ class SpriteEditor:
             canvas_w = int(16 * scale)
             canvas_h = int(16 * scale)
 
-            # Uniform dark background (no alternating checkerboard colors)
             canvas_rect_screen = pygame.Rect(self.pan_x, self.pan_y, canvas_w, canvas_h)
             pygame.draw.rect(surface, (26, 26, 28), canvas_rect_screen)
 
-            # Draw painted pixels
             for cx in range(16):
                 for cy in range(16):
                     px = self.pan_x + cx * scale
@@ -726,7 +838,7 @@ class SpriteEditor:
                     if pixel_color.a > 0:
                         pygame.draw.rect(surface, pixel_color, (px, py, scale, scale))
 
-            # Clear, crisp grid outline for every pixel square
+            # Grid lines
             grid_color = (55, 55, 60)
             for gx in range(17):
                 x_pos = self.pan_x + gx * scale
@@ -735,16 +847,25 @@ class SpriteEditor:
                 y_pos = self.pan_y + gy * scale
                 pygame.draw.line(surface, grid_color, (self.pan_x, y_pos), (self.pan_x + canvas_w, y_pos), 1)
 
-            # High-contrast active border around 16x16 canvas
+            # Selection Highlight Rect
+            if self.sel_rect:
+                sx = self.pan_x + self.sel_rect.x * scale
+                sy = self.pan_y + self.sel_rect.y * scale
+                sw = self.sel_rect.width * scale
+                sh = self.sel_rect.height * scale
+                sel_hl = pygame.Surface((sw, sh), pygame.SRCALPHA)
+                sel_hl.fill((255, 200, 0, 70))
+                surface.blit(sel_hl, (sx, sy))
+                pygame.draw.rect(surface, UITheme.WARNING, (sx, sy, sw, sh), 2)
+
             pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, canvas_rect_screen, 2)
             
         surface.set_clip(None)
 
-        # Dropdown lists on top
         if self.category_dropdown.expanded:
             self.category_dropdown.draw_list(surface)
 
-        # 6. Modals
+        # 7. Modals
         if self.close_confirm_dialog:
             overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 150))

@@ -1,15 +1,61 @@
 import os
+import re
 import pygame
 from editor.ui import UITextArea, UITextBox, UIDropdown, UITheme, draw_styled_button, FocusManager
 from editor.config import XML_DATA_ROOT, GAME_ROOT, ICON_SIZE
 
 # ----------------------------------------------------------------------
-# CodeTextArea – Line Wrapping, Gutter Alignment, Free Scrolling
+# SYNTAX HIGHLIGHTING THEME & REGEX PATTERNS
+# ----------------------------------------------------------------------
+class CodeTheme:
+    XML_TAG = (86, 156, 214)     # Blue
+    XML_ATTR = (156, 220, 254)   # Light Blue
+    XML_STRING = (206, 145, 120) # Orange
+    XML_COMMENT = (106, 153, 85) # Green
+    XML_PUNCT = (128, 128, 128)  # Gray
+    XML_TEXT = (220, 220, 220)   # White
+    XML_MISC = (220, 220, 220)   
+
+    MD_HEADER = (86, 156, 214)   # Blue
+    MD_CODE = (206, 145, 120)    # Orange
+    MD_LIST = (220, 220, 170)    # Yellowish
+    MD_BOLD = (197, 134, 192)    # Purple
+    MD_ITALIC = (78, 201, 176)   # Cyan
+    MD_LINK = (55, 148, 255)     # Deep Blue
+    MD_TEXT = (220, 220, 220)
+    MD_MISC = (220, 220, 220)
+
+    TEXT = (220, 220, 220)
+
+XML_PATTERN = re.compile(
+    r'(?P<comment><!--.*?-->)|'
+    r'(?P<tag></?[a-zA-Z0-9_:\.\-]+)|'
+    r'(?P<attr>\b[a-zA-Z0-9_:\.\-]+)(?=\s*=)|'
+    r'(?P<string>"[^"]*"|\'[^\']*\')|'
+    r'(?P<punct>[=<>/?]+)|'
+    r'(?P<text>[^<=">/?]+)|'
+    r'(?P<misc>.)'
+)
+
+MD_PATTERN = re.compile(
+    r'(?P<header>^#+\s.*)|'
+    r'(?P<code>`[^`]+`)|'
+    r'(?P<list>^\s*[-*+]\s|^\s*\d+\.\s)|'
+    r'(?P<bold>\*\*[^*]+\*\*)|'
+    r'(?P<italic>\*[^*]+\*)|'
+    r'(?P<link>\[[^\]]+\]\([^)]+\))|'
+    r'(?P<text>[^`*\[#\-\+\d]+)|'
+    r'(?P<misc>.)'
+)
+
+# ----------------------------------------------------------------------
+# CodeTextArea – Line Wrapping, Gutter Alignment, Free Scrolling, Syntax
 # ----------------------------------------------------------------------
 class CodeTextArea(UITextArea):
     def __init__(self, x, y, width, height, font, text=""):
         super().__init__(x, y, width, height, font, text)
         self.line_number_width = 50
+        self.file_type = "xml"  # defaults to xml
 
     def _update_lines(self):
         self.lines = []
@@ -140,8 +186,27 @@ class CodeTextArea(UITextArea):
                     h_w = self.font.size(l_text[h_start - s_idx : h_end - s_idx])[0]
                     pygame.draw.rect(surface, UITheme.LIST_HOVER, (text_clip.x + 8 + h_x, y_pos, h_w, self.line_height))
 
-            ts = self.font.render(l_text, True, UITheme.TEXT)
-            surface.blit(ts, (text_clip.x + 8, y_pos))
+            # Syntax Highlighting Render
+            cur_x = text_clip.x + 8
+            if self.file_type == 'xml':
+                for match in XML_PATTERN.finditer(l_text):
+                    kind = match.lastgroup
+                    val = match.group()
+                    color = getattr(CodeTheme, f"XML_{kind.upper()}", CodeTheme.TEXT)
+                    ts = self.font.render(val, True, color)
+                    surface.blit(ts, (cur_x, y_pos))
+                    cur_x += ts.get_width()
+            elif self.file_type == 'md':
+                for match in MD_PATTERN.finditer(l_text):
+                    kind = match.lastgroup
+                    val = match.group()
+                    color = getattr(CodeTheme, f"MD_{kind.upper()}", CodeTheme.TEXT)
+                    ts = self.font.render(val, True, color)
+                    surface.blit(ts, (cur_x, y_pos))
+                    cur_x += ts.get_width()
+            else:
+                ts = self.font.render(l_text, True, UITheme.TEXT)
+                surface.blit(ts, (cur_x, y_pos))
 
         if self.active and (self.blink_timer // 30) % 2 == 0:
             cx = text_clip.x + 8 + cursor_x
@@ -367,7 +432,6 @@ class CodeEditor:
         total_w = rel_x - 2 if rel_x > 0 else 0
         self.max_tab_scroll = max(0, total_w - view_w)
 
-        # Auto-scroll horizontally if tab is outside the visible view
         if target_right > self.tab_scroll_x + view_w:
             self.tab_scroll_x = (target_right + 15) - view_w
         elif target_left < self.tab_scroll_x:
@@ -376,7 +440,6 @@ class CodeEditor:
         self.tab_scroll_x = max(0, min(self.max_tab_scroll, self.tab_scroll_x))
 
     def open_file(self, path):
-        # Save active tab state before switching
         if 0 <= self.active_tab_idx < len(self.open_files):
             old_path = self.open_files[self.active_tab_idx]
             if old_path in self.file_data:
@@ -403,12 +466,14 @@ class CodeEditor:
         self._sync_text_area(is_new_open=True)
         self.ensure_tab_visible(self.active_tab_idx)
 
-
     def _sync_text_area(self, is_new_open=False):
         if 0 <= self.active_tab_idx < len(self.open_files):
             path = self.open_files[self.active_tab_idx]
             data = self.file_data.get(path)
             if data:
+                ext = os.path.splitext(path)[1].lower()
+                self.text_area.file_type = 'xml' if ext == '.xml' else 'md' if ext == '.md' else 'txt'
+
                 self.text_area.text = data["content"]
                 self.text_area._update_lines()
                 self.text_area.sel_start = None
@@ -458,7 +523,6 @@ class CodeEditor:
         if not self.open_files:
             self.active_tab_idx = -1
         elif self.active_tab_idx == idx:
-            # Focus the adjacent tab to the left (or index 0 if the first tab was closed)
             self.active_tab_idx = max(0, idx - 1)
         elif self.active_tab_idx > idx:
             self.active_tab_idx -= 1
@@ -607,7 +671,6 @@ class CodeEditor:
             if self.new_file_btn.collidepoint(event.pos):
                 folder_opts = self.file_tree.get_folder_options()
                 
-                # Determine default folder from current tree selection or root
                 default_folder = self.current_root
                 if self.file_tree.selected_path:
                     if os.path.isdir(self.file_tree.selected_path):
@@ -670,7 +733,7 @@ class CodeEditor:
                                         self.file_data[old_path]["content"] = self.text_area.text
                                 self.active_tab_idx = tab_info["index"]
                                 self._sync_text_area(is_new_open=False)
-                            self.ensure_tab_visible(self.active_tab_idx)
+                                self.ensure_tab_visible(self.active_tab_idx)
                             return True
 
         # Left File Tree
@@ -699,7 +762,7 @@ class CodeEditor:
         pygame.draw.rect(surface, UITheme.PANEL_BG, toolbar_rect)
         pygame.draw.line(surface, UITheme.BORDER, (0, toolbar_rect.bottom - 1), (self.width, toolbar_rect.bottom - 1))
 
-        surface.blit(self.font.render("Code Editor", True, UITheme.WARNING), (20, self.y_offset + 12))
+        surface.blit(self.font.render("Code & Docs", True, UITheme.WARNING), (20, self.y_offset + 12))
         draw_styled_button(surface, self.new_file_btn, "+ New File", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
         draw_styled_button(surface, self.save_btn, "Save File", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
         draw_styled_button(surface, self.delete_btn, "Delete", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)

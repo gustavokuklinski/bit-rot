@@ -215,6 +215,7 @@ class EntityEditor:
         self.delete_btn = pygame.Rect(0, 0, 110, 35)
         self.code_btn = pygame.Rect(0, 0, 110, 35)
         self.add_loot_btn = pygame.Rect(0, 0, 120, 30)
+        self.edit_sprite_btn = pygame.Rect(0, 0, 140, 30)
         
         self.refresh_file_list()
         if self.files:
@@ -256,6 +257,44 @@ class EntityEditor:
 
         self.item_type_opts = [{"label": t, "value": t} for t in sorted(types)]
 
+    def get_current_sprite_path(self, tab):
+        """Finds the absolute path to the active entity's sprite PNG file."""
+        if not tab: return None
+        base_img = None
+        root = tab["tree"].getroot()
+
+        for sprite in root.findall(".//visuals/sprite"):
+            if sprite.get("id") in ["center", "top", "body"] or base_img is None:
+                base_img = sprite.get("file")
+                if sprite.get("id") in ["center", "top", "body"]: break
+
+        if not base_img:
+            sprite_node = root.find(".//sprite")
+            if sprite_node is not None:
+                base_img = sprite_node.get("file")
+
+        if not base_img and tab["filename"] and tab["filename"] is not False:
+            base_img = os.path.splitext(tab["filename"])[0]
+
+        if not base_img:
+            return None
+
+        base_fname = os.path.basename(base_img)
+        stem = os.path.splitext(base_fname)[0]
+        s_dir = os.path.join(GAME_ROOT, 'lib', 'sprites')
+        subdirs = [tab["category"].lower(), 'items', 'clothes', 'zombie', 'player', 'npc', 'animals', 'vehicle', 'map', 'editor']
+        candidates = [base_fname] if base_fname.endswith('.png') else [base_fname, f"{stem}.png"]
+
+        # Search existing file on disk
+        for sub in subdirs:
+            for c_file in candidates:
+                p = os.path.join(s_dir, sub, c_file)
+                if os.path.exists(p):
+                    return p
+
+        # Fallback to category folder
+        target_name = base_fname if base_fname.endswith('.png') else f"{stem}.png"
+        return os.path.join(s_dir, tab["category"].lower(), target_name)
 
     def ensure_tab_visible(self, idx):
         if not (0 <= idx < len(self.open_tabs)):
@@ -540,6 +579,11 @@ class EntityEditor:
         self.duplicate_btn.topleft = (form_x + 165, current_y)
         self.delete_btn.topleft = (form_x + 310, current_y)
         self.code_btn.topleft = (form_x + 435, current_y)
+
+        preview_box_x = self.width - 170
+        preview_box_y = self.y_offset + self.tab_bar_h + 15
+        self.edit_sprite_btn.topleft = (preview_box_x, preview_box_y + 148)
+        self.edit_sprite_btn.width = 140
         
         tab["max_form_scroll"] = max(0, current_y + tab["form_scroll"] - self.height + 40)
 
@@ -865,6 +909,8 @@ class EntityEditor:
                             self.ensure_tab_visible(self.active_tab_idx)
                             return True
 
+        
+
         # Current Form Fields Interactions
         tab = self.get_current_tab()
         if tab:
@@ -930,6 +976,17 @@ class EntityEditor:
                         self.save_current_tab()
                         path = os.path.join(self.categories[tab["category"]], tab["filename"])
                         return {"action": "open_in_code", "path": path}
+
+                    if self.edit_sprite_btn.collidepoint(mx, my):
+                        sprite_path = self.get_current_sprite_path(tab)
+                        if sprite_path:
+                            # Create a blank 16x16 PNG if the file doesn't exist yet
+                            if not os.path.exists(sprite_path):
+                                try:
+                                    os.makedirs(os.path.dirname(sprite_path), exist_ok=True)
+                                    pygame.image.save(pygame.Surface((16, 16), pygame.SRCALPHA), sprite_path)
+                                except: pass
+                            return {"action": "open_in_art", "path": sprite_path}
                         
             if event.type == pygame.MOUSEBUTTONDOWN and event.pos[0] > self.sidebar_w:
                 if event.button == 4:
@@ -1085,11 +1142,14 @@ class EntityEditor:
             
             img = self.get_preview_image()
             if img:
-                scaled_img = pygame.transform.scale(img, (128, 128))
-                surface.blit(scaled_img, (preview_rect.centerx - 64, preview_rect.centery - 64))
+                scaled_img = pygame.transform.scale(img, (120, 120))
+                surface.blit(scaled_img, (preview_rect.centerx - 60, preview_rect.centery - 60))
             else:
                 surface.blit(self.font.render("No Sprite", True, UITheme.TEXT_DIM), (preview_rect.centerx - 45, preview_rect.centery - 8))
-            
+
+            # Edit Sprite Button right below the preview box
+            draw_styled_button(surface, self.edit_sprite_btn, "Edit Sprite", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
+
             # Fields Headers
             col_y = tab["filename_input"].rect.bottom + 15
             surface.blit(self.font.render("Node Path", True, UITheme.WARNING), (form_x + 20, col_y))
