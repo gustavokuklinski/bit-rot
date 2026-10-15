@@ -30,7 +30,7 @@ def generate_palette():
         elif (r, g, b) == (50, 50, 50):
             tones = [(15, 15, 15), (30, 30, 30), (50, 50, 50), (75, 75, 75), (105, 105, 105)]
         else:
-            factors = [0.4, 0.7, 1.0, 1.3, 1.6]
+            factors = [0.1, 0.4, 0.7, 1.0, 1.3, 1.6]
             for f in factors:
                 if f <= 1.0:
                     tr = max(0, min(255, int(r * f)))
@@ -62,7 +62,7 @@ class SpriteEditor:
         self.toolbar_h = 42
         self.tab_bar_h = 36
         self.sidebar_w = 280
-        self.palette_panel_w = 280
+        self.palette_panel_w = 310
         self.canvas_size = 16
 
         # Robust category path resolution checking both singular and plural forms

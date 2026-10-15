@@ -11,7 +11,9 @@ permissions:
 jobs:
   build:
     name: Build AppImage
-    runs-on: ubuntu-latest
+    # Using 22.04 for better backward compatibility with older glibc versions
+    runs-on: ubuntu-22.04
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -25,22 +27,87 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y patchelf ccache wget libfuse2
-          # Install appimagetool globally so build.sh can find it
-          wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+          sudo apt-get install -y patchelf ccache wget libfuse2 desktop-file-utils
+          # Download appimagetool and make it globally available
+          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
           chmod +x appimagetool
           sudo mv appimagetool /usr/local/bin/
 
       - name: Install Python Dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install nuitka zstandard
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Build AppImage
         run: |
-          # Make sure the build script is executable
-          chmod +x scripts/build.sh
-          # Generate the .AppImage using your build script
-          ./scripts/build.sh --appimage
-          
+          # 1. Compile Python code with Nuitka
+          python -m nuitka --standalone \
+            --assume-yes-for-downloads \
+            --output-dir=./build \
+            --include-data-dir=bitrot/data.rot=data.rot \
+            bitrot/bitrot.py
+
+          APPDIR="bitrot.AppDir"
+          rm -rf "$APPDIR"
+          mkdir -p "$APPDIR/usr/bin"
+
+          if [ ! -d "build/bitrot.dist" ]; then
+            echo "Error: build/bitrot.dist not found."
+            exit 1
+          fi
+
+          cp -a build/bitrot.dist/* "$APPDIR/usr/bin/"
+
+          # 2. Identify the compiled main binary
+          if [ -f "$APPDIR/usr/bin/bitrot.bin" ]; then
+            BINARY_NAME="bitrot.bin"
+          elif [ -f "$APPDIR/usr/bin/bitrot" ]; then
+            BINARY_NAME="bitrot"
+          else
+            BINARY_NAME=$(find "$APPDIR/usr/bin" -maxdepth 1 -type f -executable ! -name "*.so*" | head -n 1 | xargs basename)
+          fi
+
+          if [ -z "$BINARY_NAME" ]; then
+            echo "Error: Could not determine executable binary."
+            exit 1
+          fi
+
+          echo "Using binary: $BINARY_NAME"
+          chmod +x "$APPDIR/usr/bin/$BINARY_NAME"
+
+          # 3. Create AppRun (EOF must NOT have leading spaces)
+          cat << 'EOF' > "$APPDIR/AppRun"
+          #!/bin/sh
+          HERE="$(dirname "$(readlink -f "${0}")")"
+          export LD_LIBRARY_PATH="$HERE/usr/bin:$LD_LIBRARY_PATH"
+          exec "$HERE/usr/bin/$BINARY_NAME" "$@"
+          EOF
+          # Substitute the binary name variable into AppRun
+          sed -i "s/\$BINARY_NAME/$BINARY_NAME/g" "$APPDIR/AppRun"
+          chmod +x "$APPDIR/AppRun"
+
+          # 4. Create Desktop Entry (EOF must NOT have leading spaces)
+          cat << EOF > "$APPDIR/bitrot.desktop"
+          [Desktop Entry]
+          Name=Bitrot
+          Exec=$BINARY_NAME
+          Icon=bitrot
+          Type=Application
+          Categories=Utility;
+          EOF
+
+          # 5. Icon handling
+          if [ -f "bitrot/data.rot/icons/favicon.png" ]; then
+            cp "bitrot/data.rot/icons/favicon.png" "$APPDIR/bitrot.png"
+          else
+            # Generate a minimal valid 1x1 PNG fallback so appimagetool validation succeeds
+            echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=" | base64 -d > "$APPDIR/bitrot.png"
+          fi
+
+          # 6. Package into AppImage using --appimage-extract-and-run to bypass FUSE runner limits
+          ARCH=x86_64 /usr/local/bin/appimagetool --appimage-extract-and-run "$APPDIR" Bitrot-x86_64.AppImage
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -48,7 +115,7 @@ jobs:
           path: "*.AppImage"
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: "*.AppImage"

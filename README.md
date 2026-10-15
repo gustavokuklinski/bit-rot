@@ -29,10 +29,7 @@
 ## 📖 Table of Contents
 - [📋 Minimum Requirements](#-minimum-requirements)
 - [🎮 Controls and Keybinds](#-controls-and-keybinds)
-- [🚀 Using the Rot Engine](#-using-the-rot-engine)
-  - [Interactive Mode](#interactive-mode)
-  - [Command Line Mode](#command-line-mode)
-- [🛠️ Manual Installation](#-manual-installation-virtual-environment)
+- [🛠️ Installation](#-installation)
 - [📦 Building Executables](#-building-executables)
 - [🔑 Windows Signing and Certificates](#-windows-signing-and-certificates)
 - [☁️ Cloud Builds](#-cloud-builds)
@@ -96,43 +93,9 @@ Before diving in, ensure your system meets the following minimum specifications:
 
 ---
 
-## 🚀 Using the Rot Engine
+## 🛠️ Installation
 
-The **Rot Engine** scripts (`BITROT.sh` and `BITROT.bat`) are the primary control centers for the project. They act as wrappers for the specialized scripts located in the `./scripts/` directory.
-
-### 🏁 Getting Started
-**Linux / macOS:**
-```bash
-chmod +x BITROT.sh scripts/*.sh
-./BITROT.sh
-```
-
-**Windows:**
-Simply double-click `BITROT.bat` or run it via CMD:
-```cmd
-BITROT.bat
-```
-
-### 🕹️ Interactive Mode
-If you run the scripts without any arguments, you will enter the **Interactive ASCII Menu**:
-1. **Play BitRot**: Launches the game.
-2. **Editor**: Launches the level editor.
-3. **Clean Project**: Deletes cache, build folders, or resets `data.rot`.
-4. **Build Executable**: Automates the Nuitka compilation and signing process.
-
-### ⌨️ Command Line Mode
-| Command | Description | Linux | Mac | Windows |
-| :--- | :--- | :--- | :--- | :--- |
-| `shell` | Launches the game | `./BITROT.sh shell`| `./BITROT.sh shell` | `BITROT.bat shell` |
-| `shell --editor` | Launches the editor | `./BITROT.sh shell --editor` | `./BITROT.sh shell --editor` |`BITROT.bat shell --editor` |
-| `clean` | Cleans project files | `./BITROT.sh clean --full` | `./BITROT.sh clean --full` |`BITROT.bat clean --full` |
-| `build` | Compiles the game | `./BITROT.sh build --linux` or `--appimage` |  `./BITROT.sh build --macos` |  `BITROT.bat build --windows` |
-
----
-
-## 🛠️ Manual Installation (Virtual Environment)
-
-If you prefer to set things up manually for development:
+Prepare development:
 
 ### 1. Create and activate a virtual environment
 ```bash
@@ -151,14 +114,7 @@ pip install -r requirements.txt
 
 We use [Nuitka](https://nuitka.net/) to compile Python code into machine-code executables for maximum performance.
 
-### ⚡ Automatic Build (Recommended)
-The easiest way to build is using the Rot Engine wrappers. These scripts handle dependencies, icons, and signing automatically.
-
-- **Windows**: `BITROT.bat build --windows` (triggers `./scripts/build.bat`)
-- **macOS**: `./BITROT.sh build --macos` (triggers `./scripts/build.sh`)
-- **Linux (Standalone)**: `./BITROT.sh build --linux` (triggers `./scripts/build.sh`)
-
-#### 🐧 Generating a Linux AppImage
+### 🐧 Generating a Linux AppImage
 For a truly portable "single-file" experience on Linux, you can build an **AppImage**. This packages the standalone build into a read-only filesystem that runs on most distributions.
 
 **1. Install `appimagetool`:**
@@ -170,7 +126,57 @@ sudo mv appimagetool /usr/local/bin/
 
 **2. Build the AppImage:**
 ```bash
-./BITROT.sh build --appimage
+# 1. Compile the application in standalone mode
+nuitka --standalone \
+  --assume-yes-for-downloads \
+  --output-dir=./build \
+  --static-libpython=yes \
+  --include-data-dir=bitrot/data.rot=data.rot \
+  bitrot/bitrot.py
+
+# 2. Stage files into an AppDir layout
+APPDIR="bitrot.AppDir"
+rm -rf "$APPDIR"
+mkdir -p "$APPDIR/usr/bin"
+cp -a build/bitrot.dist/* "$APPDIR/usr/bin/"
+
+# Identify the compiled binary name (bitrot or bitrot.bin)
+if [ -f "$APPDIR/usr/bin/bitrot.bin" ]; then
+  BIN_NAME="bitrot.bin"
+else
+  BIN_NAME="bitrot"
+fi
+chmod +x "$APPDIR/usr/bin/$BIN_NAME"
+
+# 3. Create the entry point (AppRun)
+cat << EOF > "$APPDIR/AppRun"
+#!/bin/sh
+HERE="\$(dirname "\$(readlink -f "\${0}")")"
+export LD_LIBRARY_PATH="\$HERE/usr/bin:\$LD_LIBRARY_PATH"
+exec "\$HERE/usr/bin/$BIN_NAME" "\$@"
+EOF
+chmod +x "$APPDIR/AppRun"
+
+# 4. Add desktop integration metadata & icon
+cat << EOF > "$APPDIR/bitrot.desktop"
+[Desktop Entry]
+Name=Bitrot
+Exec=AppRun
+Icon=bitrot
+Type=Application
+Categories=Utility;
+EOF
+
+if [ -f "bitrot/data.rot/icons/favicon.png" ]; then
+  cp "bitrot/data.rot/icons/favicon.png" "$APPDIR/bitrot.png"
+else
+  # 1x1 fallback PNG if icon is missing (required by appimagetool)
+  echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=" | base64 -d > "$APPDIR/bitrot.png"
+fi
+
+# 5. Pack into a final AppImage
+ARCH=x86_64 appimagetool "$APPDIR" Bitrot-x86_64.AppImage
+
 ```
 *This will create a `.AppImage` file in the project root that can be shared and executed immediately.*
 
@@ -191,10 +197,10 @@ If you prefer to run the compilation manually or customize the build flags, use 
 #### 🐧 Linux
 ```bash
 # Build the game as a standalone directory
-$ nuitka --standalone --include-data-dir=./bitrot/data.rot=data.rot --output-dir=./build ./bitrot/bitrot.py
+nuitka --standalone --assume-yes-for-downloads --output-dir=./build --static-libpython=yes --include-data-dir=bitrot/data.rot=data.rot bitrot/bitrot.py
 
 # Build the editor as a standalone directory
-$ nuitka --standalone --include-data-dir=./bitrot/data.rot=data.rot --output-dir=./build ./bitrot/editor.py
+nuitka --standalone --assume-yes-for-downloads --output-dir=./build --static-libpython=yes --include-data-dir=bitrot/data.rot=data.rot bitrot/editor.py
 ```
 
 #### 🪟 Windows
@@ -226,13 +232,7 @@ Windows Defender often flags unsigned Python executables as "Trojan" or "Unknown
 ### 🛠️ Local Signing Requirements
 To build and sign binaries locally on Windows, you must have the **Windows SDK** installed (specifically `signtool.exe`).
 
-### ⚙️ How the Process Works
-When you run `BITROT.bat build --windows` (which executes `./scripts/build.bat`), the engine performs these steps automatically:
-1. **Certificate Generation**: It runs `python bitrot/tools/windows_certificate.py cert.pfx` to create a local self-signed certificate.
-2. **Compilation**: Nuitka compiles the `.py` files into `.exe`.
-3. **Binary Signing**: The engine locates `signtool.exe` (x64) and signs the binaries using the generated `.pfx` certificate and a secure password.
-
-**Manual Signing Command (Example):**
+**Signing Command:**
 ```cmd
 signtool sign /f cert.pfx /p "bitrot&Certificate@Windows912026" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "build\bitrot.dist\bitrot.exe"
 ```
@@ -263,7 +263,7 @@ Once the process is complete, GitHub will upload the compiled binaries as **Arti
 
 ## 📬 Contact
 
-The best way to reach us is through [GitHub Issues](https://github.com/gustavokuklinski/bit-rot/issues) or [Discord](https://discord.gg/SK4s7V6mEZ).
+The best way to reach us is through [GitHub Discussions](https://github.com/gustavokuklinski/bit-rot/discussions) or [Discord](https://discord.gg/SK4s7V6mEZ).
 
 ---
 **Survive. Adapt. Fight the Rot. 🧟**
