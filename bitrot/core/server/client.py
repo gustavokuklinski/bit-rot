@@ -272,6 +272,7 @@ class GameClient:
 
             elif m_type == NetMsg.WORLD_SYNC:
                 curr_layer = getattr(self.game, 'current_layer_index', 1)
+                client_map = getattr(self.game.map_manager, 'current_map_filename', '')
 
                 # Players
                 players_list = msg.get('players', [])
@@ -311,6 +312,7 @@ class GameClient:
                     z = self.game._synced_zombies[zid]
                     z.x = z_data['x']
                     z.y = z_data['y']
+                    z.map_filename = z_data.get('map', '')
                     set_entity_layer(z, z_data.get('layer', 1))
                     z.rect.topleft = (int(z.x), int(z.y))
                     z.health = z_data['hp']
@@ -339,7 +341,10 @@ class GameClient:
                     if zid not in current_z_ids:
                         del self.game._synced_zombies[zid]
 
-                self.game.zombies = [z for z in self.game._synced_zombies.values() if getattr(z, 'layer', 1) == curr_layer]
+                self.game.zombies = [
+                    z for z in self.game._synced_zombies.values()
+                    if getattr(z, 'layer', 1) == curr_layer and (not getattr(z, 'map_filename', None) or z.map_filename == client_map)
+                ]
                 self.game.active_zombies = self.game.zombies
 
                 # Animals
@@ -364,11 +369,20 @@ class GameClient:
                     a.health = a_data['hp']
                     a.max_health = a_data['max_hp']
 
+                for a_data in msg.get('animals', []):
+                    aid = a_data['id']
+                    a = self.game._synced_animals.get(aid)
+                    if a:
+                        a.map_filename = a_data.get('map', '')
+
                 for aid in list(self.game._synced_animals.keys()):
                     if aid not in current_a_ids:
                         del self.game._synced_animals[aid]
 
-                self.game.active_animals = [a for a in self.game._synced_animals.values() if getattr(a, 'layer', 1) == curr_layer]
+                self.game.active_animals = [
+                    a for a in self.game._synced_animals.values()
+                    if getattr(a, 'layer', 1) == curr_layer and (not getattr(a, 'map_filename', None) or a.map_filename == client_map)
+                ]
 
                 # Ground Items & Corpses
                 if not hasattr(self.game, '_synced_items'):
@@ -472,13 +486,19 @@ class GameClient:
                         dummy._last_net_clothes = new_clothes
                         dummy._last_net_colors = new_colors
 
+                for n_data in msg.get('npcs', []):
+                    nid = n_data['id']
+                    n = self.game._synced_npcs.get(nid)
+                    if n:
+                        n.map_filename = n_data.get('map', '')
+
                 for nid in list(self.game._synced_npcs.keys()):
                     if nid not in current_n_ids:
                         del self.game._synced_npcs[nid]
 
                 self.game.npcs.empty()
                 for dummy in self.game._synced_npcs.values():
-                    if getattr(dummy, 'layer', 1) == curr_layer:
+                    if getattr(dummy, 'layer', 1) == curr_layer and (not getattr(dummy, 'map_filename', None) or dummy.map_filename == client_map):
                         self.game.npcs.add(dummy)
 
                 # Vehicles
@@ -507,6 +527,7 @@ class GameClient:
 
                         existing_v.x = v_data['x']
                         existing_v.y = v_data['y']
+                        existing_v.map_filename = v_data.get('map', '')
                         existing_v.rect.topleft = (int(existing_v.x), int(existing_v.y))
                         existing_v.facing = v_data['facing']
                         existing_v.active = v_data['active']

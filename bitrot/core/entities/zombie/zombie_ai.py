@@ -238,7 +238,7 @@ class ZombieAI:
             if getattr(game, 'current_layer_index', 1) == my_layer:
                 all_players.append(game.player)
         for rp in getattr(game, 'remote_players', {}).values():
-            if not getattr(rp, 'is_dead', False) and rp.health > 0:
+            if not getattr(rp, 'is_dead', False) and getattr(rp, 'health', 0) > 0:
                 if getattr(rp, 'layer', 1) == my_layer:
                     all_players.append(rp)
 

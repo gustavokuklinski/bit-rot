@@ -45,14 +45,16 @@ class ZombieCombat:
         if self.health <= 0:
             self.health = 0
 
-            # --- TRIGGER KILL MILESTONES (Only if it just died from this hit) ---
+            # --- TRIGGER KILL MILESTONES & GLOBAL COUNTERS ---
             if not was_dead:
                 # Treat 'None' as the player to catch default weapon/projectile hits
                 if attacker == player or attacker is None:
                     if type(self).__name__ == 'NPC':
                         if not getattr(self, 'is_friendly', True):
                             check_milestone_progress(game, 'kill', 'hostile_npc')
-                    else:
+                    elif getattr(self, 'type', 'zombie') != 'animal':
+                        if hasattr(game, 'zombies_killed'):
+                            game.zombies_killed += 1
                         check_milestone_progress(game, 'kill', 'zombie')
             # --------------------------------------------------------------------
 

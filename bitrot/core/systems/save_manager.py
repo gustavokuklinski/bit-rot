@@ -203,40 +203,6 @@ def save_game(game):
         with open(host_path, "w") as f:
             json.dump(host_data, f, indent=4)
 
-        # --- 2. PREPARE & UPDATE host.rot REGISTRY ---
-        host_path = os.path.join(save_path, "host.rot")
-        host_data = {
-            "os": platform.system(),
-            "uip": get_host_ip(),
-            "host": {},
-            "remote": {}
-        }
-
-        if os.path.exists(host_path):
-            try:
-                with open(host_path, "r") as f:
-                    existing_host = json.load(f)
-                    if isinstance(existing_host, dict):
-                        if "host" in existing_host:
-                            host_data["host"] = existing_host["host"]
-                        elif "players" in existing_host:
-                            host_data["host"] = existing_host["players"]
-                        if "remote" in existing_host:
-                            host_data["remote"] = existing_host["remote"]
-            except Exception as e:
-                game.logger.info(f"Could not read existing host.rot: {e}")
-
-        host_data["host"][player_id] = {
-            "name": game.player.name,
-            "playerID": f"{player_id}.rot",
-            "alive": is_player_alive,
-            "x": int(game.player.x),
-            "y": int(game.player.y)
-        }
-
-        with open(host_path, "w") as f:
-            json.dump(host_data, f, indent=4)
-
         # --- 3. SAVE NPCS ---
         npc_data = []
         saved_npc_ids = set()

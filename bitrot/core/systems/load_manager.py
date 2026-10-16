@@ -319,6 +319,11 @@ def respawn_player_in_world(game, new_player_data, save_folder_name):
         game._is_respawning_player = False
 
 def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
+    # Ensure fresh singleplayer sessions do not retain multiplayer client/server flags
+    if not getattr(game, 'is_dedicated', False):
+        game.is_client = False
+        game.is_server = False
+
     # --- FIX: Nuke all lingering audio channels from previous sessions to free them up ---
     if pygame.mixer.get_init():
         pygame.mixer.stop()

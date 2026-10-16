@@ -111,7 +111,8 @@ def _update_entity_batch(entity_list, player_x, player_y, lod_base_radius_sq, ma
 
         _process_entity_substepping(entity, obstacles, game)
         ai_nearby = [z for z in nearby if isinstance(z, Zombie)]
-        entity.update_ai(game.player.rect, obstacles, ai_nearby, game)
+        player_rect = game.player.rect if getattr(game, 'player', None) else None
+        entity.update_ai(player_rect, obstacles, ai_nearby, game)
 
 def update_entities(game, GRID_SIZE, zombies_to_remove):
     if getattr(game, 'is_client', False):

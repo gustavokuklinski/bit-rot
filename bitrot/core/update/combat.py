@@ -111,8 +111,6 @@ def trigger_explosion(game, x, y, damage, radius, owner, explosion_sound=None):
                     
     for z in dead_zombies:
         handle_zombie_death(game, z, game.items_on_ground, game.obstacles, getattr(owner, 'active_weapon', None))
-        if owner == getattr(game, 'player', None):
-            game.zombies_killed += 1
                 
     dead_animals = []
     for a in getattr(game, 'active_animals', []):
@@ -294,7 +292,7 @@ def player_hit_zombie(player, zombie, game):
 
     game.splashes.append({'pos': (zombie.rect.centerx, zombie.rect.bottom), 'time': pygame.time.get_ticks(), 'duration': 350, 'radius': 2, 'type': 'hit_puff'})
     
-    if zombie.take_damage(final_damage, game):
+    if zombie.take_damage(final_damage, game, attacker=player):
         game.splashes.append({'pos': (zombie.rect.centerx, zombie.rect.bottom), 'time': pygame.time.get_ticks(), 'duration': 250, 'radius': 5, 'type': 'death_burst'})
         return True
 
@@ -303,7 +301,7 @@ def player_hit_zombie(player, zombie, game):
 
 def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
     zombie.die(game)
-    if weapon and getattr(game, 'player', None):
+    if getattr(game, 'player', None):
         game.player.process_kill(weapon, zombie)
 
     current_map_filename = game.map_manager.current_map_filename

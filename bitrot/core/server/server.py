@@ -49,10 +49,12 @@ class GameServer:
             self.max_clients = getattr(core.data.config, 'MAX_CLIENTS', 16)
             
             # 1. TCP Server (Reliable Connection)
+            bind_port = int(self.port) if (hasattr(self, 'port') and self.port and self.port > 0) else 0
+
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.server_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            self.server_socket.bind(("", 0))
+            self.server_socket.bind(("", bind_port))
             self.server_socket.listen(10)
             self.server_socket.setblocking(False)
 
@@ -336,6 +338,7 @@ class GameServer:
                 'x': round(z.x, 1),
                 'y': round(z.y, 1),
                 'layer': getattr(z, 'layer', 1),
+                'map': getattr(z, 'map_filename', ''),
                 'hp': int(z.health),
                 'max_hp': int(z.max_health),
                 'vx': round(getattr(z, 'vx', 0), 2),
@@ -359,6 +362,7 @@ class GameServer:
                 'x': round(n.x, 1),
                 'y': round(n.y, 1),
                 'layer': getattr(n, 'layer', 1),
+                'map': getattr(n, 'map_filename', ''),
                 'hp': int(n.health),
                 'max_hp': int(n.max_health),
                 'is_friendly': getattr(n, 'is_friendly', True),
@@ -386,6 +390,7 @@ class GameServer:
                 'x': round(a.x, 1),
                 'y': round(a.y, 1),
                 'layer': getattr(a, 'layer', 1),
+                'map': getattr(a, 'map_filename', ''),
                 'hp': int(a.health),
                 'max_hp': int(a.max_health),
                 'dx': round(getattr(a, 'dx', 0), 2),
@@ -400,6 +405,7 @@ class GameServer:
                 'x': round(v.x, 1),
                 'y': round(v.y, 1),
                 'layer': 1,
+                'map': getattr(v, 'map_filename', ''),
                 'facing': getattr(v, 'facing', 'right'),
                 'active': v.active,
                 'lights': getattr(v, 'lights', 'off')

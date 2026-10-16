@@ -63,7 +63,26 @@ def handle_attack(game, mouse_pos):
                 aim_pos = game._get_scaled_mouse_pos()
                 adjusted_aim_pos = (aim_pos[0] - game.viewport_left_offset, aim_pos[1])
                 target_world_x, target_world_y = game.screen_to_world(adjusted_aim_pos)
-                
+
+                dx = target_world_x - game.player.rect.centerx
+                dy = target_world_y - game.player.rect.centery
+                base_angle = math.atan2(dy, dx)
+
+                base_aim_inaccuracy = game.player.current_aim_factor * 25.0
+                ranged_level = game.player.progression.get_ranged(game.player)
+                skill_modifier = max(0.1, 1.0 - (ranged_level * 0.05))
+                final_inaccuracy = base_aim_inaccuracy * skill_modifier
+                total_spread_deg = weapon.spread_angle + final_inaccuracy
+
+                distance_tiles = getattr(weapon, 'firing_distance', None)
+                max_dist_pixels = None 
+                calc_dist = 1000 
+                if distance_tiles is not None:
+                    max_dist_pixels = distance_tiles * TILE_SIZE
+                    calc_dist = max_dist_pixels
+
+                damage = game.player.get_attack_damage()
+
                 if getattr(game, 'is_client', False):
                     from core.server.network import NetMsg, send_msg
                     send_msg(game.client.socket, {
@@ -84,27 +103,6 @@ def handle_attack(game, mouse_pos):
                             'pellets': weapon.pellets,
                             'spread': total_spread_deg
                         })
-                
-                dx = target_world_x - game.player.rect.centerx
-                dy = target_world_y - game.player.rect.centery
-                base_angle = math.atan2(dy, dx)
-
-                base_aim_inaccuracy = game.player.current_aim_factor * 25.0
-                ranged_level = game.player.progression.get_ranged(game.player)
-                skill_modifier = max(0.1, 1.0 - (ranged_level * 0.05))
-                final_inaccuracy = base_aim_inaccuracy * skill_modifier
-                total_spread_deg = weapon.spread_angle + final_inaccuracy
-
-                distance_tiles = getattr(weapon, 'firing_distance', None)
-                max_dist_pixels = None 
-                
-                calc_dist = 1000 
-                
-                if distance_tiles is not None:
-                    max_dist_pixels = distance_tiles * TILE_SIZE
-                    calc_dist = max_dist_pixels
-
-                damage = game.player.get_attack_damage()
 
                 for _ in range(weapon.pellets):
                     spread = math.radians(random.uniform(-total_spread_deg / 2, total_spread_deg / 2))
@@ -113,7 +111,7 @@ def handle_attack(game, mouse_pos):
                     target_x = game.player.rect.centerx + math.cos(angle) * calc_dist
                     target_y = game.player.rect.centery + math.sin(angle) * calc_dist
 
-                    game.projectiles.append(Projectile(
+                    proj = Projectile(
                         game.player.rect.centerx, 
                         game.player.rect.centery, 
                         target_x, 
@@ -121,7 +119,9 @@ def handle_attack(game, mouse_pos):
                         max_distance=max_dist_pixels,
                         damage=damage,
                         game=game
-                    ))
+                    )
+                    proj.owner = game.player
+                    game.projectiles.append(proj)
 
                 weapon.load -= 1
 
@@ -347,7 +347,6 @@ def handle_attack(game, mouse_pos):
                                 else:
                                     if player_hit_zombie(game.player, zombie, game):
                                         handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, weapon)
-                                        game.zombies_killed += 1
 
                             force = 7 
                             zombie.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]

@@ -17,14 +17,6 @@ class RemotePlayer(pygame.sprite.Sprite):
         self._layer = int(layer)
         self.rect = pygame.Rect(int(self.x), int(self.y), TILE_SIZE, TILE_SIZE)
 
-    @property
-    def layer(self):
-        return getattr(self, '_layer', 1)
-
-    @layer.setter
-    def layer(self, value):
-        self._layer = int(value)
-
         self.facing_direction = (0, 1)
         self.aim_angle = 0.0
         self.is_moving = False
@@ -43,7 +35,7 @@ class RemotePlayer(pygame.sprite.Sprite):
         
         self.swing_timer = 0
         self.swing_angle = 0.0
-        self.gun_flash_timer = 0  # <--- NEW: Track gun flash for remote players
+        self.gun_flash_timer = 0
 
         self.action_timer = 0.0
         self.action_total_time = 0.0
@@ -51,6 +43,14 @@ class RemotePlayer(pygame.sprite.Sprite):
 
         self.base_image = None
         self._load_base_sprite()
+
+    @property
+    def layer(self):
+        return getattr(self, '_layer', 1)
+
+    @layer.setter
+    def layer(self, value):
+        self._layer = int(value)
 
     def _load_base_sprite(self):
         try:

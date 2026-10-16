@@ -100,7 +100,9 @@ def update_projectiles(game, GRID_SIZE, zombies_to_remove):
 
             # Only execute player_hit_zombie if a local player entity actually fired the projectile
             local_player = getattr(game, 'player', None)
-            if local_player is not None and owner == local_player:
+            is_player_shot = local_player is not None and (owner == local_player or owner is None)
+
+            if is_player_shot:
                 if player_hit_zombie(local_player, hit_zombie, game):
                     if is_animal:
                         hit_zombie.die(game)
@@ -109,7 +111,6 @@ def update_projectiles(game, GRID_SIZE, zombies_to_remove):
                     else:
                         zombies_to_remove.append(hit_zombie)
                         handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles, local_player.active_weapon)
-                        game.zombies_killed += 1
 
                 if not hit_zombie.is_dead:
                     hit_zombie.aggro_timer, hit_zombie.state = 10000, 'chasing'
