@@ -9,7 +9,8 @@ from core.data.localization import tr
 _logo_img = None
 _language_cache = None
 _help_img_menu = None
-_controls_img_menu = None  # NEW: global for the controls icon
+_controls_img_menu = None
+_lan_img_menu = None
 
 def get_available_languages():
     global _language_cache
@@ -78,7 +79,7 @@ def draw_menu(screen, mouse_pos, has_save=False):
     center_offset_x = (GAME_WIDTH - S(1280)) // 2
     center_offset_y = (GAME_HEIGHT - S(720)) // 2
 
-    global _logo_img, _help_img_menu, _controls_img_menu
+    global _logo_img, _help_img_menu, _controls_img_menu, _lan_img_menu
     screen.fill(DARK_GRAY)
 
     try:
@@ -105,6 +106,22 @@ def draw_menu(screen, mouse_pos, has_save=False):
             controls_path = os.path.join(BASE_DIR, 'data.rot', 'lib', 'sprites', 'ui', 'controls.png')
             _controls_img_menu = pygame.image.load(controls_path).convert_alpha()
             _controls_img_menu = pygame.transform.scale(_controls_img_menu, (S(32), S(32)))
+    except Exception as e:
+        pass
+
+    try:
+        if _lan_img_menu is None:
+            lan_path = os.path.join(BASE_DIR, 'data.rot', 'lib', 'sprites', 'ui', 'lan.png')
+            if not os.path.exists(lan_path):
+                lan_path = os.path.join(SPRITE_PATH, 'ui', 'lan.png')
+            if os.path.exists(lan_path):
+                _lan_img_menu = pygame.image.load(lan_path).convert_alpha()
+                _lan_img_menu = pygame.transform.scale(_lan_img_menu, (S(32), S(32)))
+            else:
+                _lan_img_menu = pygame.Surface((S(32), S(32)), pygame.SRCALPHA)
+                pygame.draw.circle(_lan_img_menu, (50, 200, 255), (S(16), S(16)), S(12), 2)
+                t = font_12.render("LAN", False, WHITE)
+                _lan_img_menu.blit(t, t.get_rect(center=(S(16), S(16))))
     except Exception as e:
         pass
 
@@ -181,6 +198,23 @@ def draw_menu(screen, mouse_pos, has_save=False):
         
         controls_rect = controls_bg_rect
 
+    # Draw LAN Icon on the right side at the exact same height as the Help button
+    lan_rect = None
+    if _lan_img_menu:
+        lan_bg_rect = pygame.Rect(0, 0, S(48), S(48))
+        lan_bg_rect.bottomright = (center_offset_x + S(1260), center_offset_y + S(700))
+
+        is_hovered_lan = lan_bg_rect.collidepoint(mouse_pos)
+        bg_color = (80, 80, 80) if is_hovered_lan else (60, 60, 60)
+
+        pygame.draw.rect(screen, bg_color, lan_bg_rect, border_radius=6)
+        pygame.draw.rect(screen, (40, 40, 40), lan_bg_rect, width=1, border_radius=6)
+
+        img_rect = _lan_img_menu.get_rect(center=lan_bg_rect.center)
+        screen.blit(_lan_img_menu, img_rect)
+
+        lan_rect = lan_bg_rect
+
     langs = get_available_languages()
     flag_rects = []
     
@@ -227,4 +261,4 @@ def draw_menu(screen, mouse_pos, has_save=False):
         pygame.draw.rect(screen, WHITE, bg_rect, 1)
         screen.blit(tooltip_text, tooltip_rect)
 
-    return start_rect, load_rect, settings_rect, quit_rect, flag_rects, help_rect, controls_rect
+    return start_rect, load_rect, settings_rect, quit_rect, flag_rects, help_rect, controls_rect, lan_rect

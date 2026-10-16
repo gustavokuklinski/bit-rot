@@ -129,7 +129,7 @@ def consume_player_fuel_units(player, amount_needed):
 
 def calculate_boat_fuel_cost(game, dest_gx, dest_gy):
     gen = getattr(game, 'generator', None)
-    lobby_chunk = getattr(gen, 'lobby_chunk', None) if gen else None
+    lobby_chunk = getattr(gen, 'lobby_chunk', getattr(game, 'lobby_chunk', None)) if gen else getattr(game, 'lobby_chunk', None)
 
     if lobby_chunk and (dest_gx, dest_gy) == lobby_chunk:
         cur_map = getattr(game.map_manager, 'current_map_filename', '')

@@ -30,7 +30,8 @@ class VirtualGroundContainer:
         self.inventory = items
         self.capacity = 20
         self.item_type = 'ground'
-        self.image = None 
+        self.image = None
+        self.rect = None
 
 def _draw_closed_container_view(surface, game, container, content_rect, mouse_pos, modal):
     center_x = content_rect.centerx

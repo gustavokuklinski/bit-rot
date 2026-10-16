@@ -9,7 +9,8 @@ from core.data.config import get_writable_dir
 from core.ui.helpers.main_menu import draw_menu
 from core.ui.helpers.keybinds import keybinds_ui
 from core.ui.helpers.preferences import preferences_ui
-from core.ui.helpers.help_menu import help_ui  # <-- Import the new Help UI
+from core.ui.helpers.help_menu import help_ui
+from core.ui.helpers.lan_menu import lan_ui
 
 def run_menu(game):
     if hasattr(game, 'discord_rpc'):
@@ -21,16 +22,17 @@ def run_menu(game):
     saves = sorted(glob.glob(os.path.join(save_dir, "save_*"))) if os.path.exists(save_dir) else []
     has_save = len(saves) > 0
 
-    start_btn, load_btn, settings_btn, quit_btn, flag_rects, help_rect, controls_rect = draw_menu(game.game_screen, mouse_pos, has_save)
+    start_btn, load_btn, settings_btn, quit_btn, flag_rects, help_rect, controls_rect, lan_rect = draw_menu(game.game_screen, mouse_pos, has_save)
 
     is_sub_menu_open = (
         getattr(keybinds_ui, 'active', False) or 
         getattr(preferences_ui, 'active', False) or 
-        getattr(help_ui, 'active', False)
+        getattr(help_ui, 'active', False) or
+        getattr(lan_ui, 'active', False)
     )
 
     if not is_sub_menu_open:
-        menu_buttons = [b for b in [start_btn, load_btn if has_save else None, settings_btn, quit_btn, help_rect, controls_rect] if b is not None]
+        menu_buttons = [b for b in [start_btn, load_btn if has_save else None, settings_btn, quit_btn, help_rect, controls_rect, lan_rect] if b is not None]
         for flag in flag_rects:
             menu_buttons.append(flag['rect'])
 
@@ -66,6 +68,13 @@ def run_menu(game):
         game._update_screen()
         return
 
+    # Draw LAN Connection UI when active
+    if getattr(lan_ui, 'active', False):
+        lan_ui.handle_events(game, events)
+        lan_ui.draw(game.game_screen, mouse_pos, game=game)
+        game._update_screen()
+        return
+
     for event in events:
         if getattr(game, 'joystick_handler', None):
             game.joystick_handler.process_event(event)
@@ -90,6 +99,12 @@ def run_menu(game):
                 if hasattr(game, 'sound_manager'):
                     game.sound_manager.play_ui_hover()
                 keybinds_ui.toggle()
+                continue
+
+            if lan_rect and lan_rect.collidepoint(mouse_pos):
+                if hasattr(game, 'sound_manager'):
+                    game.sound_manager.play_ui_hover()
+                lan_ui.toggle()
                 continue
 
             flag_clicked = False

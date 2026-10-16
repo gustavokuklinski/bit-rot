@@ -30,18 +30,20 @@ def check_player_weight(incoming_item):
 
 def _sync_container_to_server(game, container_obj):
     if getattr(game, 'is_client', False) and getattr(game, 'client', None):
-        if container_obj and hasattr(container_obj, 'inventory'):
-            from core.server.network import NetMsg, send_msg
-            send_msg(game.client.socket, {
-                'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
-                'x': container_obj.rect.x, 'y': container_obj.rect.y,
-                'is_opened': getattr(container_obj, 'is_opened', True),
-                'inventory': [i.to_dict() if hasattr(i, 'to_dict') else i for i in container_obj.inventory]
-            })
+        if container_obj and hasattr(container_obj, 'inventory') and hasattr(container_obj, 'rect') and container_obj.rect:
+            if getattr(container_obj, 'item_type', '') != 'ground':
+                from core.server.network import NetMsg, send_msg
+                send_msg(game.client.socket, {
+                    'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
+                    'x': container_obj.rect.x, 'y': container_obj.rect.y,
+                    'is_opened': getattr(container_obj, 'is_opened', True),
+                    'inventory': [i.to_dict() if hasattr(i, 'to_dict') else i for i in container_obj.inventory]
+                })
 
 def _remove_from_ground_and_sync(game, item, type_orig=None, container_obj=None):
     if type_orig in ('container', 'nearby', 'container_stack_split', 'nearby_stack_split') and container_obj:
-        _sync_container_to_server(game, container_obj)
+        if getattr(container_obj, 'item_type', '') != 'ground':
+            _sync_container_to_server(game, container_obj)
         
     if item in game.items_on_ground:
         game.items_on_ground.remove(item)

@@ -88,7 +88,11 @@ class GameServer:
 
         self.running = False
         for sock in list(self.clients.keys()):
-            send_msg(sock, {'type': NetMsg.SERVER_CLOSED})
+            try:
+                data = pack_payload({'type': NetMsg.SERVER_CLOSED})
+                sock.sendall(struct.pack('>I', len(data)) + data)
+            except Exception:
+                pass
             unregister_socket(sock)
             try:
                 sock.close()
@@ -576,6 +580,10 @@ class GameServer:
             save_data['y'] = spawn_y
             self._save_remote_player_to_disk(client_ip, assigned_id, save_data)
 
+            # Save any in-memory door/tile modifications before reading chunks
+            if hasattr(self.game, 'map_manager') and os.path.exists(map_path):
+                self.game.map_manager.save_map_to_file(map_path)
+
             chunk_files = {}
             if os.path.exists(map_path):
                 for fname in os.listdir(map_path):
@@ -587,6 +595,29 @@ class GameServer:
                         except Exception:
                             pass
 
+            gen = getattr(self.game, 'generator', None)
+            active_chunks = []
+            lobby_chunk = None
+            military_chunk = None
+            isolated_islands = []
+            if gen:
+                active_chunks = [list(c) for c in getattr(gen, 'active_chunks', [])]
+                lobby_chunk = list(getattr(gen, 'lobby_chunk', (0, 0))) if getattr(gen, 'lobby_chunk', None) else None
+                military_chunk = list(getattr(gen, 'military_chunk', (0, 0))) if getattr(gen, 'military_chunk', None) else None
+                isolated_islands = [list(c) for c in getattr(gen, 'isolated_island_chunks', [])]
+            else:
+                macro_path = os.path.join(save_path, "macro_world.json")
+                if os.path.exists(macro_path):
+                    try:
+                        with open(macro_path, "r") as mf:
+                            m_data = json.load(mf)
+                            active_chunks = m_data.get('active_chunks', [])
+                            lobby_chunk = m_data.get('lobby_chunk')
+                            military_chunk = m_data.get('military_chunk')
+                            isolated_islands = m_data.get('isolated_island_chunks', [])
+                    except Exception:
+                        pass
+
             ack_payload = {
                 'type': NetMsg.JOIN_ACK,
                 'player_id': assigned_id,
@@ -597,6 +628,10 @@ class GameServer:
                 'spawn_y': spawn_y,
                 'restored_data': restored_player_data,
                 'chunk_files': chunk_files,
+                'active_chunks': active_chunks,
+                'lobby_chunk': lobby_chunk,
+                'military_chunk': military_chunk,
+                'isolated_island_chunks': isolated_islands,
                 'time_data': {
                     'game_time_ms': getattr(self.game.world_time, 'game_time_ms', 0),
                     'day_count': getattr(self.game.world_time, 'day_count', 0)
@@ -785,12 +820,43 @@ class GameServer:
                         self.game.projectiles.append(proj)
 
             elif action == 'toggle_door':
-                self.game.map_manager.toggle_door_state(msg.get('x'), msg.get('y'))
+                req_layer = msg.get('layer', getattr(self.game, 'current_layer_index', 1))
+                self.game.map_manager.toggle_door_state(msg.get('x'), msg.get('y'), layer=req_layer)
 
             elif action == 'hit_tile':
+                req_layer = msg.get('layer', getattr(self.game, 'current_layer_index', 1))
                 self.game.map_manager._ignore_net = True
-                self.game.map_manager.hit_tile(msg.get('x'), msg.get('y'), msg.get('damage', 1), attacker=c_info.get('player'))
+                self.game.map_manager.hit_tile(msg.get('x'), msg.get('y'), msg.get('damage', 1), attacker=c_info.get('player'), layer=req_layer)
                 self.game.map_manager._ignore_net = False
+
+            elif action == 'boat_travel':
+                dest_gx = msg.get('gx')
+                dest_gy = msg.get('gy')
+                dest_layer = msg.get('layer', 1)
+
+                if hasattr(self.game, 'generator') and self.game.generator:
+                    self.game.generator.generate_chunk_on_demand(dest_gx, dest_gy)
+
+                map_path = getattr(self.game.map_manager, 'map_folder', None)
+                chunk_files = {}
+                if map_path and os.path.exists(map_path):
+                    coord_str = f"_{dest_gx}_{dest_gy}_"
+                    for fname in os.listdir(map_path):
+                        if coord_str in fname and fname.endswith('.csv'):
+                            try:
+                                with open(os.path.join(map_path, fname), 'r', encoding='utf-8') as cf:
+                                    chunk_files[fname] = cf.read()
+                            except Exception:
+                                pass
+
+                send_msg(sock, {
+                    'type': NetMsg.WORLD_ACTION,
+                    'action': 'boat_travel_ack',
+                    'gx': dest_gx,
+                    'gy': dest_gy,
+                    'layer': dest_layer,
+                    'chunk_files': chunk_files
+                })
 
             elif action == 'player_death':
                 p_x = msg.get('x', 0)

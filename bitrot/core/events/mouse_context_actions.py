@@ -950,7 +950,17 @@ def handle_context_menu_click(game, mouse_pos):
                             consume_player_fuel_units(game.player, fuel_cost)
                             fuel_name = tr('item', "Fuel Unit")
                             display_message(f"{tr('msg', 'Used')} {fuel_cost}x {fuel_name}.")
-                            teleport_player_to_chunk(game, dest_gx, dest_gy)
+                            if getattr(game, 'is_client', False) and getattr(game, 'client', None):
+                                from core.server.network import NetMsg, send_msg
+                                send_msg(game.client.socket, {
+                                    'type': NetMsg.WORLD_ACTION,
+                                    'action': 'boat_travel',
+                                    'gx': dest_gx,
+                                    'gy': dest_gy,
+                                    'layer': 1
+                                })
+                            else:
+                                teleport_player_to_chunk(game, dest_gx, dest_gy)
                     except Exception as e:
                         print(f"Error traveling: {e}")
                 clicked_on_menu = True
@@ -1081,7 +1091,7 @@ def handle_context_menu_click(game, mouse_pos):
                             'radius': 3,
                             'type': 'hit_puff'
                         })
-                    if container_item and getattr(game, 'is_client', False) and getattr(game, 'client', None):
+                    if container_item and getattr(container_item, 'item_type', '') != 'ground' and hasattr(container_item, 'rect') and container_item.rect and getattr(game, 'is_client', False) and getattr(game, 'client', None):
                         from core.server.network import NetMsg, send_msg
                         send_msg(game.client.socket, {
                             'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
@@ -1105,7 +1115,7 @@ def handle_context_menu_click(game, mouse_pos):
                             'radius': 5,
                             'type': 'hit_puff'
                         })
-                    if container_item and getattr(game, 'is_client', False) and getattr(game, 'client', None):
+                    if container_item and getattr(container_item, 'item_type', '') != 'ground' and hasattr(container_item, 'rect') and container_item.rect and getattr(game, 'is_client', False) and getattr(game, 'client', None):
                         from core.server.network import NetMsg, send_msg
                         send_msg(game.client.socket, {
                             'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
@@ -1143,7 +1153,7 @@ def handle_context_menu_click(game, mouse_pos):
                             'radius': 4,
                             'type': 'hit_puff'
                         })
-                    if container_item and getattr(game, 'is_client', False) and getattr(game, 'client', None):
+                    if container_item and getattr(container_item, 'item_type', '') != 'ground' and hasattr(container_item, 'rect') and container_item.rect and getattr(game, 'is_client', False) and getattr(game, 'client', None):
                         from core.server.network import NetMsg, send_msg
                         send_msg(game.client.socket, {
                             'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
@@ -1459,11 +1469,12 @@ def handle_context_menu_click(game, mouse_pos):
 
                             if getattr(game, 'is_client', False) and getattr(game, 'client', None):
                                 from core.server.network import NetMsg, send_msg
-                                if source == 'ground':
+                                is_ground_pickup = (source == 'ground') or (getattr(container_item, 'item_type', '') == 'ground')
+                                if is_ground_pickup:
                                     send_msg(game.client.socket, {
                                         'type': NetMsg.WORLD_ACTION, 'action': 'pickup', 'id': getattr(item, 'id', None)
                                     })
-                                elif container_item:
+                                elif container_item and hasattr(container_item, 'rect') and container_item.rect:
                                     send_msg(game.client.socket, {
                                         'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
                                         'x': container_item.rect.x, 'y': container_item.rect.y,

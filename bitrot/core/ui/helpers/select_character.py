@@ -439,8 +439,9 @@ def _start_with_class(game, state, class_def):
             print(f"[Client] Failed to connect to server at {c_ip}:{c_port}")
             from core.messages import display_message
             display_message(game, f"Failed to connect to {c_ip}:{c_port}")
-            # Exit instead of freezing
-            game.running = False
+            game.is_client = False
+            game.cli_connect_address = None
+            game.game_state = 'MENU'
         return
 
     # Singleplayer branch below...
@@ -891,6 +892,12 @@ def handle_select_character_events(game, state, event, mouse_pos, clickable_rect
 
         # Back Button
         if clickable_rects.get('back_button') and clickable_rects['back_button'].collidepoint(mouse_pos):
+            if getattr(game, 'is_client', False):
+                game.is_client = False
+                game.cli_connect_address = None
+                game.game_state = 'MENU'
+                return
+
             if state.get('respawn_save_folder'):
                 game.current_save_folder_name = None
                 game.game_state = 'MENU'

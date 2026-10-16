@@ -928,7 +928,11 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                         game.game_state = 'PLAYING'
                     else:
                         print(f"[Client] Failed to connect to server at {c_ip}:{c_port}")
-                        game.running = False
+                        from core.messages import display_message
+                        display_message(game, f"Failed to connect to {c_ip}:{c_port}")
+                        game.is_client = False
+                        game.cli_connect_address = None
+                        game.game_state = 'MENU'
                     return
 
                 # Normal single player logic below...
@@ -1317,6 +1321,10 @@ def run_player_setup(game):
                     continue
 
                 if back_btn.collidepoint(event_pos):
+                    if is_client:
+                        state['current_tab'] = 'SelectCharacter'
+                        continue
+
                     if state['current_tab'] == 'Player' and state.get('chosen_mode') == 'sandbox':
                         state['current_tab'] = 'World'
                     elif state['current_tab'] == 'World':

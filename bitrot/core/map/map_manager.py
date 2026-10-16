@@ -354,13 +354,16 @@ class MapManager:
                     filename = f'map_L{layer_idx}_world_spawn.csv'
                 write_layer(layout, filename)
 
-    def toggle_door_state(self, grid_x, grid_y):
+    def toggle_door_state(self, grid_x, grid_y, layer=None):
         """Toggles a 'statable' tile (like a door) between its states."""
+        if layer is None:
+            layer = getattr(self.game, 'current_layer_index', 1)
+
         if getattr(self.game, 'is_client', False):
             from core.server.network import NetMsg, send_msg
             send_msg(self.game.client.socket, {
                 'type': NetMsg.WORLD_ACTION, 'action': 'toggle_door',
-                'x': grid_x, 'y': grid_y
+                'x': grid_x, 'y': grid_y, 'layer': layer
             })
             return
             
@@ -368,9 +371,11 @@ class MapManager:
             display_message(tr('msg', "Door is barricaded!"))
             return
 
-        if not self.game.map_data: return
+        target_map = self.game.all_map_layers.get(layer, self.game.map_data) if hasattr(self.game, 'all_map_layers') else self.game.map_data
+        if not target_map or not (0 <= grid_y < len(target_map) and 0 <= grid_x < len(target_map[0])):
+            return
 
-        current_char = self.game.map_data[grid_y][grid_x]
+        current_char = target_map[grid_y][grid_x]
         current_def = self.game.tile_manager.definitions.get(current_char)
 
         if not current_def or not current_def.get('is_statable'):
@@ -389,25 +394,25 @@ class MapManager:
         door_cy = tile_rect.centery
 
         if new_state == "close":
-            # Collect all active entities on this layer
+            # Collect all active entities strictly on THIS layer
             entities_to_check = []
             if getattr(self.game, 'player', None) and not getattr(self.game.player, 'is_dead', False):
-                entities_to_check.append(self.game.player)
+                if getattr(self.game, 'current_layer_index', 1) == layer:
+                    entities_to_check.append(self.game.player)
             for z in getattr(self.game, 'zombies', []):
                 if not getattr(z, 'is_dead', False) and getattr(z, 'health', 0) > 0:
-                    entities_to_check.append(z)
+                    if getattr(z, 'layer', 1) == layer:
+                        entities_to_check.append(z)
             for n in getattr(self.game, 'npcs', []):
                 if not getattr(n, 'is_dead', False) and getattr(n, 'health', 0) > 0:
-                    entities_to_check.append(n)
+                    if getattr(n, 'layer', 1) == layer:
+                        entities_to_check.append(n)
             for a in getattr(self.game, 'active_animals', []):
                 if not getattr(a, 'is_dead', False) and getattr(a, 'health', 0) > 0:
-                    entities_to_check.append(a)
-            for it in getattr(self.game, 'items_on_ground', []):
-                if isinstance(it, Animal) and not getattr(it, 'is_dead', False) and getattr(it, 'health', 0) > 0:
-                    if it not in entities_to_check:
-                        entities_to_check.append(it)
+                    if getattr(a, 'layer', 1) == layer:
+                        entities_to_check.append(a)
             for rp in getattr(self.game, 'remote_players', {}).values():
-                if not getattr(rp, 'is_dead', False) and getattr(rp, 'layer', 1) == self.game.current_layer_index:
+                if not getattr(rp, 'is_dead', False) and getattr(rp, 'layer', 1) == layer:
                     entities_to_check.append(rp)
 
             entities_in_door = []
@@ -434,14 +439,15 @@ class MapManager:
 
                 # 2. Relocate entities to the tile where they are predominantly located
                 def is_tile_walkable(tx, ty):
-                    if not (0 <= ty < len(self.game.map_data) and 0 <= tx < len(self.game.map_data[0])):
+                    if not (0 <= ty < len(target_map) and 0 <= tx < len(target_map[0])):
                         return False
-                    t_def = self.get_tile_at(tx, ty)
+                    t_def = self.game.tile_manager.definitions.get(target_map[ty][tx])
                     if t_def and t_def.get('is_obstacle', False):
                         return False
                     t_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                    if any(t_rect.colliderect(ob) for ob in self.game.obstacles):
-                        return False
+                    if layer == getattr(self.game, 'current_layer_index', 1):
+                        if any(t_rect.colliderect(ob) for ob in self.game.obstacles):
+                            return False
                     return True
 
                 for entity in entities_in_door:
@@ -488,7 +494,7 @@ class MapManager:
         if new_char in self.game.tile_manager.definitions:
             new_def = self.game.tile_manager.definitions[new_char]
             
-            self._replace_tile(grid_x, grid_y, current_char, new_char)
+            self._replace_tile(grid_x, grid_y, current_char, new_char, layer=layer)
             
             if new_def.get('sound_src'):
                 self.game.sound_manager.play_sound(
@@ -623,12 +629,15 @@ class MapManager:
             return b_data
         return None
 
-    def hit_tile(self, grid_x, grid_y, damage, weapon=None, is_projectile=False, attacker=None):
+    def hit_tile(self, grid_x, grid_y, damage, weapon=None, is_projectile=False, attacker=None, layer=None):
+        if layer is None:
+            layer = getattr(self.game, 'current_layer_index', 1)
+
         if getattr(self.game, 'is_client', False) and not getattr(self, '_ignore_net', False):
             from core.server.network import NetMsg, send_msg
             send_msg(self.game.client.socket, {
                 'type': NetMsg.WORLD_ACTION, 'action': 'hit_tile',
-                'x': grid_x, 'y': grid_y, 'damage': damage
+                'x': grid_x, 'y': grid_y, 'damage': damage, 'layer': layer
             })
             import time
             self.shaking_tiles[(grid_x, grid_y)] = time.time()
@@ -789,26 +798,50 @@ class MapManager:
             self._replace_tile(grid_x, grid_y, char, target_char)
         return True
 
-    def _replace_tile(self, grid_x, grid_y, old_char, new_char):
-        new_def = self.game.tile_manager.definitions.get(new_char) if new_char != ' ' else None
+    def _replace_tile(self, grid_x, grid_y, old_char, new_char, layer=None):
+        if layer is None:
+            layer = getattr(self.game, 'current_layer_index', 1)
 
+        new_def = self.game.tile_manager.definitions.get(new_char) if new_char != ' ' else None
         tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
-        self.game.map_data[grid_y][grid_x] = new_char
-        
-        self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
-        if new_def and new_def.get('is_obstacle', False):
-            self.game.obstacles.append(tile_rect)
-            
-        # Invalidate chunk to redraw with updated tile
-        self.invalidate_chunk(grid_x, grid_y)
-        
+        # 1. Update layer grid in memory
+        if hasattr(self.game, 'all_map_layers') and layer in self.game.all_map_layers:
+            layer_grid = self.game.all_map_layers[layer]
+            if 0 <= grid_y < len(layer_grid) and 0 <= grid_x < len(layer_grid[0]):
+                layer_grid[grid_y][grid_x] = new_char
+
+        # 2. Update active map_data and obstacles only if this layer is currently rendered
+        if layer == getattr(self.game, 'current_layer_index', 1):
+            if self.game.map_data and 0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0]):
+                self.game.map_data[grid_y][grid_x] = new_char
+            self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
+            if new_def and new_def.get('is_obstacle', False):
+                self.game.obstacles.append(tile_rect)
+            self.invalidate_chunk(grid_x, grid_y)
+
         if getattr(self.game, 'is_server', False):
+            # Persist modified tile to the map CSV so joining players load the current door state
+            map_folder = getattr(self.game.map_manager, 'map_folder', None)
+            if map_folder and os.path.exists(map_folder) and hasattr(self.game, 'all_map_layers') and layer in self.game.all_map_layers:
+                try:
+                    cur_fname = getattr(self.game.map_manager, 'current_map_filename', '')
+                    m = re.match(r'map_L\d+_(\d+)_(\d+)_map\.csv', cur_fname)
+                    if m:
+                        gx_val, gy_val = m.groups()
+                        out_csv = os.path.join(map_folder, f'map_L{layer}_{gx_val}_{gy_val}_map.csv')
+                    else:
+                        out_csv = os.path.join(map_folder, f'map_L{layer}_world_map.csv')
+                    with open(out_csv, 'w', newline='', encoding='utf-8') as f:
+                        csv.writer(f).writerows(self.game.all_map_layers[layer])
+                except Exception:
+                    pass
+
             from core.server.network import NetMsg, send_msg
             for s in self.game.server.clients:
                 send_msg(s, {
                     'type': NetMsg.WORLD_ACTION, 'action': 'tile_change',
-                    'x': grid_x, 'y': grid_y, 'char': new_char
+                    'x': grid_x, 'y': grid_y, 'char': new_char, 'layer': layer
                 })
     
     def remove_vehicle_tile(self, grid_x, grid_y):

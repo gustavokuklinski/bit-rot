@@ -233,10 +233,7 @@ class GameClient:
                 return
 
     def update(self):
-        if not self.connected or not self.socket:
-            return
-
-        # 1. Drain inbox parsed by background thread
+        # 1. Process all received network packets from the background worker inbox
         while not self.inbox.empty():
             try:
                 msg = self.inbox.get_nowait()
@@ -245,11 +242,19 @@ class GameClient:
 
             m_type = msg.get('type')
 
-            # SERVER DISCONNECT OR CRASH: Shut down client application completely
-            if m_type == '__DISCONNECTED__' or m_type == NetMsg.SERVER_CLOSED:
-                print("[Client] Connection to server lost/closed. Exiting game...")
+            # SERVER DISCONNECT OR CRASH: Return to menu cleanly
+            if m_type in ('__DISCONNECTED__', NetMsg.SERVER_CLOSED):
+                print("[Client] Connection to server lost/closed. Returning to menu...")
                 self.disconnect()
-                self.game.running = False
+                self.game.is_client = False
+                self.game.client = None
+                self.game.cli_connect_address = None
+                if hasattr(self.game, 'remote_players'):
+                    self.game.remote_players.clear()
+                if hasattr(self.game, 'world_time') and self.game.world_time:
+                    self.game.world_time.stop_all_sounds()
+                display_message(self.game, "[Network] Disconnected from server.")
+                self.game.game_state = 'MENU'
                 return
 
             if m_type == NetMsg.NEW_CHUNKS:
@@ -568,18 +573,58 @@ class GameClient:
             elif m_type == NetMsg.WORLD_ACTION and msg.get('action') == 'tile_change':
                 gx, gy = msg.get('x'), msg.get('y')
                 new_char = msg.get('char')
-                if hasattr(self.game, 'map_manager') and hasattr(self.game, 'map_data'):
-                    try:
-                        new_def = self.game.tile_manager.definitions.get(new_char)
-                        self.game.map_data[gy][gx] = new_char
-                        tile_rect = pygame.Rect(gx * TILE_SIZE, gy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                        self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
-                        if new_def and new_def.get('is_obstacle'):
-                            self.game.obstacles.append(tile_rect)
-                        self.game.map_manager.invalidate_chunk(gx, gy)
-                        self.game.cached_obstacle_count = -1
-                    except Exception:
-                        pass
+                layer = msg.get('layer', getattr(self.game, 'current_layer_index', 1))
+
+                # Update the tile in all_map_layers
+                if hasattr(self.game, 'all_map_layers') and layer in self.game.all_map_layers:
+                    layer_grid = self.game.all_map_layers[layer]
+                    if 0 <= gy < len(layer_grid) and 0 <= gx < len(layer_grid[0]):
+                        layer_grid[gy][gx] = new_char
+
+                # Update live viewport if viewing this layer
+                if layer == getattr(self.game, 'current_layer_index', 1):
+                    if hasattr(self.game, 'map_manager') and hasattr(self.game, 'map_data'):
+                        try:
+                            if 0 <= gy < len(self.game.map_data) and 0 <= gx < len(self.game.map_data[0]):
+                                self.game.map_data[gy][gx] = new_char
+                            new_def = self.game.tile_manager.definitions.get(new_char) if new_char != ' ' else None
+                            tile_rect = pygame.Rect(gx * TILE_SIZE, gy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                            self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
+                            if new_def and new_def.get('is_obstacle'):
+                                self.game.obstacles.append(tile_rect)
+                            self.game.map_manager.invalidate_chunk(gx, gy)
+                            self.game.cached_obstacle_count = -1
+
+                            if new_def and new_def.get('sound_src') and hasattr(self.game, 'sound_manager'):
+                                self.game.sound_manager.play_sound(
+                                    new_def['sound_src'],
+                                    subdir='map',
+                                    game=self.game,
+                                    source_pos=tile_rect.center,
+                                    base_volume=0.4,
+                                    pitch_variance=0.15,
+                                    is_critical=True
+                                )
+                        except Exception:
+                            pass
+
+            elif m_type == NetMsg.WORLD_ACTION and msg.get('action') == 'boat_travel_ack':
+                chunk_files = msg.get('chunk_files', {})
+                map_dir = getattr(self.game.map_manager, 'map_folder', None)
+                if map_dir:
+                    for fname, content in chunk_files.items():
+                        try:
+                            with open(os.path.join(map_dir, fname), 'w', encoding='utf-8') as cf:
+                                cf.write(content)
+                        except Exception:
+                            pass
+                    self.game.map_manager.refresh_maps()
+
+                dest_gx = msg.get('gx')
+                dest_gy = msg.get('gy')
+                dest_layer = msg.get('layer', 1)
+                from core.systems.utils import teleport_player_to_chunk
+                teleport_player_to_chunk(self.game, dest_gx, dest_gy, dest_layer=dest_layer)
 
             elif m_type == NetMsg.WORLD_ACTION and msg.get('action') == 'shake_tile':
                 gx, gy = msg.get('x'), msg.get('y')
@@ -618,6 +663,9 @@ class GameClient:
                 sender = msg.get('sender', 'Server')
                 text = msg.get('text', '')
                 display_message(self.game, f"{sender}: {text}")
+
+        if not self.connected or not self.socket:
+            return
 
         # 2. Queue local player position updates over UDP
         if self.game.player and not self.game.player.is_dead and self.server_udp_addr:
@@ -728,6 +776,12 @@ def init_client_world(game, ack_data, player_data):
     if time_data:
         game.world_time.game_time_ms = time_data.get('game_time_ms', 0)
         game.world_time.day_count = time_data.get('day_count', 0)
+
+    # Store server world metadata for boat navigation on clients
+    game.active_chunks = set(tuple(c) for c in ack_data.get('active_chunks', []))
+    game.lobby_chunk = tuple(ack_data.get('lobby_chunk')) if ack_data.get('lobby_chunk') else None
+    game.military_chunk = tuple(ack_data.get('military_chunk')) if ack_data.get('military_chunk') else None
+    game.isolated_island_chunks = set(tuple(c) for c in ack_data.get('isolated_island_chunks', []))
 
     assigned_id = ack_data.get('player_id')
     restored = ack_data.get('restored_data')
