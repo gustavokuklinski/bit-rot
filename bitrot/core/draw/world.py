@@ -75,6 +75,14 @@ def draw_world(game, surface, offset_x, offset_y, view_w, view_h):
                     defn = tm_defs.get(g_char)
                     if defn:
                         surface.blit(defn['image'], (screen_px, screen_py))
+                    else:
+                        fallback_key = 'dirty_01' if game.current_layer_index in (2, 3) else 'bg_grass'
+                        if fallback_key in tm_defs:
+                            surface.blit(tm_defs[fallback_key]['image'], (screen_px, screen_py))
+                else:
+                    fallback_key = 'dirty_01' if game.current_layer_index in (2, 3) else 'bg_grass'
+                    if fallback_key in tm_defs:
+                        surface.blit(tm_defs[fallback_key]['image'], (screen_px, screen_py))
 
             # --- B. Base Layer (Walls, Objects) ---
             # If the tile is shaking, skip here so the dedicated shaking section draws it below

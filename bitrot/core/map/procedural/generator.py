@@ -833,9 +833,10 @@ class ProceduralGenerator(
 
     for y in range(c_h):
         for x in range(c_w):
-            if l2_layers['ground'][y][x] == ' ':
+            if l2_layers['ground'][y][x] in (' ', ''):
                 l2_layers['ground'][y][x] = 'dirty_01'
-                l2_layers['base'][y][x] = '@'
+                if l2_layers['base'][y][x] in (' ', '') and not (l2_layers.get('protected_mask') and l2_layers['protected_mask'][y][x] == 1):
+                    l2_layers['base'][y][x] = '@'
 
     # Format Layer 3 (Caves 2) - EXACT SAME SPAWN DENSITY AS L1 AND L2
     self._connect_l2_drunkards(l3_layers, conns_l2=conns_l3)
@@ -852,9 +853,10 @@ class ProceduralGenerator(
 
     for y in range(c_h):
         for x in range(c_w):
-            if l3_layers['ground'][y][x] == ' ':
+            if l3_layers['ground'][y][x] in (' ', ''):
                 l3_layers['ground'][y][x] = 'dirty_01'
-                l3_layers['base'][y][x] = '@'
+                if l3_layers['base'][y][x] in (' ', '') and not (l3_layers.get('protected_mask') and l3_layers['protected_mask'][y][x] == 1):
+                    l3_layers['base'][y][x] = '@'
 
     # Save chunks for all three layers
     self._save_chunk(f'map_L1_{gx}_{gy}', l1_layers)

@@ -134,14 +134,14 @@ class MapManager:
                     neighbor = row[nx]
                     # [UPDATED] Include asphalt in the transparency check
                     is_transparent_overlay = neighbor and (
-                        neighbor.startswith('dirty_') or 
-                        neighbor.startswith('beach_sand_') or 
-                        neighbor.startswith('sand_') or 
-                        neighbor.startswith('asphalt_')
+                        (neighbor.startswith('dirty_') and neighbor != 'dirty_01') or 
+                        (neighbor.startswith('beach_sand_') and neighbor != 'beach_sand_01') or 
+                        (neighbor.startswith('sand_') and neighbor != 'sand_01') or 
+                        (neighbor.startswith('asphalt_') and neighbor != 'asphalt_01')
                     )
                     if neighbor and not is_transparent_overlay and neighbor != ' ':
                         return neighbor
-        return 'bg_grass'
+        return 'dirty_01' if getattr(self.game, 'current_layer_index', 1) in (2, 3) else 'bg_grass'
 
     def get_chunk_surface(self, cx, cy, layer_idx, layer_type='world'):
         """
@@ -225,6 +225,10 @@ class MapManager:
                             defn = tm.definitions.get(char)
                             if defn:
                                 surface.blit(defn['image'], ((x - min_x) * TILE_SIZE, (y - min_y) * TILE_SIZE))
+                        else:
+                            fallback = 'dirty_01' if layer_idx in (2, 3) else 'bg_grass'
+                            if fallback in tm.definitions:
+                                surface.blit(tm.definitions[fallback]['image'], ((x - min_x) * TILE_SIZE, (y - min_y) * TILE_SIZE))
             
             # 2. Base Layer (Walls, Objects)
             if base_data:
@@ -306,6 +310,11 @@ class MapManager:
             char = self.game.map_data[grid_y][grid_x]
             if char in self.game.tile_manager.definitions:
                 return self.game.tile_manager.definitions[char]
+            if hasattr(self.game, 'ground_data') and self.game.ground_data:
+                if 0 <= grid_y < len(self.game.ground_data) and 0 <= grid_x < len(self.game.ground_data[0]):
+                    g_char = self.game.ground_data[grid_y][grid_x]
+                    if g_char in self.game.tile_manager.definitions:
+                        return self.game.tile_manager.definitions[g_char]
         return None
 
     def save_map_to_file(self, save_dir):

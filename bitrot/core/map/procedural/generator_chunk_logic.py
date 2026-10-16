@@ -7,7 +7,9 @@ from core.data.config import *
 
 class ProceduralGeneratorChunk:
 
-    def _generate_confusing_asphalt_maze(self, layers, occupied_mask, w, h, cx, cy):
+    def _generate_confusing_asphalt_maze(self, layers, occupied_mask, w, h, cx, cy, placed_rects=None):
+        if placed_rects is None:
+            placed_rects = []
         road_tile = 'dirty_01'
         road_width = 2
         num_arms = random.randint(2, 4)
@@ -18,6 +20,12 @@ class ProceduralGeneratorChunk:
                 for oy in range(-rw // 2, rw // 2 + 1):
                     tx, ty = x + ox, y + oy
                     if 0 <= tx < w and 0 <= ty < h:
+                        if any(pr.collidepoint(tx, ty) for pr in placed_rects):
+                            return False
+                        if layers.get('protected_mask') and layers['protected_mask'][ty][tx] == 1:
+                            return False
+                        if layers['base'][ty][tx] != ' ':
+                            return False
                         ground = layers['ground'][ty][tx]
                         if ground == getattr(self, 'sand_tile', 'sand_01') or \
                            ground == getattr(self, 'water_tile', 'water_01'):
@@ -38,6 +46,12 @@ class ProceduralGeneratorChunk:
                     for oy in range(-road_width // 2, road_width // 2 + 1):
                         tx, ty = curr_x + ox, curr_y + oy
                         if 0 <= tx < w and 0 <= ty < h:
+                            if any(pr.collidepoint(tx, ty) for pr in placed_rects):
+                                continue
+                            if layers.get('protected_mask') and layers['protected_mask'][ty][tx] == 1:
+                                continue
+                            if layers['base'][ty][tx] != ' ':
+                                continue
                             if not self._is_in_connector_zone_internal(tx, ty, w, h, cx, cy):
                                 layers['ground'][ty][tx] = road_tile
                                 occupied_mask[ty][tx] = 1
@@ -879,10 +893,12 @@ class ProceduralGeneratorChunk:
             if not ignore_mask:
                 for ry in range(ty, ty+th):
                     for rx in range(tx, tx+tw):
+                        if layers.get('protected_mask') and layers['protected_mask'][ry][rx] == 1:
+                            return False
                         ground_tile = layers['ground'][ry][rx]
                         if ground_tile == getattr(self, 'water_tile', 'water_01'): return False
                         if layers['base'][ry][rx] == '@': return False
-                        if occupied_mask[ry][rx] == 1 and ground_tile != road_tile: 
+                        if occupied_mask[ry][rx] == 1: 
                             return False
             return True
 
@@ -970,7 +986,7 @@ class ProceduralGeneratorChunk:
         # 7. Forest Areas & Nature Placement
         # 7. Forest Areas & Nature Placement
         if force_forest:
-            self._generate_confusing_asphalt_maze(layers, occupied_mask, w, h, cx, cy)
+            self._generate_confusing_asphalt_maze(layers, occupied_mask, w, h, cx, cy, placed_rects=placed_rects)
 
         # Densely place Forest_ templates in forest chunks (and near Petrol_)
         if hasattr(self, 'forest_templates') and self.forest_templates:
@@ -1287,24 +1303,36 @@ class ProceduralGeneratorChunk:
     def _finalize_placement(self, layers, occupied_mask, placed_rects, tmpl, tmpl_name, tx, ty, tw, th, cx, cy, w, h, is_building2, sand_tile, draw_secondary_maze_road):
         is_cave = 'cave' in tmpl_name.lower()
         road_tile = 'asphalt_01'
-        
+        b_rect = pygame.Rect(tx, ty, tw, th)
+
+        # 1. Blit the building template first so its ground and base take priority
+        self._blit_template(layers, tmpl, tx, ty, w, h, clear_base=True)
+        placed_rects.append(b_rect)
+        for ry in range(ty, ty + th):
+            for rx in range(tx, tx + tw):
+                occupied_mask[ry][rx] = 1
+                if 'protected_mask' in layers:
+                    layers['protected_mask'][ry][rx] = 1
+
+        # 2. Paint pavement lot around the exterior perimeter only (never overwrite building interior)
         if not is_cave:
             lot_m = 2
-            for ry in range(ty-lot_m, ty+th+lot_m):
-                for rx in range(tx-lot_m, tx+tw+lot_m):
-                    if 1 <= rx < w-1 and 1 <= ry < h-1:
+            for ry in range(ty - lot_m, ty + th + lot_m):
+                for rx in range(tx - lot_m, tx + tw + lot_m):
+                    if 1 <= rx < w - 1 and 1 <= ry < h - 1:
+                        if b_rect.collidepoint(rx, ry):
+                            continue
+                        if layers.get('protected_mask') and layers['protected_mask'][ry][rx] == 1:
+                            continue
                         if layers['ground'][ry][rx] != getattr(self, 'water_tile', 'water_01'):
                             layers['ground'][ry][rx] = road_tile
                             occupied_mask[ry][rx] = 1
-            
-            bx, by = tx + tw // 2, ty + th // 2
-            draw_secondary_maze_road(bx, by, cx, cy, road_tile)
+
+            # Connect road from the exterior border of the building toward the hub
+            conn_x = max(1, min(w - 2, tx + tw // 2))
+            conn_y = min(h - 2, ty + th + 1) if cy > ty + th else max(1, ty - 2)
+            draw_secondary_maze_road(conn_x, conn_y, cx, cy, road_tile)
         else:
-            bx, by = tx + tw // 2, ty + th // 2
-            draw_secondary_maze_road(bx, by, cx, cy, 'dirty_01', path_width=3)
-            
-        self._blit_template(layers, tmpl, tx, ty, w, h, clear_base=True)
-        placed_rects.append(pygame.Rect(tx, ty, tw, th))
-        for ry in range(ty, ty + th):
-            for rx in range(tx, tx + tw): 
-                occupied_mask[ry][rx] = 1
+            conn_x = max(1, min(w - 2, tx + tw // 2))
+            conn_y = min(h - 2, ty + th + 1) if cy > ty + th else max(1, ty - 2)
+            draw_secondary_maze_road(conn_x, conn_y, cx, cy, 'dirty_01', path_width=2)

@@ -846,16 +846,29 @@ def handle_keyboard_events(game, event, action_triggered=None):
                 perform_chunk_transition(game, *chunk_trans)
                 return
 
-            # 2. Stairs manual transition: player must be standing directly on top of the stair tile
+            # 2. Stairs manual transition: triggers when player touches or stands on the stair tile
             p_gx = int(game.player.rect.centerx // TILE_SIZE)
             p_gy = int(game.player.rect.centery // TILE_SIZE)
             stair_tile = game.map_manager.get_tile_at(p_gx, p_gy)
+            
+            if not (stair_tile and stair_tile.get('is_stair')):
+                for dy in (-1, 0, 1):
+                    for dx in (-1, 0, 1):
+                        cand = game.map_manager.get_tile_at(p_gx + dx, p_gy + dy)
+                        if cand and cand.get('is_stair'):
+                            tile_r = pygame.Rect((p_gx + dx) * TILE_SIZE, (p_gy + dy) * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                            if game.player.rect.colliderect(tile_r):
+                                stair_tile = cand
+                                break
+                    if stair_tile and stair_tile.get('is_stair'):
+                        break
+
             if stair_tile and stair_tile.get('is_stair'):
                 target_layer = stair_tile.get('target_layer')
                 if target_layer and target_layer != game.current_layer_index:
                     if game.player.layer_switch_cooldown <= 0:
                         if set_active_layer(game, target_layer):
-                            game.player.layer_switch_cooldown = 30
+                            game.player.layer_switch_cooldown = 45
                     return
 
             # 3. Vehicle exit

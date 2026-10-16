@@ -200,7 +200,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                             obstacles.append(rect)
                     else:
                         renderable_tiles.append((tile_def['image'], rect))
-                        if tile_def['is_obstacle']:
+                        if tile_def['is_obstacle'] and not tile_def.get('is_stair'):
                             obstacles.append(rect) 
                         
                         if tile_def['type'] == 'maptile_container':
@@ -256,7 +256,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                             obstacles.append(rect)
                     else:
                         renderable_tiles.append((tile_def['image'], rect)) 
-                        if tile_def['is_obstacle']:
+                        if tile_def['is_obstacle'] and not tile_def.get('is_stair'):
                             obstacles.append(rect) 
                         
                         if tile_def['type'] == 'maptile_container':
@@ -345,7 +345,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                     rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
                     tile_def = tile_manager.definitions[char]
                     renderable_tiles.append((tile_def['image'], rect)) 
-                    if tile_def['is_obstacle']:
+                    if tile_def['is_obstacle'] and not tile_def.get('is_stair'):
                         obstacles.append(rect)
                         
                     if tile_def['type'] == 'maptile_container':

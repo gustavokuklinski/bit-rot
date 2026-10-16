@@ -262,23 +262,25 @@ class ProceduralGeneratorL2:
                                     stack.append((nx, ny))
 
                     if island_pixels and len(island_pixels) >= 4:
-                        entrance_point = None
+                        # Find open perimeter tiles (base == ' ' or door) that face outward
+                        candidates = []
                         for px, py in island_pixels:
                             for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
                                 nx, ny = px + dx, py + dy
                                 if 0 <= nx < w and 0 <= ny < h:
-                                    if (not protected or protected[ny][nx] == 0) and ground[ny][nx] in [' ', '@', '#']:
-                                        entrance_point = (nx, ny)
-                                        break
-                            if entrance_point:
-                                break
+                                    if ground[ny][nx] in [' ', '@', '#'] and (not protected or protected[ny][nx] == 0):
+                                        if base[py][px] == ' ' or 'door' in str(base[py][px]).lower():
+                                            candidates.append((px, py))
+                                            break
 
-                        if not entrance_point:
+                        if candidates:
+                            # Pick the perimeter opening closest to the chunk center
+                            candidates.sort(key=lambda pt: (pt[0] - cx)**2 + (pt[1] - cy)**2)
+                            components.append(candidates[0])
+                        else:
                             avg_x = sum(p[0] for p in island_pixels) // len(island_pixels)
                             avg_y = sum(p[1] for p in island_pixels) // len(island_pixels)
-                            entrance_point = (avg_x, avg_y)
-
-                        components.append(entrance_point)
+                            components.append((avg_x, avg_y))
 
         conns = conns_l2 or {}
         doorway_points = []
@@ -337,59 +339,67 @@ class ProceduralGeneratorL2:
         core_min, core_max = -2, 2
         border_min, border_max = -3, 3
         
-        max_steps = (abs(tx - cx) + abs(ty - cy)) * 6 + 40
+        max_steps = (abs(tx - cx) + abs(ty - cy)) * 8 + 60
         steps = 0
         
-        while (cx != tx or cy != ty) and steps < max_steps:
-            steps += 1
-            
+        def stamp_carve(at_x, at_y, final_reach=False):
             for dy in range(border_min, border_max):
                 for dx in range(border_min, border_max):
-                    nx, ny = cx + dx, cy + dy
+                    nx, ny = at_x + dx, at_y + dy
                     if 0 <= nx < w and 0 <= ny < h:
-                        # Never overwrite or carve through the building template
+                        # Never overwrite inside the template
                         if protected and protected[ny][nx] == 1:
                             continue
 
-                        is_core = (core_min <= dx < core_max and core_min <= dy < core_max)
+                        is_core = (core_min <= dx < core_max and core_min <= dy < core_max) or final_reach
                         
                         if is_core:
-                            current_tile = ground[ny][nx]
-                            if current_tile in [' ', border_tile, '#']:
+                            if ground[ny][nx] in [' ', border_tile, '#']:
                                 ground[ny][nx] = path_tile
-                            if base[ny][nx] != ' ':
+                            if base[ny][nx] == border_tile:
                                 base[ny][nx] = ' '
                         else:
-                            if ground[ny][nx] in [' ', '#']:
+                            # CRITICAL: Only set border_tile '@' on raw unexcavated void.
+                            # NEVER place '@' on tiles that are already open floor or building margins!
+                            if ground[ny][nx] in [' ', '#'] and base[ny][nx] in [' ', '#']:
                                 ground[ny][nx] = path_tile
                                 base[ny][nx] = border_tile
+
+        while (cx != tx or cy != ty) and steps < max_steps:
+            steps += 1
+            stamp_carve(cx, cy)
             
             dist_x = tx - cx
             dist_y = ty - cy
-            choice = random.random()
             
-            if choice < 0.50 and dist_x != 0:
+            if dist_x == 0 and dist_y == 0:
+                break
+                
+            choice = random.random()
+            if choice < 0.60 and dist_x != 0:
                 dx_step = 1 if dist_x > 0 else -1
                 dy_step = 0
             elif choice < 0.95 and dist_y != 0:
                 dx_step = 0
                 dy_step = 1 if dist_y > 0 else -1
             else:
-                if random.random() < 0.5:
-                    dx_step = random.choice([-1, 1])
+                if random.random() < 0.5 and dist_x != 0:
+                    dx_step = 1 if dist_x > 0 else -1
                     dy_step = 0
+                elif dist_y != 0:
+                    dx_step = 0
+                    dy_step = 1 if dist_y > 0 else -1
                 else:
                     dx_step = 0
-                    dy_step = random.choice([-1, 1])
+                    dy_step = 0
 
             cx += dx_step
             cy += dy_step
-            
             cx = max(3, min(w - 4, cx))
             cy = max(3, min(h - 4, cy))
-            
-            if abs(cx - tx) <= 1 and abs(cy - ty) <= 1:
-                break
+
+        # Always stamp the destination with an open core so the entrance is guaranteed clear
+        stamp_carve(tx, ty, final_reach=True)
 
     def _apply_l2_border(self, layers, tx, ty, tmpl_w, tmpl_h, mw, mh, suffix='_L2', margin=4):
         """

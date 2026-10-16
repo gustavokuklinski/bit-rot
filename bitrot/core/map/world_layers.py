@@ -258,6 +258,55 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
 
     return all_map_layers, all_ground_layers, all_spawn_layers, all_roof_layers, all_light_layers
 
+def find_matching_stair_tile(game, target_layer, from_layer, from_gx, from_gy):
+    """
+    Searches target_layer for the matching stair tile to place the player onto.
+    Priority 1: Stair tiles on target_layer pointing back to from_layer.
+    Priority 2: Any stair tile on target_layer.
+    In both cases, picks the one closest to (from_gx, from_gy).
+    """
+    map_data = game.all_map_layers.get(target_layer, getattr(game, 'map_data', []))
+    ground_data = game.all_ground_layers.get(target_layer, getattr(game, 'ground_data', []))
+    
+    h = len(map_data) if map_data else 0
+    w = len(map_data[0]) if h > 0 else 0
+    if h == 0 or w == 0:
+        return None
+
+    defs = game.tile_manager.definitions
+    matching_stairs = []
+    any_stairs = []
+
+    for y in range(h):
+        for x in range(w):
+            t_def = None
+            char = map_data[y][x] if y < len(map_data) and x < len(map_data[y]) else ' '
+            if char in defs and defs[char].get('is_stair'):
+                t_def = defs[char]
+
+            if not t_def and ground_data and y < len(ground_data) and x < len(ground_data[y]):
+                g_char = ground_data[y][x]
+                if g_char in defs and defs[g_char].get('is_stair'):
+                    t_def = defs[g_char]
+
+            if t_def and t_def.get('is_stair'):
+                stair_target = t_def.get('target_layer')
+                dist_sq = (x - from_gx) ** 2 + (y - from_gy) ** 2
+                if stair_target == from_layer:
+                    matching_stairs.append((dist_sq, x, y))
+                else:
+                    any_stairs.append((dist_sq, x, y))
+
+    if matching_stairs:
+        matching_stairs.sort(key=lambda s: s[0])
+        return (matching_stairs[0][1], matching_stairs[0][2])
+
+    if any_stairs:
+        any_stairs.sort(key=lambda s: s[0])
+        return (any_stairs[0][1], any_stairs[0][2])
+
+    return None
+
 def _rebuild_world_from_data(game):
     game.obstacles.clear()
     game.containers.clear()
@@ -297,6 +346,9 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
         return False
 
     current_filename = game.map_manager.current_map_filename
+    from_layer = getattr(game, 'current_layer_index', 1)
+    from_gx = int(game.player.rect.centerx // TILE_SIZE) if getattr(game, 'player', None) else 0
+    from_gy = int(game.player.rect.centery // TILE_SIZE) if getattr(game, 'player', None) else 0
     
     # --- CACHE CURRENT LAYER TO MAP_STATES ---
     if not skip_cache_save and getattr(game, 'current_layer_index', None) is not None and getattr(game, 'map_data', None):
@@ -527,15 +579,34 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
         game.spatial_manager.rebuild_item_grid(force=True)
         game.spatial_manager.rebuild_container_grid()
 
-    # Safety reposition and velocity reset for the player on the new layer
+    # Reposition player on top of the matching destination stair tile
     if hasattr(game, 'player') and game.player:
-        free_spot = find_free_tile(game.player.rect, game.obstacles, initial_pos=(game.player.x, game.player.y), max_radius=4)
-        if free_spot:
-            game.player.x, game.player.y = free_spot
-            game.player.rect.topleft = (int(game.player.x), int(game.player.y))
+        dest_stair = find_matching_stair_tile(game, layer_index, from_layer, from_gx, from_gy)
+        
+        if dest_stair:
+            dest_gx, dest_gy = dest_stair
+            dest_px = dest_gx * TILE_SIZE
+            dest_py = dest_gy * TILE_SIZE
+            game.player.x = float(dest_px)
+            game.player.y = float(dest_py)
+            game.player.rect.topleft = (dest_px, dest_py)
+            
+            # Ensure the landing stair tile is never blocked as an obstacle
+            stair_rect = pygame.Rect(dest_px, dest_py, TILE_SIZE, TILE_SIZE)
+            if stair_rect in game.obstacles:
+                game.obstacles.remove(stair_rect)
+        else:
+            free_spot = find_free_tile(game.player.rect, game.obstacles, initial_pos=(from_gx * TILE_SIZE, from_gy * TILE_SIZE), max_radius=8)
+            if free_spot:
+                game.player.x, game.player.y = free_spot
+                game.player.rect.topleft = (int(game.player.x), int(game.player.y))
+
         game.player.vx = 0
         game.player.vy = 0
         game.player.is_moving = False
+        game.player.layer_switch_cooldown = 45
+        if hasattr(game.player, 'layer'):
+            game.player.layer = layer_index
 
         # Center camera directly on player in new layer
         zoom = getattr(game, 'zoom_level', 1.0)
