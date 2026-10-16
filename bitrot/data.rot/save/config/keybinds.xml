@@ -9,19 +9,21 @@
         <bind action="aim" key="1073742048" default="1073742048"/>
         <bind action="interact" key="101" default="101"/>
         <bind action="chat" key="116" default="116"/>
-        <bind action="toggle_inventory" key="105" default="105"/>
+        <bind action="help" key="1073741882" default="1073741882"/>
+        <bind action="pause" key="1073741883" default="1073741883"/>
+        <bind action="toggle_menu" key="1073741884" default="1073741884"/>
+        <bind action="reset_modals" key="1073741885" default="1073741885"/>
+        <bind action="toggle_status" key="104" default="1073741886"/>
+        <bind action="toggle_inventory" key="105" default="1073741887"/>
+        <bind action="toggle_gear" key="103" default="1073741888"/>
+        <bind action="toggle_nearby" key="110" default="1073741889"/>
+        <bind action="toggle_slots" key="1073741890" default="1073741890"/>
+        <bind action="toggle_messages" key="1073741891" default="1073741891"/>
         <bind action="toggle_crafting" key="99" default="99"/>
-        <bind action="toggle_status" key="104" default="104"/>
-        <bind action="toggle_gear" key="103" default="103"/>
-        <bind action="toggle_nearby" key="110" default="110"/>
-        <bind action="toggle_messages" key="109" default="109"/>
-        <bind action="toggle_slots" key="121" default="121"/>
         <bind action="reload" key="114" default="114"/>
         <bind action="vehicle_engine" key="113" default="113"/>
         <bind action="action_shove" key="32" default="32"/>
         <bind action="toggle_modals" key="9" default="9"/>
-        <bind action="pause" key="1073741883" default="1073741883"/>
-        <bind action="reset_modals" key="1073741885" default="1073741885"/>
         <bind action="shoot" key="-1" default="-1"/>
         <bind action="aim_trigger" key="-3" default="-3"/>
     </keyboard_mouse>

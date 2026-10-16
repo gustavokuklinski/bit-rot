@@ -98,15 +98,17 @@ def update_projectiles(game, GRID_SIZE, zombies_to_remove):
                     'kb_y': (dy / mag) * kb_force
                 })
 
-            if owner is None or owner == game.player:
-                if player_hit_zombie(game.player, hit_zombie, game):
+            # Only execute player_hit_zombie if a local player entity actually fired the projectile
+            local_player = getattr(game, 'player', None)
+            if local_player is not None and owner == local_player:
+                if player_hit_zombie(local_player, hit_zombie, game):
                     if is_animal:
                         hit_zombie.die(game)
                         if hit_zombie in game.items_on_ground: game.items_on_ground.remove(hit_zombie)
                         if hit_zombie in game.active_animals: game.active_animals.remove(hit_zombie)
                     else:
                         zombies_to_remove.append(hit_zombie)
-                        handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles, game.player.active_weapon)
+                        handle_zombie_death(game, hit_zombie, game.items_on_ground, game.obstacles, local_player.active_weapon)
                         game.zombies_killed += 1
 
                 if not hit_zombie.is_dead:
@@ -160,11 +162,15 @@ def update_projectiles(game, GRID_SIZE, zombies_to_remove):
                  projectiles_to_remove.append(p)
                  continue
 
-             damage = getattr(p, 'damage', game.player.get_attack_damage())
+             damage = getattr(p, 'damage', 5)
+             if damage is None:
+                 local_p = getattr(game, 'player', None)
+                 damage = local_p.get_attack_damage() if local_p else 5
+
              dx, dy = hit_npc.rect.centerx - p.rect.centerx, hit_npc.rect.centery - p.rect.centery
              mag = math.hypot(dx, dy)
              create_blood_splatter(game, hit_npc.rect, damage, [dx/mag, dy/mag] if mag > 0 else None)
-             if game.player and game.player.active_weapon and game.player.active_weapon.item_type == 'weapon_ranged':
+             if getattr(game, 'player', None) and game.player.active_weapon and game.player.active_weapon.item_type == 'weapon_ranged':
                   knockback_force = getattr(game.player.active_weapon, 'knockback', 0)
                   dx, dy = hit_npc.rect.centerx - game.player.rect.centerx, hit_npc.rect.centery - game.player.rect.centery
                   dist = math.hypot(dx, dy)
@@ -178,7 +184,7 @@ def update_projectiles(game, GRID_SIZE, zombies_to_remove):
                      if other_npc != hit_npc and not other_npc.is_dead and (other_npc.rect.centerx - hit_npc.rect.centerx)**2 + (other_npc.rect.centery - hit_npc.rect.centery)**2 < (TILE_SIZE * 15) ** 2:
                          other_npc.aggro_timer, other_npc.state = max(other_npc.aggro_timer, 8000), True, 'chasing'
 
-             if hit_npc.take_damage(damage, game, attacker=attacker) and attacker == game.player:
+             if hit_npc.take_damage(damage, game, attacker=attacker) and getattr(game, 'player', None) and attacker == game.player:
                  print(f"You shot and killed {hit_npc.name}!")
              projectiles_to_remove.append(p)
              continue

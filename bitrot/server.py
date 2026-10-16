@@ -143,28 +143,48 @@ class DedicatedServerGame:
         self.tile_manager = TileManager()
         self.spatial_manager = SpatialManager(self)
 
-        # 2. Resolve world config from data.rot/server/world.xml
+        # 2. Resolve world config from data.rot/server/server_world.xml
         self.server_dir_base = os.path.join(get_writable_dir(), "data.rot", "server")
         os.makedirs(self.server_dir_base, exist_ok=True)
 
         server_xml_path = os.path.join(self.server_dir_base, "server_world.xml")
-        if not os.path.exists(server_xml_path):
-            candidates = [
-                os.path.join(get_writable_dir(), "data.rot", "save", "config", "world.xml"),
-                os.path.join(DATA_PATH, "world.xml"),
-                os.path.join(DATA_PATH, "config", "world.xml"),
-                os.path.join(BASE_DIR, "data.rot", "lib", "data", "world.xml"),
-                os.path.join(BASE_DIR, "data.rot", "lib", "data", "world_builds", "world_default.xml"),
-            ]
-            src_xml = next((p for p in candidates if os.path.exists(p)), None)
-            if src_xml:
-                shutil.copyfile(src_xml, server_xml_path)
-            else:
-                default_data = load_config_data(core.data.config.get_world_config_path("world"))
-                save_config_xml(default_data, server_xml_path)
+        base_server_xml = os.path.join(BASE_DIR, "data.rot", "server", "server_world.xml")
 
-        core.data.config.load_settings(server_xml_path)
-        self.world_settings = load_config_data(server_xml_path)
+        # If server_world.xml is missing or is an empty/corrupted placeholder (< 50 bytes)
+        is_invalid = not os.path.exists(server_xml_path) or os.path.getsize(server_xml_path) < 50
+
+        if is_invalid:
+            if os.path.exists(base_server_xml) and os.path.getsize(base_server_xml) > 50:
+                if os.path.abspath(base_server_xml) != os.path.abspath(server_xml_path):
+                    shutil.copyfile(base_server_xml, server_xml_path)
+            else:
+                candidates = [
+                    os.path.join(BASE_DIR, "data.rot", "server", "world.xml"),
+                    os.path.join(get_writable_dir(), "data.rot", "save", "config", "world.xml"),
+                    os.path.join(BASE_DIR, "data.rot", "save", "config", "world.xml"),
+                    os.path.join(DATA_PATH, "world.xml"),
+                    os.path.join(BASE_DIR, "data.rot", "lib", "data", "world.xml")
+                ]
+                builds_dir = os.path.join(BASE_DIR, "data.rot", "lib", "data", "world_builds")
+                if os.path.exists(builds_dir):
+                    for f in sorted(os.listdir(builds_dir)):
+                        if f.endswith('.xml'):
+                            candidates.append(os.path.join(builds_dir, f))
+
+                src_xml = next((p for p in candidates if os.path.exists(p) and os.path.getsize(p) > 50), None)
+                if src_xml:
+                    shutil.copyfile(src_xml, server_xml_path)
+                else:
+                    default_path = core.data.config.get_world_config_path("world")
+                    default_data = load_config_data(default_path)
+                    if default_data:
+                        save_config_xml(default_data, server_xml_path)
+
+        # Fallback to base_server_xml if server_xml_path still does not exist
+        active_xml_source = server_xml_path if os.path.exists(server_xml_path) and os.path.getsize(server_xml_path) > 50 else base_server_xml
+
+        core.data.config.load_settings(active_xml_source)
+        self.world_settings = load_config_data(active_xml_source)
 
         # 3. Setup server session folder: data.rot/server/server_<TIMESTAMP>/
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -177,8 +197,10 @@ class DedicatedServerGame:
         os.makedirs(self.map_path, exist_ok=True)
         os.makedirs(self.player_dir, exist_ok=True)
 
-        # Copy the active server_world.xml into the session directory as world.xml
-        shutil.copyfile(server_xml_path, os.path.join(self.save_path, "world.xml"))
+        # Copy the resolved world configuration into the active session directory
+        session_world_xml = os.path.join(self.save_path, "world.xml")
+        if os.path.exists(active_xml_source):
+            shutil.copyfile(active_xml_source, session_world_xml)
         self.map_manager.map_folder = self.map_path
 
         # 4. Generate world

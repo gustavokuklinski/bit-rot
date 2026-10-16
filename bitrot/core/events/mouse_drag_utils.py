@@ -54,12 +54,18 @@ def _remove_from_ground_and_sync(game, item, type_orig=None, container_obj=None)
             })
 
 def _sync_source_container(game, container_obj):
-    if container_obj and hasattr(container_obj, 'inventory'):
+    if (container_obj 
+        and hasattr(container_obj, 'inventory') 
+        and getattr(container_obj, 'item_type', '') != 'ground'
+        and hasattr(container_obj, 'rect') 
+        and container_obj.rect is not None):
         if getattr(game, 'is_client', False) and getattr(game, 'client', None):
             from core.server.network import NetMsg, send_msg
             send_msg(game.client.socket, {
-                'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
-                'x': container_obj.rect.x, 'y': container_obj.rect.y,
+                'type': NetMsg.WORLD_ACTION, 
+                'action': 'container_sync',
+                'x': container_obj.rect.x, 
+                'y': container_obj.rect.y,
                 'is_opened': getattr(container_obj, 'is_opened', True),
                 'inventory': [i.to_dict() for i in container_obj.inventory]
             })

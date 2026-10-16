@@ -574,6 +574,8 @@ class GameClient:
                 gx, gy = msg.get('x'), msg.get('y')
                 new_char = msg.get('char')
                 layer = msg.get('layer', getattr(self.game, 'current_layer_index', 1))
+                map_fname = msg.get('map_filename')
+                current_fname = getattr(self.game.map_manager, 'current_map_filename', '')
 
                 # Update the tile in all_map_layers
                 if hasattr(self.game, 'all_map_layers') and layer in self.game.all_map_layers:
@@ -581,8 +583,8 @@ class GameClient:
                     if 0 <= gy < len(layer_grid) and 0 <= gx < len(layer_grid[0]):
                         layer_grid[gy][gx] = new_char
 
-                # Update live viewport if viewing this layer
-                if layer == getattr(self.game, 'current_layer_index', 1):
+                # Update live viewport only if viewing this exact layer and chunk map
+                if layer == getattr(self.game, 'current_layer_index', 1) and (not map_fname or map_fname == current_fname):
                     if hasattr(self.game, 'map_manager') and hasattr(self.game, 'map_data'):
                         try:
                             if 0 <= gy < len(self.game.map_data) and 0 <= gx < len(self.game.map_data[0]):
@@ -643,10 +645,22 @@ class GameClient:
                     rp.swing_timer = 15
                     rp.swing_angle = float(msg.get('angle', 0.0))
 
+            elif m_type == NetMsg.WORLD_ACTION and msg.get('action') == 'container_opened':
+                cx, cy = msg.get('x'), msg.get('y')
+                inv_data = msg.get('inventory', [])
+                for c in getattr(self.game, 'containers', []):
+                    if hasattr(c, 'rect') and c.rect.x == cx and c.rect.y == cy:
+                        c.is_opened = True
+                        c.is_opening = False
+                        c.inventory = [Item.from_dict(d) for d in inv_data if d]
+                        c._last_sync_state = str([i.get('id', '') + str(i.get('load', '')) for i in inv_data])
+                        break
+
             elif m_type == NetMsg.WORLD_ACTION and msg.get('action') == 'shoot':
                 pid = msg.get('player_id')
                 rp = self.game.remote_players.get(pid)
                 if rp:
+                    rp.gun_flash_timer = 5
                     from core.entities.item.projectile import Projectile
                     proj = Projectile(rp.rect.centerx, rp.rect.centery, msg.get('tx'), msg.get('ty'), speed=20, game=self.game)
                     self.game.projectiles.append(proj)
@@ -691,6 +705,7 @@ class GameClient:
                 'weapon': wpn,
                 'clothes': clothes_simple,
                 'clothes_colors': clothes_colors,
+                'gun_flash_timer': getattr(self.game.player, 'gun_flash_timer', 0),
                 'swing_timer': getattr(self.game.player, 'melee_swing_timer', 0),
                 'swing_angle': round(getattr(self.game.player, 'melee_swing_angle', 0), 2),
                 'action_timer': getattr(self.game.player, 'action_timer', 0),

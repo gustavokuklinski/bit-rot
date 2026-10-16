@@ -915,7 +915,7 @@ def handle_keyboard_events(game, event, action_triggered=None):
                 elif target['type'] == 'tile':
                     tx, ty = target['entity']
                     tile = game.map_manager.get_tile_at(tx, ty)
-                    if tile and tile.get('is_statable') and tile.get('type') == 'maptile':
+                    if tile and tile.get('is_statable'):
                         game.map_manager.toggle_door_state(tx, ty)
                 elif target['type'] == 'maptile_teleport':
                     tx, ty = target['entity']

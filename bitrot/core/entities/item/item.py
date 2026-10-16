@@ -269,6 +269,9 @@ class Item:
         if self.durability is not None:
             return False
         itype = getattr(self, 'item_type', '') or ''
+        name_lower = getattr(self, 'name', '').lower()
+        if 'capsule' in name_lower or itype == 'capsule':
+            return True
         valid_type = (
             itype.startswith('consumable') or
             itype in [

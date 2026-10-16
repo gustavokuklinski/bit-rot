@@ -68,7 +68,10 @@ def handle_attack(game, mouse_pos):
                     from core.server.network import NetMsg, send_msg
                     send_msg(game.client.socket, {
                         'type': NetMsg.WORLD_ACTION, 'action': 'shoot',
-                        'tx': target_world_x, 'ty': target_world_y
+                        'tx': target_world_x, 'ty': target_world_y,
+                        'damage': damage,
+                        'pellets': weapon.pellets,
+                        'spread': total_spread_deg
                     })
                 elif getattr(game, 'is_server', False):
                     from core.server.network import NetMsg, send_msg
@@ -76,7 +79,10 @@ def handle_attack(game, mouse_pos):
                         send_msg(s, {
                             'type': NetMsg.WORLD_ACTION, 'action': 'shoot',
                             'player_id': getattr(game.player, 'player_id', 'host'),
-                            'tx': target_world_x, 'ty': target_world_y
+                            'tx': target_world_x, 'ty': target_world_y,
+                            'damage': damage,
+                            'pellets': weapon.pellets,
+                            'spread': total_spread_deg
                         })
                 
                 dx = target_world_x - game.player.rect.centerx

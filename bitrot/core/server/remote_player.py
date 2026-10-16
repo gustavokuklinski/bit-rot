@@ -126,6 +126,10 @@ class RemotePlayer(pygame.sprite.Sprite):
         self.max_health = float(data.get('max_health', self.max_health))
         self.is_dead = bool(data.get('is_dead', False))
 
+        net_flash = int(data.get('gun_flash_timer', 0))
+        if net_flash > getattr(self, 'gun_flash_timer', 0):
+            self.gun_flash_timer = net_flash
+
         net_swing = int(data.get('swing_timer', 0))
         if net_swing > 0 and self.swing_timer <= 0:
             self.swing_timer = net_swing

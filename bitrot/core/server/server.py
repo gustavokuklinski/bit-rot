@@ -312,6 +312,7 @@ class GameServer:
                 'weapon': host_wpn,
                 'clothes': clothes_simple,
                 'clothes_colors': clothes_colors,
+                'gun_flash_timer': getattr(self.game.player, 'gun_flash_timer', 0),
                 'swing_timer': getattr(self.game.player, 'melee_swing_timer', 0),
                 'swing_angle': round(getattr(self.game.player, 'melee_swing_angle', 0), 2),
                 'action_timer': getattr(self.game.player, 'action_timer', 0),
@@ -423,7 +424,7 @@ class GameServer:
 
         containers_data = []
         for c in getattr(self.game, 'containers', []):
-            if getattr(c, 'item_type', '') == 'maptile_container':
+            if getattr(c, 'item_type', '') == 'maptile_container' and (getattr(c, 'is_opened', False) or getattr(c, 'is_opening', False)):
                 containers_data.append({
                     'x': c.rect.x,
                     'y': c.rect.y,
@@ -786,6 +787,18 @@ class GameServer:
                         if not getattr(c, 'is_opened', False):
                             if hasattr(c, 'open'):
                                 c.open(self.game)
+                            else:
+                                c.is_opened = True
+
+                        # Authoritative TCP broadcast: guarantees container stays open for all players
+                        inv_data = [i.to_dict() if hasattr(i, 'to_dict') else i for i in getattr(c, 'inventory', [])]
+                        self.broadcast_queue.put(({
+                            'type': NetMsg.WORLD_ACTION,
+                            'action': 'container_opened',
+                            'x': cx,
+                            'y': cy,
+                            'inventory': inv_data
+                        }, None))
                         break
 
             elif action == 'melee_swing':
@@ -800,9 +813,10 @@ class GameServer:
                 tx, ty = msg.get('tx', 0), msg.get('ty', 0)
                 pellets = msg.get('pellets', 1)
                 spread = msg.get('spread', 0)
+                damage = msg.get('damage', 5)
                 
                 other_socks = [s for s in self.clients if s != sock]
-                self.broadcast_queue.put(({'type': NetMsg.WORLD_ACTION, 'action': 'shoot', 'player_id': c_info['id'], 'tx': tx, 'ty': ty, 'pellets': pellets, 'spread': spread}, other_socks))
+                self.broadcast_queue.put(({'type': NetMsg.WORLD_ACTION, 'action': 'shoot', 'player_id': c_info['id'], 'tx': tx, 'ty': ty, 'pellets': pellets, 'spread': spread, 'damage': damage}, other_socks))
                 
                 rp = self.game.remote_players.get(c_info.get('id'))
                 if rp:
@@ -816,12 +830,16 @@ class GameServer:
                         spr = math.radians(random.uniform(-spread/2, spread/2))
                         target_x = rp.rect.centerx + math.cos(base_angle + spr) * 1000
                         target_y = rp.rect.centery + math.sin(base_angle + spr) * 1000
-                        proj = Projectile(rp.rect.centerx, rp.rect.centery, target_x, target_y, speed=20, game=self.game)
+                        proj = Projectile(rp.rect.centerx, rp.rect.centery, target_x, target_y, speed=20, damage=damage, game=self.game)
+                        proj.owner = rp
                         self.game.projectiles.append(proj)
 
             elif action == 'toggle_door':
                 req_layer = msg.get('layer', getattr(self.game, 'current_layer_index', 1))
-                self.game.map_manager.toggle_door_state(msg.get('x'), msg.get('y'), layer=req_layer)
+                map_fname = msg.get('map_filename', getattr(self.game.map_manager, 'current_map_filename', ''))
+                self.game.map_manager.toggle_door_state(
+                    msg.get('x'), msg.get('y'), layer=req_layer, map_filename=map_fname
+                )
 
             elif action == 'hit_tile':
                 req_layer = msg.get('layer', getattr(self.game, 'current_layer_index', 1))

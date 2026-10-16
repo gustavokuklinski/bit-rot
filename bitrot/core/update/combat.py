@@ -211,19 +211,20 @@ def update_capsule_drops(game):
                 if not new_capsule:
                     continue
 
-                # --- FIX: Guarantee strictly 1 unit per shot ---
-                if hasattr(new_capsule, 'load'):
-                    new_capsule.load = 1
+                if not getattr(new_capsule, 'capacity', None) or new_capsule.capacity <= 1:
+                    new_capsule.capacity = 100
+                new_capsule.load = 1
 
                 stacked = False
-                if new_capsule.is_stackable():
-                    for it in game.items_on_ground:
-                        if getattr(it, 'type', '') == 'animal' or not hasattr(it, 'can_stack_with'):
-                            continue
-                        if it.can_stack_with(new_capsule) and math.hypot(it.rect.centerx - pos_x, it.rect.centery - pos_y) < 24:
-                            it.load = (getattr(it, 'load', 1) or 1) + 1  # Increment by strictly 1
-                            stacked = True
-                            break
+                for it in game.items_on_ground:
+                    if getattr(it, 'type', '') == 'animal' or not hasattr(it, 'name'):
+                        continue
+                    if (it.name == new_capsule.name or 'capsule' in it.name.lower()) and math.hypot(it.rect.centerx - pos_x, it.rect.centery - pos_y) < 24:
+                        if not getattr(it, 'capacity', None) or it.capacity <= 1:
+                            it.capacity = 100
+                        it.load = (getattr(it, 'load', 1) or 1) + 1
+                        stacked = True
+                        break
 
                 if not stacked:
                     new_capsule.rect.center = (int(pos_x), int(pos_y))
@@ -248,6 +249,8 @@ def update_capsule_drops(game):
                     game.spatial_manager.rebuild_item_grid(force=True)
 
 def player_hit_zombie(player, zombie, game):
+    if not player or not hasattr(player, 'progression'):
+        return False
     progression = player.progression
     active_weapon = player.active_weapon
     base_damage, damage_multiplier, knockback_force = 1, 1.0, 0
@@ -300,7 +303,8 @@ def player_hit_zombie(player, zombie, game):
 
 def handle_zombie_death(game, zombie, items_on_ground_list, obstacles, weapon):
     zombie.die(game)
-    if weapon: game.player.process_kill(weapon, zombie)
+    if weapon and getattr(game, 'player', None):
+        game.player.process_kill(weapon, zombie)
 
     current_map_filename = game.map_manager.current_map_filename
     if current_map_filename not in game.map_states:

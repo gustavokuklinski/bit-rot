@@ -1346,9 +1346,9 @@ def run_player_setup(game):
     game._update_screen()
 
 def _load_presets(state):
-    preset_dir = "./data.rot/save/player"
+    preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "player")
     if not os.path.exists(preset_dir):
-        os.makedirs(preset_dir)
+        os.makedirs(preset_dir, exist_ok=True)
     
     presets = ["None"]
     try:
@@ -1365,9 +1365,9 @@ def _save_preset(state):
         print("Cannot save preset with default name.")
         return 
 
-    preset_dir = "./data.rot/save/player"
+    preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "player")
     if not os.path.exists(preset_dir):
-        os.makedirs(preset_dir)
+        os.makedirs(preset_dir, exist_ok=True)
         
     filepath = os.path.join(preset_dir, f"{player_name}.xml")
     
@@ -1403,7 +1403,7 @@ def _load_preset(state):
     if not preset_name or preset_name == "None":
         return
 
-    filepath = os.path.join("./data.rot/save/player", f"{preset_name}.xml")
+    filepath = os.path.join(get_writable_dir(), "data.rot", "save", "player", f"{preset_name}.xml")
     if not os.path.exists(filepath):
         print(f"Error: Preset file not found: {filepath}")
         return
@@ -1450,7 +1450,7 @@ def _delete_preset(state):
         print("No preset selected to delete.")
         return
 
-    filepath = os.path.join("./data.rot/save/player", f"{preset_name}.xml")
+    filepath = os.path.join(get_writable_dir(), "data.rot", "save", "player", f"{preset_name}.xml")
     if not os.path.exists(filepath):
         print(f"Error: Preset file not found: {filepath}")
         return

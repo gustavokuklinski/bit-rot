@@ -354,16 +354,19 @@ class MapManager:
                     filename = f'map_L{layer_idx}_world_spawn.csv'
                 write_layer(layout, filename)
 
-    def toggle_door_state(self, grid_x, grid_y, layer=None):
+    def toggle_door_state(self, grid_x, grid_y, layer=None, map_filename=None):
         """Toggles a 'statable' tile (like a door) between its states."""
         if layer is None:
             layer = getattr(self.game, 'current_layer_index', 1)
+        if map_filename is None:
+            map_filename = getattr(self.current_map_filename, 'current_map_filename', self.current_map_filename)
 
         if getattr(self.game, 'is_client', False):
             from core.server.network import NetMsg, send_msg
             send_msg(self.game.client.socket, {
                 'type': NetMsg.WORLD_ACTION, 'action': 'toggle_door',
-                'x': grid_x, 'y': grid_y, 'layer': layer
+                'x': grid_x, 'y': grid_y, 'layer': layer,
+                'map_filename': map_filename
             })
             return
             
@@ -388,13 +391,10 @@ class MapManager:
         new_state = "open" if current_state == "close" else "close"
 
         tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-
-        tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
         door_cx = tile_rect.centerx
         door_cy = tile_rect.centery
 
         if new_state == "close":
-            # Collect all active entities strictly on THIS layer
             entities_to_check = []
             if getattr(self.game, 'player', None) and not getattr(self.game.player, 'is_dead', False):
                 if getattr(self.game, 'current_layer_index', 1) == layer:
@@ -415,86 +415,46 @@ class MapManager:
                 if not getattr(rp, 'is_dead', False) and getattr(rp, 'layer', 1) == layer:
                     entities_to_check.append(rp)
 
-            entities_in_door = []
-            five_pct = TILE_SIZE * 0.05  # 5% threshold
+            entities_in_door = [e for e in entities_to_check if e.rect.colliderect(tile_rect)]
 
-            for entity in entities_to_check:
-                if entity.rect.colliderect(tile_rect):
-                    overlap = entity.rect.clip(tile_rect)
-                    if overlap.width >= five_pct and overlap.height >= five_pct:
-                        entities_in_door.append(entity)
+            def is_tile_walkable(tx, ty):
+                if not (0 <= ty < len(target_map) and 0 <= tx < len(target_map[0])):
+                    return False
+                t_def = self.game.tile_manager.definitions.get(target_map[ty][tx])
+                if t_def and t_def.get('is_obstacle', False):
+                    return False
+                return True
 
-            if entities_in_door:
-                # 1. Avoid closing if any entity is in the middle of the door
-                middle_threshold = TILE_SIZE * 0.18
-                for entity in entities_in_door:
-                    dx = abs(entity.rect.centerx - door_cx)
-                    dy = abs(entity.rect.centery - door_cy)
-                    if dx <= middle_threshold and dy <= middle_threshold:
-                        if entity == getattr(self.game, 'player', None):
-                            display_message(tr('msg', "Player is in the doorway, cannot close."))
-                        else:
-                            display_message(tr('msg', "Doorway is blocked, cannot close."))
-                        return
+            for entity in entities_in_door:
+                ex = entity.rect.centerx
+                ey = entity.rect.centery
+                dx = ex - door_cx
+                dy = ey - door_cy
 
-                # 2. Relocate entities to the tile where they are predominantly located
-                def is_tile_walkable(tx, ty):
-                    if not (0 <= ty < len(target_map) and 0 <= tx < len(target_map[0])):
-                        return False
-                    t_def = self.game.tile_manager.definitions.get(target_map[ty][tx])
-                    if t_def and t_def.get('is_obstacle', False):
-                        return False
-                    t_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                    if layer == getattr(self.game, 'current_layer_index', 1):
-                        if any(t_rect.colliderect(ob) for ob in self.game.obstacles):
-                            return False
-                    return True
+                # Nudge toward open space
+                target_candidates = [
+                    (grid_x, grid_y - 1), (grid_x, grid_y + 1),
+                    (grid_x - 1, grid_y), (grid_x + 1, grid_y)
+                ]
+                if abs(dx) > abs(dy):
+                    target_candidates.sort(key=lambda c: -abs(c[0] - grid_x))
+                else:
+                    target_candidates.sort(key=lambda c: -abs(c[1] - grid_y))
 
-                for entity in entities_in_door:
-                    ex = entity.rect.centerx
-                    ey = entity.rect.centery
-                    dx = ex - door_cx
-                    dy = ey - door_cy
+                for tgx, tgy in target_candidates:
+                    if is_tile_walkable(tgx, tgy):
+                        target_rect = pygame.Rect(tgx * TILE_SIZE, tgy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                        entity.rect.center = target_rect.center
+                        if hasattr(entity, 'x'): entity.x = float(entity.rect.x)
+                        if hasattr(entity, 'y'): entity.y = float(entity.rect.y)
+                        break
 
-                    # Identify preferred target tile based on displacement axis
-                    target_candidates = []
-                    if abs(dx) >= abs(dy):
-                        primary = (grid_x - 1, grid_y) if dx < 0 else (grid_x + 1, grid_y)
-                        secondary = (grid_x, grid_y - 1) if dy < 0 else (grid_x, grid_y + 1)
-                        target_candidates = [primary, secondary]
-                    else:
-                        primary = (grid_x, grid_y - 1) if dy < 0 else (grid_x, grid_y + 1)
-                        secondary = (grid_x - 1, grid_y) if dx < 0 else (grid_x + 1, grid_y)
-                        target_candidates = [primary, secondary]
-
-                    # Append remaining directions as fallback
-                    for cand_dir in [(grid_x + 1, grid_y), (grid_x - 1, grid_y), (grid_x, grid_y + 1), (grid_x, grid_y - 1)]:
-                        if cand_dir not in target_candidates:
-                            target_candidates.append(cand_dir)
-
-                    pushed = False
-                    for tgx, tgy in target_candidates:
-                        if is_tile_walkable(tgx, tgy):
-                            target_rect = pygame.Rect(tgx * TILE_SIZE, tgy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                            entity.rect.center = target_rect.center
-                            if hasattr(entity, 'x'): entity.x = float(entity.rect.x)
-                            if hasattr(entity, 'y'): entity.y = float(entity.rect.y)
-                            if hasattr(entity, 'vx'): entity.vx = 0
-                            if hasattr(entity, 'vy'): entity.vy = 0
-                            pushed = True
-                            break
-
-                    if not pushed:
-                        display_message(tr('msg', "Doorway is blocked, cannot close."))
-                        return
-        
         base_name = current_char.replace("_open", "").replace("_close", "")
         new_char = f"{base_name}_{new_state}"
 
         if new_char in self.game.tile_manager.definitions:
             new_def = self.game.tile_manager.definitions[new_char]
-            
-            self._replace_tile(grid_x, grid_y, current_char, new_char, layer=layer)
+            self._replace_tile(grid_x, grid_y, current_char, new_char, layer=layer, map_filename=map_filename)
             
             if new_def.get('sound_src'):
                 self.game.sound_manager.play_sound(
@@ -798,9 +758,11 @@ class MapManager:
             self._replace_tile(grid_x, grid_y, char, target_char)
         return True
 
-    def _replace_tile(self, grid_x, grid_y, old_char, new_char, layer=None):
+    def _replace_tile(self, grid_x, grid_y, old_char, new_char, layer=None, map_filename=None):
         if layer is None:
             layer = getattr(self.game, 'current_layer_index', 1)
+        if map_filename is None:
+            map_filename = getattr(self, 'current_map_filename', '')
 
         new_def = self.game.tile_manager.definitions.get(new_char) if new_char != ' ' else None
         tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
@@ -819,13 +781,13 @@ class MapManager:
             if new_def and new_def.get('is_obstacle', False):
                 self.game.obstacles.append(tile_rect)
             self.invalidate_chunk(grid_x, grid_y)
+            self.game.cached_obstacle_count = -1
 
         if getattr(self.game, 'is_server', False):
-            # Persist modified tile to the map CSV so joining players load the current door state
             map_folder = getattr(self.game.map_manager, 'map_folder', None)
             if map_folder and os.path.exists(map_folder) and hasattr(self.game, 'all_map_layers') and layer in self.game.all_map_layers:
                 try:
-                    cur_fname = getattr(self.game.map_manager, 'current_map_filename', '')
+                    cur_fname = map_filename or getattr(self.game.map_manager, 'current_map_filename', '')
                     m = re.match(r'map_L\d+_(\d+)_(\d+)_map\.csv', cur_fname)
                     if m:
                         gx_val, gy_val = m.groups()
@@ -834,14 +796,15 @@ class MapManager:
                         out_csv = os.path.join(map_folder, f'map_L{layer}_world_map.csv')
                     with open(out_csv, 'w', newline='', encoding='utf-8') as f:
                         csv.writer(f).writerows(self.game.all_map_layers[layer])
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"Error persisting tile change: {e}")
 
             from core.server.network import NetMsg, send_msg
             for s in self.game.server.clients:
                 send_msg(s, {
                     'type': NetMsg.WORLD_ACTION, 'action': 'tile_change',
-                    'x': grid_x, 'y': grid_y, 'char': new_char, 'layer': layer
+                    'x': grid_x, 'y': grid_y, 'char': new_char, 'layer': layer,
+                    'map_filename': map_filename
                 })
     
     def remove_vehicle_tile(self, grid_x, grid_y):

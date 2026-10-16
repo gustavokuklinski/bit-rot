@@ -169,9 +169,9 @@ def save_config_xml(data, filepath):
         print(f"Error saving config XML: {e}")
 
 def _load_config_presets(state):
-    preset_dir = "./data.rot/save/config"
+    preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "config")
     if not os.path.exists(preset_dir):
-        os.makedirs(preset_dir)
+        os.makedirs(preset_dir, exist_ok=True)
     presets = ["world"] 
     try:
         files = [f for f in os.listdir(preset_dir) if f.endswith('.xml') and f != "preferences.xml"]
