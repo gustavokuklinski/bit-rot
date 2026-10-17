@@ -63,18 +63,7 @@ class NPCCombat:
         return False
 
     def take_damage(self, damage, game, attacker=None):
-        if getattr(game, 'is_client', False):
-            from core.server.network import NetMsg, send_msg
-            send_msg(game.client.socket, {
-                'type': NetMsg.ENTITY_DAMAGE,
-                'entity_type': 'npc',
-                'id': getattr(self, 'id', None),
-                'damage': damage
-            })
-            self.health -= damage
-            self.health_bar_timer = 180
-            if self.health <= 0: return True
-            return False
+        
             
         if self.is_dead: return True
 
@@ -115,7 +104,7 @@ class NPCCombat:
             self.aggro_timer = 10000  # 10 seconds aggro
         
         # If attacked by player, become hostile and un-freeze static state to retaliate
-        if attacker is not None and (attacker == player or type(attacker).__name__ == 'RemotePlayer'):
+        if attacker is not None and attacker == player:
             self.is_friendly = False
             self.is_static = False
             self.current_attacker = attacker

@@ -63,7 +63,8 @@ def handle_attack(game, mouse_pos):
                 aim_pos = game._get_scaled_mouse_pos()
                 adjusted_aim_pos = (aim_pos[0] - game.viewport_left_offset, aim_pos[1])
                 target_world_x, target_world_y = game.screen_to_world(adjusted_aim_pos)
-
+                
+               
                 dx = target_world_x - game.player.rect.centerx
                 dy = target_world_y - game.player.rect.centery
                 base_angle = math.atan2(dy, dx)
@@ -76,33 +77,14 @@ def handle_attack(game, mouse_pos):
 
                 distance_tiles = getattr(weapon, 'firing_distance', None)
                 max_dist_pixels = None 
+                
                 calc_dist = 1000 
+                
                 if distance_tiles is not None:
                     max_dist_pixels = distance_tiles * TILE_SIZE
                     calc_dist = max_dist_pixels
 
                 damage = game.player.get_attack_damage()
-
-                if getattr(game, 'is_client', False):
-                    from core.server.network import NetMsg, send_msg
-                    send_msg(game.client.socket, {
-                        'type': NetMsg.WORLD_ACTION, 'action': 'shoot',
-                        'tx': target_world_x, 'ty': target_world_y,
-                        'damage': damage,
-                        'pellets': weapon.pellets,
-                        'spread': total_spread_deg
-                    })
-                elif getattr(game, 'is_server', False):
-                    from core.server.network import NetMsg, send_msg
-                    for s in game.server.clients:
-                        send_msg(s, {
-                            'type': NetMsg.WORLD_ACTION, 'action': 'shoot',
-                            'player_id': getattr(game.player, 'player_id', 'host'),
-                            'tx': target_world_x, 'ty': target_world_y,
-                            'damage': damage,
-                            'pellets': weapon.pellets,
-                            'spread': total_spread_deg
-                        })
 
                 for _ in range(weapon.pellets):
                     spread = math.radians(random.uniform(-total_spread_deg / 2, total_spread_deg / 2))
@@ -111,7 +93,7 @@ def handle_attack(game, mouse_pos):
                     target_x = game.player.rect.centerx + math.cos(angle) * calc_dist
                     target_y = game.player.rect.centery + math.sin(angle) * calc_dist
 
-                    proj = Projectile(
+                    game.projectiles.append(Projectile(
                         game.player.rect.centerx, 
                         game.player.rect.centery, 
                         target_x, 
@@ -119,9 +101,7 @@ def handle_attack(game, mouse_pos):
                         max_distance=max_dist_pixels,
                         damage=damage,
                         game=game
-                    )
-                    proj.owner = game.player
-                    game.projectiles.append(proj)
+                    ))
 
                 weapon.load -= 1
 
@@ -274,20 +254,7 @@ def handle_attack(game, mouse_pos):
                 game.player.melee_swing_angle = math.atan2(-dy_swing, dx_swing)
                 game.player.melee_swing_timer = 15
 
-                if getattr(game, 'is_client', False):
-                    from core.server.network import NetMsg, send_msg
-                    send_msg(game.client.socket, {
-                        'type': NetMsg.WORLD_ACTION, 'action': 'melee_swing',
-                        'angle': game.player.melee_swing_angle
-                    })
-                elif getattr(game, 'is_server', False):
-                    from core.server.network import NetMsg, send_msg
-                    for s in game.server.clients:
-                        send_msg(s, {
-                            'type': NetMsg.WORLD_ACTION, 'action': 'melee_swing',
-                            'player_id': getattr(game.player, 'player_id', 'host'),
-                            'angle': game.player.melee_swing_angle
-                        })
+                
 
                 if weapon and weapon.item_type in ['weapon_melee', 'tool'] and 'swing' in weapon.sounds and weapon.sounds['swing']:
                     game.sound_manager.play_sound(
@@ -335,18 +302,10 @@ def handle_attack(game, mouse_pos):
                                 zombie.knockback_velocity = [kb_x, kb_y]
                                 zombie.knockback_timer = 200
 
-                                if getattr(game, 'is_client', False) and getattr(game, 'client', None):
-                                    send_msg(game.client.socket, {
-                                        'type': NetMsg.ENTITY_DAMAGE,
-                                        'entity_type': 'zombie',
-                                        'id': getattr(zombie, 'id', None),
-                                        'damage': damage,
-                                        'kb_x': kb_x,
-                                        'kb_y': kb_y
-                                    })
-                                else:
-                                    if player_hit_zombie(game.player, zombie, game):
-                                        handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, weapon)
+                                
+                                if player_hit_zombie(game.player, zombie, game):
+                                    handle_zombie_death(game, zombie, game.items_on_ground, game.obstacles, weapon)
+                                    game.zombies_killed += 1
 
                             force = 7 
                             zombie.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
@@ -359,42 +318,7 @@ def handle_attack(game, mouse_pos):
                             hit_something = True
                             break
 
-                # 2. Hit Remote Players (PvP)
-                if not hit_something:
-                    for rp in getattr(game, 'remote_players', {}).values():
-                        if getattr(rp, 'is_dead', False): continue
-                        dist = math.hypot(rp.rect.centerx - game.player.rect.centerx, rp.rect.centery - game.player.rect.centery)
-                        if dist <= attack_range:
-                            dx = rp.rect.centerx - game.player.rect.centerx
-                            dy_inv = game.player.rect.centery - rp.rect.centery
-                            rp_angle = math.atan2(dy_inv, dx)
-                            angle_diff = abs(game.player.melee_swing_angle - rp_angle)
-                            if angle_diff > math.pi: angle_diff = 2 * math.pi - angle_diff
-
-                            if rp.rect.collidepoint(world_pos) or angle_diff < 1.0:
-                                dx_kb = rp.rect.centerx - game.player.rect.centerx
-                                dy_kb = rp.rect.centery - game.player.rect.centery 
-                                kb_angle = math.atan2(dy_kb, dx_kb)
-
-                                if can_deal_damage:
-                                    damage = game.player.get_attack_damage()
-                                    create_blood_splatter(game, rp.rect, damage, [math.cos(kb_angle), math.sin(kb_angle)])
-                                    game.splashes.append({'pos': rp.rect.center, 'time': pygame.time.get_ticks(), 'duration': 350, 'radius': 3, 'type': 'hit_puff'})
-
-                                    if getattr(game, 'is_client', False):
-                                        from core.server.network import NetMsg, send_msg
-                                        send_msg(game.client.socket, {
-                                            'type': NetMsg.ENTITY_DAMAGE, 'entity_type': 'player',
-                                            'id': rp.player_id, 'damage': damage
-                                        })
-                                    else:
-                                        for s, info in game.server.clients.items():
-                                            if info.get('id') == rp.player_id:
-                                                from core.server.network import NetMsg, send_msg
-                                                send_msg(s, {'type': NetMsg.ENTITY_DAMAGE, 'entity_type': 'player', 'damage': damage})
-                                                break
-                                hit_something = True
-                                break
+                
 
                 # 3. Hit Animals
                 if not hit_something:
@@ -466,19 +390,9 @@ def handle_attack(game, mouse_pos):
                                         npc.knockback_velocity = [kb_x, kb_y]
                                         npc.knockback_timer = 200
 
-                                        if getattr(game, 'is_client', False) and getattr(game, 'client', None):
-                                            from core.server.network import NetMsg, send_msg
-                                            send_msg(game.client.socket, {
-                                                'type': NetMsg.ENTITY_DAMAGE,
-                                                'entity_type': 'npc',
-                                                'id': getattr(npc, 'id', None),
-                                                'damage': damage,
-                                                'kb_x': kb_x,
-                                                'kb_y': kb_y
-                                            })
-                                        else:
-                                            is_dead = npc.take_damage(damage, game, attacker=game.player)
-                                            display_message(game, f"{tr('msg', 'You attacked')} {npc.name} {tr('msg', 'for')} {damage} {tr('msg', 'damage!')}")
+                                        
+                                        is_dead = npc.take_damage(damage, game, attacker=game.player)
+                                        display_message(game, f"{tr('msg', 'You attacked')} {npc.name} {tr('msg', 'for')} {damage} {tr('msg', 'damage!')}")
                                     
                                     if dist > 0:
                                         force = 7

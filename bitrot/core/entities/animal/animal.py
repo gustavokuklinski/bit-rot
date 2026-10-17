@@ -12,7 +12,6 @@ from core.entities.item.item import Item
 from core.ui.notifications import check_milestone_progress
 from core.data.config import TILE_SIZE
 from core.systems.utils import create_smooth_entity_mask
-from core.systems.world_area import is_same_area
 
 class Animal(Zombie):
 
@@ -97,7 +96,7 @@ class Animal(Zombie):
 
     def attack(self, target_entity, game):
         # Prevent non-hostile animals from ever damaging players
-        if not self.attack_player and (target_entity == getattr(game, 'player', None) or type(target_entity).__name__ == 'RemotePlayer'):
+        if not self.attack_player and target_entity == getattr(game, 'player', None):
             return
 
         # Animals ignore and never attack FNPCs
@@ -150,10 +149,6 @@ class Animal(Zombie):
         if game.player and not game.player.is_dead:
             if getattr(game, 'current_layer_index', 1) == my_layer:
                 threats.append(game.player)
-        for rp in getattr(game, 'remote_players', {}).values():
-            if not getattr(rp, 'is_dead', False):
-                if is_same_area(self, rp, game):          # was: layer only
-                    threats.append(rp)
 
         for t in threats:
             dx = t.rect.centerx - self.rect.centerx
@@ -242,17 +237,7 @@ class Animal(Zombie):
                 self.move_towards(self.wander_target, obstacles, other_zombies, game, can_see_target=False, allow_break_obstacles=False)
 
     def take_damage(self, amount, game, attacker=None):
-        if getattr(game, 'is_client', False):
-            from core.server.network import NetMsg, send_msg
-            send_msg(game.client.socket, {
-                'type': NetMsg.ENTITY_DAMAGE,
-                'entity_type': 'animal',
-                'id': getattr(self, 'id', None),
-                'damage': amount
-            })
-            self.health -= amount
-            if self.health <= 0: return True
-            return False
+        
             
         if getattr(self, 'is_dead', False):
             return False

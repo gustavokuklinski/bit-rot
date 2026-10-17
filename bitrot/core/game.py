@@ -255,29 +255,6 @@ class Game:
         self.dynamic_h = GAME_HEIGHT
 
 
-        # --- MULTIPLAYER INITIALIZATION ---
-        self.is_server = False
-        self.is_client = False
-        self.server = None
-        self.client = None
-        self.remote_players = {}
-        self.cli_connect_address = None
-
-        # Parse CLI --connect=<IP>:<PORT>
-        for arg in sys.argv[1:]:
-            if arg.startswith("--connect="):
-                val = arg.split("=", 1)[1].strip()
-                if ":" in val:
-                    h_ip, h_port = val.split(":", 1)
-                    try:
-                        self.cli_connect_address = (h_ip.strip(), int(h_port.strip()))
-                        self.is_client = True
-                        self.game_state = 'PLAYER_SETUP'
-                        self.player_setup_state['current_tab'] = 'Player'
-                    except ValueError:
-                        print(f"Invalid --connect address: {val}")
-
-
     def respawn_player_in_world(self, player_data, save_folder_name):
         return respawn_player_in_world(self, player_data, save_folder_name)
 
@@ -449,17 +426,6 @@ class Game:
             while self.running:
                 if getattr(self, 'joystick_handler', None):
                     self.joystick_handler.update_cursor(self)
-
-                if self.is_server and self.server:
-                    self.server.update()
-
-                if self.is_client and self.client:
-                    self.client.update()
-                    # If the connection closed during update(), exit the game loop immediately
-                    if not self.running:
-                        break
-
-                # The State Machine Dispatcher
                 if self.game_state == 'SPLASH':
                     run_splash(self)
                 elif self.game_state == 'MENU':
@@ -484,8 +450,6 @@ class Game:
             self.running = False
             raise e
         finally:
-            if self.is_client and self.client:
-                self.client.disconnect()
             self.logger.info("Game Execution Ended safely.")
 
     def _draw_crt_filter(self):

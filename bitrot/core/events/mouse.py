@@ -75,17 +75,7 @@ def handle_mouse_down(game, event, mouse_pos):
                             dropped_item.layer = getattr(game, 'current_layer_index', 1)
                             dropped_item.map_filename = getattr(game.map_manager, 'current_map_filename', '')
                             
-                            if getattr(game, 'is_client', False) and getattr(game, 'client', None):
-                                from core.server.network import NetMsg, send_msg
-                                send_msg(game.client.socket, {
-                                    'type': NetMsg.WORLD_ACTION, 
-                                    'action': 'drop', 
-                                    'item_data': dropped_item.to_dict(), 
-                                    'x': dropped_item.x, 
-                                    'y': dropped_item.y, 
-                                    'layer': dropped_item.layer,
-                                    'is_placed': True
-                                })
+                            
                             
                             if game and hasattr(game, 'sound_manager'):
                                 game.sound_manager.play_sound(

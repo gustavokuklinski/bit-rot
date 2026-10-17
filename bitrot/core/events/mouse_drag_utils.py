@@ -28,47 +28,12 @@ def check_container_weight_limit(container, incoming_item, item_to_remove=None):
 def check_player_weight(incoming_item):
     return True
 
-def _sync_container_to_server(game, container_obj):
-    if getattr(game, 'is_client', False) and getattr(game, 'client', None):
-        if container_obj and hasattr(container_obj, 'inventory') and hasattr(container_obj, 'rect') and container_obj.rect:
-            if getattr(container_obj, 'item_type', '') != 'ground':
-                from core.server.network import NetMsg, send_msg
-                send_msg(game.client.socket, {
-                    'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
-                    'x': container_obj.rect.x, 'y': container_obj.rect.y,
-                    'is_opened': getattr(container_obj, 'is_opened', True),
-                    'inventory': [i.to_dict() if hasattr(i, 'to_dict') else i for i in container_obj.inventory]
-                })
 
 def _remove_from_ground_and_sync(game, item, type_orig=None, container_obj=None):
-    if type_orig in ('container', 'nearby', 'container_stack_split', 'nearby_stack_split') and container_obj:
-        if getattr(container_obj, 'item_type', '') != 'ground':
-            _sync_container_to_server(game, container_obj)
-        
     if item in game.items_on_ground:
         game.items_on_ground.remove(item)
-        if getattr(game, 'is_client', False) and getattr(game, 'client', None):
-            from core.server.network import NetMsg, send_msg
-            send_msg(game.client.socket, {
-                'type': NetMsg.WORLD_ACTION, 'action': 'pickup', 'id': getattr(item, 'id', None)
-            })
 
-def _sync_source_container(game, container_obj):
-    if (container_obj 
-        and hasattr(container_obj, 'inventory') 
-        and getattr(container_obj, 'item_type', '') != 'ground'
-        and hasattr(container_obj, 'rect') 
-        and container_obj.rect is not None):
-        if getattr(game, 'is_client', False) and getattr(game, 'client', None):
-            from core.server.network import NetMsg, send_msg
-            send_msg(game.client.socket, {
-                'type': NetMsg.WORLD_ACTION, 
-                'action': 'container_sync',
-                'x': container_obj.rect.x, 
-                'y': container_obj.rect.y,
-                'is_opened': getattr(container_obj, 'is_opened', True),
-                'inventory': [i.to_dict() for i in container_obj.inventory]
-            })
+
 
 def return_remainder_to_origin(game, item, type_orig, i_orig, container_obj):
     """Safely returns the remaining portion of an item back to its original container/slot."""
@@ -117,7 +82,7 @@ def return_remainder_to_origin(game, item, type_orig, i_orig, container_obj):
                 container_obj.inventory.insert(i_orig, item)
             else:
                 container_obj.inventory.append(item)
-            _sync_container_to_server(game, container_obj)
+ 
 
     # 7. Return to Nearby Container or Ground
     elif type_orig == 'nearby' and container_obj is not None:
@@ -129,7 +94,7 @@ def return_remainder_to_origin(game, item, type_orig, i_orig, container_obj):
                 container_obj.inventory.insert(i_orig, item)
             else:
                 container_obj.inventory.append(item)
-            _sync_container_to_server(game, container_obj)
+   
 
     # 8. Stack split origins
     elif 'stack_split' in str(type_orig):

@@ -51,9 +51,8 @@ def update_game_state(game):
       return
 
   # Check spawns and flush background-threaded spawns
-  if not getattr(game, 'is_client', False):
-    check_dynamic_zombie_spawns(game, GRID_SIZE)
-    async_spawner.flush_to_game(game)
+  check_dynamic_zombie_spawns(game, GRID_SIZE)
+  async_spawner.flush_to_game(game)
 
   zombies_to_remove = []
 

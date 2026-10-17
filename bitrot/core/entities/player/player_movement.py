@@ -418,9 +418,11 @@ class PlayerMovement:
                 if vehicle_rect.colliderect(zombie.rect):
                     self.vehicle.damage_motor(1.5)
                     damage_to_zombie = 100
-                    if zombie.take_damage(damage_to_zombie, game, attacker=self):
+                    if zombie.take_damage(damage_to_zombie, game):
                         zombie.die(game)
                         display_message(tr('msg', "Roadkill! Zombie splattered."))
+                        if hasattr(game, 'zombies_killed'):
+                            game.zombies_killed += 1
                         if zombie in game.zombies:
                             try: game.zombies.remove(zombie)
                             except ValueError: pass

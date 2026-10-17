@@ -38,9 +38,10 @@ def update_vehicles(game, zombies_to_remove):
                         create_blood_splatter(game, entity.rect, 20, velocity_dir)
 
                         if entity in game.zombies:
-                             if entity.take_damage(impact_damage, game, attacker=getattr(game, 'player', None)):
+                             if entity.take_damage(impact_damage, game):
                                 roadkill_zombies.append(entity)
                                 handle_zombie_death(game, entity, game.items_on_ground, game.obstacles, None)
+                                game.zombies_killed += 1
                              else:
                                  if speed > 0:
                                      entity.knockback_velocity = [(vehicle.velocity[0] / speed) * 15, (vehicle.velocity[1] / speed) * 15]

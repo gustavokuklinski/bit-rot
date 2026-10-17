@@ -2,7 +2,6 @@ import os
 import shutil
 import json
 import re
-import socket
 import platform
 import uuid
 from datetime import datetime
@@ -12,20 +11,6 @@ from core.data.config import MAP_DIR, get_writable_dir
 from core.entities.npc.npc_dialog import NPCDialog
 from core.entities.item.item_helpers import deserialize_item, serialize_item
 from core.data.radio_manager import RadioManager 
-
-def get_host_ip():
-    """Finds the local network IP of the host machine."""
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except Exception:
-        try:
-            return socket.gethostbyname(socket.gethostname())
-        except Exception:
-            return "127.0.0.1"
 
 def delete_pending_world_save(game, state=None):
     """
@@ -113,7 +98,6 @@ def save_game(game):
         host_path = os.path.join(save_path, "host.rot")
         host_data = {
             "os": platform.system(),
-            "uip": get_host_ip(),
             "host": {},
             "remote": {}
         }
@@ -199,6 +183,39 @@ def save_game(game):
                 "x": int(game.player.x),
                 "y": int(game.player.y)
             }
+
+        with open(host_path, "w") as f:
+            json.dump(host_data, f, indent=4)
+
+        # --- 2. PREPARE & UPDATE host.rot REGISTRY ---
+        host_path = os.path.join(save_path, "host.rot")
+        host_data = {
+            "os": platform.system(),
+            "host": {},
+            "remote": {}
+        }
+
+        if os.path.exists(host_path):
+            try:
+                with open(host_path, "r") as f:
+                    existing_host = json.load(f)
+                    if isinstance(existing_host, dict):
+                        if "host" in existing_host:
+                            host_data["host"] = existing_host["host"]
+                        elif "players" in existing_host:
+                            host_data["host"] = existing_host["players"]
+                        if "remote" in existing_host:
+                            host_data["remote"] = existing_host["remote"]
+            except Exception as e:
+                game.logger.info(f"Could not read existing host.rot: {e}")
+
+        host_data["host"][player_id] = {
+            "name": game.player.name,
+            "playerID": f"{player_id}.rot",
+            "alive": is_player_alive,
+            "x": int(game.player.x),
+            "y": int(game.player.y)
+        }
 
         with open(host_path, "w") as f:
             json.dump(host_data, f, indent=4)

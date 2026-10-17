@@ -5,9 +5,7 @@ from core.events.mouse_drag_utils import (
     check_recursive_containment,
     check_container_weight_limit,
     check_player_weight,
-    _sync_container_to_server,
     _remove_from_ground_and_sync,
-    _sync_source_container,
     return_remainder_to_origin
 )
 

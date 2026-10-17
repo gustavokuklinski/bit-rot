@@ -84,19 +84,12 @@ def draw_entities(game, surface, offset_x, offset_y, view_w, view_h, screen_rect
             if is_capsule:
                 cap_x = draw_pos.x + (draw_pos.width // 2) - 1
                 cap_y = draw_pos.y + (draw_pos.height // 2) - 1
-                cap_count = min(4, int(getattr(item, 'load', 1) or 1))
-
-                # Offsets for visually grouped cluster on the ground
-                cluster_offsets = [(0, 0), (2, -2), (-2, 2), (3, 1)]
-
-                for c_idx in range(cap_count):
-                    ox, oy = cluster_offsets[c_idx]
-                    if getattr(item, 'image', None):
-                        if not hasattr(item, 'ground_image_capsule'):
-                            item.ground_image_capsule = pygame.transform.scale(item.image, (3, 2))
-                        surface.blit(item.ground_image_capsule, (cap_x + ox, cap_y + oy))
-                    else:
-                        pygame.draw.rect(surface, (218, 165, 32), (cap_x + ox, cap_y + oy, 3, 2))
+                if getattr(item, 'image', None):
+                    if not hasattr(item, 'ground_image_capsule'):
+                        item.ground_image_capsule = pygame.transform.scale(item.image, (3, 2))
+                    surface.blit(item.ground_image_capsule, (cap_x, cap_y))
+                else:
+                    pygame.draw.rect(surface, (218, 165, 32), (cap_x, cap_y, 3, 2))
             else:
                 if getattr(item, 'image', None):
                     if not hasattr(item, 'ground_image_8x8'):
@@ -155,11 +148,7 @@ def draw_entities(game, surface, offset_x, offset_y, view_w, view_h, screen_rect
             if current_opacity > 0 and screen_rect.colliderect(entity.rect):
                 entity.draw(surface, offset_x, offset_y, int(current_opacity))
 
-    for rp in getattr(game, 'remote_players', {}).values():
-        if getattr(rp, 'layer', 1) != curr_layer:
-            continue
-        if screen_rect.colliderect(rp.rect):
-            rp.draw(surface, offset_x, offset_y, game)
+    
 
     game.player.draw_highlight_stairs(surface, game, offset_x, offset_y)
     game.player.draw(surface, offset_x, offset_y, getattr(game.player, 'is_aiming', False))

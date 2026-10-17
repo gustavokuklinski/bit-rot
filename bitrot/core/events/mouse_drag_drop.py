@@ -18,7 +18,6 @@ from core.entities.item.item_helpers import (
 from core.events.mouse_drag_utils import (
     check_recursive_containment, check_container_weight_limit,
     check_player_weight, _remove_from_ground_and_sync,
-    _sync_source_container, _sync_container_to_server,
     return_remainder_to_origin
 )
 
@@ -177,7 +176,7 @@ def handle_mouse_up(game, event, mouse_pos):
 
                             def do_belt_loot():
                                 _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
-                                _sync_source_container(game, container_obj)
+                                
 
                                 if game.player.belt[i_target] is None:
                                     game.player.belt[i_target] = item_ref
@@ -339,7 +338,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                                 if rem > 0 and not is_infinite_liquid_source(container_obj):
                                                     return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
-                                                _sync_source_container(game, container_obj)
+                                            
                                             else:
                                                 return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
                                     
@@ -480,7 +479,7 @@ def handle_mouse_up(game, event, mouse_pos):
 
                                         def do_inv_loot():
                                             _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
-                                            _sync_source_container(game, container_obj)
+                                          
                                             game.player.inventory.insert(target_index, item_ref)
                                             if game and hasattr(game, 'sound_manager'):
                                                 game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
@@ -591,7 +590,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                             if rem > 0 and not is_infinite_liquid_source(container_obj):
                                                 return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
-                                            _sync_source_container(game, container_obj)
+                                       
                                         else:
                                             return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
                                     
@@ -691,7 +690,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                             if rem > 0 and not is_infinite_liquid_source(container_obj):
                                                 return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
-                                            _sync_source_container(game, container_obj)
+                                    
                                         else:
                                             return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
                                     
@@ -884,7 +883,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                             _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                             if rem > 0 and not is_infinite_liquid_source(container_obj):
                                                 return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
-                                            _sync_source_container(game, container_obj)
+                                  
                                         else:
                                             return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
                                     
@@ -1120,7 +1119,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                     _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
                                     if rem > 0 and not is_infinite_liquid_source(container_obj):
                                         return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
-                                    _sync_source_container(game, container_obj)
+                              
                                 else:
                                     return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
                             
@@ -1163,8 +1162,7 @@ def handle_mouse_up(game, event, mouse_pos):
 
             if dropped_successfully:
                 game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
-                if type_orig in ('container', 'nearby', 'container_stack_split', 'nearby_stack_split') and container_obj:
-                    _sync_container_to_server(game, container_obj)
+                
                 return
 
         # --- Target 5: Drop on Open Ground / World or Bounce Back ---
@@ -1268,15 +1266,7 @@ def handle_mouse_up(game, event, mouse_pos):
                         game.dragged_item.layer = getattr(game, 'current_layer_index', 1)
                         game.dragged_item.map_filename = getattr(game.map_manager, 'current_map_filename', '')
                         
-                        if getattr(game, 'is_client', False) and getattr(game, 'client', None):
-                            from core.server.network import NetMsg, send_msg
-                            send_msg(game.client.socket, {
-                                'type': NetMsg.WORLD_ACTION, 'action': 'drop',
-                                'item_data': game.dragged_item.to_dict(),
-                                'x': game.dragged_item.x, 'y': game.dragged_item.y,
-                                'layer': game.dragged_item.layer,
-                                'is_placed': False
-                            })
+                        
                         
                         if game.dragged_item not in game.items_on_ground:
                             game.items_on_ground.append(game.dragged_item)
@@ -1293,8 +1283,7 @@ def handle_mouse_up(game, event, mouse_pos):
                                 is_critical=True
                             )
 
-                        if type_orig in ('container', 'nearby', 'container_stack_split', 'nearby_stack_split') and container_obj:
-                            _sync_container_to_server(game, container_obj)
+                        
 
                 if not dropped_successfully and game.dragged_item:
                     # BOUNCE BACK SAFELY
@@ -1313,13 +1302,13 @@ def handle_mouse_up(game, event, mouse_pos):
                             pass
                         else:
                             container_obj.inventory.insert(i_orig, game.dragged_item)
-                            _sync_container_to_server(game, container_obj)
+                    
                     elif type_orig == 'nearby' and container_obj is not None:
                         if is_infinite_liquid_source(container_obj) and getattr(game.dragged_item, 'liquid', False):
                             pass
                         else:
                             container_obj.inventory.insert(i_orig, game.dragged_item)
-                            _sync_container_to_server(game, container_obj)
+                    
                             if getattr(container_obj, 'item_type', '') == 'ground':
                                 game.items_on_ground.append(game.dragged_item)
                     elif 'stack_split' in type_orig:

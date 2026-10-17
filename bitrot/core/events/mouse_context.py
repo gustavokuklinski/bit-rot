@@ -360,19 +360,21 @@ def handle_right_click(game, mouse_pos):
                 cur_gx, cur_gy = (int(match.group(1)), int(match.group(2))) if match else (None, None)
 
                 gen = getattr(game, 'generator', None)
-                active_chunks = getattr(gen, 'active_chunks', getattr(game, 'active_chunks', set()))
-                lobby_chunk = getattr(gen, 'lobby_chunk', getattr(game, 'lobby_chunk', None))
-                military_chunk = getattr(gen, 'military_chunk', getattr(game, 'military_chunk', None))
-                isolated_islands = getattr(gen, 'isolated_island_chunks', getattr(game, 'isolated_island_chunks', set())) 
+                active_chunks = set()
+                lobby_chunk = None
+                military_chunk = None
+                isolated_islands = set()
 
-                has_island_map = False
+                if gen:
+                    active_chunks = getattr(gen, 'active_chunks', set())
+                    lobby_chunk = getattr(gen, 'lobby_chunk', None)
+                    military_chunk = getattr(gen, 'military_chunk', None)
+                    isolated_islands = getattr(gen, 'isolated_island_chunks', set())
+
                 owned_maps = set()
                 def check_inventory_for_maps(inv):
-                    nonlocal has_island_map
                     for it in inv:
                         if not it: continue
-                        if getattr(it, 'name', '').lower() == "island map":
-                            has_island_map = True
                         if it.name.startswith("Cartography Sector "):
                             chunk_str = it.name.replace("Cartography Sector ", "").strip()
                             owned_maps.add(chunk_str)
@@ -413,7 +415,7 @@ def handle_right_click(game, mouse_pos):
                     if (cgx, cgy) == military_chunk: continue
                     if (cgx, cgy) == lobby_chunk: continue
                     if (cgx, cgy) == (cur_gx, cur_gy): continue
-                    if not has_island_map and sub_key not in owned_maps: continue
+                    if sub_key not in owned_maps: continue
 
                     sub_opts.append(sub_key)
                     fuel_cost = calculate_boat_fuel_cost(game, cgx, cgy)

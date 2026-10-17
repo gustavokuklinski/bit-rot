@@ -26,7 +26,6 @@ class MapManager:
         
         # [NEW] Chunk Caching System
         self.chunk_surfaces = {} 
-        self.offchunk_grids = {}      # (layer, 'gx_gy') -> grid of a chunk that is NOT the loaded one
         self.CHUNK_SIZE = CHUNK_SIZE if 'CHUNK_SIZE' in globals() else 32
 
         # [NEW] Performance: Chunk Generation Throttling
@@ -91,7 +90,6 @@ class MapManager:
     def clear_cache(self):
         """Clears all cached chunk surfaces."""
         self.chunk_surfaces.clear()
-        self.offchunk_grids.clear()
 
     def reset_frame_metrics(self):
         """Called by Game loop every frame to reset generation limits."""
@@ -124,76 +122,6 @@ class MapManager:
         
         for k in keys_to_remove:
             del self.chunk_surfaces[k]
-
-    @staticmethod
-    def _chunk_key(filename):
-        """'map_L2_3_1_map.csv' -> '3_1' | 'map_L1_world_map.csv' -> 'world' | else None"""
-        m = re.match(r'map_L\d+_(\d+)_(\d+)_map\.csv', filename or '')
-        if m:
-            return f"{m.group(1)}_{m.group(2)}"
-        if re.match(r'map_L\d+_world_map\.csv', filename or ''):
-            return 'world'
-        return None
-
-    def _is_loaded_chunk(self, map_filename):
-        """True if map_filename belongs to the chunk currently loaded in game.all_map_layers."""
-        if not map_filename:
-            return True
-        k = self._chunk_key(map_filename)
-        cur = self._chunk_key(self.current_map_filename)
-        if k is None or cur is None:
-            return True
-        return k == cur
-
-    def _layer_csv_path(self, layer, map_filename):
-        fname = re.sub(r'^map_L\d+_', f'map_L{layer}_', map_filename or self.current_map_filename)
-        return os.path.join(self.map_folder, fname)
-
-    def _get_layer_grid(self, layer, map_filename=None):
-        """Returns the base-tile grid of `layer` for the chunk named by `map_filename`.
-        Loaded chunk -> live in-memory grid. Any other chunk -> grid read from its CSV."""
-        if self._is_loaded_chunk(map_filename):
-            layers = getattr(self.game, 'all_map_layers', None) or {}
-            if layer in layers:
-                return layers[layer]
-            if layer == getattr(self.game, 'current_layer_index', 1):
-                return self.game.map_data
-            return None
-
-        key = (layer, self._chunk_key(map_filename))
-        grid = self.offchunk_grids.get(key)
-        if grid is None:
-            path = self._layer_csv_path(layer, map_filename)
-            if not os.path.exists(path):
-                return None
-            try:
-                with open(path, 'r', newline='', encoding='utf-8') as f:
-                    grid = list(csv.reader(f))
-            except Exception as e:
-                print(f"Error loading off-chunk grid {path}: {e}")
-                return None
-            self.offchunk_grids[key] = grid
-        return grid
-
-    def _write_layer_grid(self, layer, map_filename, grid):
-        path = self._layer_csv_path(layer, map_filename)
-        try:
-            if os.path.isdir(os.path.dirname(path)):
-                with open(path, 'w', newline='', encoding='utf-8') as f:
-                    csv.writer(f).writerows(grid)
-        except Exception as e:
-            print(f"Error persisting tile change to {path}: {e}")
-
-    def apply_network_tile_change(self, grid_x, grid_y, new_char, layer, map_filename=None):
-        """CLIENT: applies a server 'tile_change' to the chunk it belongs to (and to the local
-        cache CSV, so re-entering that chunk shows the right state).
-        Returns True if the change is visible in the live viewport."""
-        grid = self._get_layer_grid(layer, map_filename)
-        if not grid or not (0 <= grid_y < len(grid) and 0 <= grid_x < len(grid[grid_y])):
-            return False
-        grid[grid_y][grid_x] = new_char
-        self._write_layer_grid(layer, map_filename, grid)
-        return self._is_loaded_chunk(map_filename) and layer == getattr(self.game, 'current_layer_index', 1)
 
     def _get_adjacent_bg(self, grid, x, y):
         """Helper to find the adjacent solid terrain to fill transparent gaps in live chunks."""
@@ -426,34 +354,16 @@ class MapManager:
                     filename = f'map_L{layer_idx}_world_spawn.csv'
                 write_layer(layout, filename)
 
-    def toggle_door_state(self, grid_x, grid_y, layer=None, map_filename=None):
-        """Toggles a 'statable' tile (like a door) between its states.
-        layer/map_filename identify the chunk+layer the door lives in - a client can be in a
-        different chunk than the one the server has loaded."""
-        if layer is None:
-            layer = getattr(self.game, 'current_layer_index', 1)
-        if map_filename is None:
-            map_filename = self.current_map_filename
-
-        if getattr(self.game, 'is_client', False):
-            from core.server.network import NetMsg, send_msg
-            send_msg(self.game.client.socket, {
-                'type': NetMsg.WORLD_ACTION, 'action': 'toggle_door',
-                'x': grid_x, 'y': grid_y, 'layer': layer,
-                'map_filename': map_filename
-            })
-            return
-
-        if self.get_barricade(grid_x, grid_y, map_filename):
+    def toggle_door_state(self, grid_x, grid_y):
+        """Toggles a 'statable' tile (like a door) between its states."""
+        
+        if self.get_barricade(grid_x, grid_y):
             display_message(tr('msg', "Door is barricaded!"))
             return
 
-        is_loaded = self._is_loaded_chunk(map_filename)
-        target_map = self._get_layer_grid(layer, map_filename)
-        if not target_map or not (0 <= grid_y < len(target_map) and 0 <= grid_x < len(target_map[grid_y])):
-            return
+        if not self.game.map_data: return
 
-        current_char = target_map[grid_y][grid_x]
+        current_char = self.game.map_data[grid_y][grid_x]
         current_def = self.game.tile_manager.definitions.get(current_char)
 
         if not current_def or not current_def.get('is_statable'):
@@ -466,84 +376,112 @@ class MapManager:
         new_state = "open" if current_state == "close" else "close"
 
         tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+
+        tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
         door_cx = tile_rect.centerx
         door_cy = tile_rect.centery
 
         if new_state == "close":
-            target_key = self._chunk_key(map_filename)
-            is_dedicated = getattr(self.game, 'is_dedicated', False)
-
-            def in_target_chunk(e):
-                # Dedicated server / remote players carry their own map; host-local entities live in the loaded chunk
-                if is_dedicated or type(e).__name__ == 'RemotePlayer':
-                    ek = self._chunk_key(getattr(e, 'map_filename', ''))
-                    if ek is not None:
-                        return ek == target_key
-                return is_loaded
-
+            # Collect all active entities on this layer
             entities_to_check = []
-            player = getattr(self.game, 'player', None)
-            if player and not getattr(player, 'is_dead', False):
-                if is_loaded and getattr(self.game, 'current_layer_index', 1) == layer:
-                    entities_to_check.append(player)
+            if getattr(self.game, 'player', None) and not getattr(self.game.player, 'is_dead', False):
+                entities_to_check.append(self.game.player)
             for z in getattr(self.game, 'zombies', []):
                 if not getattr(z, 'is_dead', False) and getattr(z, 'health', 0) > 0:
-                    if getattr(z, 'layer', 1) == layer and in_target_chunk(z):
-                        entities_to_check.append(z)
+                    entities_to_check.append(z)
             for n in getattr(self.game, 'npcs', []):
                 if not getattr(n, 'is_dead', False) and getattr(n, 'health', 0) > 0:
-                    if getattr(n, 'layer', 1) == layer and in_target_chunk(n):
-                        entities_to_check.append(n)
+                    entities_to_check.append(n)
             for a in getattr(self.game, 'active_animals', []):
                 if not getattr(a, 'is_dead', False) and getattr(a, 'health', 0) > 0:
-                    if getattr(a, 'layer', 1) == layer and in_target_chunk(a):
-                        entities_to_check.append(a)
-            for rp in getattr(self.game, 'remote_players', {}).values():
-                if not getattr(rp, 'is_dead', False) and getattr(rp, 'layer', 1) == layer and in_target_chunk(rp):
-                    entities_to_check.append(rp)
+                    entities_to_check.append(a)
+            for it in getattr(self.game, 'items_on_ground', []):
+                if isinstance(it, Animal) and not getattr(it, 'is_dead', False) and getattr(it, 'health', 0) > 0:
+                    if it not in entities_to_check:
+                        entities_to_check.append(it)
+            
 
-            entities_in_door = [e for e in entities_to_check if e.rect.colliderect(tile_rect)]
+            entities_in_door = []
+            five_pct = TILE_SIZE * 0.05  # 5% threshold
 
-            def is_tile_walkable(tx, ty):
-                if not (0 <= ty < len(target_map) and 0 <= tx < len(target_map[ty])):
-                    return False
-                t_def = self.game.tile_manager.definitions.get(target_map[ty][tx])
-                if t_def and t_def.get('is_obstacle', False):
-                    return False
-                return True
+            for entity in entities_to_check:
+                if entity.rect.colliderect(tile_rect):
+                    overlap = entity.rect.clip(tile_rect)
+                    if overlap.width >= five_pct and overlap.height >= five_pct:
+                        entities_in_door.append(entity)
 
-            for entity in entities_in_door:
-                ex = entity.rect.centerx
-                ey = entity.rect.centery
-                dx = ex - door_cx
-                dy = ey - door_cy
+            if entities_in_door:
+                # 1. Avoid closing if any entity is in the middle of the door
+                middle_threshold = TILE_SIZE * 0.18
+                for entity in entities_in_door:
+                    dx = abs(entity.rect.centerx - door_cx)
+                    dy = abs(entity.rect.centery - door_cy)
+                    if dx <= middle_threshold and dy <= middle_threshold:
+                        if entity == getattr(self.game, 'player', None):
+                            display_message(tr('msg', "Player is in the doorway, cannot close."))
+                        else:
+                            display_message(tr('msg', "Doorway is blocked, cannot close."))
+                        return
 
-                target_candidates = [
-                    (grid_x, grid_y - 1), (grid_x, grid_y + 1),
-                    (grid_x - 1, grid_y), (grid_x + 1, grid_y)
-                ]
-                if abs(dx) > abs(dy):
-                    target_candidates.sort(key=lambda c: -abs(c[0] - grid_x))
-                else:
-                    target_candidates.sort(key=lambda c: -abs(c[1] - grid_y))
+                # 2. Relocate entities to the tile where they are predominantly located
+                def is_tile_walkable(tx, ty):
+                    if not (0 <= ty < len(self.game.map_data) and 0 <= tx < len(self.game.map_data[0])):
+                        return False
+                    t_def = self.get_tile_at(tx, ty)
+                    if t_def and t_def.get('is_obstacle', False):
+                        return False
+                    t_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                    if any(t_rect.colliderect(ob) for ob in self.game.obstacles):
+                        return False
+                    return True
 
-                for tgx, tgy in target_candidates:
-                    if is_tile_walkable(tgx, tgy):
-                        target_rect = pygame.Rect(tgx * TILE_SIZE, tgy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                        entity.rect.center = target_rect.center
-                        if hasattr(entity, 'x'): entity.x = float(entity.rect.x)
-                        if hasattr(entity, 'y'): entity.y = float(entity.rect.y)
-                        break
+                for entity in entities_in_door:
+                    ex = entity.rect.centerx
+                    ey = entity.rect.centery
+                    dx = ex - door_cx
+                    dy = ey - door_cy
 
+                    # Identify preferred target tile based on displacement axis
+                    target_candidates = []
+                    if abs(dx) >= abs(dy):
+                        primary = (grid_x - 1, grid_y) if dx < 0 else (grid_x + 1, grid_y)
+                        secondary = (grid_x, grid_y - 1) if dy < 0 else (grid_x, grid_y + 1)
+                        target_candidates = [primary, secondary]
+                    else:
+                        primary = (grid_x, grid_y - 1) if dy < 0 else (grid_x, grid_y + 1)
+                        secondary = (grid_x - 1, grid_y) if dx < 0 else (grid_x + 1, grid_y)
+                        target_candidates = [primary, secondary]
+
+                    # Append remaining directions as fallback
+                    for cand_dir in [(grid_x + 1, grid_y), (grid_x - 1, grid_y), (grid_x, grid_y + 1), (grid_x, grid_y - 1)]:
+                        if cand_dir not in target_candidates:
+                            target_candidates.append(cand_dir)
+
+                    pushed = False
+                    for tgx, tgy in target_candidates:
+                        if is_tile_walkable(tgx, tgy):
+                            target_rect = pygame.Rect(tgx * TILE_SIZE, tgy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                            entity.rect.center = target_rect.center
+                            if hasattr(entity, 'x'): entity.x = float(entity.rect.x)
+                            if hasattr(entity, 'y'): entity.y = float(entity.rect.y)
+                            if hasattr(entity, 'vx'): entity.vx = 0
+                            if hasattr(entity, 'vy'): entity.vy = 0
+                            pushed = True
+                            break
+
+                    if not pushed:
+                        display_message(tr('msg', "Doorway is blocked, cannot close."))
+                        return
+        
         base_name = current_char.replace("_open", "").replace("_close", "")
         new_char = f"{base_name}_{new_state}"
 
         if new_char in self.game.tile_manager.definitions:
             new_def = self.game.tile_manager.definitions[new_char]
-            self._replace_tile(grid_x, grid_y, current_char, new_char, layer=layer, map_filename=map_filename)
-
-            # Positional sound only makes sense for the chunk we actually have loaded
-            if new_def.get('sound_src') and is_loaded:
+            
+            self._replace_tile(grid_x, grid_y, current_char, new_char)
+            
+            if new_def.get('sound_src'):
                 self.game.sound_manager.play_sound(
                     new_def['sound_src'],
                     subdir='map',
@@ -553,6 +491,7 @@ class MapManager:
                     pitch_variance=0.15,
                     is_critical=True
                 )
+
         else:
             print(f"Warning: Could not find matching door state '{new_char}'")
     
@@ -620,8 +559,8 @@ class MapManager:
                 return True
         return False
 
-    def get_barricade(self, grid_x, grid_y, map_filename=None):
-        map_name = map_filename or self.current_map_filename
+    def get_barricade(self, grid_x, grid_y):
+        map_name = self.current_map_filename
         if map_name in self.game.map_states and 'barricades' in self.game.map_states[map_name]:
             return self.game.map_states[map_name]['barricades'].get((grid_x, grid_y))
         return None
@@ -675,19 +614,8 @@ class MapManager:
             return b_data
         return None
 
-    def hit_tile(self, grid_x, grid_y, damage, weapon=None, is_projectile=False, attacker=None, layer=None):
-        if layer is None:
-            layer = getattr(self.game, 'current_layer_index', 1)
-
-        if getattr(self.game, 'is_client', False) and not getattr(self, '_ignore_net', False):
-            from core.server.network import NetMsg, send_msg
-            send_msg(self.game.client.socket, {
-                'type': NetMsg.WORLD_ACTION, 'action': 'hit_tile',
-                'x': grid_x, 'y': grid_y, 'damage': damage, 'layer': layer
-            })
-            import time
-            self.shaking_tiles[(grid_x, grid_y)] = time.time()
-            return True
+    def hit_tile(self, grid_x, grid_y, damage, weapon=None, is_projectile=False, attacker=None):
+        
             
         if not self.game.map_data or not (0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0])):
             return False
@@ -732,14 +660,7 @@ class MapManager:
         import time
         # Trigger shake effect
         self.shaking_tiles[(grid_x, grid_y)] = time.time()
-        if getattr(self.game, 'is_server', False):
-            from core.server.network import NetMsg, send_msg
-            for s in self.game.server.clients:
-                send_msg(s, {
-                    'type': NetMsg.WORLD_ACTION, 'action': 'shake_tile',
-                    'x': grid_x, 'y': grid_y
-                })
-
+        
         # 1. BARRICADE ABSORPTION
         if barricade:
             barricade['health'] -= damage
@@ -844,46 +765,21 @@ class MapManager:
             self._replace_tile(grid_x, grid_y, char, target_char)
         return True
 
-    def _replace_tile(self, grid_x, grid_y, old_char, new_char, layer=None, map_filename=None):
-        if layer is None:
-            layer = getattr(self.game, 'current_layer_index', 1)
-        if map_filename is None:
-            map_filename = getattr(self, 'current_map_filename', '')
-
+    def _replace_tile(self, grid_x, grid_y, old_char, new_char):
         new_def = self.game.tile_manager.definitions.get(new_char) if new_char != ' ' else None
+
         tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-        is_loaded = self._is_loaded_chunk(map_filename)
 
-        # 1. Update the grid of the chunk the tile REALLY belongs to (loaded grid or off-chunk CSV grid)
-        layer_grid = self._get_layer_grid(layer, map_filename)
-        if layer_grid and 0 <= grid_y < len(layer_grid) and 0 <= grid_x < len(layer_grid[grid_y]):
-            layer_grid[grid_y][grid_x] = new_char
-        else:
-            layer_grid = None
-
-        # 2. Update active map_data and obstacles only if that chunk+layer is currently rendered
-        if is_loaded and layer == getattr(self.game, 'current_layer_index', 1):
-            if self.game.map_data and 0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[grid_y]):
-                self.game.map_data[grid_y][grid_x] = new_char
-            self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
-            if new_def and new_def.get('is_obstacle', False):
-                self.game.obstacles.append(tile_rect)
-            self.invalidate_chunk(grid_x, grid_y)
-            self.game.cached_obstacle_count = -1
-
-        # 3. Server: persist to the correct chunk file and tell the clients
-        if getattr(self.game, 'is_server', False):
-            if layer_grid is not None and self.map_folder and os.path.exists(self.map_folder):
-                self._write_layer_grid(layer, map_filename, layer_grid)
-
-            from core.server.network import NetMsg, send_msg
-            for s in self.game.server.clients:
-                send_msg(s, {
-                    'type': NetMsg.WORLD_ACTION, 'action': 'tile_change',
-                    'x': grid_x, 'y': grid_y, 'char': new_char, 'layer': layer,
-                    'map_filename': map_filename
-                })
-    
+        self.game.map_data[grid_y][grid_x] = new_char
+        
+        self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
+        if new_def and new_def.get('is_obstacle', False):
+            self.game.obstacles.append(tile_rect)
+            
+        # Invalidate chunk to redraw with updated tile
+        self.invalidate_chunk(grid_x, grid_y)
+        
+        
     def remove_vehicle_tile(self, grid_x, grid_y):
         """
         Call this when a player starts driving to remove the static tile 

@@ -457,100 +457,94 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
                 if v.rect not in game.obstacles:
                     game.obstacles.append(v.rect)
     else:
-        if getattr(game, 'is_client', False):
-            game.items_on_ground = []
-            game.zombies = []
-            game.blood_stains = []
-            if hasattr(game, 'active_animals'): game.active_animals = []
-            if hasattr(game, 'npcs'): game.npcs.empty()
+        
+        game.items_on_ground = spawn_initial_items(game.obstacles, item_spawns)
+        for item in game.items_on_ground:
+            item.layer = layer_index
+            item.map_filename = new_filename
+        game.blood_stains = []
+
+        max_z_chunk = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
+        max_anim_chunk = getattr(core.data.config, 'ANIMAL_MAX_CHUNK', 6)
+        max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
+
+        if hasattr(game, 'layer_zombies') and layer_index in game.layer_zombies and game.layer_zombies[layer_index]:
+            game.zombies = list(game.layer_zombies[layer_index])
         else:
-            game.items_on_ground = spawn_initial_items(game.obstacles, item_spawns)
-            for item in game.items_on_ground:
-                item.layer = layer_index
-                item.map_filename = new_filename
-            game.blood_stains = []
-
-            max_z_chunk = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
-            max_anim_chunk = getattr(core.data.config, 'ANIMAL_MAX_CHUNK', 6)
-            max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
-
-            if hasattr(game, 'layer_zombies') and layer_index in game.layer_zombies and game.layer_zombies[layer_index]:
-                game.zombies = list(game.layer_zombies[layer_index])
-            else:
-                game.zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground, limit=max_z_chunk)
-            for z in game.zombies:
-                z.layer = layer_index
-                z.map_filename = new_filename
-                
-            if hasattr(game, 'active_animals'):
-                from core.entities.animal.animal import Animal
-                from core.entities.animal.animal_loader import AnimalLoader
-                AnimalLoader.load_animals()
-                
-                for y, row in enumerate(game.spawn_data):
+            game.zombies = spawn_initial_zombies(game.obstacles, zombie_spawns, game.items_on_ground, limit=max_z_chunk)
+        for z in game.zombies:
+            z.layer = layer_index
+            z.map_filename = new_filename
+            
+        if hasattr(game, 'active_animals'):
+            from core.entities.animal.animal import Animal
+            from core.entities.animal.animal_loader import AnimalLoader
+            AnimalLoader.load_animals()
+            
+            for y, row in enumerate(game.spawn_data):
+                if len(game.active_animals) >= max_anim_chunk:
+                    break
+                for x, char in enumerate(row):
                     if len(game.active_animals) >= max_anim_chunk:
                         break
-                    for x, char in enumerate(row):
-                        if len(game.active_animals) >= max_anim_chunk:
-                            break
-                        if char == 'ANM':
-                            a_type = AnimalLoader.get_random_animal_type(layer=layer_index)
-                            if a_type:
-                                animal = Animal(x * TILE_SIZE, y * TILE_SIZE, a_type, game=game, layer=layer_index)
-                                game.active_animals.append(animal)
-                                game.items_on_ground.append(animal)
+                    if char == 'ANM':
+                        a_type = AnimalLoader.get_random_animal_type(layer=layer_index)
+                        if a_type:
+                            animal = Animal(x * TILE_SIZE, y * TILE_SIZE, a_type, game=game, layer=layer_index)
+                            game.active_animals.append(animal)
+                            game.items_on_ground.append(animal)
 
-            if hasattr(game, 'npcs'):
-                game.npcs.empty()
-            if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points:
-                is_lobby_chunk = False
-                match = re.match(r'map_L(\d+)_(\d+)_(\d+)_map\.csv', new_filename)
-                if match and getattr(game, 'generator', None) and hasattr(game.generator, 'lobby_chunk'):
-                    layer_num = int(match.group(1))
-                    gx, gy = int(match.group(2)), int(match.group(3))
-                    if (gx, gy) == game.generator.lobby_chunk and layer_num == 1:
-                        is_lobby_chunk = True
+        if hasattr(game, 'npcs'):
+            game.npcs.empty()
+        if hasattr(game, 'npc_spawn_points') and game.npc_spawn_points:
+            is_lobby_chunk = False
+            match = re.match(r'map_L(\d+)_(\d+)_(\d+)_map\.csv', new_filename)
+            if match and getattr(game, 'generator', None) and hasattr(game.generator, 'lobby_chunk'):
+                layer_num = int(match.group(1))
+                gx, gy = int(match.group(2)), int(match.group(3))
+                if (gx, gy) == game.generator.lobby_chunk and layer_num == 1:
+                    is_lobby_chunk = True
 
-                occupied_npc_tiles = set()
-                spawned_count = 0
-                npc_limit = 3 if is_lobby_chunk else max_npc_chunk
+            occupied_npc_tiles = set()
+            spawned_count = 0
+            npc_limit = 3 if is_lobby_chunk else max_npc_chunk
 
-                for spawn_data in game.npc_spawn_points:
-                    if spawned_count >= npc_limit:
-                        break
+            for spawn_data in game.npc_spawn_points:
+                if spawned_count >= npc_limit:
+                    break
 
-                    if len(spawn_data) == 3:
-                        nx, ny, npc_type = spawn_data
-                    else:
-                        nx, ny = spawn_data
-                        npc_type = 'HNPC'
-                        
-                    # Never spawn FNPC at L2 or L3
-                    if layer_index in (2, 3):
-                        is_static = False
-                        npc_type = 'HNPC'
-                    else:
-                        is_static = (npc_type in ('FNPC')) or is_lobby_chunk
+                if len(spawn_data) == 3:
+                    nx, ny, npc_type = spawn_data
+                else:
+                    nx, ny = spawn_data
+                    npc_type = 'HNPC'
+                    
+                # Never spawn FNPC at L2 or L3
+                if layer_index in (2, 3):
+                    is_static = False
+                    npc_type = 'HNPC'
+                else:
+                    is_static = (npc_type in ('FNPC')) or is_lobby_chunk
 
-                    npc = NPC(nx, ny, game, is_static=is_static, layer=layer_index)
-                    if is_lobby_chunk:
-                        npc.is_friendly = True
-                        npc.is_static = True
-                    elif layer_index in (2, 3) or npc_type in ('HNPC'):
-                        npc.is_friendly = False   
-                        npc.is_static = False     
-                    elif npc_type in ('FNPC'):
-                        npc.is_friendly = True    
-                        npc.is_static = True   
-                        
-                    blocked_obstacles = list(game.obstacles) + [n.rect for n in game.npcs]
-                    free_pos = find_free_tile(npc.rect, blocked_obstacles, max_radius=15, initial_pos=(nx, ny))
-                    if free_pos and free_pos not in occupied_npc_tiles:
-                        occupied_npc_tiles.add(free_pos)
-                        npc.rect.topleft = free_pos
-                        npc.x, npc.y = free_pos
-                        game.npcs.add(npc)
-                        spawned_count += 1
+                npc = NPC(nx, ny, game, is_static=is_static, layer=layer_index)
+                if is_lobby_chunk:
+                    npc.is_friendly = True
+                    npc.is_static = True
+                elif layer_index in (2, 3) or npc_type in ('HNPC'):
+                    npc.is_friendly = False   
+                    npc.is_static = False     
+                elif npc_type in ('FNPC'):
+                    npc.is_friendly = True    
+                    npc.is_static = True   
+                    
+                blocked_obstacles = list(game.obstacles) + [n.rect for n in game.npcs]
+                free_pos = find_free_tile(npc.rect, blocked_obstacles, max_radius=15, initial_pos=(nx, ny))
+                if free_pos and free_pos not in occupied_npc_tiles:
+                    occupied_npc_tiles.add(free_pos)
+                    npc.rect.topleft = free_pos
+                    npc.x, npc.y = free_pos
+                    game.npcs.add(npc)
+                    spawned_count += 1
 
     if hasattr(game, 'active_animals'):
         game.active_animals.extend(chasing_animals)

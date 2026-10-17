@@ -130,43 +130,42 @@ class WorldTime:
         
         self.last_update_time = current_real_time
 
-        if not getattr(self.game, 'is_client', False):
-            self.game_time_ms += delta_time
-            
-            if self.game.current_layer_index not in (2, 3):
-                self.weather_timer -= delta_time
-                if self.weather_timer <= 0:
-                    if self.weather == 'CLEAR':
-                        self.weather = self.next_weather
-                        self.weather_timer = random.randint(45000, 110000)
+        self.game_time_ms += delta_time
+        
+        if self.game.current_layer_index not in (2, 3):
+            self.weather_timer -= delta_time
+            if self.weather_timer <= 0:
+                if self.weather == 'CLEAR':
+                    self.weather = self.next_weather
+                    self.weather_timer = random.randint(45000, 110000)
 
-                        msg_map = {
-                            'RAIN': tr('msg', "It started raining."),
-                            'FOG': tr('msg', "A thick fog rolls in."),
-                            'RAIN_FOG': tr('msg', "Rain begins pouring through heavy fog.")
-                        }
-                        display_message(msg_map.get(self.weather, "Weather changed."))
+                    msg_map = {
+                        'RAIN': tr('msg', "It started raining."),
+                        'FOG': tr('msg', "A thick fog rolls in."),
+                        'RAIN_FOG': tr('msg', "Rain begins pouring through heavy fog.")
+                    }
+                    display_message(msg_map.get(self.weather, "Weather changed."))
 
-                        if self.weather in ['RAIN', 'RAIN_FOG']:
-                            if hasattr(self.game, 'sound_manager') and not self.rain_channel:
-                                self.rain_channel = self.game.sound_manager.play_sound(
-                                    "rain.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=2000
-                                )
-                    else:
-                        self.weather = 'CLEAR'
-                        self.next_weather = random.choice(["FOG", "RAIN", "RAIN_FOG"])
-                        self.weather_timer = random.randint(90000, 240000)
-                        display_message(tr('msg', "The skies cleared up."))
+                    if self.weather in ['RAIN', 'RAIN_FOG']:
+                        if hasattr(self.game, 'sound_manager') and not self.rain_channel:
+                            self.rain_channel = self.game.sound_manager.play_sound(
+                                "rain.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=2000
+                            )
+                else:
+                    self.weather = 'CLEAR'
+                    self.next_weather = random.choice(["FOG", "RAIN", "RAIN_FOG"])
+                    self.weather_timer = random.randint(90000, 240000)
+                    display_message(tr('msg', "The skies cleared up."))
 
-                        if self.rain_channel:
-                            self.rain_channel.fadeout(2000)
-                            self.rain_channel = None
+                    if self.rain_channel:
+                        self.rain_channel.fadeout(2000)
+                        self.rain_channel = None
 
-            if self.game_time_ms >= self.day_length_ms:
-                self.game_time_ms %= self.day_length_ms
-                self.day_count += 1
-                check_milestone_progress(self.game, 'days', 'world_day')
-                display_message(self.game, f"{tr('msg', 'The horde grows stronger... (Day')} {self.day_count})")
+        if self.game_time_ms >= self.day_length_ms:
+            self.game_time_ms %= self.day_length_ms
+            self.day_count += 1
+            check_milestone_progress(self.game, 'days', 'world_day')
+            display_message(self.game, f"{tr('msg', 'The horde grows stronger... (Day')} {self.day_count})")
             
         exact_hour = (self.game_time_ms / self.day_length_ms) * 24.0
         self.current_hour = int(exact_hour)

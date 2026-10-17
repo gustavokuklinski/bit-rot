@@ -461,10 +461,7 @@ def handle_context_menu_click(game, mouse_pos):
                                     else:
                                         item.load -= transfer_units
 
-                                from core.events.mouse_drag_utils import _sync_container_to_server
-                                _sync_container_to_server(game, target_container)
-                                if container_item:
-                                    _sync_container_to_server(game, container_item)
+                                
 
                                 if hasattr(game, 'sound_manager'):
                                     game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
@@ -603,8 +600,7 @@ def handle_context_menu_click(game, mouse_pos):
                         fuel_eq.load = max(0.0, float(fuel_eq.load) - transfer_units)
                     veh.update_stats_from_equipment()
 
-                    from core.events.mouse_drag_utils import _sync_container_to_server
-                    _sync_container_to_server(game, target_container)
+                    
 
                     if hasattr(game, 'sound_manager'):
                         game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
@@ -950,17 +946,7 @@ def handle_context_menu_click(game, mouse_pos):
                             consume_player_fuel_units(game.player, fuel_cost)
                             fuel_name = tr('item', "Fuel Unit")
                             display_message(f"{tr('msg', 'Used')} {fuel_cost}x {fuel_name}.")
-                            if getattr(game, 'is_client', False) and getattr(game, 'client', None):
-                                from core.server.network import NetMsg, send_msg
-                                send_msg(game.client.socket, {
-                                    'type': NetMsg.WORLD_ACTION,
-                                    'action': 'boat_travel',
-                                    'gx': dest_gx,
-                                    'gy': dest_gy,
-                                    'layer': 1
-                                })
-                            else:
-                                teleport_player_to_chunk(game, dest_gx, dest_gy)
+                            teleport_player_to_chunk(game, dest_gx, dest_gy)
                     except Exception as e:
                         print(f"Error traveling: {e}")
                 clicked_on_menu = True
@@ -1091,14 +1077,7 @@ def handle_context_menu_click(game, mouse_pos):
                             'radius': 3,
                             'type': 'hit_puff'
                         })
-                    if container_item and getattr(container_item, 'item_type', '') != 'ground' and hasattr(container_item, 'rect') and container_item.rect and getattr(game, 'is_client', False) and getattr(game, 'client', None):
-                        from core.server.network import NetMsg, send_msg
-                        send_msg(game.client.socket, {
-                            'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
-                            'x': container_item.rect.x, 'y': container_item.rect.y,
-                            'is_opened': getattr(container_item, 'is_opened', True),
-                            'inventory': [it.to_dict() for it in container_item.inventory]
-                        })
+                    
                 else:
                     game.player.drop_item_stack(game, source, index, container_item, 1)
                 clicked_on_menu = True
@@ -1115,14 +1094,7 @@ def handle_context_menu_click(game, mouse_pos):
                             'radius': 5,
                             'type': 'hit_puff'
                         })
-                    if container_item and getattr(container_item, 'item_type', '') != 'ground' and hasattr(container_item, 'rect') and container_item.rect and getattr(game, 'is_client', False) and getattr(game, 'client', None):
-                        from core.server.network import NetMsg, send_msg
-                        send_msg(game.client.socket, {
-                            'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
-                            'x': container_item.rect.x, 'y': container_item.rect.y,
-                            'is_opened': getattr(container_item, 'is_opened', True),
-                            'inventory': [it.to_dict() for it in container_item.inventory]
-                        })
+                    
                 else:
                     game.player.drop_item_stack(game, source, index, container_item, 'all')
                 clicked_on_menu = True
@@ -1153,14 +1125,7 @@ def handle_context_menu_click(game, mouse_pos):
                             'radius': 4,
                             'type': 'hit_puff'
                         })
-                    if container_item and getattr(container_item, 'item_type', '') != 'ground' and hasattr(container_item, 'rect') and container_item.rect and getattr(game, 'is_client', False) and getattr(game, 'client', None):
-                        from core.server.network import NetMsg, send_msg
-                        send_msg(game.client.socket, {
-                            'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
-                            'x': container_item.rect.x, 'y': container_item.rect.y,
-                            'is_opened': getattr(container_item, 'is_opened', True),
-                            'inventory': [it.to_dict() for it in container_item.inventory]
-                        })
+                    
                 else:
                     if source == 'gear':
                         slot_name = index 
@@ -1282,13 +1247,7 @@ def handle_context_menu_click(game, mouse_pos):
                             open_time = max(0.2, 1.8 - (agility * 0.2))
 
                             item.is_opening = True
-                            if getattr(game, 'is_client', False):
-                                from core.server.network import NetMsg, send_msg
-                                send_msg(game.client.socket, {
-                                    'type': NetMsg.WORLD_ACTION, 
-                                    'action': 'lock_container', 
-                                    'x': item.rect.x, 'y': item.rect.y
-                                })
+                            
                             
                             def cancel_open():
                                 item.is_opening = False
@@ -1467,20 +1426,7 @@ def handle_context_menu_click(game, mouse_pos):
                                     source_pos=game.player.rect.center, base_volume=0.5, is_critical=True
                                 )
 
-                            if getattr(game, 'is_client', False) and getattr(game, 'client', None):
-                                from core.server.network import NetMsg, send_msg
-                                is_ground_pickup = (source == 'ground') or (getattr(container_item, 'item_type', '') == 'ground')
-                                if is_ground_pickup:
-                                    send_msg(game.client.socket, {
-                                        'type': NetMsg.WORLD_ACTION, 'action': 'pickup', 'id': getattr(item, 'id', None)
-                                    })
-                                elif container_item and hasattr(container_item, 'rect') and container_item.rect:
-                                    send_msg(game.client.socket, {
-                                        'type': NetMsg.WORLD_ACTION, 'action': 'container_sync',
-                                        'x': container_item.rect.x, 'y': container_item.rect.y,
-                                        'is_opened': getattr(container_item, 'is_opened', True),
-                                        'inventory': [it.to_dict() for it in container_item.inventory]
-                                    })
+                            
 
                     if source == 'nearby':
                         grab_time = 0.3

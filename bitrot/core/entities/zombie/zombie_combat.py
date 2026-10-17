@@ -16,18 +16,7 @@ class ZombieCombat:
         if attacker is not None and type(attacker).__name__ == 'NPC' and not getattr(attacker, 'is_friendly', True):
             return False
 
-        if getattr(game, 'is_client', False):
-            from core.server.network import NetMsg, send_msg
-            send_msg(game.client.socket, {
-                'type': NetMsg.ENTITY_DAMAGE,
-                'entity_type': 'zombie',
-                'id': getattr(self, 'id', None),
-                'damage': amount
-            })
-            self.health -= amount
-            self.show_health_bar_timer = 120
-            if self.health <= 0: return True
-            return False
+        
 
         # Prevent multiple kill triggers on an already dead zombie
         was_dead = getattr(self, 'is_dead', False) or self.health <= 0
@@ -45,16 +34,14 @@ class ZombieCombat:
         if self.health <= 0:
             self.health = 0
 
-            # --- TRIGGER KILL MILESTONES & GLOBAL COUNTERS ---
+            # --- TRIGGER KILL MILESTONES (Only if it just died from this hit) ---
             if not was_dead:
                 # Treat 'None' as the player to catch default weapon/projectile hits
                 if attacker == player or attacker is None:
                     if type(self).__name__ == 'NPC':
                         if not getattr(self, 'is_friendly', True):
                             check_milestone_progress(game, 'kill', 'hostile_npc')
-                    elif getattr(self, 'type', 'zombie') != 'animal':
-                        if hasattr(game, 'zombies_killed'):
-                            game.zombies_killed += 1
+                    else:
                         check_milestone_progress(game, 'kill', 'zombie')
             # --------------------------------------------------------------------
 
@@ -102,19 +89,17 @@ class ZombieCombat:
         damage = random.randint(self.min_attack, self.max_attack)
 
         # 1. Target is the Player or a RemotePlayer
-        if target_entity == game.player or type(target_entity).__name__ == 'RemotePlayer':
+        if target_entity == game.player:
             infection = 0
             if random.random() < ZOMBIE_INFECTION_CHANCE:
                 infection = random.uniform(self.min_infection, self.max_infection)
             
-            if target_entity == game.player:
-                final_dmg, final_inf = target_entity.take_damage(game, damage, infection, attacker=self)
-                if final_inf > 0:
-                    print(f"**HIT!** Zombie hit you for {final_dmg:.1f} damage and {final_inf:.1f} infection!")
-                else:
-                    print(f"**HIT!** Zombie hit you for {final_dmg:.1f} damage.")
+            final_dmg, final_inf = target_entity.take_damage(game, damage, infection, attacker=self)
+            if final_inf > 0:
+                print(f"**HIT!** Zombie hit you for {final_dmg:.1f} damage and {final_inf:.1f} infection!")
             else:
-                target_entity.take_damage(damage, game, attacker=self, infection=infection)
+                print(f"**HIT!** Zombie hit you for {final_dmg:.1f} damage.")
+            
                 
         # 2. Target is an NPC, Animal, or other Zombie
         else:

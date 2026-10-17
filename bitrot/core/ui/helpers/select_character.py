@@ -423,26 +423,7 @@ def _start_with_class(game, state, class_def):
     final_player_data['visuals'] = {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'}
     final_player_data['sounds'] = {'steps': 'steps.ogg'}
 
-    # ---> CLIENT MULTIPLAYER: Connect directly without creating a local save <---
-    if getattr(game, 'is_client', False) and getattr(game, 'cli_connect_address', None):
-        from core.server.client import GameClient, init_client_world
-        c_ip, c_port = game.cli_connect_address
-        print(f"[Client] Connecting to dedicated server at {c_ip}:{c_port} with preset '{class_def['name']}'...")
-        game.client = GameClient(game)
-
-        success, ack_data = game.client.connect(c_ip, c_port, final_player_data)
-        if success and ack_data:
-            print(f"[Client] Connection confirmed. Loading server session '{ack_data.get('save_folder_name')}'...")
-            init_client_world(game, ack_data, final_player_data)
-            game.game_state = 'PLAYING'
-        else:
-            print(f"[Client] Failed to connect to server at {c_ip}:{c_port}")
-            from core.messages import display_message
-            display_message(game, f"Failed to connect to {c_ip}:{c_port}")
-            game.is_client = False
-            game.cli_connect_address = None
-            game.game_state = 'MENU'
-        return
+    
 
     # Singleplayer branch below...
     w_state = getattr(game, 'world_setup_state', {})
@@ -892,12 +873,6 @@ def handle_select_character_events(game, state, event, mouse_pos, clickable_rect
 
         # Back Button
         if clickable_rects.get('back_button') and clickable_rects['back_button'].collidepoint(mouse_pos):
-            if getattr(game, 'is_client', False):
-                game.is_client = False
-                game.cli_connect_address = None
-                game.game_state = 'MENU'
-                return
-
             if state.get('respawn_save_folder'):
                 game.current_save_folder_name = None
                 game.game_state = 'MENU'

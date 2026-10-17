@@ -658,7 +658,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
 
     start_btn_rect = pygame.Rect(col4_x, stats_rect.bottom + S(20), col4_width, S(70))
     is_balanced = (state.get('total_trait_cost', 0) <= STARTING_POINTS)
-    btn_label = tr('ui', "CONNECT") if getattr(game, 'is_client', False) else tr('ui', "START GAME")
+    btn_label = tr('ui', "START GAME")
     if is_balanced:
         pygame.draw.rect(game.game_screen, (0, 100, 0), start_btn_rect, border_radius=border_radius)
         if start_btn_rect.collidepoint(mouse_pos):
@@ -914,26 +914,7 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                 final_player_data['visuals'] = {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'}
                 final_player_data['sounds'] = { 'steps': 'steps.ogg' }
 
-                # ---> CLIENT MULTIPLAYER: Connect directly to server <---
-                if getattr(game, 'is_client', False) and getattr(game, 'cli_connect_address', None):
-                    from core.server.client import GameClient, init_client_world
-                    c_ip, c_port = game.cli_connect_address
-                    print(f"[Client] Connecting to dedicated server at {c_ip}:{c_port}...")
-                    game.client = GameClient(game)
-
-                    success, ack_data = game.client.connect(c_ip, c_port, final_player_data)
-                    if success and ack_data:
-                        print(f"[Client] Connected! Initializing world...")
-                        init_client_world(game, ack_data, final_player_data)
-                        game.game_state = 'PLAYING'
-                    else:
-                        print(f"[Client] Failed to connect to server at {c_ip}:{c_port}")
-                        from core.messages import display_message
-                        display_message(game, f"Failed to connect to {c_ip}:{c_port}")
-                        game.is_client = False
-                        game.cli_connect_address = None
-                        game.game_state = 'MENU'
-                    return
+                
 
                 # Normal single player logic below...
                 w_state = getattr(game, 'world_setup_state', {})
@@ -1321,10 +1302,6 @@ def run_player_setup(game):
                     continue
 
                 if back_btn.collidepoint(event_pos):
-                    if is_client:
-                        state['current_tab'] = 'SelectCharacter'
-                        continue
-
                     if state['current_tab'] == 'Player' and state.get('chosen_mode') == 'sandbox':
                         state['current_tab'] = 'World'
                     elif state['current_tab'] == 'World':
@@ -1346,9 +1323,9 @@ def run_player_setup(game):
     game._update_screen()
 
 def _load_presets(state):
-    preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "player")
+    preset_dir = "./data.rot/save/player"
     if not os.path.exists(preset_dir):
-        os.makedirs(preset_dir, exist_ok=True)
+        os.makedirs(preset_dir)
     
     presets = ["None"]
     try:
@@ -1365,9 +1342,9 @@ def _save_preset(state):
         print("Cannot save preset with default name.")
         return 
 
-    preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "player")
+    preset_dir = "./data.rot/save/player"
     if not os.path.exists(preset_dir):
-        os.makedirs(preset_dir, exist_ok=True)
+        os.makedirs(preset_dir)
         
     filepath = os.path.join(preset_dir, f"{player_name}.xml")
     
@@ -1403,7 +1380,7 @@ def _load_preset(state):
     if not preset_name or preset_name == "None":
         return
 
-    filepath = os.path.join(get_writable_dir(), "data.rot", "save", "player", f"{preset_name}.xml")
+    filepath = os.path.join("./data.rot/save/player", f"{preset_name}.xml")
     if not os.path.exists(filepath):
         print(f"Error: Preset file not found: {filepath}")
         return
@@ -1450,7 +1427,7 @@ def _delete_preset(state):
         print("No preset selected to delete.")
         return
 
-    filepath = os.path.join(get_writable_dir(), "data.rot", "save", "player", f"{preset_name}.xml")
+    filepath = os.path.join("./data.rot/save/player", f"{preset_name}.xml")
     if not os.path.exists(filepath):
         print(f"Error: Preset file not found: {filepath}")
         return

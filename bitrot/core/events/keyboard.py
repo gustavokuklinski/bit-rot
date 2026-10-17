@@ -173,10 +173,6 @@ def find_closest_vehicle(game):
     return None
 
 def toggle_pause(game):
-    if getattr(game, 'is_server', False) or getattr(game, 'is_client', False):
-        display_message(game, tr('msg', "[Server] Pause and offline save are disabled during multiplayer."))
-        return
-
     if game.game_state == 'PLAYING':
         game.game_state = 'PAUSED'
         game.capture_pause_screen()
@@ -915,7 +911,7 @@ def handle_keyboard_events(game, event, action_triggered=None):
                 elif target['type'] == 'tile':
                     tx, ty = target['entity']
                     tile = game.map_manager.get_tile_at(tx, ty)
-                    if tile and tile.get('is_statable'):
+                    if tile and tile.get('is_statable') and tile.get('type') == 'maptile':
                         game.map_manager.toggle_door_state(tx, ty)
                 elif target['type'] == 'maptile_teleport':
                     tx, ty = target['entity']

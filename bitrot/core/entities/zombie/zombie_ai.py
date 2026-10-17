@@ -7,7 +7,6 @@ import pygame
 import heapq
 from core.data.config import TILE_SIZE
 import core.data.config
-from core.systems.world_area import is_same_area
 
 class ZombieAI:
     def __init__(self):
@@ -47,8 +46,6 @@ class ZombieAI:
 
         for z in zombies_to_check:
             if z is self or getattr(z, 'is_dead', False):
-                continue
-            if not is_same_area(self, z, game):          # NEW: never aggro zombies of other chunks/layers
                 continue
             dx = z.rect.centerx - self.rect.centerx
             dy = z.rect.centery - self.rect.centery
@@ -240,10 +237,6 @@ class ZombieAI:
         if game.player and not getattr(game.player, 'is_dead', False) and game.player.health > 0:
             if getattr(game, 'current_layer_index', 1) == my_layer:
                 all_players.append(game.player)
-        for rp in getattr(game, 'remote_players', {}).values():
-            if not getattr(rp, 'is_dead', False) and getattr(rp, 'health', 0) > 0:
-                if is_same_area(self, rp, game):          # was: getattr(rp, 'layer', 1) == my_layer
-                    all_players.append(rp)
 
         target_entity = None
         target_rect = None

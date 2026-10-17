@@ -48,13 +48,8 @@ def _update_entity_batch(entity_list, player_x, player_y, lod_base_radius_sq, ma
     current_time = pygame.time.get_ticks()
     processed_count = 0
 
-    all_p_coords = [(player_x, player_y)]
-    for rp in getattr(game, 'remote_players', {}).values():
-        if not getattr(rp, 'is_dead', False):
-            all_p_coords.append((int(rp.x), int(rp.y)))
-
     def get_min_player_dist_sq(e):
-        return min((px - e.rect.centerx)**2 + (py - e.rect.centery)**2 for px, py in all_p_coords)
+        return (player_x - e.rect.centerx)**2 + (player_y - e.rect.centery)**2
 
     entities_by_dist = sorted(entity_list, key=get_min_player_dist_sq)
 
@@ -111,22 +106,15 @@ def _update_entity_batch(entity_list, player_x, player_y, lod_base_radius_sq, ma
 
         _process_entity_substepping(entity, obstacles, game)
         ai_nearby = [z for z in nearby if isinstance(z, Zombie)]
-        player_rect = game.player.rect if getattr(game, 'player', None) else None
-        entity.update_ai(player_rect, obstacles, ai_nearby, game)
+        entity.update_ai(game.player.rect, obstacles, ai_nearby, game)
 
 def update_entities(game, GRID_SIZE, zombies_to_remove):
-    if getattr(game, 'is_client', False):
-        return
-
     map_chunks = getattr(core.data.config, 'MAP_CHUNKS', 2)
     max_zombies = max(12, 25 - (map_chunks * 2))
     max_animals = max(6, max_zombies // 2)
 
     if getattr(game, 'player', None):
         px, py = game.player.rect.centerx, game.player.rect.centery
-    elif getattr(game, 'remote_players', None):
-        first_rp = next((rp for rp in game.remote_players.values() if not getattr(rp, 'is_dead', False)), None)
-        px, py = (int(first_rp.x), int(first_rp.y)) if first_rp else (0, 0)
     else:
         px, py = (0, 0)
 

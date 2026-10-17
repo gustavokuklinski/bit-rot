@@ -269,9 +269,6 @@ class Item:
         if self.durability is not None:
             return False
         itype = getattr(self, 'item_type', '') or ''
-        name_lower = getattr(self, 'name', '').lower()
-        if 'capsule' in name_lower or itype == 'capsule':
-            return True
         valid_type = (
             itype.startswith('consumable') or
             itype in [
@@ -434,27 +431,6 @@ class Container(Item):
             import core.messages
             game = getattr(core.messages, '_game_instance', None)
             
-        if game and getattr(game, 'is_client', False):
-            from core.server.network import NetMsg, send_msg
-            send_msg(game.client.socket, {
-                'type': NetMsg.WORLD_ACTION,
-                'action': 'open_container',
-                'x': self.rect.x, 'y': self.rect.y
-            })
-            self.is_opened = True
-            self.is_opening = False
-
-            if hasattr(game, 'sound_manager'):
-                game.sound_manager.play_sound(
-                    'open_maptile.ogg',
-                    subdir='map',
-                    game=game,
-                    source_pos=self.rect.center,
-                    base_volume=0.5,
-                    pitch_variance=0.1,
-                    is_critical=True
-                )
-            return
             
         self.is_opened = True
         self.is_opening = False

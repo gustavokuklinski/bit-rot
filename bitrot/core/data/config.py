@@ -7,7 +7,8 @@ import subprocess
 import uuid
 from collections import OrderedDict
 
-
+def get_writable_dir():
+    return os.path.abspath(".")
 
 pygame.init()
 infoObject = pygame.display.Info()
@@ -28,15 +29,6 @@ DATA_PATH    = os.path.join(BASE_DIR, "data.rot", "lib", "data") + os.sep
 SPRITE_PATH  = os.path.join(BASE_DIR, "data.rot", "lib", "sprites") + os.sep
 SOUND_PATH   = os.path.join(BASE_DIR, "data.rot", "lib", "sfx") + os.sep
 FONT_FACE    = os.path.join(BASE_DIR, "data.rot", "lib", "font", "PixelOperator8.ttf")
-
-def get_writable_dir():
-    # Anchor to BASE_DIR if data.rot exists there, preventing empty ./data.rot in parent directories
-    if os.path.exists(os.path.join(BASE_DIR, "data.rot")):
-        return BASE_DIR
-    cwd = os.path.abspath(".")
-    if os.path.exists(os.path.join(cwd, "data.rot")):
-        return cwd
-    return BASE_DIR
 
 TRANSPARENT = (0, 0, 0, 0)
 WHITE = (255, 255, 255)
@@ -166,7 +158,7 @@ VOLUME_ITEMS = 0.50
 VOLUME_MAP = 0.50
 GAME_LANGUAGE = "en_US"
 
-MAX_CLIENTS = 16
+
 
 def generate_random_seed(chunks=None):
     if chunks is None:
@@ -234,22 +226,17 @@ def get_world_config_path(preset="world"):
 
     # 4. Default game template from server, library, or build presets
     lib_candidates = [
-        os.path.join(BASE_DIR, "data.rot", "server", "server_world.xml"),
-        os.path.join(get_writable_dir(), "data.rot", "server", "server_world.xml"),
-        os.path.join(BASE_DIR, "data.rot", "server", "world.xml"),
-        os.path.join(get_writable_dir(), "data.rot", "server", "world.xml"),
         os.path.join(get_writable_dir(), "data.rot", "save", "config", "world.xml"),
-        os.path.join(BASE_DIR, "data.rot", "save", "config", "world.xml"),
         os.path.join(DATA_PATH, "world.xml"),
         os.path.join(DATA_PATH, "config", "world.xml"),
         os.path.join(BASE_DIR, "data.rot", "lib", "data", "world.xml"),
         os.path.join(BASE_DIR, "data.rot", "lib", "data", "config", "world.xml")
     ]
     for path in lib_candidates:
-        if os.path.exists(path) and os.path.getsize(path) > 50:
+        if os.path.exists(path):
             return path
 
-    return os.path.join(BASE_DIR, "data.rot", "server", "server_world.xml")
+    return os.path.join(DATA_PATH, "world.xml")
 
 class ImageFontWrapper:
     def __init__(self, font_path, size, is_sysfont=False, max_cache_size=256):

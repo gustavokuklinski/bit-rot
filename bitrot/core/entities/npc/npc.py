@@ -14,7 +14,6 @@ from core.messages import display_message
 from faker import Faker
 from core.entities.npc.npc_dialog import NPCDialog
 from core.systems.utils import create_smooth_entity_mask, resolve_stuck_in_obstacle
-from core.systems.world_area import is_same_area
 
 # Mixins
 from core.entities.npc.npc_data import NPCData
@@ -383,9 +382,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         entities_to_check = [e for e in game.npcs if e != self and not e.is_dead and getattr(e, 'layer', 1) == my_layer]
         if game.player and not game.player.is_dead and getattr(game, 'current_layer_index', 1) == my_layer:
             entities_to_check.append(game.player)
-        for rp in getattr(game, 'remote_players', {}).values():
-            if not getattr(rp, 'is_dead', False) and is_same_area(self, rp, game):     # was: layer only
-                entities_to_check.append(rp)
+        
 
         target_entity = None
         target_pos = None
@@ -415,17 +412,15 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         potential_targets = []
 
         if self.is_friendly:
+            # FNPCs defend against hostile NPCs if necessary
             if attacker == game.player and game.player and not game.player.is_dead:
                 potential_targets.append(game.player)
-            for rp in getattr(game, 'remote_players', {}).values():
-                if attacker == rp and not getattr(rp, 'is_dead', False) and is_same_area(self, rp, game):
-                    potential_targets.append(rp)
+            
         else:
+            # HNPCs IGNORE FNPCs, Zombies, and Animals (they only fight players)
             if game.player and not game.player.is_dead:
                 potential_targets.append(game.player)
-            for rp in getattr(game, 'remote_players', {}).values():
-                if not getattr(rp, 'is_dead', False) and is_same_area(self, rp, game):
-                    potential_targets.append(rp)
+            
 
         min_dist_to_target = float('inf')
 
@@ -443,7 +438,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                         self.alert_nearby_zombies(game, search_range)
 
         if is_aggroed:
-            if attacker and not attacker.is_dead and is_same_area(self, attacker, game):   # NEW check
+            if attacker and not attacker.is_dead:
                 target_entity = attacker
                 self.state = 'chasing'
             elif game.player and not game.player.is_dead:
@@ -459,39 +454,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         else:
             self.aim_angle = self.angle
             target_pos = None
-            
-            # --- FIX: Implement standard wandering AI for dynamic non-static NPCs ---
-            if not self.is_static:
-                if getattr(self, 'aggro_timer', 0) > 0:
-                    self.aggro_timer -= getattr(game, 'dt_ms', 16)
-                self.state = 'wandering'
-                current_time = pygame.time.get_ticks()
-
-                target_reached = self.wander_target and math.hypot(self.wander_target[0] - self.rect.centerx, self.wander_target[1] - self.rect.centery) < TILE_SIZE
-                wander_interval = getattr(core.data.config, 'ZOMBIE_WANDER_CHANGE_INTERVAL', 2500)
-
-                if (current_time - getattr(self, 'last_wander_change', 0) > wander_interval) or (self.wander_target is None) or target_reached:
-                    for _ in range(10):
-                        wander_radius = 5 * TILE_SIZE
-                        new_target_x = self.rect.centerx + random.randint(-wander_radius, wander_radius)
-                        new_target_y = self.rect.centery + random.randint(-wander_radius, wander_radius)
-
-                        grid_x = int(new_target_x // TILE_SIZE)
-                        grid_y = int(new_target_y // TILE_SIZE)
-
-                        if hasattr(game, 'map_data') and 0 <= grid_y < len(game.map_data) and 0 <= grid_x < len(game.map_data[0]):
-                            tile = game.map_manager.get_tile_at(grid_x, grid_y) if hasattr(game, 'map_manager') else None
-                            if not tile or not tile.get('is_obstacle', False):
-                                g_layer = game.all_ground_layers.get(getattr(self, 'layer', 1), [[]])
-                                g_tile = g_layer[grid_y][grid_x] if 0 <= grid_y < len(g_layer) and 0 <= grid_x < len(g_layer[0]) else ''
-                                if 'water' not in str(g_tile).lower():
-                                    self.wander_target = (new_target_x, new_target_y)
-                                    break
-                    self.last_wander_change = current_time
-                target_pos = self.wander_target
-            else:
-                self.state = 'idle'
-                self.wander_target = None
+            self.state = 'idle'
 
         self.dx, self.dy = 0, 0
         
@@ -499,9 +462,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             dist_to_dest = math.hypot(target_pos[0] - self.rect.centerx, target_pos[1] - self.rect.centery)
             move_threshold = (TILE_SIZE * 8) if is_ranged_weapon else (TILE_SIZE * 0.8)
             
-            if self.state == 'wandering':
-                move_threshold = TILE_SIZE * 0.8
-
             if dist_to_dest > move_threshold:
                 has_los = self.has_line_of_sight(pygame.Rect(target_pos[0]-2, target_pos[1]-2, 4, 4), game, current_time)
 
@@ -775,8 +735,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     
                     if target_entity == game.player:
                         target_entity.take_damage(game, damage_to_deal, 0, attacker=self)
-                    elif type(target_entity).__name__ == 'RemotePlayer':
-                        target_entity.take_damage(damage_to_deal, game, attacker=self)
+                    
                     else:
                         # Neither HNPC nor zombies kill animals
                         if getattr(target_entity, 'type', '') == 'animal' or type(target_entity).__name__ == 'Animal':

@@ -183,23 +183,10 @@ def handle_player_death(game):
     game.player.clothes = {}
     game.player.active_weapon = None
 
-    # 4. Save world and update host.rot
-    if getattr(game, 'is_client', False) and getattr(game, 'client', None):
-        from core.server.network import NetMsg, send_msg
-        items_payload = [it.to_dict() for it in corpse.inventory]
-        send_msg(game.client.socket, {
-            'type': NetMsg.WORLD_ACTION,
-            'action': 'player_death',
-            'x': death_pos[0],
-            'y': death_pos[1],
-            'layer': death_layer,
-            'map_filename': death_map,
-            'name': game.player.name,
-            'inventory': items_payload
-        })
+    
 
     # 5. Save world and update host.rot
-    if getattr(game, 'current_save_folder_name', None) and not getattr(game, 'is_client', False):
+    if getattr(game, 'current_save_folder_name', None):
         if getattr(core.data.config, 'PERMADEATH', False):
             import shutil
             try:
@@ -218,14 +205,6 @@ def handle_player_death(game):
             except Exception as e:
                 if hasattr(game, 'logger'):
                     game.logger.info(f"Error saving game on death: {e}")
-
-    # If the host is running a server, do not disconnect or shut down the server!
-    # Immediately send the host player back to the setup screen to create/respawn a character.
-    if getattr(game, 'is_server', False):
-        game.player_setup_state = {}
-        game.player_setup_state['current_tab'] = 'SelectCharacter'
-        game.player_setup_state['respawn_save_folder'] = game.current_save_folder_name
-        game.game_state = 'PLAYER_SETUP'
 
 def respawn_player_in_world(game, new_player_data, save_folder_name):
     """Loads existing world state and spawns a new character in the same map."""
@@ -319,11 +298,6 @@ def respawn_player_in_world(game, new_player_data, save_folder_name):
         game._is_respawning_player = False
 
 def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
-    # Ensure fresh singleplayer sessions do not retain multiplayer client/server flags
-    if not getattr(game, 'is_dedicated', False):
-        game.is_client = False
-        game.is_server = False
-
     # --- FIX: Nuke all lingering audio channels from previous sessions to free them up ---
     if pygame.mixer.get_init():
         pygame.mixer.stop()

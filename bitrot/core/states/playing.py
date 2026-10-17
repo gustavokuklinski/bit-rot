@@ -49,9 +49,6 @@ def run_playing(game):
     player_positions = []
     if game.player:
         player_positions.append(game.player.rect.center)
-    for rp in getattr(game, 'remote_players', {}).values():
-        if not getattr(rp, 'is_dead', False):
-            player_positions.append((int(rp.x), int(rp.y)))
 
     px, py = game.player.rect.center if game.player else (0, 0)
     
@@ -175,8 +172,7 @@ def run_playing(game):
     
     game.npc_spawn_timer += 1
     if game.npc_spawn_timer >= 30:
-        if not getattr(game, 'is_client', False):
-            manage_dynamic_npcs(game)
+        manage_dynamic_npcs(game)
         game.npc_spawn_timer = 0
 
     player_pos = game.player.rect.center if game.player else None

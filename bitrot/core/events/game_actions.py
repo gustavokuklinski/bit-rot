@@ -66,13 +66,7 @@ def try_grab_item(game):
                     is_critical=True
                 )
 
-            if getattr(game, 'is_client', False) and getattr(game, 'client', None):
-                from core.server.network import NetMsg, send_msg
-                send_msg(game.client.socket, {
-                    'type': NetMsg.WORLD_ACTION, 
-                    'action': 'pickup', 
-                    'id': getattr(closest_item, 'id', None)
-                })
+            
 
             current_map_filename = game.map_manager.current_map_filename
             if current_map_filename not in game.map_states:

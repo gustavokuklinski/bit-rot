@@ -195,17 +195,7 @@ class PlayerInventory:
 
             item_to_drop.is_placed = False
 
-            if getattr(game, 'is_client', False) and getattr(game, 'client', None):
-                from core.server.network import NetMsg, send_msg
-                send_msg(game.client.socket, {
-                    'type': NetMsg.WORLD_ACTION, 
-                    'action': 'drop', 
-                    'item_data': item_to_drop.to_dict(), 
-                    'x': item_to_drop.x, 
-                    'y': item_to_drop.y, 
-                    'layer': item_to_drop.layer,
-                    'is_placed': False
-                })
+            
             
             if item_to_drop not in game.items_on_ground:
                 game.items_on_ground.append(item_to_drop)
@@ -415,31 +405,10 @@ class PlayerInventory:
             else:
                 item_to_drop.is_placed = False
 
-            if getattr(game, 'is_client', False) and getattr(game, 'client', None):
-                from core.server.network import NetMsg, send_msg
-                send_msg(game.client.socket, {
-                    'type': NetMsg.WORLD_ACTION, 
-                    'action': 'drop', 
-                    'item_data': item_to_drop.to_dict(), 
-                    'x': item_to_drop.x, 
-                    'y': item_to_drop.y, 
-                    'layer': item_to_drop.layer,
-                    'is_placed': False
-                })
+            
             
             if item_to_drop not in game.items_on_ground:
                 game.items_on_ground.append(item_to_drop)
-
-            if game and hasattr(game, 'sound_manager'):
-                game.sound_manager.play_sound(
-                    'drop.ogg',
-                    subdir='items',
-                    game=game,
-                    source_pos=item_to_drop.rect.center,
-                    base_volume=0.5,
-                    pitch_variance=0.1,
-                    is_critical=True
-                )
 
             self.drop_cooldown = 10 
             return item_to_drop
