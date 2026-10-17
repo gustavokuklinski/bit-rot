@@ -14,6 +14,7 @@ from core.messages import display_message
 from faker import Faker
 from core.entities.npc.npc_dialog import NPCDialog
 from core.systems.utils import create_smooth_entity_mask, resolve_stuck_in_obstacle
+from core.systems.world_area import is_same_area
 
 # Mixins
 from core.entities.npc.npc_data import NPCData
@@ -383,7 +384,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         if game.player and not game.player.is_dead and getattr(game, 'current_layer_index', 1) == my_layer:
             entities_to_check.append(game.player)
         for rp in getattr(game, 'remote_players', {}).values():
-            if not getattr(rp, 'is_dead', False) and getattr(rp, 'layer', 1) == my_layer:
+            if not getattr(rp, 'is_dead', False) and is_same_area(self, rp, game):     # was: layer only
                 entities_to_check.append(rp)
 
         target_entity = None
@@ -414,18 +415,16 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         potential_targets = []
 
         if self.is_friendly:
-            # FNPCs defend against hostile NPCs if necessary
             if attacker == game.player and game.player and not game.player.is_dead:
                 potential_targets.append(game.player)
             for rp in getattr(game, 'remote_players', {}).values():
-                if attacker == rp and not getattr(rp, 'is_dead', False):
+                if attacker == rp and not getattr(rp, 'is_dead', False) and is_same_area(self, rp, game):
                     potential_targets.append(rp)
         else:
-            # HNPCs IGNORE FNPCs, Zombies, and Animals (they only fight players)
             if game.player and not game.player.is_dead:
                 potential_targets.append(game.player)
             for rp in getattr(game, 'remote_players', {}).values():
-                if not getattr(rp, 'is_dead', False):
+                if not getattr(rp, 'is_dead', False) and is_same_area(self, rp, game):
                     potential_targets.append(rp)
 
         min_dist_to_target = float('inf')
@@ -444,7 +443,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                         self.alert_nearby_zombies(game, search_range)
 
         if is_aggroed:
-            if attacker and not attacker.is_dead:
+            if attacker and not attacker.is_dead and is_same_area(self, attacker, game):   # NEW check
                 target_entity = attacker
                 self.state = 'chasing'
             elif game.player and not game.player.is_dead:

@@ -19,6 +19,7 @@ The following Large Language Models (LLMs) were utilized during the development 
 - **Qwen3.5**
 - **ChatGPT-5o**
 - **DeepSeek-R1**
+- **Cloude Sonnet 5.5**
 
 > **Agent Usage:** No autonomous AI agents were deployed. All interactions were session-based, prompt-by-prompt, with no continuous autonomous loops.
 

@@ -406,6 +406,7 @@ class DedicatedServerGame:
                     z = Zombie(zd['x'], zd['y'], tmpl)
                     z.id = zd.get('id', str(uuid.uuid4()))
                     z.layer = zd.get('layer', 1)
+                    z.map_filename = zd.get('map_filename', '')      # NEW
                     z.health = zd.get('health', z.max_health)
                     self.zombies.append(z)
             except Exception as e:
@@ -424,6 +425,7 @@ class DedicatedServerGame:
                     npc.health = nd.get('health', 100)
                     npc.max_health = nd.get('max_health', 100)
                     npc.is_friendly = nd.get('is_friendly', True)
+                    npc.map_filename = nd.get('map_filename', '')
                     self.npcs.add(npc)
             except Exception as e:
                 self.logger.warning(f"Error restoring npc.rot: {e}")
@@ -668,12 +670,19 @@ class DedicatedServerGame:
     def get_events(self):
         return pygame.event.get()
 
-    def emit_noise(self, source_pos, radius, source_type="noise"):
+    def emit_noise(self, source_pos, radius, source_type="noise", map_filename=None):
         if not source_pos:
             return
+        
+        def same_area(e):
+            if not map_filename:
+                return True
+            em = getattr(e, 'map_filename', '') or ''
+            return (not em) or em == map_filename
+
         rad_sq = radius * radius
         for z in getattr(self, 'active_zombies', []) + getattr(self, 'zombies', []):
-            if getattr(z, 'is_dead', False):
+            if getattr(z, 'is_dead', False) or not same_area(z):
                 continue
             dx = z.rect.centerx - source_pos[0]
             dy = z.rect.centery - source_pos[1]
@@ -682,7 +691,7 @@ class DedicatedServerGame:
                     z.alert_to_noise(source_pos, source_type=source_type)
 
         for npc in getattr(self, 'active_npcs', []):
-            if getattr(npc, 'is_dead', False):
+            if getattr(npc, 'is_dead', False) or not same_area(npc):
                 continue
             if not getattr(npc, 'is_friendly', True) and not getattr(npc, 'is_static', False):
                 dx = npc.rect.centerx - source_pos[0]

@@ -303,6 +303,7 @@ class GameServer:
                 'x': round(self.game.player.x, 1),
                 'y': round(self.game.player.y, 1),
                 'layer': getattr(self.game, 'current_layer_index', 1),
+                'map': getattr(self.game.map_manager, 'current_map_filename', ''),
                 'facing': self.game.player.facing_direction,
                 'aim_angle': round(self.game.player.aim_angle, 2),
                 'is_moving': self.game.player.is_moving,
@@ -574,6 +575,7 @@ class GameServer:
             if free_pos:
                 spawn_x, spawn_y = free_pos
             remote_p = RemotePlayer(assigned_id, p_name, spawn_x, spawn_y)
+            remote_p.map_filename = current_map
             c_info['player'] = remote_p
 
             if not hasattr(self.game, 'remote_players'):

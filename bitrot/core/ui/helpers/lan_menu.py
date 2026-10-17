@@ -26,7 +26,7 @@ def _draw_btn(surface, rect, text, mouse_pos, enabled=True, base_color=(80, 80, 
 class LanMenuUI:
     def __init__(self):
         self.active = False
-        self.server_address = "0.0.0.0:00000"
+        self.server_address = "192.168.0.6:7777"
         self.input_active = True
         self.error_message = ""
         self.error_timer = 0

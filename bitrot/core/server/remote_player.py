@@ -4,6 +4,7 @@ import math
 from core.data.config import TILE_SIZE, WHITE, GREEN, RED, GRAY, font_14
 from core.entities.item.item import Item
 from core.entities.item.item_factory import get_tinted_sprite
+from core.systems.world_area import is_same_area
 
 class RemotePlayer(pygame.sprite.Sprite):
     """Represents another connected player in the world."""
@@ -15,6 +16,7 @@ class RemotePlayer(pygame.sprite.Sprite):
         self.x = float(x)
         self.y = float(y)
         self._layer = int(layer)
+        self.map_filename = ''
         self.rect = pygame.Rect(int(self.x), int(self.y), TILE_SIZE, TILE_SIZE)
 
         self.facing_direction = (0, 1)
@@ -78,6 +80,10 @@ class RemotePlayer(pygame.sprite.Sprite):
                 self.cached_clothes_surfaces[slot] = img
 
     def take_damage(self, damage, game, attacker=None, infection=0):
+        # Drop hits coming from entities that live in another chunk / layer
+        if attacker is not None and hasattr(attacker, 'rect'):
+            if not is_same_area(attacker, self, game):
+                return False
         if hasattr(game, 'server') and game.server:
             for sock, info in game.server.clients.items():
                 if info.get('id') == self.player_id:
@@ -116,6 +122,7 @@ class RemotePlayer(pygame.sprite.Sprite):
         self.x = float(data.get('x', self.x))
         self.y = float(data.get('y', self.y))
         self.layer = int(data.get('layer', getattr(self, 'layer', 1)))
+        self.map_filename = str(data.get('map', self.map_filename) or '')
         self.rect.topleft = (int(self.x), int(self.y))
         self.facing_direction = tuple(data.get('facing', self.facing_direction))
         self.aim_angle = float(data.get('aim_angle', self.aim_angle))
@@ -164,8 +171,12 @@ class RemotePlayer(pygame.sprite.Sprite):
     def draw(self, surface, offset_x, offset_y, game=None):
         if self.is_dead:
             return
-        if game and getattr(game, 'current_layer_index', 1) != getattr(self, 'layer', 1):
-            return
+        if game:
+            if getattr(game, 'current_layer_index', 1) != getattr(self, 'layer', 1):
+                return
+            cur_map = getattr(getattr(game, 'map_manager', None), 'current_map_filename', '')
+            if self.map_filename and cur_map and self.map_filename != cur_map:
+                return
 
         draw_x = int(self.x + offset_x)
         draw_y = int(self.y + offset_y)

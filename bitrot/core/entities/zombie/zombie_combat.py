@@ -114,7 +114,7 @@ class ZombieCombat:
                 else:
                     print(f"**HIT!** Zombie hit you for {final_dmg:.1f} damage.")
             else:
-                target_entity.take_damage(damage, game, infection=infection)
+                target_entity.take_damage(damage, game, attacker=self, infection=infection)
                 
         # 2. Target is an NPC, Animal, or other Zombie
         else:

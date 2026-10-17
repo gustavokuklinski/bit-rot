@@ -596,40 +596,34 @@ class GameClient:
                 new_char = msg.get('char')
                 layer = msg.get('layer', getattr(self.game, 'current_layer_index', 1))
                 map_fname = msg.get('map_filename')
-                current_fname = getattr(self.game.map_manager, 'current_map_filename', '')
 
-                # Update the tile in all_map_layers
-                if hasattr(self.game, 'all_map_layers') and layer in self.game.all_map_layers:
-                    layer_grid = self.game.all_map_layers[layer]
-                    if 0 <= gy < len(layer_grid) and 0 <= gx < len(layer_grid[0]):
-                        layer_grid[gy][gx] = new_char
+                # Applies to the right chunk only (loaded grid or the cached CSV of another chunk)
+                is_live = self.game.map_manager.apply_network_tile_change(gx, gy, new_char, layer, map_fname)
 
-                # Update live viewport only if viewing this exact layer and chunk map
-                if layer == getattr(self.game, 'current_layer_index', 1) and (not map_fname or map_fname == current_fname):
-                    if hasattr(self.game, 'map_manager') and hasattr(self.game, 'map_data'):
-                        try:
-                            if 0 <= gy < len(self.game.map_data) and 0 <= gx < len(self.game.map_data[0]):
-                                self.game.map_data[gy][gx] = new_char
-                            new_def = self.game.tile_manager.definitions.get(new_char) if new_char != ' ' else None
-                            tile_rect = pygame.Rect(gx * TILE_SIZE, gy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                            self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
-                            if new_def and new_def.get('is_obstacle'):
-                                self.game.obstacles.append(tile_rect)
-                            self.game.map_manager.invalidate_chunk(gx, gy)
-                            self.game.cached_obstacle_count = -1
+                if is_live:
+                    try:
+                        if 0 <= gy < len(self.game.map_data) and 0 <= gx < len(self.game.map_data[gy]):
+                            self.game.map_data[gy][gx] = new_char
+                        new_def = self.game.tile_manager.definitions.get(new_char) if new_char != ' ' else None
+                        tile_rect = pygame.Rect(gx * TILE_SIZE, gy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                        self.game.obstacles = [rect for rect in self.game.obstacles if rect != tile_rect]
+                        if new_def and new_def.get('is_obstacle'):
+                            self.game.obstacles.append(tile_rect)
+                        self.game.map_manager.invalidate_chunk(gx, gy)
+                        self.game.cached_obstacle_count = -1
 
-                            if new_def and new_def.get('sound_src') and hasattr(self.game, 'sound_manager'):
-                                self.game.sound_manager.play_sound(
-                                    new_def['sound_src'],
-                                    subdir='map',
-                                    game=self.game,
-                                    source_pos=tile_rect.center,
-                                    base_volume=0.4,
-                                    pitch_variance=0.15,
-                                    is_critical=True
-                                )
-                        except Exception:
-                            pass
+                        if new_def and new_def.get('sound_src') and hasattr(self.game, 'sound_manager'):
+                            self.game.sound_manager.play_sound(
+                                new_def['sound_src'],
+                                subdir='map',
+                                game=self.game,
+                                source_pos=tile_rect.center,
+                                base_volume=0.4,
+                                pitch_variance=0.15,
+                                is_critical=True
+                            )
+                    except Exception:
+                        pass
 
             elif m_type == NetMsg.WORLD_ACTION and msg.get('action') == 'boat_travel_ack':
                 chunk_files = msg.get('chunk_files', {})
@@ -715,6 +709,7 @@ class GameClient:
                 'x': round(self.game.player.x, 1),
                 'y': round(self.game.player.y, 1),
                 'layer': getattr(self.game, 'current_layer_index', 1),
+                'map': getattr(self.game.map_manager, 'current_map_filename', ''),
                 'facing': self.game.player.facing_direction,
                 'aim_angle': round(self.game.player.aim_angle, 2),
                 'is_moving': self.game.player.is_moving,

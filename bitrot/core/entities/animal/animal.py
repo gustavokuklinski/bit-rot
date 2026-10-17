@@ -12,6 +12,7 @@ from core.entities.item.item import Item
 from core.ui.notifications import check_milestone_progress
 from core.data.config import TILE_SIZE
 from core.systems.utils import create_smooth_entity_mask
+from core.systems.world_area import is_same_area
 
 class Animal(Zombie):
 
@@ -151,7 +152,7 @@ class Animal(Zombie):
                 threats.append(game.player)
         for rp in getattr(game, 'remote_players', {}).values():
             if not getattr(rp, 'is_dead', False):
-                if getattr(rp, 'layer', 1) == my_layer:
+                if is_same_area(self, rp, game):          # was: layer only
                     threats.append(rp)
 
         for t in threats:
