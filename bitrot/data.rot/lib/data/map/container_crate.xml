@@ -1,8 +1,8 @@
-<map name="crate" type="maptile_container" char="crate" is_obstacle="true">
+<map name="Wood Crate" type="maptile_container" char="crate" is_obstacle="true">
     <visuals>
         <sprite file="crate.png" />
     </visuals>
-    <capacity value="15" />
+    <capacity value="10" />
     <loot>
         <!-- Resources & Melee: Middle -->
         <item type="resource" min="1" max="4" chance="0.35" />
@@ -17,5 +17,13 @@
 
         <item item="Cartography for [MAP_POS]" chance="0.10"/>
         <item type="car_key" min="1" max="1" chance="0.10"  />
+
+
+        <item item="Toolkit" chance="0.4" />
+        <item item="Car Engine" chance="0.1" />
+        <item item="Car Battery" chance="0.1" />
+        <item item="Car Tire" chance="0.1" />
+        <item item="Motor Repair Kit" chance="0.2" />
+        <item item="Fuel Canister" chance="0.3" />
     </loot>
 </map>

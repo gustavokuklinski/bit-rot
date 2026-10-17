@@ -1,4 +1,4 @@
-<item name="Wallet" type="container" allow_belt="false">
+<item name="Wallet" type="container" allow_belt="false" allow_type="[currency]">
     <properties>
         <capacity value="2" />
         <sprite file="container_wallet.png" />

@@ -26,6 +26,15 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
 
         allow_liquid_str = root.attrib.get('allow_liquid', 'false')
         allow_liquid = (allow_liquid_str.lower() == 'true')
+
+        # Parse allow_type="[type1, type2]"
+        allow_type_str = root.attrib.get('allow_type')
+        allow_type = [t.strip().lower() for t in allow_type_str.replace('[', '').replace(']', '').split(',') if t.strip()] if allow_type_str else None
+
+        # Parse disallow_type="[type1, type2]"
+        disallow_type_str = root.attrib.get('disallow_type')
+        disallow_type = [t.strip().lower() for t in disallow_type_str.replace('[', '').replace(']', '').split(',') if t.strip()] if disallow_type_str else None
+
         
         allow_belt_str = root.attrib.get('allow_belt', 'false')
         allow_belt = (allow_belt_str.lower() == 'true')
@@ -74,6 +83,8 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
             'disposable': disposable, 
             'liquid': liquid, 
             'allow_liquid': allow_liquid, 
+            'allow_type': allow_type,
+            'disallow_type': disallow_type,
             'allow_belt': allow_belt,
             'consume_time': consume_time,
             'tip': tip,

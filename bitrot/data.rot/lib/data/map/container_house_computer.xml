@@ -1,4 +1,4 @@
-<map name="house_computer" type="maptile_container" char="house_computer" is_obstacle="true" is_visible="true">
+<map name="Computer" type="maptile_container" char="house_computer" is_obstacle="true" is_visible="true">
     <visuals>
         <sprite file="house_computer.png" />
     </visuals>

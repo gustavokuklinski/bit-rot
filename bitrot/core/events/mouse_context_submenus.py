@@ -6,7 +6,7 @@ from core.data.localization import tr
 from core.data.recipe_manager import RecipeManager
 from core.entities.item.item_helpers import (
     does_allow_liquid, get_container_available_liquid, item_allows_belt,
-    is_valid_send_to_container, is_item_liquid, get_container_liquid_capacity_units
+    is_valid_send_to_container, is_item_liquid, get_container_liquid_capacity_units, can_container_accept_item
 )
 from core.events.mouse_drag_utils import check_container_weight_limit, check_recursive_containment
 from core.ui.crafting_common import get_recipe_status_details, is_recipe_relevant_to_item
@@ -234,7 +234,7 @@ def build_send_to_submenu(clicked_item, click_source, click_container_item, game
         if click_container_item and c is click_container_item: continue
         if not is_valid_send_to_container(c): continue
         if check_recursive_containment(clicked_item, c): continue
-
+        if not can_container_accept_item(c, clicked_item): continue
         c_key = str(getattr(c, 'id', id(c)))
         if c_key in seen_c_keys: continue
 

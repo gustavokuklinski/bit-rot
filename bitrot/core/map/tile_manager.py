@@ -33,7 +33,15 @@ class TileManager:
                         # [NEW] Parse the is_opened tag
                         is_opened = root.get('is_opened', 'false').lower() == 'true'
 
+                        # Parse infinite_liquid attribute (defaults to False if explicitly false or if closed)
+                        raw_inf = root.get('infinite_liquid')
+                        if raw_inf is not None:
+                            infinite_liquid = raw_inf.lower() in ('true', '1')
+                        else:
+                            infinite_liquid = allow_liquid and is_opened
+
                         is_stair = root.get('is_stair', 'false').lower() == 'true'
+
                         is_visible = root.get('is_visible', 'false').lower() == 'true'
 
                         # Default to 0 if not specified
@@ -54,6 +62,7 @@ class TileManager:
                                     'is_obstacle': is_obstacle,
                                     'destructible': is_destructible, 
                                     'allow_liquid': allow_liquid, 
+                                    'infinite_liquid': infinite_liquid,
                                     'is_opened': is_opened, # [ADDED] Store the flag
                                     'is_visible': is_visible,
                                     'image': image,
@@ -61,8 +70,6 @@ class TileManager:
                                     'type': root.get('type'),
                                     'state': root.get('state'),
                                     'is_statable': root.get('state') is not None,
-                                    'rest': root.get('rest', 'false').lower() == 'true',
-                                    'sleep': root.get('sleep', 'false').lower() == 'true',
                                     'light_state': root.get('light', 'off'), 
                                     'light_radius': int(root.get('light_radius', '0')),
                                     'is_stair': is_stair,

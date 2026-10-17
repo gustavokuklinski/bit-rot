@@ -1,9 +1,0 @@
-<item name="Liquid Bowl" type="container" allow_liquid="true" allow_belt="false" tip="Use to craft.\nOnly liquids allowed">
-    <properties>
-        <capacity value="1" />
-        <sprite file="container_bowl.png" />
-        
-        <max_liquid value="10" />
-    </properties>
-    <spawn chance="1" />
-</item>

@@ -79,11 +79,8 @@ def is_item_allowed_in_slot(item, slot_type, index_or_name, target_obj=None):
     elif slot_type == 'container':
         if not target_obj:
             return True
-        if check_recursive_containment(item, target_obj):
-            return False
-        if does_allow_liquid(target_obj) and not is_liquid:
-            return False
-        if is_liquid and not does_allow_liquid(target_obj):
+        from core.entities.item.item_helpers import can_container_accept_item
+        if not can_container_accept_item(target_obj, item):
             return False
         if is_liquid and does_allow_liquid(target_obj):
             avail = get_container_liquid_capacity_units(target_obj, item)

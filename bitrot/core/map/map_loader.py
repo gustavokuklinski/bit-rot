@@ -11,11 +11,11 @@ from core.entities.zombie.zombie import Zombie
 from core.placement import find_free_tile
 from core.entities.vehicle.vehicle import Vehicle
 
-def _set_liquid_source_load(new_item, loot_entry):
-    """Sets liquid load: full if INFINITE_LIQUID is True, otherwise randomizes."""
+def _set_liquid_source_load(new_item, loot_entry, force_infinite=False):
+    """Sets liquid load: full if force_infinite is True, otherwise randomizes within min/max."""
     if not getattr(new_item, 'capacity', None):
         return
-    is_infinite = getattr(core.data.config, 'INFINITE_LIQUID', True)
+    is_infinite = force_infinite and getattr(core.data.config, 'INFINITE_LIQUID', True)
     item_cap = int(getattr(new_item, 'capacity', 100) or 100)
     
     if is_infinite:
@@ -47,7 +47,7 @@ def _generate_container_items(tile_def, game=None):
     loot_pool = list(tile_def['loot'])
     random.shuffle(loot_pool)
     
-    is_liquid_source = tile_def.get('allow_liquid', False)
+    is_liquid_source = tile_def.get('infinite_liquid', False)
     
     # 1. Base Global Multiplier
     dynamic_multiplier = getattr(core.data.config, 'ITEM_SPAWN_CHANCE_MULTIPLIER', 1.0)
@@ -120,8 +120,8 @@ def _generate_container_items(tile_def, game=None):
                         new_item = Item.create_from_name(chosen_item)
                         
                         if new_item:
-                            if is_liquid_source:
-                                _set_liquid_source_load(new_item, loot_entry)
+                            if tile_def.get('allow_liquid', False):
+                                _set_liquid_source_load(new_item, loot_entry, force_infinite=is_liquid_source)
                             items.append(new_item)
                         
             elif 'item' in loot_entry and not loot_entry['item'].endswith(' on'):
@@ -212,7 +212,8 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                             val_open = tile_def.get('is_opened', False)
                             is_opened = str(val_open).lower() in ['true', '1'] or val_open is True
 
-                            if allow_liquid or is_opened:
+                            # Only open on start if explicitly set to is_opened="true"
+                            if is_opened:
                                 items = _generate_container_items(tile_def)
                                 container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
                                 container.is_opened = True
@@ -268,7 +269,8 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                             val_open = tile_def.get('is_opened', False)
                             is_opened = str(val_open).lower() in ['true', '1'] or val_open is True
 
-                            if allow_liquid or is_opened:
+                            # Only open on start if explicitly set to is_opened="true"
+                            if is_opened:
                                 items = _generate_container_items(tile_def)
                                 container = Container(name=tile_def.get('name', tile_def['type']), items=items, capacity=capacity)
                                 container.is_opened = True

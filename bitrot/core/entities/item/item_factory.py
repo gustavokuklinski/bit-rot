@@ -406,6 +406,9 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     place_items = list(template.get('place_items', []))
     place_time = template.get('place_time', 1.5)
 
+    allow_type = template.get('allow_type', None)
+    disallow_type = template.get('disallow_type', None)
+
     new_item = cls(
         actual_name, template['type'], durability=durability, load=load, 
         capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, 
@@ -422,7 +425,8 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
         allow_belt=allow_belt, tip=tip, consume_time=consume_time,
         safe_radius=safe_radius, max_liquid=max_liquid, map_value=map_value,
         barricade_health=barricade_health, remove_items=remove_items, remove_time=remove_time,
-        place_items=place_items, place_time=place_time, ammo_drop_capsule=ammo_drop_capsule
+        place_items=place_items, place_time=place_time, ammo_drop_capsule=ammo_drop_capsule,
+        allow_type=allow_type, disallow_type=disallow_type
     )
 
     # Use shared cache instead of item.image.copy()
@@ -458,17 +462,15 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
                         loot_item.capacity = new_item.max_liquid
                         loot_item.load = new_item.max_liquid
                         
-                    if disposable or allow_liquid:
+                    if disposable:
                         new_item.inventory.append(loot_item)
                     else:
-                        fits = True
+                        from core.entities.item.item_helpers import can_container_accept_item
                         max_cap = new_item.capacity or 0
-                        
-                        if len(new_item.inventory) >= max_cap:
-                            fits = False
+                        fits = (len(new_item.inventory) < max_cap)
                         
                         if fits and new_item.item_type in ['container', 'cloth']:
-                            if getattr(new_item, 'allow_liquid', False) != getattr(loot_item, 'liquid', False):
+                            if not can_container_accept_item(new_item, loot_item):
                                 fits = False
 
                         if fits:

@@ -109,10 +109,109 @@ def is_valid_send_to_container(obj):
 
     return False
 
+def get_item_types(item):
+    """Returns a set of normalized lowercase type strings describing the item."""
+    types = set()
+    if not item:
+        return types
+    itype = getattr(item, 'item_type', '') or getattr(item, 'type', '') or ''
+    if itype:
+        types.add(str(itype).lower().strip())
+    if getattr(item, 'liquid', False):
+        types.add('liquid')
+    name = getattr(item, 'name', '')
+    if name == 'Fuel Unit':
+        types.add('car_fuel')
+        types.add('liquid')
+    return types
+
+def get_container_allow_types(container):
+    """Returns a set of allowed types for container, or None if unrestricted."""
+    if not container:
+        return None
+    val = getattr(container, 'allow_type', None)
+    if val is None and hasattr(container, 'properties') and isinstance(container.properties, dict):
+        val = container.properties.get('allow_type')
+    if val is None and hasattr(container, 'tile_def') and isinstance(container.tile_def, dict):
+        val = container.tile_def.get('allow_type')
+    if val is None and isinstance(container, dict):
+        val = container.get('allow_type')
+
+    if val:
+        if isinstance(val, (list, tuple, set)):
+            return {str(t).lower().strip() for t in val if t}
+        if isinstance(val, str):
+            return {t.strip().lower() for t in val.replace('[', '').replace(']', '').split(',') if t.strip()}
+    return None
+
+def get_container_disallow_types(container):
+    """Returns a set of disallowed types for container, or empty set."""
+    if not container:
+        return set()
+    val = getattr(container, 'disallow_type', None)
+    if val is None and hasattr(container, 'properties') and isinstance(container.properties, dict):
+        val = container.properties.get('disallow_type')
+    if val is None and hasattr(container, 'tile_def') and isinstance(container.tile_def, dict):
+        val = container.tile_def.get('disallow_type')
+    if val is None and isinstance(container, dict):
+        val = container.get('disallow_type')
+
+    if val:
+        if isinstance(val, (list, tuple, set)):
+            return {str(t).lower().strip() for t in val if t}
+        if isinstance(val, str):
+            return {t.strip().lower() for t in val.replace('[', '').replace(']', '').split(',') if t.strip()}
+    return set()
+
+def can_container_accept_item(container, item):
+    """Validates whether an item is approved to enter container based on allow_type, disallow_type, and liquid compatibility."""
+    if not container or not item:
+        return False
+    if item is container:
+        return False
+
+    if hasattr(item, 'inventory') and item.inventory:
+        from core.events.mouse_drag_utils import check_recursive_containment
+        if check_recursive_containment(item, container):
+            return False
+
+    item_types = get_item_types(item)
+
+    # 1. Disallow Check (Blacklist)
+    disallowed = get_container_disallow_types(container)
+    if disallowed and any(t in disallowed for t in item_types):
+        return False
+
+    # 2. Allow Check (Whitelist)
+    allowed = get_container_allow_types(container)
+    if allowed is not None:
+        if not any(t in allowed for t in item_types):
+            return False
+
+    # 3. Liquid Handling Check
+    is_liquid = is_item_liquid(item)
+    c_allows_liquid = does_allow_liquid(container)
+
+    if is_liquid and not c_allows_liquid:
+        return False
+    if not is_liquid and c_allows_liquid and allowed is None:
+        return False
+
+    return True
+
 def does_allow_liquid(obj):
-    """Safely checks if an object allows liquid, accounting for string-parsed XML booleans."""
+    """Checks if container accepts liquid using allow_type, disallow_type, and fallback allow_liquid."""
     if not obj:
         return False
+
+    disallowed = get_container_disallow_types(obj)
+    if 'liquid' in disallowed or 'car_fuel' in disallowed:
+        return False
+
+    allowed = get_container_allow_types(obj)
+    if allowed is not None:
+        return ('liquid' in allowed) or ('car_fuel' in allowed)
+
     val = getattr(obj, 'allow_liquid', None)
     if val is not None:
         return str(val).lower() in ('true', '1') or val is True
@@ -132,6 +231,26 @@ def is_infinite_liquid_source(obj):
         return False
     if not does_allow_liquid(obj):
         return False
+
+    # Check explicit attribute on the container instance
+    val = getattr(obj, 'infinite_liquid', None)
+    if val is not None:
+        return str(val).lower() in ('true', '1') or val is True
+
+    # Check underlying tile definition
+    if hasattr(obj, 'tile_def') and isinstance(obj.tile_def, dict):
+        val = obj.tile_def.get('infinite_liquid')
+        if val is not None:
+            return str(val).lower() in ('true', '1') or val is True
+
+    # Check dict structure
+    if isinstance(obj, dict) and 'infinite_liquid' in obj:
+        return str(obj['infinite_liquid']).lower() in ('true', '1')
+
+    # A closed container (is_opened == False) is never an infinite source
+    if hasattr(obj, 'is_opened') and not getattr(obj, 'is_opened', True):
+        return False
+
     item_type = getattr(obj, 'item_type', '')
     obj_type = getattr(obj, 'type', '')
     if isinstance(obj, dict):
@@ -401,11 +520,10 @@ def get_container_available_liquid(container, target_item=None):
     return max(0.0, max_liq - current_liq)
 
 def add_item_to_container_inventory(container, item_to_add, target_index=-1, is_stack=False):
-    """
-    Safely adds or stacks item_to_add into container.inventory, enforcing container volume and weight limits.
-    Returns (transferred_amount, remaining_load, success).
-    """
     if not container or not hasattr(container, 'inventory'):
+        return 0.0, float(getattr(item_to_add, 'load', 1) or 1), False
+
+    if not can_container_accept_item(container, item_to_add):
         return 0.0, float(getattr(item_to_add, 'load', 1) or 1), False
 
     is_liquid = is_item_liquid(item_to_add)

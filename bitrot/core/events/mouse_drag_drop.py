@@ -13,7 +13,7 @@ from core.entities.item.item_helpers import (
     does_allow_liquid, is_infinite_liquid_source,
     get_container_max_liquid, get_container_available_liquid,
     add_item_to_container_inventory, is_container_on_player,
-    is_container_closed_or_locked, get_transfer_time
+    is_container_closed_or_locked, get_transfer_time, can_container_accept_item
 )
 from core.events.mouse_drag_utils import (
     check_recursive_containment, check_container_weight_limit,
@@ -279,6 +279,13 @@ def handle_mouse_up(game, event, mouse_pos):
                             modal['active_tab'] = label
                             
                             if target_container:
+           
+                                if not can_container_accept_item(target_container, game.dragged_item):
+                                    display_message(tr('msg', "This item cannot be placed in this container."))
+                                    dropped_successfully = False
+                                    tab_drop_handled = True
+                                    break
+
                                 if check_recursive_containment(game.dragged_item, target_container):
                                     dropped_successfully = False
                                     tab_drop_handled = True
@@ -526,6 +533,12 @@ def handle_mouse_up(game, event, mouse_pos):
                     elif modal.get('active_tab') in modal.get('container_mapping', {}):
                         container = modal['container_mapping'][modal['active_tab']]
                         if container:
+                        
+                            if not can_container_accept_item(container, game.dragged_item):
+                                display_message(tr('msg', "This item cannot be placed in this container."))
+                                dropped_successfully = False
+                                break
+
                             if check_recursive_containment(game.dragged_item, container):
                                 dropped_successfully = False
                                 break
@@ -639,6 +652,12 @@ def handle_mouse_up(game, event, mouse_pos):
                             target_container = slot_data['container']
                             target_index = slot_data['index']
                             
+                           
+                            if not can_container_accept_item(target_container, game.dragged_item):
+                                display_message(tr('msg', "This item cannot be placed in this container."))
+                                dropped_successfully = False
+                                break
+
                             if check_recursive_containment(game.dragged_item, target_container):
                                 display_message(tr('msg', "Cannot put the container inside itself."))
                                 dropped_successfully = False
@@ -818,6 +837,12 @@ def handle_mouse_up(game, event, mouse_pos):
                     elif active_tab in modal.get('container_mapping', {}):
                         container = modal['container_mapping'][active_tab]
                         if container:
+                         
+                            if not can_container_accept_item(container, game.dragged_item):
+                                display_message(tr('msg', "This item cannot be placed in this container."))
+                                dropped_successfully = False
+                                break
+
                             if check_recursive_containment(game.dragged_item, container):
                                 display_message(tr('msg', "Cannot put the container inside itself."))
                                 dropped_successfully = False
@@ -997,6 +1022,12 @@ def handle_mouse_up(game, event, mouse_pos):
                     is_ground = getattr(container, 'item_type', '') == 'ground'
                     if not is_ground and modal['type'] == 'nearby' and modal.get('active_tab') == 'Ground':
                         is_ground = True
+                    
+                    if not is_ground:
+                        if not can_container_accept_item(container, game.dragged_item):
+                            display_message(tr('msg', "This item cannot be placed in this container."))
+                            dropped_successfully = False
+                            break
 
                     if is_ground:
                         target_index = -1

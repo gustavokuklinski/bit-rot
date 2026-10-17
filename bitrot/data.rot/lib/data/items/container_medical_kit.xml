@@ -1,4 +1,4 @@
-<item name="Medical Kit" type="container" allow_belt="false">
+<item name="Medical Kit" type="container" allow_belt="false" allow_type="[resource, consumable_medication, consumable_drugs]" disallow_type="[container]">
     <properties>
         <capacity value="5" />
         <sprite file="container_medical_kit.png" />

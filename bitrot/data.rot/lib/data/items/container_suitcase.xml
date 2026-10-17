@@ -1,4 +1,4 @@
-<item name="Suitcase" type="container" allow_belt="false">
+<item name="Suitcase" type="container" allow_belt="false" disallow_type="[container]">
     <properties>
         <capacity value="3" />
         

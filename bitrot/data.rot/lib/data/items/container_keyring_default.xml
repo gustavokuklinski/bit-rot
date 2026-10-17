@@ -1,4 +1,4 @@
-<item name="Keyring Default" type="container" allow_belt="false">
+<item name="Keyring Default" type="container" allow_belt="false" allow_type="[car_key]">
     <properties>
         <capacity value="5" />
         <sprite file="container_keyring_default.png" />

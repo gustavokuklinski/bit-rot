@@ -1,4 +1,4 @@
-<item name="Cup" type="container" allow_liquid="true" allow_belt="false" tip="Use to craft.\nOnly liquids allowed">
+<item name="Cup" type="container" allow_belt="false" allow_type="[liquid, car_fuel]" tip="Use to craft.\nOnly liquids allowed">
     <properties>
         <load value="1" />
         

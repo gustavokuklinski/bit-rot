@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<map name="house_wardrobe" type="maptile_container" char="house_wardrobe" is_obstacle="true">
+<map name="Wardrobe" type="maptile_container" char="house_wardrobe" is_obstacle="true">
     <visuals>
         <sprite file="house_wardrobe.png" />
     </visuals>

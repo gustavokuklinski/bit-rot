@@ -816,8 +816,11 @@ def load_game(game, save_folder_name):
                         if item: c.inventory.append(item)
                 else:
                     if getattr(c, 'item_type', '') == 'maptile_container':
-                        if not getattr(c, 'allow_liquid', False):
-                            c.is_opened = False
+                        c_is_open = False
+                        if hasattr(c, 'tile_def') and c.tile_def:
+                            c_is_open = c.tile_def.get('is_opened', False)
+                        c.is_opened = c_is_open
+                        if not c_is_open:
                             c.inventory = []
 
         raw_layer_triggers = world_data.get('layer_spawn_triggers', {})

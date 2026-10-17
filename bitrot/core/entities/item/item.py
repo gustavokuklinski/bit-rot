@@ -12,7 +12,7 @@ SPRITE_CACHE = {}
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, allow_belt=False, tip=None, consume_time=1.0, safe_radius=0, max_liquid=None, map_value=None, barricade_health=0, remove_items=None, remove_time=1.5, place_items=None, place_time=1.5, ammo_drop_capsule=None, **kwargs):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, allow_belt=False, tip=None, consume_time=1.0, safe_radius=0, max_liquid=None, map_value=None, barricade_health=0, remove_items=None, remove_time=1.5, place_items=None, place_time=1.5, ammo_drop_capsule=None, allow_type=None, disallow_type=None, **kwargs):
         self.name = name
         self.item_type = item_type
         self.id = str(uuid.uuid4())
@@ -67,7 +67,29 @@ class Item:
         
         is_liq = (str(liquid).lower() == 'true' if isinstance(liquid, str) else bool(liquid)) or (self.item_type in ('liquid', 'car_fuel')) or (self.name == 'Fuel Unit')
         self.liquid = is_liq
-        self.allow_liquid = str(allow_liquid).lower() == 'true' if isinstance(allow_liquid, str) else bool(allow_liquid)
+
+        # Format allow_type and disallow_type lists
+        if isinstance(allow_type, str):
+            self.allow_type = [t.strip().lower() for t in allow_type.replace('[', '').replace(']', '').split(',') if t.strip()]
+        elif isinstance(allow_type, (list, tuple, set)):
+            self.allow_type = [str(t).strip().lower() for t in allow_type if str(t).strip()]
+        else:
+            self.allow_type = None
+
+        if isinstance(disallow_type, str):
+            self.disallow_type = [t.strip().lower() for t in disallow_type.replace('[', '').replace(']', '').split(',') if t.strip()]
+        elif isinstance(disallow_type, (list, tuple, set)):
+            self.disallow_type = [str(t).strip().lower() for t in disallow_type if str(t).strip()]
+        else:
+            self.disallow_type = None
+
+        # Derive allow_liquid seamlessly from allow_type/disallow_type
+        if self.allow_type is not None:
+            self.allow_liquid = ('liquid' in self.allow_type) or ('car_fuel' in self.allow_type)
+        elif self.disallow_type is not None and ('liquid' in self.disallow_type or 'car_fuel' in self.disallow_type):
+            self.allow_liquid = False
+        else:
+            self.allow_liquid = str(allow_liquid).lower() == 'true' if isinstance(allow_liquid, str) else bool(allow_liquid)
 
         self.require = require
         
@@ -131,6 +153,11 @@ class Item:
             'inventory': [i.to_dict() if hasattr(i, 'to_dict') else i for i in self.inventory] if self.inventory else []
         }
 
+        if getattr(self, 'allow_type', None) is not None:
+            data['allow_type'] = self.allow_type
+        if getattr(self, 'disallow_type', None) is not None:
+            data['disallow_type'] = self.disallow_type
+
         if getattr(self, 'in_belt', False):
             data['in_belt'] = self.in_belt
 
@@ -168,7 +195,9 @@ class Item:
         # Pass spawn_loot=False so newly reconstructed saved items do not re-spawn default XML loot
         item = Item.create_from_name(data['name'], force_color=saved_color, spawn_loot=False)
         if not item: return None
-        
+        if 'allow_type' in data: item.allow_type = data['allow_type']
+        if 'disallow_type' in data: item.disallow_type = data['disallow_type']
+
         if 'id' in data: item.id = data['id']
         if 'durability' in data: item.durability = data['durability']
         if 'load' in data: item.load = data['load']

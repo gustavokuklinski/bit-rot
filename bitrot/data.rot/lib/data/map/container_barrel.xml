@@ -1,0 +1,11 @@
+<map name="Barrel" type="maptile_container" char="misc_barrel" is_obstacle="true" allow_liquid="true" infinite_liquid="false" is_visible="true">
+    <visuals>
+        <sprite file="misc_barrel.png" />
+    </visuals>
+    <capacity value="1" />
+    <loot>
+        <item item="Fuel Unit" chance="0.2" min="10" max="50" />
+        <item item="Water Unit" chance="0.2" min="15" max="60" />
+        <item item="Dirty Water Unit" chance="0.2" min="20" max="80" />
+    </loot>
+</map>
