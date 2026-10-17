@@ -405,15 +405,16 @@ def handle_mouse_motion(game, event, mouse_pos):
                 game.dragged_item, game.drag_origin = game.drag_candidate
                 if type_orig == 'inventory':
                     game.player.inventory.pop(i_orig)
-                elif type_orig == 'belt':
-                    if game.player.active_weapon == game.player.belt[i_orig]:
+                elif type_orig == 'belt' or i_orig == 'belt':
+                    belt_idx = i_orig if isinstance(i_orig, int) else type_orig
+                    if getattr(game.player, 'active_weapon', None) in (game.player.belt[belt_idx], game.dragged_item):
                         game.player.active_weapon = None
-                    game.player.belt[i_orig] = None
+                    game.player.belt[belt_idx] = None
                     game.dragged_item.in_belt = False
 
                 elif type_orig == 'gear':
                     slot_name = i_orig 
-                    game.player.clothes[slot_name] = None 
+                    game.player.clothes[slot_name] = None
                 elif type_orig == 'container':
                     container_obj = container_info[0]
                     if is_infinite_liquid_source(container_obj) and getattr(game.dragged_item, 'liquid', False):

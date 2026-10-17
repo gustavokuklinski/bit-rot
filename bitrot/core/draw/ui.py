@@ -222,7 +222,8 @@ def get_targeted_slot_info(game, mouse_pos, dynamic_h=GAME_HEIGHT):
         return None, None, None, None
 
     # 2. If NO modal is under the cursor, check the Belt HUD at the bottom of the screen
-    for i in range(5):
+    belt_count = len(game.player.belt) if getattr(game, 'player', None) else 3
+    for i in range(belt_count):
         slot = get_belt_hud_slot_rect(i, game=game, dynamic_h=dynamic_h)
         if slot.collidepoint(mouse_pos):
             return slot, 'belt', i, None

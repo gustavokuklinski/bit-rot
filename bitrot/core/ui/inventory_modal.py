@@ -25,7 +25,8 @@ def draw_text_shadow(surface, font_12, text, color, pos, align='topleft', shadow
 
 def draw_belt_hud(surface, game, player, mouse_pos, dynamic_h=None):
     """Draws the always-visible belt HUD at the bottom of the screen."""
-    for i in range(5):
+    belt_count = len(player.belt) if player else 3
+    for i in range(belt_count):
         slot_rect = get_belt_hud_slot_rect(i, game=game, dynamic_h=dynamic_h)
         
         pygame.draw.rect(surface, (30, 30, 30), slot_rect, 0, 3)
@@ -84,9 +85,10 @@ def draw_belt_hud(surface, game, player, mouse_pos, dynamic_h=None):
 
 def get_belt_hud_slot_rect(i, game=None, dynamic_h=None, **kwargs):
     from core.data.config import GAME_WIDTH, GAME_HEIGHT
+    belt_count = len(game.player.belt) if (game and getattr(game, 'player', None)) else 3
     slot_size = 40 
     gap = 6        
-    total_width = (slot_size * 5) + (gap * 4)
+    total_width = (slot_size * belt_count) + (gap * (belt_count - 1))
     start_x = (GAME_WIDTH - total_width) // 2
     current_height = GAME_HEIGHT
     if dynamic_h is not None:

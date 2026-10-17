@@ -179,7 +179,7 @@ def handle_player_death(game):
 
     # 3. Clear dead player's items to avoid duplication
     game.player.inventory = []
-    game.player.belt = [None] * 5
+    game.player.belt = [None] * 3
     game.player.clothes = {}
     game.player.active_weapon = None
 
@@ -726,7 +726,7 @@ def load_game(game, save_folder_name):
         game.player.drugs = float(player_data.get('stats', {}).get('drugs', 0.0))
 
         game.player.belt = []
-        for item_data in player_data.get('belt', [None]*5):
+        for item_data in player_data.get('belt', [None]*3)[:3]:
             if item_data:
                 if isinstance(item_data, dict):
                     game.player.belt.append(Item.from_dict(item_data))

@@ -525,10 +525,11 @@ class JoystickHandler:
                 
             if x != 0:
                 current_index = getattr(self, 'belt_index', -1)
+                max_idx = (len(game.player.belt) - 1) if (game and getattr(game, 'player', None)) else 2
                 if x == -1: # Left
-                    current_index = 4 if current_index <= 0 else current_index - 1
+                    current_index = max_idx if current_index <= 0 else current_index - 1
                 elif x == 1: # Right
-                    current_index = 0 if current_index >= 4 else current_index + 1
+                    current_index = 0 if current_index >= max_belt_idx else current_index + 1
                     
                 self.belt_index = current_index
                 key_to_send = pygame.K_1 + current_index

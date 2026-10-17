@@ -63,13 +63,16 @@ class ZombieAI:
         if not core.data.config.ZOMBIE_LINE_OF_SIGHT_CHECK:
             return True
 
-        if not hasattr(self, 'last_los_check_time'):
-            self.last_los_check_time = 0
-            self.los_check_interval = 250
-            self.cached_los_result = True
+        is_player_target = (game.player and target_rect.center == game.player.rect.center)
 
-        if current_time - self.last_los_check_time < self.los_check_interval:
-            return self.cached_los_result
+        if is_player_target:
+            if not hasattr(self, 'last_los_check_time'):
+                self.last_los_check_time = 0
+                self.los_check_interval = 250
+                self.cached_los_result = True
+
+            if current_time - self.last_los_check_time < self.los_check_interval:
+                return self.cached_los_result
 
         start_pos = self.rect.center
         end_pos = target_rect.center
@@ -80,31 +83,58 @@ class ZombieAI:
         if dist == 0:
             return True
 
-        # Perpendicular normal for physical width check (5 px half-width)
-        nx = (-dy / dist) * 5.0
-        ny = (dx / dist) * 5.0
+        # Quick AABB bounding box to discard far-away obstacles
+        min_x = min(start_pos[0], end_pos[0]) - 8
+        max_x = max(start_pos[0], end_pos[0]) + 8
+        min_y = min(start_pos[1], end_pos[1]) - 8
+        max_y = max(start_pos[1], end_pos[1]) + 8
+        bound_rect = pygame.Rect(min_x, min_y, max_x - min_x, max_y - min_y)
 
-        rays = [
-            (start_pos, end_pos),
-            ((start_pos[0] + nx, start_pos[1] + ny), (end_pos[0] + nx, end_pos[1] + ny)),
-            ((start_pos[0] - nx, start_pos[1] - ny), (end_pos[0] - nx, end_pos[1] - ny)),
-        ]
+        if hasattr(game, 'cached_obstacle_grid') and game.cached_obstacle_grid:
+            from core.update.utils import get_nearby_obstacles
+            obstacles = get_nearby_obstacles(bound_rect, game.cached_obstacle_grid, 128)
+        else:
+            obstacles = [obs for obs in getattr(game, 'obstacles', []) if bound_rect.colliderect(obs)]
 
+        # Fast-path: Check center ray first (eliminates 66% of ray tests when blocked)
         los_result = True
-        obstacles = getattr(game, 'obstacles', [])
+        map_mgr = getattr(game, 'map_manager', None)
         for obs in obstacles:
-            hit = any(obs.clipline(p1, p2) for p1, p2 in rays)
-            if hit:
+            if obs.right < min_x or obs.left > max_x or obs.bottom < min_y or obs.top > max_y:
+                continue
+            if obs.clipline(start_pos, end_pos):
                 gx = obs.centerx // TILE_SIZE
                 gy = obs.centery // TILE_SIZE
-                tile_def = game.map_manager.get_tile_at(gx, gy) if hasattr(game, 'map_manager') else None
+                tile_def = map_mgr.get_tile_at(gx, gy) if map_mgr else None
                 if tile_def and tile_def.get('is_visible'):
                     continue
                 los_result = False
                 break
 
-        self.last_los_check_time = current_time
-        self.cached_los_result = los_result
+        # Only check side clearance rays if center ray was clear
+        if los_result:
+            nx = (-dy / dist) * 5.0
+            ny = (dx / dist) * 5.0
+            side_rays = [
+                ((start_pos[0] + nx, start_pos[1] + ny), (end_pos[0] + nx, end_pos[1] + ny)),
+                ((start_pos[0] - nx, start_pos[1] - ny), (end_pos[0] - nx, end_pos[1] - ny)),
+            ]
+            for obs in obstacles:
+                if obs.right < min_x or obs.left > max_x or obs.bottom < min_y or obs.top > max_y:
+                    continue
+                if any(obs.clipline(p1, p2) for p1, p2 in side_rays):
+                    gx = obs.centerx // TILE_SIZE
+                    gy = obs.centery // TILE_SIZE
+                    tile_def = map_mgr.get_tile_at(gx, gy) if map_mgr else None
+                    if tile_def and tile_def.get('is_visible'):
+                        continue
+                    los_result = False
+                    break
+
+        if is_player_target:
+            self.last_los_check_time = current_time
+            self.cached_los_result = los_result
+
         return los_result
 
     def _get_path_astar(self, start_pos, target_pos, game, allow_break_obstacles=False):
@@ -281,9 +311,13 @@ class ZombieAI:
         if in_detection_zone and target_rect:
             if can_see_target:
                 player_is_reachable = True
-            elif not has_active_noise:
+            elif self.path:
+                player_is_reachable = True
+            elif not has_active_noise and (current_time - getattr(self, 'last_path_calc_time', 0) > 600):
+                self.last_path_calc_time = current_time
                 check_path = self._get_path_astar(self.rect.center, target_rect.center, game, allow_break_obstacles=False)
                 if check_path is not None:
+                    self.path = check_path
                     player_is_reachable = True
 
         # State Decision

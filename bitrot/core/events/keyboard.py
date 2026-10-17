@@ -736,7 +736,7 @@ def handle_keyboard_events(game, event, action_triggered=None):
 
         # Hardcoded Hotbar & Zoom bindings
         if game.game_state == 'PLAYING':
-            if pygame.K_1 <= event.key <= pygame.K_5:
+            if pygame.K_1 <= event.key <= pygame.K_3:
                 slot_index = event.key - pygame.K_1
                 if game.player:
                     item = game.player.belt[slot_index]

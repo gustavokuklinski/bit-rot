@@ -318,11 +318,18 @@ def handle_input(game):
 
                     if was_dragging and not getattr(game, 'is_dragging', False):
                         if isinstance(origin, tuple) and len(origin) == 2:
-                            origin_type, origin_index = origin
-                            if origin_type in ('belt_hud', 'belt'):
-                                game.player.belt[origin_index] = None 
+                            # Support both (index, type) and (type, index)
+                            origin_index = origin[0] if isinstance(origin[0], int) else origin[1]
+                            origin_type = origin[1] if isinstance(origin[0], int) else origin[0]
+                            if origin_type in ('belt_hud', 'belt') and isinstance(origin_index, int):
+                                if 0 <= origin_index < len(game.player.belt) and game.player.belt[origin_index] == dragged_item_ref:
+                                    game.player.belt[origin_index] = None
                                 if hasattr(dragged_item_ref, 'in_belt'):
                                     dragged_item_ref.in_belt = False
+
+                    if getattr(game, 'player', None) and getattr(game.player, 'active_weapon', None):
+                        if game.player.active_weapon not in game.player.belt:
+                            game.player.active_weapon = None
                     
             elif event.type == pygame.MOUSEMOTION:
                 handle_mouse_motion(game, event, mouse_pos)

@@ -85,7 +85,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
         self.inventory = []
         self.active_weapon = None
-        self.belt = [None] * 5
+        self.belt = [None] * 3
         self.last_decay_time = time.time()
         self.base_inventory_slots = 15
         
@@ -235,6 +235,9 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             display_message(tr('msg', "Action cancelled."))
 
     def update_stats(self, game):
+        if self.active_weapon is not None and self.active_weapon not in self.belt:
+            self.active_weapon = None
+
         current_time = time.time()
 
         if self.action_timer > 0:
@@ -512,7 +515,14 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         start_pos = self.rect.center
         end_pos = target_rect.center
 
+        min_x = min(start_pos[0], end_pos[0])
+        max_x = max(start_pos[0], end_pos[0])
+        min_y = min(start_pos[1], end_pos[1])
+        max_y = max(start_pos[1], end_pos[1])
+
         for obs in obstacles:
+            if obs.right < min_x or obs.left > max_x or obs.bottom < min_y or obs.top > max_y:
+                continue
             if obs.clipline(start_pos, end_pos):
                 if game and hasattr(game, 'map_manager'):
                     gx = obs.centerx // TILE_SIZE

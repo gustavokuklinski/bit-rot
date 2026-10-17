@@ -218,6 +218,8 @@ def handle_mouse_up(game, event, mouse_pos):
 
                     else:
                         item_to_swap = item_in_slot
+                        if getattr(game.player, 'active_weapon', None) == item_to_swap:
+                            game.player.active_weapon = None
                         game.player.belt[i_target] = game.dragged_item
                         game.dragged_item.in_belt = True
                         game.dragged_item = item_to_swap 
@@ -226,7 +228,6 @@ def handle_mouse_up(game, event, mouse_pos):
 
                         if game and hasattr(game, 'sound_manager'):
                             game.sound_manager.play_sound('equip_belt.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
-
                     if dropped_successfully: break
             if dropped_successfully:
                 game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
@@ -1334,6 +1335,10 @@ def handle_mouse_up(game, event, mouse_pos):
                             vehicle.close_trunk(game)
                     else:
                         game.player.inventory.append(game.dragged_item)
+
+        if getattr(game, 'player', None) and getattr(game.player, 'active_weapon', None):
+            if game.player.active_weapon not in game.player.belt:
+                game.player.active_weapon = None
 
         game.is_dragging = False
         game.dragged_item = None

@@ -24,8 +24,9 @@ def handle_attack(game, mouse_pos):
             break
     
     if not click_in_modal:
-        for i in range(5):
-            if get_belt_hud_slot_rect(i).collidepoint(mouse_pos):
+        belt_count = len(game.player.belt) if getattr(game, 'player', None) else 3
+        for i in range(belt_count):
+            if get_belt_hud_slot_rect(i, game=game).collidepoint(mouse_pos):
                 click_in_modal = True
                 break
 
