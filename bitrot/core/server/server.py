@@ -394,8 +394,9 @@ class GameServer:
                 'map': getattr(a, 'map_filename', ''),
                 'hp': int(a.health),
                 'max_hp': int(a.max_health),
-                'dx': round(getattr(a, 'dx', 0), 2),
-                'dy': round(getattr(a, 'dy', 0), 2)
+                'vx': round(getattr(a, 'vx', 0), 2),
+                'vy': round(getattr(a, 'vy', 0), 2),
+                'anim': round(getattr(a, 'walk_anim_angle', 0), 2)
             })
 
         vehicles_data = []

@@ -368,6 +368,9 @@ class GameClient:
                     a.rect.topleft = (int(a.x), int(a.y))
                     a.health = a_data['hp']
                     a.max_health = a_data['max_hp']
+                    a.vx = a_data.get('vx', 0)
+                    a.vy = a_data.get('vy', 0)
+                    a.walk_anim_angle = a_data.get('anim', 0)
 
                 for a_data in msg.get('animals', []):
                     aid = a_data['id']

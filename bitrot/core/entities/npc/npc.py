@@ -459,7 +459,39 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         else:
             self.aim_angle = self.angle
             target_pos = None
-            self.state = 'idle'
+            
+            # --- FIX: Implement standard wandering AI for dynamic non-static NPCs ---
+            if not self.is_static:
+                if getattr(self, 'aggro_timer', 0) > 0:
+                    self.aggro_timer -= getattr(game, 'dt_ms', 16)
+                self.state = 'wandering'
+                current_time = pygame.time.get_ticks()
+
+                target_reached = self.wander_target and math.hypot(self.wander_target[0] - self.rect.centerx, self.wander_target[1] - self.rect.centery) < TILE_SIZE
+                wander_interval = getattr(core.data.config, 'ZOMBIE_WANDER_CHANGE_INTERVAL', 2500)
+
+                if (current_time - getattr(self, 'last_wander_change', 0) > wander_interval) or (self.wander_target is None) or target_reached:
+                    for _ in range(10):
+                        wander_radius = 5 * TILE_SIZE
+                        new_target_x = self.rect.centerx + random.randint(-wander_radius, wander_radius)
+                        new_target_y = self.rect.centery + random.randint(-wander_radius, wander_radius)
+
+                        grid_x = int(new_target_x // TILE_SIZE)
+                        grid_y = int(new_target_y // TILE_SIZE)
+
+                        if hasattr(game, 'map_data') and 0 <= grid_y < len(game.map_data) and 0 <= grid_x < len(game.map_data[0]):
+                            tile = game.map_manager.get_tile_at(grid_x, grid_y) if hasattr(game, 'map_manager') else None
+                            if not tile or not tile.get('is_obstacle', False):
+                                g_layer = game.all_ground_layers.get(getattr(self, 'layer', 1), [[]])
+                                g_tile = g_layer[grid_y][grid_x] if 0 <= grid_y < len(g_layer) and 0 <= grid_x < len(g_layer[0]) else ''
+                                if 'water' not in str(g_tile).lower():
+                                    self.wander_target = (new_target_x, new_target_y)
+                                    break
+                    self.last_wander_change = current_time
+                target_pos = self.wander_target
+            else:
+                self.state = 'idle'
+                self.wander_target = None
 
         self.dx, self.dy = 0, 0
         
@@ -467,6 +499,9 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             dist_to_dest = math.hypot(target_pos[0] - self.rect.centerx, target_pos[1] - self.rect.centery)
             move_threshold = (TILE_SIZE * 8) if is_ranged_weapon else (TILE_SIZE * 0.8)
             
+            if self.state == 'wandering':
+                move_threshold = TILE_SIZE * 0.8
+
             if dist_to_dest > move_threshold:
                 has_los = self.has_line_of_sight(pygame.Rect(target_pos[0]-2, target_pos[1]-2, 4, 4), game, current_time)
 

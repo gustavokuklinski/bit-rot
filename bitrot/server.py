@@ -705,6 +705,7 @@ class DedicatedServerGame:
         self.dt_mult = (self.dt_ms / 1000.0) * 60.0
         self.frame_count += 1
 
+        self.active_zombies = self.zombies
         self.world_time.update()
         self.server.update()
         update_game_state(self)
