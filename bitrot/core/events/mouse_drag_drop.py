@@ -291,11 +291,11 @@ def handle_mouse_up(game, event, mouse_pos):
                                     tab_drop_handled = True
                                     break
                                     
-                                elif does_allow_liquid(target_container) and not getattr(game.dragged_item, 'liquid', False):
-                                    display_message(tr('msg', "Container only accepts liquids."))
-                                    dropped_successfully = False
-                                    tab_drop_handled = True
-                                    break
+                                #elif does_allow_liquid(target_container) and not getattr(game.dragged_item, 'liquid', False):
+                                #    display_message(tr('msg', "Container only accepts liquids."))
+                                #    dropped_successfully = False
+                                #    tab_drop_handled = True
+                                #    break
                                     
                                 elif getattr(game.dragged_item, 'liquid', False) and not does_allow_liquid(target_container):
                                     display_message(tr('msg', "Liquid spills."))
@@ -543,10 +543,10 @@ def handle_mouse_up(game, event, mouse_pos):
                                 dropped_successfully = False
                                 break
                             
-                            if does_allow_liquid(container) and not getattr(game.dragged_item, 'liquid', False):
-                                display_message(tr('msg', "Container only accepts liquids."))
-                                dropped_successfully = False 
-                                break
+                            #if does_allow_liquid(container) and not getattr(game.dragged_item, 'liquid', False):
+                            #    display_message(tr('msg', "Container only accepts liquids."))
+                            #    dropped_successfully = False 
+                            #    break
                             elif getattr(game.dragged_item, 'liquid', False) and not does_allow_liquid(container):
                                 display_message(tr('msg', "Liquid spills."))
                                 dropped_successfully = True 
@@ -663,10 +663,10 @@ def handle_mouse_up(game, event, mouse_pos):
                                 dropped_successfully = False
                                 break
                             
-                            if does_allow_liquid(target_container) and not getattr(game.dragged_item, 'liquid', False):
-                                display_message(tr('msg', "Container only accepts liquids."))
-                                dropped_successfully = False
-                                break
+                            #if does_allow_liquid(target_container) and not getattr(game.dragged_item, 'liquid', False):
+                            #    display_message(tr('msg', "Container only accepts liquids."))
+                            #    dropped_successfully = False
+                            #    break
                             elif getattr(game.dragged_item, 'liquid', False) and not does_allow_liquid(target_container):
                                 display_message(tr('msg', "Liquid spills."))
                                 dropped_successfully = True
@@ -848,10 +848,10 @@ def handle_mouse_up(game, event, mouse_pos):
                                 dropped_successfully = False
                                 break
                             
-                            if does_allow_liquid(container) and not getattr(game.dragged_item, 'liquid', False):
-                                display_message(tr('msg', "Container only accepts liquids."))
-                                dropped_successfully = False 
-                                break
+                            #if does_allow_liquid(container) and not getattr(game.dragged_item, 'liquid', False):
+                            #    display_message(tr('msg', "Container only accepts liquids."))
+                            #    dropped_successfully = False 
+                            #    break
                             elif getattr(game.dragged_item, 'liquid', False) and not does_allow_liquid(container):
                                 display_message(tr('msg', "Liquid spills."))
                                 dropped_successfully = True 
@@ -1010,10 +1010,10 @@ def handle_mouse_up(game, event, mouse_pos):
                         dropped_successfully = False
                         break
 
-                    if does_allow_liquid(container) and not getattr(game.dragged_item, 'liquid', False):
-                        display_message(tr('msg', "Container only accepts liquids."))
-                        dropped_successfully = False 
-                        break
+                    #if does_allow_liquid(container) and not getattr(game.dragged_item, 'liquid', False):
+                    #    display_message(tr('msg', "Container only accepts liquids."))
+                    #    dropped_successfully = False 
+                    #    break
                     elif getattr(game.dragged_item, 'liquid', False) and not does_allow_liquid(container):
                         display_message(tr('msg', "Liquid spills."))
                         dropped_successfully = True 

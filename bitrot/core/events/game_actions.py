@@ -62,7 +62,6 @@ def try_grab_item(game):
                     game=game,
                     source_pos=game.player.rect.center,
                     base_volume=0.5,
-                    pitch_variance=0.1,
                     is_critical=True
                 )
 

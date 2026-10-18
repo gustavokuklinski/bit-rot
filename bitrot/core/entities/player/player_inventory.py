@@ -127,7 +127,6 @@ class PlayerInventory:
                         game=target_game,
                         source_pos=self.rect.center,
                         base_volume=0.5,
-                        pitch_variance=0.1,
                         is_critical=True
                     )
                     
@@ -207,7 +206,6 @@ class PlayerInventory:
                     game=game,
                     source_pos=item_to_drop.rect.center,
                     base_volume=0.5,
-                    pitch_variance=0.1,
                     is_critical=True
                 )
 

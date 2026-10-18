@@ -538,7 +538,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                         game=game, 
                         source_pos=self.rect.center, 
                         base_volume=0.3, 
-                        pitch_variance=0.25 
+                        #pitch_variance=0.15 
                     )
                     self.last_step_sound_time = current_time
                     self.current_step_delay = random.randint(350, 500) 
@@ -728,7 +728,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                             game=game, 
                             source_pos=self.rect.center, 
                             base_volume=0.3, 
-                            pitch_variance=0.15
+                            #pitch_variance=0.15
                         )
                     self.melee_swing_timer = 250
                     self.melee_swing_angle = attack_angle

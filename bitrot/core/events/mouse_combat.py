@@ -54,7 +54,6 @@ def handle_attack(game, mouse_pos):
                         game=game,
                         source_pos=game.player.rect.center,
                         base_volume=0.5,
-                        # pitch_variance=0.15,
                         is_critical=True
                     )
                 
@@ -162,8 +161,7 @@ def handle_attack(game, mouse_pos):
                             subdir='items', 
                             game=game, 
                             source_pos=game.player.rect.center, 
-                            base_volume=0.5, 
-                            pitch_variance=0.15, 
+                            base_volume=0.5,
                             is_critical=True
                         )
                     print(f"**CLICK!** {weapon.name} is out of ammo.")
@@ -189,7 +187,6 @@ def handle_attack(game, mouse_pos):
                         game=game,
                         source_pos=game.player.rect.center,
                         base_volume=0.5,
-                        pitch_variance=0.15,
                         is_critical=True
                     )
 
@@ -257,7 +254,7 @@ def handle_attack(game, mouse_pos):
 
                 
 
-                if weapon and weapon.item_type in ['weapon_melee', 'tool'] and 'swing' in weapon.sounds and weapon.sounds['swing']:
+                if weapon and weapon.item_type in ['weapon_melee'] and 'swing' in weapon.sounds and weapon.sounds['swing']:
                     game.sound_manager.play_sound(
                         weapon.sounds['swing'],
                         subdir='items',

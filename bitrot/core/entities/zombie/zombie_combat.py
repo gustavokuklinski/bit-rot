@@ -56,8 +56,8 @@ class ZombieCombat:
                     subdir=snd_dir, 
                     game=game, 
                     source_pos=self.rect.center, 
-                    base_volume=0.6, 
-                    pitch_variance=0.15
+                    base_volume=0.6
+                    
                 )
             self.last_hit_sound_time = current_time
 
@@ -123,8 +123,7 @@ class ZombieCombat:
                 subdir=snd_dir, 
                 game=game, 
                 source_pos=self.rect.center, 
-                base_volume=0.6, 
-                pitch_variance=0.15
+                base_volume=0.6
             )
 
     def die(self, game):
@@ -157,8 +156,7 @@ class ZombieCombat:
                 subdir=snd_dir, 
                 game=game, 
                 source_pos=self.rect.center, 
-                base_volume=0.3, 
-                pitch_variance=0.15
+                base_volume=0.3
             )
              
         # 2. Create Corpse at death position

@@ -72,8 +72,7 @@ class PlayerCombat:
                 subdir='items',
                 game=game,
                 source_pos=self.rect.center,
-                base_volume=1.0,
-                pitch_variance=0.15,
+                base_volume=0.8,
                 is_critical=True
             )
             

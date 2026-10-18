@@ -631,5 +631,5 @@ class ZombieAI:
                         snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
                         game.sound_manager.play_sound(
                             self.sound_attack, subdir=snd_dir, game=game,
-                            source_pos=self.rect.center, base_volume=0.6, pitch_variance=0.35
+                            source_pos=self.rect.center, base_volume=0.6
                         )

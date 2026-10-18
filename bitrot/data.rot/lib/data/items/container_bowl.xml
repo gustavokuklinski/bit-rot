@@ -1,4 +1,4 @@
-<item name="Food Bowl" type="container" allow_belt="false" allow_type="[liquid, consumable_food]" tip="Bowl for Food">
+<item name="Bowl" type="container" allow_belt="false" allow_type="[liquid, consumable_food]">
     <properties>
         <capacity value="2" />
         <sprite file="container_bowl.png" />
