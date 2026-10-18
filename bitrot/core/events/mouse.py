@@ -105,21 +105,30 @@ def handle_mouse_down(game, event, mouse_pos):
             clicked_notif = False
             for notif in game.notifications:
                 if notif.get('rect') and notif['rect'].collidepoint(mouse_pos):
-                    # Ensure status modal is open
-                    status_modal = next((m for m in game.modals if m['type'] == 'status'), None)
-                    target_tab = notif.get('target_tab', 'Quests')
-                    if status_modal:
-                        status_modal['active_tab'] = target_tab
-                        # Bring modal to front
-                        game.modals.remove(status_modal)
-                        game.modals.append(status_modal)
+                    # If this is the fixed/persistent TAB prompt notification, toggle the UI
+                    if notif.get('persistent'):
+                        from core.events.keyboard import toggle_default_ui
+                        toggle_default_ui(game)
+                        if notif in game.notifications:
+                            game.notifications.remove(notif)
                     else:
-                        toggle_status_modal(game)
-                        # The newly created modal is always placed at the end of the list
-                        game.modals[-1]['active_tab'] = target_tab
-                        
-                    # Remove the clicked notification
-                    game.notifications.remove(notif)
+                        # Default behavior for other quest/milestone notifications: open status modal
+                        status_modal = next((m for m in game.modals if m['type'] == 'status'), None)
+                        target_tab = notif.get('target_tab', 'Quests')
+                        if status_modal:
+                            status_modal['active_tab'] = target_tab
+                            # Bring modal to front
+                            game.modals.remove(status_modal)
+                            game.modals.append(status_modal)
+                        else:
+                            toggle_status_modal(game)
+                            # The newly created modal is always placed at the end of the list
+                            game.modals[-1]['active_tab'] = target_tab
+                            
+                        # Remove the clicked notification
+                        if notif in game.notifications:
+                            game.notifications.remove(notif)
+
                     clicked_notif = True
                     break
                     
@@ -556,6 +565,11 @@ def handle_mouse_down(game, event, mouse_pos):
         
         if getattr(game, 'menu_hud_button_rect', None) and game.menu_hud_button_rect.collidepoint(mouse_pos):
             game.show_hud_menus = not getattr(game, 'show_hud_menus', False)
+            return
+        
+        if getattr(game, 'modals_all_button_rect', None) and game.modals_all_button_rect.collidepoint(mouse_pos):
+            from core.events.keyboard import toggle_default_ui
+            toggle_default_ui(game)
             return
 
         if game.status_button_rect and game.status_button_rect.collidepoint(mouse_pos):

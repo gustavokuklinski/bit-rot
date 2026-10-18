@@ -78,7 +78,7 @@ def update_camera(game):
     left_encroachment = 0
     right_encroachment = 0
     dynamic_h = GAME_HEIGHT
-    ignored_modals = {'big_map', 'npc_dialog', 'crafting'}
+    ignored_modals = {'big_map', 'npc_dialog', 'crafting', 'container'}
     
     for modal in getattr(game, 'modals', []):
         if 'rect' in modal and modal.get('type') not in ignored_modals:

@@ -3,16 +3,23 @@ from core.data.config import GAME_WIDTH, WHITE, font_12
 from core.entities.npc.npc_dialog import NPCDialog
 import core.messages
 
-def add_notification(game, title, message, duration=5000, target_tab='Quests', play_sound=True):
+def add_notification(game, title, message, duration=5000, target_tab='Quests', play_sound=True, persistent=False):
     if not hasattr(game, 'notifications'): 
         game.notifications = []
+
+    # Prevent duplicate persistent notifications from stacking
+    if persistent:
+        for n in game.notifications:
+            if n.get('persistent') and n.get('message') == message:
+                return
         
     game.notifications.append({
         'title': title,
         'message': message,
-        'remaining_time': duration,
+        'remaining_time': duration if duration is not None else 999999999,
         'rect': None,
-        'target_tab': target_tab
+        'target_tab': target_tab,
+        'persistent': persistent
     })
 
     if play_sound:
@@ -59,6 +66,9 @@ def draw_notifications(surface, game):
         
         # Check hover state
         is_hovered = chip_rect.collidepoint(mouse_pos)
+
+        if not is_hovered and not notif.get('persistent', False):
+            notif['remaining_time'] -= getattr(game, 'dt_ms', 16)
         
         # Only tick down the timer if the mouse is NOT hovering over it
         if not is_hovered:

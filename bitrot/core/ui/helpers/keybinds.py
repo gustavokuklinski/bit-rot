@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 import xml.dom.minidom
 import core.data.config as config
 from core.ui.modals import draw_scrollbar
+from core.data.localization import tr
 
 # Keyboard / Mouse uses positive integers for keys, negative for mouse buttons.
 DEFAULT_KB_MOUSE_BINDS = {
@@ -97,6 +98,53 @@ def draw_btn(surface, rect, text, mouse_pos, enabled=True, base_color=(60, 60, 6
     txt_surf = config.font_16.render(text, False, text_color)
     txt_rect = txt_surf.get_rect(center=rect.center)
     surface.blit(txt_surf, txt_rect)
+
+
+def get_action_bind_labels(action):
+    """Returns a tuple (keyboard_button_name, joystick_button_name) for a given action."""
+    # 1. Keyboard / Mouse
+    kb_val = keybind_manager.kb_binds.get(action)
+    if kb_val is None:
+        kb_name = "TAB"
+    elif kb_val < 0:
+        btn_num = -kb_val
+        if btn_num == 1: kb_name = "LMB"
+        elif btn_num == 2: kb_name = "MMB"
+        elif btn_num == 3: kb_name = "RMB"
+        else: kb_name = f"MB{btn_num}"
+    else:
+        name = pygame.key.name(kb_val).upper()
+        special_names = {
+            "SPACE": "SPACE",
+            "LEFT SHIFT": "LSHIFT",
+            "RIGHT SHIFT": "RSHIFT",
+            "LEFT CTRL": "LCTRL",
+            "RIGHT CTRL": "RCTRL",
+            "RETURN": "ENTER",
+            "TAB": "TAB"
+        }
+        kb_name = special_names.get(name, name)
+
+    # 2. Joystick Controller
+    joy_val = keybind_manager.joy_binds.get(action)
+    if joy_val is not None:
+        joy_name = JOYSTICK_BTN_NAMES.get(joy_val, f"BTN {joy_val}")
+    else:
+        joy_name = "START"
+
+    return kb_name, joy_name
+
+def get_open_ui_prompt_text():
+    """Generates the localized, dynamic 'Press [KEY/JOY] to open UI' string."""
+    kb_btn, joy_btn = get_action_bind_labels('toggle_modals')
+    ctrl_str = f"{kb_btn}/{joy_btn}"
+    
+    template = tr('msg', "Press [{controls}] to open UI")
+    if '{controls}' in template:
+        return template.replace('{controls}', ctrl_str)
+    if '[TAB]' in template:
+        return template.replace('[TAB]', f"[{ctrl_str}]")
+    return f"Press [{ctrl_str}] to open UI"
 
 
 class KeybindManager:

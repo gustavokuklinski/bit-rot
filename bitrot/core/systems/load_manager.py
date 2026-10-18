@@ -31,6 +31,9 @@ from core.data.radio_manager import RadioManager
 from core.placement import find_free_tile
 from core.systems.save_manager import save_game
 from core.systems.utils import teleport_player_to_chunk
+from core.ui.notifications import add_notification
+from core.data.localization import tr
+from core.ui.helpers.keybinds import get_open_ui_prompt_text
 
 def load_map(game, map_filename):
     game.all_map_layers.clear()
@@ -271,21 +274,13 @@ def respawn_player_in_world(game, new_player_data, save_folder_name):
         game.player.is_reloading = False
         game.player.active_weapon = None
 
-        stat_pos = game.last_modal_positions.get('status', (0, 0))
-        inv_pos = game.last_modal_positions.get('inventory', (1034, 256))
-        nearby_pos = game.last_modal_positions.get('nearby', (1034, 494))
-        msg_pos = game.last_modal_positions.get('messages', (3, 460))
-        gear_pos = game.last_modal_positions.get('gear', (1034, 3))
-        slots_pos = game.last_modal_positions.get('slots', (1034, 3))
+        game.modals = []
 
-        game.modals = [
-            {'type': 'status', 'id': str(uuid.uuid4()), 'position': stat_pos, 'rect': pygame.Rect(stat_pos, (STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
-            {'type': 'inventory', 'id': str(uuid.uuid4()), 'position': inv_pos, 'rect': pygame.Rect(inv_pos, (INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0), 'active_tab': 'Inventory'},
-            {'type': 'gear', 'id': str(uuid.uuid4()), 'position': gear_pos, 'rect': pygame.Rect(gear_pos, (GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
-            {'type': 'nearby', 'id': str(uuid.uuid4()), 'position': nearby_pos, 'rect': pygame.Rect(nearby_pos, (NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0), 'active_tab': 'Ground'},
-            {'type': 'messages', 'id': str(uuid.uuid4()), 'position': msg_pos, 'rect': pygame.Rect(msg_pos, (MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
-            {'type': 'slots', 'id': str(uuid.uuid4()), 'position': slots_pos, 'rect': pygame.Rect(slots_pos, (SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)}
-        ]
+        init_tab_msg = get_open_ui_prompt_text()
+        if hasattr(game, 'message_logs'):
+            game.message_logs['All'].append(init_tab_msg)
+
+        add_notification(game, tr('ui', 'UI Tip'), init_tab_msg, duration=None, persistent=True, play_sound=False)
 
         if hasattr(game, 'spatial_manager'):
             game.spatial_manager.rebuild_zombie_grid()
@@ -446,21 +441,14 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     game.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
     game.zombies_killed = 0
-    stat_pos = game.last_modal_positions.get('status', (0, 0))
-    inv_pos = game.last_modal_positions.get('inventory', (1034, 256))
-    nearby_pos = game.last_modal_positions.get('nearby', (1034, 494))
-    msg_pos = game.last_modal_positions.get('messages', (3, 460))
-    gear_pos = game.last_modal_positions.get('gear', (1034, 3))
-    slots_pos = game.last_modal_positions.get('slots', (1034, 3))
+    
+    game.modals = []
+    if not is_loading_existing_save:
+        init_tab_msg = get_open_ui_prompt_text()
+        if hasattr(game, 'message_logs'):
+            game.message_logs['All'].append(init_tab_msg)
 
-    game.modals = [
-        {'type': 'status', 'id': str(uuid.uuid4()), 'position': stat_pos, 'rect': pygame.Rect(stat_pos, (STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
-        {'type': 'inventory', 'id': str(uuid.uuid4()), 'position': inv_pos, 'rect': pygame.Rect(inv_pos, (INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0), 'active_tab': 'Inventory'},
-        {'type': 'gear', 'id': str(uuid.uuid4()), 'position': gear_pos, 'rect': pygame.Rect(gear_pos, (GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
-        {'type': 'nearby', 'id': str(uuid.uuid4()), 'position': nearby_pos, 'rect': pygame.Rect(nearby_pos, (NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0), 'active_tab': 'Ground'},
-        {'type': 'messages', 'id': str(uuid.uuid4()), 'position': msg_pos, 'rect': pygame.Rect(msg_pos, (MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)},
-        {'type': 'slots', 'id': str(uuid.uuid4()), 'position': slots_pos, 'rect': pygame.Rect(slots_pos, (SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT)), 'is_dragging': False, 'drag_offset': (0, 0)}
-    ]
+        add_notification(game, tr('ui', 'UI Tip'), init_tab_msg, duration=None, persistent=True, play_sound=False)
 
     if getattr(core.data.config, 'UI_SHOW_TUTORIAL_DEFAULT', False):
         help_pos = game.last_modal_positions.get('help', (GAME_WIDTH / 2 - HELP_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - HELP_MODAL_HEIGHT / 2))
@@ -752,6 +740,59 @@ def load_game(game, save_folder_name):
         
         with open(os.path.join(save_path, "world.rot"), "r") as f:
             world_data = json.load(f)
+
+        # Restore modal positions
+        if "modal_positions" in world_data and isinstance(world_data["modal_positions"], dict):
+            game.last_modal_positions.update(world_data["modal_positions"])
+
+        # Restore open/closed modals exactly as they were saved
+        game.modals = []
+        saved_open_modals = world_data.get("open_modals", None)
+
+        if saved_open_modals is not None:
+            DIMENSIONS = {
+                'status': (STATUS_MODAL_WIDTH, STATUS_MODAL_HEIGHT),
+                'inventory': (INVENTORY_MODAL_WIDTH, INVENTORY_MODAL_HEIGHT),
+                'gear': (GEAR_MODAL_WIDTH, GEAR_MODAL_HEIGHT),
+                'nearby': (NEARBY_MODAL_WIDTH, NEARBY_MODAL_HEIGHT),
+                'messages': (MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT),
+                'slots': (SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT),
+                'container': (CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT),
+                'help': (HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT)
+            }
+
+            for m_data in saved_open_modals:
+                m_type = m_data.get('type')
+                pos = tuple(m_data.get('position', game.last_modal_positions.get(m_type, (0, 0))))
+                dim = DIMENSIONS.get(m_type, (256, 240))
+                new_m = {
+                    'id': str(uuid.uuid4()),
+                    'type': m_type,
+                    'position': pos,
+                    'rect': pygame.Rect(pos, dim),
+                    'is_dragging': False,
+                    'drag_offset': (0, 0),
+                    'active_tab': m_data.get('active_tab'),
+                    'scroll_offset_y': m_data.get('scroll_offset_y', 0)
+                }
+
+                if m_type == 'container':
+                    target_id = m_data.get('item_id')
+                    target_pos = m_data.get('item_pos')
+                    found_c = None
+                    candidates = game.containers + game.items_on_ground + game.player.inventory + list(game.player.clothes.values())
+                    for cand in candidates:
+                        if target_id and getattr(cand, 'id', None) == target_id:
+                            found_c = cand
+                            break
+                        if target_pos and hasattr(cand, 'rect') and [cand.rect.x, cand.rect.y] == target_pos:
+                            found_c = cand
+                            break
+                    if found_c:
+                        new_m['item'] = found_c
+                        game.modals.append(new_m)
+                else:
+                    game.modals.append(new_m)
         
         game.app_state = {'slots': [None] * 5}
         for idx, s_data in enumerate(world_data.get('app_slots', [])):

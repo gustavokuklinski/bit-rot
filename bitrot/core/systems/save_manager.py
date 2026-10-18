@@ -482,6 +482,27 @@ def save_game(game):
                 if isinstance(b_arr, (bytearray, bytes)):
                     saved_explored_tiles[m_name] = b_arr.hex()
 
+        saved_open_modals = []
+        for m in getattr(game, 'modals', []):
+            m_type = m.get('type')
+            if not m_type or m_type in ('belt',):
+                continue
+            
+            m_entry = {
+                'type': m_type,
+                'position': [m['rect'].x, m['rect'].y] if 'rect' in m else list(m.get('position', (0, 0))),
+                'active_tab': m.get('active_tab'),
+                'scroll_offset_y': m.get('scroll_offset_y', 0)
+            }
+            if m_type == 'container' and m.get('item'):
+                c_it = m['item']
+                m_entry['item_id'] = getattr(c_it, 'id', None)
+                m_entry['item_name'] = getattr(c_it, 'name', None)
+                if hasattr(c_it, 'rect'):
+                    m_entry['item_pos'] = [c_it.rect.x, c_it.rect.y]
+
+            saved_open_modals.append(m_entry)
+
         world_data = {
             "time": {
                 "game_time_ms": game.world_time.game_time_ms,
@@ -490,6 +511,7 @@ def save_game(game):
             "layer_spawn_triggers": {str(k): list(v) for k, v in game.layer_spawn_triggers.items()},
             "items": safe_ground_items,
             "containers": container_data,
+            "open_modals": saved_open_modals,
             "modal_positions": game.last_modal_positions,
             "app_slots": [i.to_dict() if hasattr(i, 'to_dict') else i for i in getattr(game, 'app_state', {}).get('slots', [])],
             "barricades": saved_barricades,

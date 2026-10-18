@@ -62,8 +62,8 @@ def run_load_game_menu(game):
                 idx = game.load_game_state.get('selected_save_index')
                 if idx is not None and idx < len(game.load_game_state['save_list']):
                     save_folder = game.load_game_state['save_list'][idx]['filename']
-                    game.load_game(save_folder)
 
+                    # Hand off to background loader (do not call load_game here synchronously)
                     game.loading_saved_game_folder = save_folder
                     game.loading_done = False
                     game.game_state = 'LOADING'

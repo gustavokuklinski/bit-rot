@@ -557,61 +557,66 @@ def process_chat_command(game, text):
             
     return False
 
+DEFAULT_MODAL_POSITIONS = {
+    'gear': (GAME_WIDTH - GEAR_MODAL_WIDTH, 0),
+    'inventory': (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT),
+    'nearby': (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT),
+    'messages': (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
+    'status': (0, 0),
+    'slots': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
+    'container': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT - CONTAINER_MODAL_HEIGHT),
+    'text': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
+    'mobile': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
+    'vehicle': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
+    'crafting': (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2),
+    'help': (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2),
+}
+
 def reset_modal_positions(game):
-    default_positions = {
-        'gear': (GAME_WIDTH - GEAR_MODAL_WIDTH, 0),
-        'inventory': (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT),
-        'nearby': (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT),
-        'messages': (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
-        'status': (0, 0),
-        'slots': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
-        'container': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT - CONTAINER_MODAL_HEIGHT),
-        'text': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
-        'mobile': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT),
-        'vehicle': (MESSAGES_MODAL_WIDTH, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
-        'crafting': (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2),
-        'help': (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2),
-    }
     if hasattr(game, 'last_modal_positions'):
-        game.last_modal_positions.update(default_positions)
+        game.last_modal_positions.update(DEFAULT_MODAL_POSITIONS)
     game.modals.clear()
     if hasattr(game, 'saved_modals'):
         game.saved_modals.clear()
     toggle_default_ui(game)
 
 def toggle_default_ui(game):
-    if game.modals:
-        game.saved_modals = []
-        for modal in game.modals:
-            if 'rect' in modal:
-                game.last_modal_positions[modal['type']] = (modal['rect'].x, modal['rect'].y)
-            game.saved_modals.append(modal)
+    if hasattr(game, 'notifications'):
+        game.notifications = [n for n in game.notifications if not n.get('persistent')]
+        
+    MAIN_PANEL_TYPES = {'gear', 'inventory', 'nearby', 'messages', 'status', 'slots'}
+    is_main_ui_open = any(m.get('type') in MAIN_PANEL_TYPES for m in getattr(game, 'modals', []))
+
+    # Check if a standalone container modal is currently open
+    open_container_modal = next((m for m in game.modals if m.get('type') == 'container'), None)
+    container_to_dock = open_container_modal.get('item') if open_container_modal else None
+
+    if is_main_ui_open:
+        # If the UI is open -> hide all modals
         game.modals.clear()
-    elif getattr(game, 'saved_modals', None):
-        for modal in game.saved_modals:
-            if modal['type'] in game.last_modal_positions:
-                pos = game.last_modal_positions[modal['type']]
-                modal['position'] = pos
-                if 'rect' in modal:
-                    modal['rect'].topleft = pos
-            game.modals.append(modal)
-        game.saved_modals.clear()
+        if hasattr(game, 'saved_modals'):
+            game.saved_modals.clear()
     else:
-        default_positions = {
-            'gear': (GAME_WIDTH - GEAR_MODAL_WIDTH, 0),
-            'inventory': (GAME_WIDTH - INVENTORY_MODAL_WIDTH, GEAR_MODAL_HEIGHT),
-            'nearby': (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT),
-            'messages': (0, GAME_HEIGHT - MESSAGES_MODAL_HEIGHT),
-            'status': (0,0),
-            'slots': (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT)
-        }
-        game.last_modal_positions.update(default_positions)
+        # If hidden (or only a container is open) -> close container, show and reset default UI
+        game.modals.clear()
+        if hasattr(game, 'saved_modals'):
+            game.saved_modals.clear()
+
+        if hasattr(game, 'last_modal_positions'):
+            game.last_modal_positions.update(DEFAULT_MODAL_POSITIONS)
+
         toggle_gear_modal(game)
         toggle_inventory_modal(game)
         toggle_nearby_modal(game)
         toggle_messages_modal(game)
         toggle_status_modal(game)
         toggle_slots_modal(game)
+
+        # Place the previously opened container into Nearby
+        if container_to_dock:
+            nearby_modal = next((m for m in game.modals if m.get('type') == 'nearby'), None)
+            if nearby_modal:
+                nearby_modal['active_tab'] = getattr(container_to_dock, 'name', 'Ground')
 
 def handle_keyboard_events(game, event, action_triggered=None):
     
@@ -779,6 +784,7 @@ def handle_keyboard_events(game, event, action_triggered=None):
         elif action_triggered == 'toggle_gear': toggle_gear_modal(game)
         elif action_triggered == 'toggle_nearby': toggle_nearby_modal(game)
         elif action_triggered == 'toggle_slots': toggle_slots_modal(game)
+        elif action_triggered == 'toggle_modals': toggle_default_ui(game)
         elif action_triggered == 'toggle_messages':
             # Only F10 / action toggles messages; never let 'M' trigger it
             if not (event.type == pygame.KEYDOWN and event.key == pygame.K_m):
@@ -937,7 +943,11 @@ def handle_keyboard_events(game, event, action_triggered=None):
                         else:
                             modal_exists = any(m['type'] == 'container' and m.get('item') == found_container for m in game.modals)
                             if not modal_exists:
-                                target_pos = getattr(game, 'last_modal_positions', {}).get('nearby', (GAME_WIDTH - NEARBY_MODAL_WIDTH, GEAR_MODAL_HEIGHT + INVENTORY_MODAL_HEIGHT))
+                                # When modals are hidden, center the container so it does not snap to the right dock
+                                target_pos = (
+                                    GAME_WIDTH - CONTAINER_MODAL_WIDTH - 5,
+                                    GAME_HEIGHT - CONTAINER_MODAL_HEIGHT - 5
+                                )
                                 new_modal = {
                                     'id': uuid.uuid4(),
                                     'type': 'container',

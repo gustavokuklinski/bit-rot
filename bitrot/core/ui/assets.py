@@ -36,6 +36,13 @@ def load_assets():
     except pygame.error as e:
         print(f"Error loading menu hud icon: {e}")
         assets['menu_hud_icon'] = None
+    
+    try:
+        modals_all_img = pygame.image.load(SPRITE_PATH + 'ui/modals_all.png').convert_alpha()
+        assets['modals_all_icon'] = pygame.transform.scale(modals_all_img, (15, 15))
+    except pygame.error as e:
+        print(f"Error loading modals_all icon: {e}")
+        assets['modals_all_icon'] = None
 
     try:
         assets['close_button'] = pygame.image.load(SPRITE_PATH + 'ui/close.png').convert_alpha()

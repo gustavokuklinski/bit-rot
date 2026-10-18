@@ -246,9 +246,10 @@ def handle_context_menu_click(game, mouse_pos):
                         game.context_menu['active'] = False
                         return
 
+                # An action is external (requires looting timer) if from world, vehicle, nearby, or external container
                 is_external = (
                     source in ['nearby', 'ground', 'container_map', 'vehicle_equipment'] 
-                    or (source == 'container' and container_item and not is_container_on_player(container_item, game.player))
+                    or (source == 'container' and (not container_item or not is_container_on_player(container_item, game.player)))
                 )
 
                 if target_dest == 'Inventory':
@@ -336,7 +337,6 @@ def handle_context_menu_click(game, mouse_pos):
                     transfer_time = get_transfer_time(game.player)
                     action_label = f"{tr('ui', 'Removing')} {tr('item', item.name)}"
                     game.player.start_action(action_label, transfer_time, do_send_ground, xp_reward=0.5)
-                
 
                 elif target_dest == 'Belt':
                     if source == 'belt':
@@ -350,13 +350,20 @@ def handle_context_menu_click(game, mouse_pos):
 
                     empty_idx = next((bi for bi, b in enumerate(game.player.belt) if b is None), None)
                     if empty_idx is not None:
-                        removed = remove_from_source(game, item, source, index, container_item)
-                        if removed:
-                            removed.in_belt = True
-                            game.player.belt[empty_idx] = removed
-                            if hasattr(game, 'sound_manager'):
-                                game.sound_manager.play_sound('equip_belt.ogg', subdir='items', game=game, source_pos=game.player.rect.center, is_critical=True)
-                            display_message(f"{tr('msg', 'Sent')} {tr('item', removed.name)} {tr('msg', 'to belt slot')} {empty_idx+1}.")
+                        def do_send_belt():
+                            removed = remove_from_source(game, item, source, index, container_item)
+                            if removed:
+                                removed.in_belt = True
+                                game.player.belt[empty_idx] = removed
+                                if hasattr(game, 'sound_manager'):
+                                    game.sound_manager.play_sound('equip_belt.ogg', subdir='items', game=game, source_pos=game.player.rect.center, is_critical=True)
+                                display_message(f"{tr('msg', 'Sent')} {tr('item', removed.name)} {tr('msg', 'to belt slot')} {empty_idx+1}.")
+
+                        transfer_time = get_transfer_time(game.player)
+                        if is_external:
+                            game.player.start_action(tr('msg', "Looting"), transfer_time, do_send_belt, xp_reward=0.5)
+                        else:
+                            do_send_belt()
                     else:
                         display_message(tr('msg', "Belt is full."))
 
@@ -1212,15 +1219,23 @@ def handle_context_menu_click(game, mouse_pos):
                         if not is_nearby_tab:
                             modal_exists = any(m['type'] == 'container' and m.get('item') == item for m in game.modals)
                             if not modal_exists:
-                                slots_modal = next((m for m in game.modals if m.get('type') == 'slots'), None)
-                                if slots_modal and 'rect' in slots_modal:
-                                    slots_pos = (slots_modal['rect'].x, slots_modal['rect'].y)
+                                has_default_ui = any(m['type'] in ('inventory', 'nearby', 'slots') for m in game.modals)
+                                if has_default_ui:
+                                    slots_modal = next((m for m in game.modals if m.get('type') == 'slots'), None)
+                                    if slots_modal and 'rect' in slots_modal:
+                                        slots_pos = (slots_modal['rect'].x, slots_modal['rect'].y)
+                                    else:
+                                        slots_pos = getattr(game, 'last_modal_positions', {}).get(
+                                            'slots', (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT)
+                                        )
+                                    target_pos = (slots_pos[0], max(0, slots_pos[1] - CONTAINER_MODAL_HEIGHT))
+                                    game.last_modal_positions['container'] = target_pos
                                 else:
-                                    slots_pos = getattr(game, 'last_modal_positions', {}).get(
-                                        'slots', (MESSAGES_MODAL_WIDTH + STATUS_MODAL_WIDTH, GAME_HEIGHT - SLOTS_MODAL_HEIGHT)
+                                    # Modals are hidden -> open centered without border snapping
+                                    target_pos = (
+                                        GAME_WIDTH - CONTAINER_MODAL_WIDTH - 5,
+                                        GAME_HEIGHT - CONTAINER_MODAL_HEIGHT - 5
                                     )
-                                target_pos = (slots_pos[0], max(0, slots_pos[1] - CONTAINER_MODAL_HEIGHT))
-                                game.last_modal_positions['container'] = target_pos
 
                                 new_container_modal = {
                                     'id': uuid.uuid4(),
@@ -1426,18 +1441,22 @@ def handle_context_menu_click(game, mouse_pos):
                                     source_pos=game.player.rect.center, base_volume=0.5, is_critical=True
                                 )
 
-                            
+                    # Check if the container is external (requires looting timer)
+                    is_external_grab = (
+                        source in ('nearby', 'ground') 
+                        or (source == 'container' and (not container_item or not is_container_on_player(container_item, game.player)))
+                    )
 
-                    if source == 'nearby':
-                        grab_time = 0.3
+                    if is_external_grab:
+                        grab_time = get_transfer_time(game.player)
                         game.player.start_action(tr('msg', "Looting"), grab_time, do_grab, xp_reward=0.5)
                     else:
                         do_grab()
                 else:
                     display_message(tr('msg', "Inventory is full."))
 
-            clicked_on_menu = True
-            break
+                clicked_on_menu = True
+                break
 
     game.context_menu['active'] = False
     if clicked_on_menu:

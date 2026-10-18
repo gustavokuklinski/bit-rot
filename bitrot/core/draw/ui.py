@@ -829,6 +829,19 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         if getattr(game, 'assets', None) and game.assets.get('menu_hud_icon'):
             icon_rect = game.assets['menu_hud_icon'].get_rect(center=game.menu_hud_button_rect.center)
             game.game_screen.blit(game.assets['menu_hud_icon'], icon_rect)
+
+        # New Modals All button placed beside Toggle Menus
+        game.modals_all_button_rect = pygame.Rect(
+            game.menu_hud_button_rect.x + 25,
+            game.menu_hud_button_rect.y,
+            game.menu_hud_button_rect.width,
+            game.menu_hud_button_rect.height
+        )
+
+        if getattr(game, 'assets', None) and game.assets.get('modals_all_icon'):
+            icon_rect = game.assets['modals_all_icon'].get_rect(center=game.modals_all_button_rect.center)
+            game.game_screen.blit(game.assets['modals_all_icon'], icon_rect)
+        
             
         # 1. Display mini status bars when the Player Status modal is closed
         is_status_modal_open = any(m.get('type') == 'status' for m in getattr(game, 'modals', []))
@@ -871,6 +884,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         tooltip_targets = [
             (game.pause_button_rect, f"{tr('ui', 'Pause')} ({get_key_name('pause') or 'F2'})"), 
             (game.menu_hud_button_rect, f"{tr('ui', 'Toggle UI Menus')} ({get_key_name('toggle_menu') or 'F3'})"),
+            (game.modals_all_button_rect, f"{tr('ui', 'Toggle & Reset UI')} ({get_key_name('toggle_modals') or 'TAB'})"),
             (getattr(game, 'status_button_rect', None), f"{tr('ui', 'Player Status')} ({get_key_name('toggle_status') or 'F5'})"),
             (getattr(game, 'inventory_button_rect', None), f"{tr('ui', 'Inventory')} ({get_key_name('toggle_inventory') or 'F6'})"),
             (getattr(game, 'gear_button_rect', None), f"{tr('ui', 'Gear')} ({get_key_name('toggle_gear') or 'F7'})"),
