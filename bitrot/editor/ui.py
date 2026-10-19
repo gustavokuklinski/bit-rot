@@ -352,9 +352,10 @@ class UIDropdown:
         if self.searchable:
             base_h += self.item_height
             
-        from editor.config import SCREEN_HEIGHT
+        cur_surf = pygame.display.get_surface()
+        screen_h = cur_surf.get_height() if cur_surf else 720
         self.list_rect.height = base_h
-        if self.rect.bottom + base_h > SCREEN_HEIGHT - 10:
+        if self.rect.bottom + base_h > screen_h - 10:
             self.list_rect.bottom = self.rect.top
         else:
             self.list_rect.top = self.rect.bottom
@@ -1296,27 +1297,43 @@ class Toolbar:
         self.height = height
         self.font = font
         self.buttons = []
-        self.active_tool = None
+        self._active_tool = None
 
-        self.button_defs = [
+        self.direct_button_defs = [
             {"label": "+ New Building", "action": "NEW BUILDING", "color": UITheme.SUCCESS},
             {"label": "Rename", "action": "RENAME", "color": UITheme.PANEL_BG},
             {"label": "Save Map", "action": "SAVE MAP", "color": UITheme.ACCENT},
-            {"label": "Select", "action": "SELECTION", "color": UITheme.PANEL_BG},
-            {"label": "Fill", "action": "FILL", "color": UITheme.PANEL_BG},
-            {"label": "Eraser", "action": "ERASER", "color": UITheme.PANEL_BG},
-            {"label": "Undo", "action": "UNDO", "color": UITheme.PANEL_BG},
-            {"label": "Clear", "action": "CLEAR", "color": UITheme.DANGER},
-            {"label": "Copy", "action": "COPY", "color": UITheme.PANEL_BG},
-            {"label": "Paste", "action": "PASTE", "color": UITheme.PANEL_BG},
         ]
+        
+        self.menu_tool_defs = [
+            {"label": "Select", "action": "SELECTION"},
+            {"label": "Fill", "action": "FILL"},
+            {"label": "Eraser", "action": "ERASER"},
+            {"label": "Undo", "action": "UNDO"},
+            {"label": "Clear", "action": "CLEAR"},
+            {"label": "Copy", "action": "COPY"},
+            {"label": "Paste", "action": "PASTE"},
+        ]
+        
+        self.tools_expanded = False
+        self.tools_btn_rect = pygame.Rect(0, 0, 110, 30)
+        self.menu_item_height = 28
+        self._rebuild_buttons()
+
+    @property
+    def active_tool(self):
+        return self._active_tool
+
+    @active_tool.setter
+    def active_tool(self, val):
+        self._active_tool = val
         self._rebuild_buttons()
 
     def _rebuild_buttons(self):
         self.buttons = []
         padding = 8
         cur_x = self.x + padding
-        for b_def in self.button_defs:
+        for b_def in self.direct_button_defs:
             w = self.font.size(b_def["label"])[0] + 24
             rect = pygame.Rect(cur_x, self.y + 6, w, self.height - 12)
             self.buttons.append({
@@ -1327,9 +1344,19 @@ class Toolbar:
             })
             cur_x += w + padding
 
+        tool_name = self.active_tool.capitalize() if self.active_tool else "Tools"
+        tools_label = f"☰ {tool_name}"
+        tools_w = max(120, self.font.size(tools_label)[0] + 24)
+        self.tools_btn_rect = pygame.Rect(cur_x, self.y + 6, tools_w, self.height - 12)
+
     def resize(self, width):
         self.width = width
         self._rebuild_buttons()
+
+    def get_dropdown_rect(self):
+        menu_w = max(160, self.tools_btn_rect.width + 20)
+        menu_h = len(self.menu_tool_defs) * self.menu_item_height + 8
+        return pygame.Rect(self.tools_btn_rect.x, self.tools_btn_rect.bottom + 2, menu_w, menu_h)
 
     def draw(self, surface):
         pygame.draw.rect(surface, UITheme.PANEL_BG, (self.x, self.y, self.width, self.height))
@@ -1337,13 +1364,64 @@ class Toolbar:
 
         mouse_pos = pygame.mouse.get_pos()
         for b in self.buttons:
-            is_active_tool = (self.active_tool == b["action"])
-            base_col = UITheme.ACCENT if is_active_tool else b["color"]
-            hover_col = UITheme.ACCENT_HOVER if is_active_tool else (UITheme.HOVER_BG if base_col == UITheme.PANEL_BG else UITheme.SUCCESS_HOVER)
-            draw_styled_button(surface, b["rect"], b["label"], self.font, mouse_pos, base_col, hover_col)
+            draw_styled_button(surface, b["rect"], b["label"], self.font, mouse_pos, b["color"], UITheme.HOVER_BG if b["color"] == UITheme.PANEL_BG else UITheme.SUCCESS_HOVER)
+
+        tool_name = self.active_tool.capitalize() if self.active_tool else "Tools"
+        tools_label = f"☰ {tool_name}"
+        btn_color = UITheme.ACCENT if (self.tools_expanded or self.active_tool) else UITheme.PANEL_BG
+        btn_hover = UITheme.ACCENT_HOVER if (self.tools_expanded or self.active_tool) else UITheme.HOVER_BG
+        draw_styled_button(surface, self.tools_btn_rect, tools_label, self.font, mouse_pos, btn_color, btn_hover)
+
+        if self.tools_expanded:
+            dd_rect = self.get_dropdown_rect()
+            shadow = dd_rect.copy()
+            shadow.y += 3
+            pygame.draw.rect(surface, (10, 10, 10, 160), shadow, border_radius=6)
+            pygame.draw.rect(surface, UITheme.PANEL_BG, dd_rect, border_radius=6)
+            pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, dd_rect, 1, border_radius=6)
+
+            for i, tool in enumerate(self.menu_tool_defs):
+                item_rect = pygame.Rect(dd_rect.x + 4, dd_rect.y + 4 + i * self.menu_item_height, dd_rect.width - 8, self.menu_item_height - 2)
+                is_active = (self.active_tool == tool["action"])
+                hovered = item_rect.collidepoint(mouse_pos)
+
+                if is_active:
+                    pygame.draw.rect(surface, UITheme.ACCENT, item_rect, border_radius=4)
+                elif hovered:
+                    pygame.draw.rect(surface, UITheme.HOVER_BG, item_rect, border_radius=4)
+
+                prefix = "✓ " if is_active else "  "
+                lbl_color = UITheme.TEXT if (is_active or hovered) else UITheme.TEXT_DIM
+                txt_surf = self.font.render(f"{prefix}{tool['label']}", True, lbl_color)
+                surface.blit(txt_surf, (item_rect.x + 8, item_rect.centery - txt_surf.get_height() // 2))
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.tools_expanded:
+                dd_rect = self.get_dropdown_rect()
+                if dd_rect.collidepoint(event.pos):
+                    rel_y = event.pos[1] - (dd_rect.y + 4)
+                    idx = int(rel_y // self.menu_item_height)
+                    if 0 <= idx < len(self.menu_tool_defs):
+                        action = self.menu_tool_defs[idx]["action"]
+                        self.tools_expanded = False
+                        self._rebuild_buttons()
+                        return action
+                    return True
+                elif self.tools_btn_rect.collidepoint(event.pos):
+                    self.tools_expanded = False
+                    return True
+                else:
+                    self.tools_expanded = False
+                    for b in self.buttons:
+                        if b["rect"].collidepoint(event.pos):
+                            return b["action"]
+                    return True
+
+            if self.tools_btn_rect.collidepoint(event.pos):
+                self.tools_expanded = not self.tools_expanded
+                return True
+
             for b in self.buttons:
                 if b["rect"].collidepoint(event.pos):
                     return b["action"]
@@ -1462,6 +1540,10 @@ class Sidebar:
         self.building_dimensions = {} 
         self.selected_building = None
 
+        # Context Menu for Right-Click
+        self.context_menu = None  # {"name": str, "tab": str, "rect": Rect, "options": list}
+        self.context_item_h = 30
+
     def refresh_buildings(self, building_dir, tile_map): pass
 
     def resize(self, x, y, total_screen_height):
@@ -1516,7 +1598,8 @@ class Sidebar:
             self.blink_timer = getattr(self, 'blink_timer', 0) + 1
             cursor = "|" if self.search_active and (self.blink_timer // 30) % 2 == 0 else ""
             search_surf = self.font.render(self.search_text + cursor, True, UITheme.TEXT)
-        else: search_surf = self.font.render("Search...", True, UITheme.TEXT_DIM)
+        else: 
+            search_surf = self.font.render("Search...", True, UITheme.TEXT_DIM)
         
         text_rect = search_surf.get_rect(centery=self.search_rect.centery)
         text_rect.x = self.search_rect.x + 8
@@ -1529,15 +1612,8 @@ class Sidebar:
         surface.set_clip(view_rect)
 
         content_height = 0
-        items_to_draw = {}
-        selected_name = None
-        
-        if self.active_tab == "Tiles":
-            items_to_draw = self.filtered_tiles
-            selected_name = self.selected_tile
-        elif self.active_tab == "Items":
-            items_to_draw = self.filtered_items
-            selected_name = self.selected_item
+        items_to_draw = self.filtered_tiles if self.active_tab == "Tiles" else self.filtered_items
+        selected_name = self.selected_tile if self.active_tab == "Tiles" else self.selected_item
 
         row, col = 0, 0
         for name, image in sorted(items_to_draw.items()):
@@ -1581,8 +1657,52 @@ class Sidebar:
             self.scrollbar_thumb_rect = None
             self.scrollbar_track_rect = None
 
+        # Draw Right-Click Context Menu on top
+        if self.context_menu:
+            cm_rect = self.context_menu["rect"]
+            shadow = cm_rect.copy()
+            shadow.y += 3
+            pygame.draw.rect(surface, (10, 10, 10, 160), shadow, border_radius=6)
+            pygame.draw.rect(surface, UITheme.PANEL_BG, cm_rect, border_radius=6)
+            pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, cm_rect, 1, border_radius=6)
+
+            for i, opt in enumerate(self.context_menu["options"]):
+                opt_rect = pygame.Rect(cm_rect.x + 4, cm_rect.y + 4 + i * self.context_item_h, cm_rect.width - 8, self.context_item_h - 2)
+                if opt_rect.collidepoint(mouse_pos):
+                    pygame.draw.rect(surface, UITheme.LIST_HOVER, opt_rect, border_radius=4)
+                lbl_color = UITheme.TEXT if opt_rect.collidepoint(mouse_pos) else UITheme.TEXT_DIM
+                lbl = self.font.render(opt["label"], True, lbl_color)
+                surface.blit(lbl, (opt_rect.x + 10, opt_rect.centery - lbl.get_height() // 2))
+
     def handle_event(self, event):
-        if event.type == pygame.MOUSEBUTTONUP: self.dragging_scroll = False
+        # 1. Floating Right-Click Context Menu Priority
+        if self.context_menu:
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                cm_rect = self.context_menu["rect"]
+                if cm_rect.collidepoint(event.pos):
+                    rel_y = event.pos[1] - (cm_rect.y + 4)
+                    idx = int(rel_y // self.context_item_h)
+                    if 0 <= idx < len(self.context_menu["options"]):
+                        opt = self.context_menu["options"][idx]
+                        action = opt["action"]
+                        item_name = self.context_menu["name"]
+                        tab_kind = self.context_menu["tab"]
+                        self.context_menu = None
+                        return {
+                            "action": "item_context_action",
+                            "option": action,
+                            "item_name": item_name,
+                            "tab": tab_kind
+                        }
+                self.context_menu = None
+                return True
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                self.context_menu = None
+                return True
+
+        if event.type == pygame.MOUSEBUTTONUP: 
+            self.dragging_scroll = False
+
         if event.type == pygame.MOUSEMOTION:
             if self.dragging_scroll and self.scrollbar_thumb_rect and self.max_scroll > 0:
                 dy = event.pos[1] - self.scroll_start_mouse_y
@@ -1598,26 +1718,27 @@ class Sidebar:
         if event.type == pygame.MOUSEBUTTONDOWN:
             mx, my = event.pos
             if self.x <= mx <= self.x + SIDEBAR_WIDTH:
-                if self.scrollbar_thumb_rect and self.scrollbar_thumb_rect.collidepoint(mx, my):
-                    self.dragging_scroll = True
-                    self.scroll_start_mouse_y = my
-                    self.scroll_start_offset = self.scroll_offset
-                    return True
-                elif self.scrollbar_track_rect and self.scrollbar_track_rect.collidepoint(mx, my) and self.max_scroll > 0:
-                     view_h = self.scrollbar_track_rect.height
-                     thumb_h = self.scrollbar_thumb_rect.height if self.scrollbar_thumb_rect else 20
-                     track_space = view_h - thumb_h
-                     if track_space > 0:
-                        rel_y = my - self.scrollbar_track_rect.y - (thumb_h / 2)
-                        ratio = rel_y / track_space
-                        self.scroll_offset = ratio * self.max_scroll
-                        self.scroll_offset = max(0, min(self.scroll_offset, self.max_scroll))
+                if event.button == 1:
+                    if self.scrollbar_thumb_rect and self.scrollbar_thumb_rect.collidepoint(mx, my):
                         self.dragging_scroll = True
                         self.scroll_start_mouse_y = my
                         self.scroll_start_offset = self.scroll_offset
                         return True
+                    elif self.scrollbar_track_rect and self.scrollbar_track_rect.collidepoint(mx, my) and self.max_scroll > 0:
+                        view_h = self.scrollbar_track_rect.height
+                        thumb_h = self.scrollbar_thumb_rect.height if self.scrollbar_thumb_rect else 20
+                        track_space = view_h - thumb_h
+                        if track_space > 0:
+                            rel_y = my - self.scrollbar_track_rect.y - (thumb_h / 2)
+                            ratio = rel_y / track_space
+                            self.scroll_offset = ratio * self.max_scroll
+                            self.scroll_offset = max(0, min(self.scroll_offset, self.max_scroll))
+                            self.dragging_scroll = True
+                            self.scroll_start_mouse_y = my
+                            self.scroll_start_offset = self.scroll_offset
+                            return True
 
-                if my < self.y + self.tab_height:
+                if my < self.y + self.tab_height and event.button == 1:
                     for tab_name, rect in self.tab_rects.items():
                         if rect.collidepoint(mx, my):
                             self.active_tab = tab_name
@@ -1625,10 +1746,11 @@ class Sidebar:
                             return True
                     return True
                 
-                if self.search_rect.collidepoint(mx, my):
+                if self.search_rect.collidepoint(mx, my) and event.button == 1:
                     self.search_active = True
                     return True
-                else: self.search_active = False
+                else: 
+                    self.search_active = False
 
                 if event.button == 4:
                     self.scroll_offset = max(0, self.scroll_offset - self.scroll_speed)
@@ -1638,24 +1760,44 @@ class Sidebar:
                     return True
 
                 if my > self.content_area_y:
-                    items_to_check = {}
-                    if self.active_tab == "Tiles": items_to_check = self.filtered_tiles
-                    elif self.active_tab == "Items": items_to_check = self.filtered_items
-                    
+                    items_to_check = self.filtered_tiles if self.active_tab == "Tiles" else self.filtered_items
                     row, col = 0, 0
                     for name, image in sorted(items_to_check.items()):
                         tile_x = self.x + col * (TILE_SIZE + 10) + 10
                         tile_y = self.content_area_y + row * (TILE_SIZE + 10) - self.scroll_offset
 
                         if pygame.Rect(tile_x, tile_y, TILE_SIZE, TILE_SIZE).collidepoint(mx, my):
-                            if self.active_tab == "Tiles":
-                                self.selected_tile = name
-                                self.selected_item = None
-                            elif self.active_tab == "Items":
-                                self.selected_item = name
-                                self.selected_tile = None
-                            self.selected_building = None
-                            return True
+                            if event.button == 1:
+                                if self.active_tab == "Tiles":
+                                    self.selected_tile = name
+                                    self.selected_item = None
+                                elif self.active_tab == "Items":
+                                    self.selected_item = name
+                                    self.selected_tile = None
+                                self.selected_building = None
+                                return True
+                            elif event.button == 3:
+                                cm_w, cm_h = 160, 3 * self.context_item_h + 8
+                                
+                                # Query the current real window resolution dynamically
+                                cur_surf = pygame.display.get_surface()
+                                screen_w, screen_h = cur_surf.get_size() if cur_surf else (self.x + SIDEBAR_WIDTH, self.y + self.height)
+                                
+                                # Anchor at cursor; flip left/up if overflowing window boundary
+                                cm_x = mx if (mx + cm_w <= screen_w - 5) else max(5, mx - cm_w)
+                                cm_y = my if (my + cm_h <= screen_h - 5) else max(5, screen_h - cm_h - 5)
+
+                                self.context_menu = {
+                                    "name": name,
+                                    "tab": self.active_tab,
+                                    "rect": pygame.Rect(cm_x, cm_y, cm_w, cm_h),
+                                    "options": [
+                                        {"label": "Edit Entity", "action": "edit_entity"},
+                                        {"label": "Edit Sprite", "action": "edit_sprite"},
+                                        {"label": "Edit Code", "action": "edit_code"},
+                                    ]
+                                }
+                                return True
 
                         col += 1
                         if col * (TILE_SIZE + 10) + 10 > SIDEBAR_WIDTH - 15:
@@ -1664,8 +1806,10 @@ class Sidebar:
                 return True
                 
         if event.type == pygame.KEYDOWN and self.search_active:
-            if event.key == pygame.K_BACKSPACE: self.search_text = self.search_text[:-1]
-            else: self.search_text += event.unicode
+            if event.key == pygame.K_BACKSPACE: 
+                self.search_text = self.search_text[:-1]
+            else: 
+                self.search_text += event.unicode
             self._filter_content()
             return True
         return False

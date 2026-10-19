@@ -16,6 +16,9 @@ from editor.ui import (
     Sidebar, Toolbar, NewBuildingModal, MenuBar, UITheme, 
     draw_tooltips, draw_styled_button, RenameBuildingModal
 )
+
+import xml.etree.ElementTree as ET
+
 from editor.file_tree import FileTree
 from editor.dialog_editor import DialogEditor
 from editor.crafts import CraftEditor
@@ -48,6 +51,76 @@ except Exception:
 
 MAP_PATTERN = re.compile(r"(map_L\d+_P(?:\d+_)*\d+)(_light|_roof|_map|_spawn|_ground)?\.csv")
 BUILDING_PATTERN = re.compile(r"(.+)(_light|_roof|_map|_spawn|_ground)\.csv")
+
+def resolve_item_metadata(name, tab_type="Items"):
+    """Finds the corresponding XML file, entity category, and sprite PNG for an item or tile."""
+    clean_name = name.strip("[]")
+    name_alts = {clean_name.lower(), clean_name.lower().replace(" ", "_"), clean_name.lower().replace("_", " ")}
+
+    # 1. Search in Items
+    item_dir = os.path.join(GAME_ROOT, 'lib', 'data', 'items')
+    s_item_dir = os.path.join(GAME_ROOT, 'lib', 'sprites', 'items')
+    if os.path.exists(item_dir):
+        for f in os.listdir(item_dir):
+            if f.endswith('.xml'):
+                p = os.path.join(item_dir, f)
+                stem = os.path.splitext(f)[0].lower()
+                try:
+                    root = ET.parse(p).getroot()
+                    r_name = root.attrib.get('name', '').lower()
+                    if r_name in name_alts or stem in name_alts:
+                        sp_node = root.find(".//sprite")
+                        sp_file = sp_node.attrib.get('file', f"{os.path.splitext(f)[0]}.png") if sp_node is not None else f"{os.path.splitext(f)[0]}.png"
+                        if not sp_file.lower().endswith('.png'): sp_file += '.png'
+                        return {"category": "Items", "xml_filename": f, "xml_path": p, "sprite_path": os.path.join(s_item_dir, sp_file)}
+                except Exception: pass
+
+    # 2. Search in Clothes
+    cloth_dir = os.path.join(GAME_ROOT, 'lib', 'data', 'clothes')
+    s_cloth_dir = os.path.join(GAME_ROOT, 'lib', 'sprites', 'clothes')
+    if os.path.exists(cloth_dir):
+        for f in os.listdir(cloth_dir):
+            if f.endswith('.xml'):
+                p = os.path.join(cloth_dir, f)
+                stem = os.path.splitext(f)[0].lower()
+                try:
+                    root = ET.parse(p).getroot()
+                    r_name = root.attrib.get('name', '').lower()
+                    if r_name in name_alts or stem in name_alts:
+                        sp_node = root.find(".//sprite")
+                        sp_file = sp_node.attrib.get('file', f"{os.path.splitext(f)[0]}.png") if sp_node is not None else f"{os.path.splitext(f)[0]}.png"
+                        if not sp_file.lower().endswith('.png'): sp_file += '.png'
+                        return {"category": "Clothes", "xml_filename": f, "xml_path": p, "sprite_path": os.path.join(s_cloth_dir, sp_file)}
+                except Exception: pass
+
+    # 3. Search in Map Tiles
+    map_data_dir = os.path.join(GAME_ROOT, 'lib', 'data', 'map')
+    s_map_dir = os.path.join(GAME_ROOT, 'lib', 'sprites', 'map')
+    if os.path.exists(map_data_dir):
+        for f in os.listdir(map_data_dir):
+            if f.endswith('.xml'):
+                p = os.path.join(map_data_dir, f)
+                stem = os.path.splitext(f)[0].lower()
+                try:
+                    root = ET.parse(p).getroot()
+                    char_val = root.attrib.get('char', '')
+                    r_name = root.attrib.get('name', '').lower()
+                    if char_val == name or r_name in name_alts or stem in name_alts:
+                        sp_node = root.find(".//sprite")
+                        sp_file = sp_node.attrib.get('file', f"{os.path.splitext(f)[0]}.png") if sp_node is not None else f"{os.path.splitext(f)[0]}.png"
+                        if not sp_file.lower().endswith('.png'): sp_file += '.png'
+                        return {"category": "Map", "xml_filename": f, "xml_path": p, "sprite_path": os.path.join(s_map_dir, sp_file)}
+                except Exception: pass
+
+    fallback_cat = "Map" if tab_type == "Tiles" else "Items"
+    target_dir = map_data_dir if fallback_cat == "Map" else item_dir
+    target_s_dir = s_map_dir if fallback_cat == "Map" else s_item_dir
+    return {
+        "category": fallback_cat,
+        "xml_filename": f"{clean_name}.xml",
+        "xml_path": os.path.join(target_dir, f"{clean_name}.xml"),
+        "sprite_path": os.path.join(target_s_dir, f"{clean_name}.png")
+    }
 
 def get_map_dimensions(map_name, map_dir):
     try:
@@ -160,6 +233,10 @@ def editor():
     b_tab_bar_h = 34
     content_y = TAB_BAR_HEIGHT + TOOLBAR_HEIGHT + b_tab_bar_h
 
+    RULER_W = 28
+    RULER_H = 18
+    RULER_FONT = pygame.font.Font(None, 15)
+
     def open_building_tab(folder, name, root_dir):
         nonlocal active_b_idx, b_tab_scroll_x, max_b_tab_scroll
         for i, tab in enumerate(building_tabs):
@@ -182,8 +259,8 @@ def editor():
             "folder": folder,
             "name": name,
             "root_dir": root_dir,
-            "cam_x": FILE_TREE_WIDTH + 20,
-            "cam_y": content_y + 20,
+            "cam_x": FILE_TREE_WIDTH + 20 + RULER_W,
+            "cam_y": content_y + 20 + RULER_H,
             "zoom_idx": INITIAL_ZOOM_INDEX,
             "sel_rect": None,
             "sel_start": None,
@@ -240,10 +317,17 @@ def editor():
     running = True
     while running:
         cur_tab = building_tabs[active_b_idx] if 0 <= active_b_idx < len(building_tabs) else None
-        map_view_rect = pygame.Rect(FILE_TREE_WIDTH + 10, content_y + 10, current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH - 20, current_screen_height - content_y - 20)
+        
+        # Viewport boundaries with Ruler offsets
+        total_view_rect = pygame.Rect(FILE_TREE_WIDTH + 10, content_y + 10, current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH - 20, current_screen_height - content_y - 20)
+        ruler_top_rect = pygame.Rect(total_view_rect.left + RULER_W, total_view_rect.top, total_view_rect.width - RULER_W, RULER_H)
+        ruler_left_rect = pygame.Rect(total_view_rect.left, total_view_rect.top + RULER_H, RULER_W, total_view_rect.height - RULER_H)
+        ruler_corner_rect = pygame.Rect(total_view_rect.left, total_view_rect.top, RULER_W, RULER_H)
+        map_view_rect = pygame.Rect(total_view_rect.left + RULER_W, total_view_rect.top + RULER_H, total_view_rect.width - RULER_W, total_view_rect.height - RULER_H)
 
         for event in pygame.event.get():
-            if event.type == pygame.QUIT: running = False
+            if event.type == pygame.QUIT: 
+                running = False
 
             if event.type == pygame.VIDEORESIZE:
                 current_screen_width, current_screen_height = event.w, event.h
@@ -297,9 +381,9 @@ def editor():
                 continue
 
             # ----------------------------------------------------------
-            # BUILDING EDITOR EVENT HANDLING
+            # BUILDING EDITOR EVENT HANDLING (Z-INDEX ORDER)
             # ----------------------------------------------------------
-            # Modals
+            # 1. Modals
             if new_building_modal.active:
                 res = new_building_modal.handle_event(event)
                 if isinstance(res, dict) and res.get('action') == 'create_building':
@@ -322,7 +406,6 @@ def editor():
                         np = os.path.join(r_dir, f"{n_name}_{suffix}.csv")
                         if os.path.exists(op): os.rename(op, np)
                     
-                    # Update tabs with the new name
                     for tab in building_tabs:
                         if tab["name"] == o_name and tab.get("folder") == res.get("folder"):
                             tab["name"] = n_name
@@ -330,7 +413,75 @@ def editor():
                     building_file_tree.refresh()
                 continue
 
-            # Keyboard Shortcuts
+            # 2. Priority Floating Menus: Right-Click Context Menu & Hamburger Dropdown
+            if sidebar.context_menu:
+                sb_res = sidebar.handle_event(event)
+                if sb_res and isinstance(sb_res, dict) and sb_res.get("action") == "item_context_action":
+                    item_name = sb_res["item_name"]
+                    option = sb_res["option"]
+                    meta = resolve_item_metadata(item_name, sb_res["tab"])
+                    
+                    if option == "edit_entity":
+                        cat = meta.get("category", "Items")
+                        entity_editor.active_category = cat
+                        entity_editor.category_dropdown.selected_value = cat
+                        entity_editor.category_dropdown._update_label()
+                        entity_editor.refresh_file_list()
+                        entity_editor.open_tab_file(meta.get("xml_filename", f"{item_name}.xml"))
+                        editor_mode = "Entities"
+                        menu_bar.active_mode = "Entities"
+                    elif option == "edit_sprite":
+                        sp_p = meta.get("sprite_path")
+                        if sp_p:
+                            if not os.path.exists(sp_p):
+                                os.makedirs(os.path.dirname(sp_p), exist_ok=True)
+                                pygame.image.save(pygame.Surface((16, 16), pygame.SRCALPHA), sp_p)
+                            sprite_editor.open_tab_sprite(sp_p)
+                            editor_mode = "Art"
+                            menu_bar.active_mode = "Art"
+                    elif option == "edit_code":
+                        x_p = meta.get("xml_path")
+                        if x_p:
+                            if not os.path.exists(x_p):
+                                os.makedirs(os.path.dirname(x_p), exist_ok=True)
+                                with open(x_p, 'w', encoding='utf-8') as f:
+                                    f.write(f'<!-- {item_name} -->\n<item name="{item_name}" />\n')
+                                code_editor.file_tree.refresh()
+                            code_editor.open_file(x_p)
+                            editor_mode = "Code"
+                            menu_bar.active_mode = "Code"
+                continue
+
+            # Prioritize hamburger dropdown events so clicks are never intercepted by tab bar
+            if toolbar.tools_expanded:
+                tb_action = toolbar.handle_event(event)
+                if tb_action and tb_action is not True:
+                    if tb_action == "SELECTION" and cur_tab:
+                        cur_tab["is_selecting"] = True
+                        tile_to_place = None
+                        toolbar.active_tool = "SELECTION"
+                    elif tb_action == "FILL" and cur_tab:
+                        if cur_tab["sel_rect"] and sidebar.selected_tile:
+                            cur_tab["map"].fill_rect(cur_tab["sel_rect"], sidebar.selected_tile, cur_tab["map"].active_layer_name)
+                            cur_tab["modified"] = True
+                    elif tb_action == "ERASER":
+                        tile_to_place = "eraser"
+                        toolbar.active_tool = "ERASER"
+                    elif tb_action == "UNDO" and cur_tab:
+                        cur_tab["map"].undo()
+                    elif tb_action == "CLEAR" and cur_tab:
+                        rect = cur_tab["sel_rect"] if cur_tab["sel_rect"] else pygame.Rect(0, 0, cur_tab["map"].width, cur_tab["map"].height)
+                        cur_tab["map"].clear_rect(rect, cur_tab["map"].active_layer_name)
+                        cur_tab["modified"] = True
+                    elif tb_action == "COPY" and cur_tab and cur_tab["sel_rect"]:
+                        clipboard = cur_tab["map"].get_tiles_in_rect(cur_tab["sel_rect"], cur_tab["map"].active_layer_name)
+                    elif tb_action == "PASTE" and cur_tab and clipboard:
+                        tx, ty = (cur_tab["sel_rect"].x, cur_tab["sel_rect"].y) if cur_tab["sel_rect"] else (0, 0)
+                        cur_tab["map"].paste_tiles((tx, ty), clipboard, cur_tab["map"].active_layer_name)
+                        cur_tab["modified"] = True
+                continue
+
+            # 3. Keyboard Shortcuts
             if event.type == pygame.KEYDOWN:
                 ctrl = (event.mod & pygame.KMOD_CTRL)
                 if ctrl and event.key == pygame.K_s and cur_tab:
@@ -352,7 +503,7 @@ def editor():
                     tile_to_place = None
                     toolbar.active_tool = None
 
-            # Building Tab Strip Clicks
+            # 4. Building Tab Strip Clicks
             b_tabs_rect = pygame.Rect(FILE_TREE_WIDTH, TAB_BAR_HEIGHT + TOOLBAR_HEIGHT, current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH, b_tab_bar_h)
             if event.type == pygame.MOUSEBUTTONDOWN and b_tabs_rect.collidepoint(event.pos):
                 if event.button == 4:
@@ -377,7 +528,7 @@ def editor():
                         cur_tx += tw + 2
                     continue
 
-            # Toolbar actions
+            # 5. Direct Toolbar actions
             tb_action = toolbar.handle_event(event)
             if tb_action:
                 if tb_action == "NEW BUILDING":
@@ -387,38 +538,53 @@ def editor():
                 elif tb_action == "SAVE MAP" and cur_tab:
                     save_map_layers(cur_tab["map"], cur_tab["name"], cur_tab["root_dir"])
                     cur_tab["modified"] = False
-                elif tb_action == "SELECTION" and cur_tab:
-                    cur_tab["is_selecting"] = True
-                    tile_to_place = None
-                    toolbar.active_tool = "SELECTION"
-                elif tb_action == "FILL" and cur_tab:
-                    if cur_tab["sel_rect"] and sidebar.selected_tile:
-                        cur_tab["map"].fill_rect(cur_tab["sel_rect"], sidebar.selected_tile, cur_tab["map"].active_layer_name)
-                        cur_tab["modified"] = True
-                elif tb_action == "ERASER":
-                    tile_to_place = "eraser"
-                    toolbar.active_tool = "ERASER"
-                elif tb_action == "UNDO" and cur_tab:
-                    cur_tab["map"].undo()
-                elif tb_action == "CLEAR" and cur_tab:
-                    rect = cur_tab["sel_rect"] if cur_tab["sel_rect"] else pygame.Rect(0, 0, cur_tab["map"].width, cur_tab["map"].height)
-                    cur_tab["map"].clear_rect(rect, cur_tab["map"].active_layer_name)
-                    cur_tab["modified"] = True
-                elif tb_action == "COPY" and cur_tab and cur_tab["sel_rect"]:
-                    clipboard = cur_tab["map"].get_tiles_in_rect(cur_tab["sel_rect"], cur_tab["map"].active_layer_name)
-                elif tb_action == "PASTE" and cur_tab and clipboard:
-                    tx, ty = (cur_tab["sel_rect"].x, cur_tab["sel_rect"].y) if cur_tab["sel_rect"] else (0, 0)
-                    cur_tab["map"].paste_tiles((tx, ty), clipboard, cur_tab["map"].active_layer_name)
-                    cur_tab["modified"] = True
                 continue
 
-            if sidebar.handle_event(event):
-                if sidebar.selected_tile or sidebar.selected_item:
-                    tile_to_place = None
-                    toolbar.active_tool = None
-                continue
+            # 6. Sidebar interaction
+            sb_res = sidebar.handle_event(event)
+            if sb_res:
+                if isinstance(sb_res, dict) and sb_res.get("action") == "item_context_action":
+                    item_name = sb_res["item_name"]
+                    option = sb_res["option"]
+                    meta = resolve_item_metadata(item_name, sb_res["tab"])
+                    
+                    if option == "edit_entity":
+                        cat = meta.get("category", "Items")
+                        entity_editor.active_category = cat
+                        entity_editor.category_dropdown.selected_value = cat
+                        entity_editor.category_dropdown._update_label()
+                        entity_editor.refresh_file_list()
+                        entity_editor.open_tab_file(meta.get("xml_filename", f"{item_name}.xml"))
+                        editor_mode = "Entities"
+                        menu_bar.active_mode = "Entities"
+                    elif option == "edit_sprite":
+                        sp_p = meta.get("sprite_path")
+                        if sp_p:
+                            if not os.path.exists(sp_p):
+                                os.makedirs(os.path.dirname(sp_p), exist_ok=True)
+                                pygame.image.save(pygame.Surface((16, 16), pygame.SRCALPHA), sp_p)
+                            sprite_editor.open_tab_sprite(sp_p)
+                            editor_mode = "Art"
+                            menu_bar.active_mode = "Art"
+                    elif option == "edit_code":
+                        x_p = meta.get("xml_path")
+                        if x_p:
+                            if not os.path.exists(x_p):
+                                os.makedirs(os.path.dirname(x_p), exist_ok=True)
+                                with open(x_p, 'w', encoding='utf-8') as f:
+                                    f.write(f'<!-- {item_name} -->\n<item name="{item_name}" />\n')
+                                code_editor.file_tree.refresh()
+                            code_editor.open_file(x_p)
+                            editor_mode = "Code"
+                            menu_bar.active_mode = "Code"
+                    continue
+                else:
+                    if sidebar.selected_tile or sidebar.selected_item:
+                        tile_to_place = None
+                        toolbar.active_tool = None
+                    continue
 
-            # File Tree: Opening Buildings & Independent Layer Visibility
+            # 7. File Tree
             ft_res = building_file_tree.handle_event(event)
             if ft_res:
                 if isinstance(ft_res, dict):
@@ -427,7 +593,6 @@ def editor():
                         r_dir = os.path.join(BUILDINGS_DIR, fld) if fld else BUILDINGS_DIR
                         open_building_tab(fld, m_name, r_dir)
                     elif ft_res.get('action') == 'toggle_visibility':
-                        # Only affect the specific building's layer
                         for tab in building_tabs:
                             if tab["folder"] == ft_res["folder"] and tab["name"] == ft_res["map_name"]:
                                 tab["map"].layer_properties[ft_res["layer_name"]]["visible"] = ft_res["visible"]
@@ -435,7 +600,7 @@ def editor():
                         cur_tab["map"].set_active_layer(ft_res['layer_name'])
                 continue
 
-            # Canvas Navigation (Zoom, Pan, Drawing)
+            # 8. Canvas Navigation (Zoom, Pan, Drawing)
             if cur_tab:
                 z_scale = ZOOM_LEVELS[cur_tab["zoom_idx"]]
                 if event.type == pygame.MOUSEBUTTONDOWN and map_view_rect.collidepoint(event.pos):
@@ -480,6 +645,18 @@ def editor():
                             map_y = int(((event.pos[1] - cur_tab["cam_y"]) / z_scale) // TILE_SIZE)
                             x1, y1 = cur_tab["sel_start"]
                             cur_tab["sel_rect"] = pygame.Rect(min(x1, map_x), min(y1, map_y), abs(map_x - x1) + 1, abs(map_y - y1) + 1)
+                    elif not cur_tab["is_selecting"] and pygame.mouse.get_pressed()[0] and map_view_rect.collidepoint(event.pos):
+                        map_x = int(((event.pos[0] - cur_tab["cam_x"]) / z_scale) // TILE_SIZE)
+                        map_y = int(((event.pos[1] - cur_tab["cam_y"]) / z_scale) // TILE_SIZE)
+                        if tile_to_place == "eraser":
+                            cur_tab["map"].set_tile(map_x, map_y, None)
+                            cur_tab["modified"] = True
+                        elif sidebar.selected_tile:
+                            cur_tab["map"].set_tile(map_x, map_y, sidebar.selected_tile)
+                            cur_tab["modified"] = True
+                        elif sidebar.selected_item and cur_tab["map"].active_layer_name == "spawn":
+                            cur_tab["map"].set_tile(map_x, map_y, sidebar.selected_item)
+                            cur_tab["modified"] = True
 
         # --------------------------------------------------------------
         # RENDERING
@@ -492,14 +669,13 @@ def editor():
         elif editor_mode == "Code": code_editor.draw(screen)
         elif editor_mode == "Art": sprite_editor.draw(screen)
         else:
-            # Map Rendering inside viewport
+            # 1. Map Rendering inside viewport
             surface_clip = screen.get_clip()
             screen.set_clip(map_view_rect)
             if cur_tab:
                 z_scale = ZOOM_LEVELS[cur_tab["zoom_idx"]]
                 cur_tab["map"].render(screen, all_render_tiles, FONT, (cur_tab["cam_x"], cur_tab["cam_y"]), z_scale)
 
-                # Grid
                 scaled_ts = int(TILE_SIZE * z_scale)
                 for gx in range(cur_tab["map"].width + 1):
                     lx = cur_tab["cam_x"] + gx * scaled_ts
@@ -514,7 +690,51 @@ def editor():
                     pygame.draw.rect(screen, UITheme.WARNING, (sx, sy, cur_tab["sel_rect"].width * TILE_SIZE * z_scale, cur_tab["sel_rect"].height * TILE_SIZE * z_scale), 2)
             screen.set_clip(surface_clip)
 
-            # Building Tab Bar
+            # 2. Rulers Rendering (Columns & Rows)
+            if cur_tab:
+                z_scale = ZOOM_LEVELS[cur_tab["zoom_idx"]]
+                scaled_ts = int(TILE_SIZE * z_scale)
+                step = 1 if scaled_ts >= 20 else (2 if scaled_ts >= 10 else 5)
+
+                # Top Ruler (Columns)
+                screen.set_clip(ruler_top_rect)
+                pygame.draw.rect(screen, UITheme.PANEL_BG, ruler_top_rect)
+                pygame.draw.line(screen, UITheme.BORDER, (ruler_top_rect.left, ruler_top_rect.bottom - 1), (ruler_top_rect.right, ruler_top_rect.bottom - 1))
+                for col in range(cur_tab["map"].width):
+                    col_x = cur_tab["cam_x"] + col * scaled_ts
+                    if col_x + scaled_ts >= ruler_top_rect.left and col_x <= ruler_top_rect.right:
+                        pygame.draw.line(screen, UITheme.BORDER, (col_x, ruler_top_rect.bottom - 5), (col_x, ruler_top_rect.bottom - 1))
+                        if col % step == 0:
+                            num_surf = RULER_FONT.render(str(col), True, UITheme.TEXT_DIM)
+                            screen.blit(num_surf, (col_x + (scaled_ts - num_surf.get_width()) // 2, ruler_top_rect.centery - num_surf.get_height() // 2))
+                end_x = cur_tab["cam_x"] + cur_tab["map"].width * scaled_ts
+                if ruler_top_rect.left <= end_x <= ruler_top_rect.right:
+                    pygame.draw.line(screen, UITheme.BORDER, (end_x, ruler_top_rect.bottom - 8), (end_x, ruler_top_rect.bottom - 1))
+                screen.set_clip(surface_clip)
+
+                # Left Ruler (Rows)
+                screen.set_clip(ruler_left_rect)
+                pygame.draw.rect(screen, UITheme.PANEL_BG, ruler_left_rect)
+                pygame.draw.line(screen, UITheme.BORDER, (ruler_left_rect.right - 1, ruler_left_rect.top), (ruler_left_rect.right - 1, ruler_left_rect.bottom))
+                for row in range(cur_tab["map"].height):
+                    row_y = cur_tab["cam_y"] + row * scaled_ts
+                    if row_y + scaled_ts >= ruler_left_rect.top and row_y <= ruler_left_rect.bottom:
+                        pygame.draw.line(screen, UITheme.BORDER, (ruler_left_rect.right - 5, row_y), (ruler_left_rect.right - 1, row_y))
+                        if row % step == 0:
+                            num_surf = RULER_FONT.render(str(row), True, UITheme.TEXT_DIM)
+                            screen.blit(num_surf, (ruler_left_rect.centerx - num_surf.get_width() // 2, row_y + (scaled_ts - num_surf.get_height()) // 2))
+                end_y = cur_tab["cam_y"] + cur_tab["map"].height * scaled_ts
+                if ruler_left_rect.top <= end_y <= ruler_left_rect.bottom:
+                    pygame.draw.line(screen, UITheme.BORDER, (ruler_left_rect.right - 8, end_y), (ruler_left_rect.right - 1, end_y))
+                screen.set_clip(surface_clip)
+
+                # Corner Box
+                pygame.draw.rect(screen, UITheme.PANEL_BG, ruler_corner_rect)
+                pygame.draw.rect(screen, UITheme.BORDER, ruler_corner_rect, 1)
+                lbl_xy = RULER_FONT.render("XY", True, UITheme.TEXT_DIM)
+                screen.blit(lbl_xy, (ruler_corner_rect.centerx - lbl_xy.get_width() // 2, ruler_corner_rect.centery - lbl_xy.get_height() // 2))
+
+            # 3. Building Tab Bar
             tab_bar_rect = pygame.Rect(FILE_TREE_WIDTH, TAB_BAR_HEIGHT + TOOLBAR_HEIGHT, current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH, b_tab_bar_h)
             pygame.draw.rect(screen, UITheme.PANEL_BG, tab_bar_rect)
             pygame.draw.line(screen, UITheme.BORDER, (tab_bar_rect.left, tab_bar_rect.bottom - 1), (tab_bar_rect.right, tab_bar_rect.bottom - 1))
@@ -549,7 +769,7 @@ def editor():
                 cur_tx += tw + 2
             screen.set_clip(surface_clip)
 
-            # Left Tree & Right Sidebar
+            # 4. Left Tree, Right Sidebar & Top Toolbar (drawn on top for dropdown overlays)
             building_file_tree.draw(screen, cur_tab["name"] if cur_tab else "", cur_tab["folder"] if cur_tab else "", cur_tab["map"].active_layer_name if cur_tab else "")
             sidebar.draw(screen)
             toolbar.draw(screen)
