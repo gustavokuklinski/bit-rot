@@ -16,10 +16,16 @@ class TileManager:
         self._load_definitions()
 
     def _load_definitions(self):
-        """Parses all XML files in the tile folder to load tile definitions."""
-        for filename in os.listdir(self.tile_folder):
-            if filename.endswith('.xml'):
-                filepath = f"{self.tile_folder}/{filename}"
+        """Parses all XML files in the tile folder and any subfolders to load tile definitions."""
+        if not os.path.exists(self.tile_folder):
+            print(f"Warning: Tile folder not found at '{self.tile_folder}'")
+            return
+
+        for root_dir, _, files in os.walk(self.tile_folder):
+            for filename in files:
+                if not filename.endswith('.xml'):
+                    continue
+                filepath = os.path.join(root_dir, filename)
                 try:
                     tree = ET.parse(filepath)
                     root = tree.getroot()
@@ -30,10 +36,8 @@ class TileManager:
                         is_destructible = root.get('destructible', 'false').lower() == 'true'
                         allow_liquid = root.get('allow_liquid', 'false').lower() == 'true'
                         
-                        # [NEW] Parse the is_opened tag
                         is_opened = root.get('is_opened', 'false').lower() == 'true'
 
-                        # Parse infinite_liquid attribute (defaults to False if explicitly false or if closed)
                         raw_inf = root.get('infinite_liquid')
                         if raw_inf is not None:
                             infinite_liquid = raw_inf.lower() in ('true', '1')
@@ -41,17 +45,23 @@ class TileManager:
                             infinite_liquid = allow_liquid and is_opened
 
                         is_stair = root.get('is_stair', 'false').lower() == 'true'
-
                         is_visible = root.get('is_visible', 'false').lower() == 'true'
-
-                        # Default to 0 if not specified
                         target_layer = int(root.get('target_layer', '0'))
 
                         sprite_node = root.find('visuals/sprite')
                         sprite_file = sprite_node.get('file') if sprite_node is not None else None
                         
                         if char and sprite_file:
-                            image_path = f"{self.asset_folder}/{sprite_file}"
+                            # Primary path: directly under self.asset_folder
+                            image_path = os.path.join(self.asset_folder, sprite_file)
+                            
+                            # If not found directly, check relative to the current XML subfolder
+                            if not os.path.exists(image_path):
+                                rel_sub = os.path.relpath(root_dir, self.tile_folder)
+                                alt_path = os.path.join(self.asset_folder, rel_sub, sprite_file)
+                                if os.path.exists(alt_path):
+                                    image_path = alt_path
+
                             try:
                                 image = pygame.image.load(image_path).convert_alpha()
                                 image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
@@ -63,7 +73,7 @@ class TileManager:
                                     'destructible': is_destructible, 
                                     'allow_liquid': allow_liquid, 
                                     'infinite_liquid': infinite_liquid,
-                                    'is_opened': is_opened, # [ADDED] Store the flag
+                                    'is_opened': is_opened,
                                     'is_visible': is_visible,
                                     'image': image,
                                     'mask': mask, 
@@ -195,4 +205,4 @@ class TileManager:
                             except pygame.error as e:
                                 print(f"Error loading image {image_path} for tile '{char}': {e}")
                 except ET.ParseError as e:
-                    print(f"Warning: Could not parse XML file {filename}: {e}")
+                    print(f"Warning: Could not parse XML file {filepath}: {e}")

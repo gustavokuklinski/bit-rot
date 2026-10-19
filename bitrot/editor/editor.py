@@ -53,64 +53,73 @@ MAP_PATTERN = re.compile(r"(map_L\d+_P(?:\d+_)*\d+)(_light|_roof|_map|_spawn|_gr
 BUILDING_PATTERN = re.compile(r"(.+)(_light|_roof|_map|_spawn|_ground)\.csv")
 
 def resolve_item_metadata(name, tab_type="Items"):
-    """Finds the corresponding XML file, entity category, and sprite PNG for an item or tile."""
+    """Finds the corresponding XML file, entity category, and sprite PNG for an item or tile across subfolders."""
     clean_name = name.strip("[]")
     name_alts = {clean_name.lower(), clean_name.lower().replace(" ", "_"), clean_name.lower().replace("_", " ")}
 
-    # 1. Search in Items
+    # 1. Search in Items (including subfolders)
     item_dir = os.path.join(GAME_ROOT, 'lib', 'data', 'items')
     s_item_dir = os.path.join(GAME_ROOT, 'lib', 'sprites', 'items')
     if os.path.exists(item_dir):
-        for f in os.listdir(item_dir):
-            if f.endswith('.xml'):
-                p = os.path.join(item_dir, f)
-                stem = os.path.splitext(f)[0].lower()
-                try:
-                    root = ET.parse(p).getroot()
-                    r_name = root.attrib.get('name', '').lower()
-                    if r_name in name_alts or stem in name_alts:
-                        sp_node = root.find(".//sprite")
-                        sp_file = sp_node.attrib.get('file', f"{os.path.splitext(f)[0]}.png") if sp_node is not None else f"{os.path.splitext(f)[0]}.png"
-                        if not sp_file.lower().endswith('.png'): sp_file += '.png'
-                        return {"category": "Items", "xml_filename": f, "xml_path": p, "sprite_path": os.path.join(s_item_dir, sp_file)}
-                except Exception: pass
+        for root_d, dirs, files in os.walk(item_dir):
+            for f in files:
+                if f.endswith('.xml'):
+                    p = os.path.join(root_d, f)
+                    stem = os.path.splitext(f)[0].lower()
+                    try:
+                        root = ET.parse(p).getroot()
+                        r_name = root.attrib.get('name', '').lower()
+                        if r_name in name_alts or stem in name_alts:
+                            sp_node = root.find(".//sprite")
+                            sp_file = sp_node.attrib.get('file', f"{os.path.splitext(f)[0]}.png") if sp_node is not None else f"{os.path.splitext(f)[0]}.png"
+                            if not sp_file.lower().endswith('.png'): sp_file += '.png'
+                            sp_path = os.path.join(s_item_dir, sp_file)
+                            rel_xml = os.path.relpath(p, item_dir).replace('\\', '/')
+                            return {"category": "Items", "xml_filename": rel_xml, "xml_path": p, "sprite_path": sp_path}
+                    except Exception: pass
 
-    # 2. Search in Clothes
+    # 2. Search in Clothes (including subfolders)
     cloth_dir = os.path.join(GAME_ROOT, 'lib', 'data', 'clothes')
     s_cloth_dir = os.path.join(GAME_ROOT, 'lib', 'sprites', 'clothes')
     if os.path.exists(cloth_dir):
-        for f in os.listdir(cloth_dir):
-            if f.endswith('.xml'):
-                p = os.path.join(cloth_dir, f)
-                stem = os.path.splitext(f)[0].lower()
-                try:
-                    root = ET.parse(p).getroot()
-                    r_name = root.attrib.get('name', '').lower()
-                    if r_name in name_alts or stem in name_alts:
-                        sp_node = root.find(".//sprite")
-                        sp_file = sp_node.attrib.get('file', f"{os.path.splitext(f)[0]}.png") if sp_node is not None else f"{os.path.splitext(f)[0]}.png"
-                        if not sp_file.lower().endswith('.png'): sp_file += '.png'
-                        return {"category": "Clothes", "xml_filename": f, "xml_path": p, "sprite_path": os.path.join(s_cloth_dir, sp_file)}
-                except Exception: pass
+        for root_d, dirs, files in os.walk(cloth_dir):
+            for f in files:
+                if f.endswith('.xml'):
+                    p = os.path.join(root_d, f)
+                    stem = os.path.splitext(f)[0].lower()
+                    try:
+                        root = ET.parse(p).getroot()
+                        r_name = root.attrib.get('name', '').lower()
+                        if r_name in name_alts or stem in name_alts:
+                            sp_node = root.find(".//sprite")
+                            sp_file = sp_node.attrib.get('file', f"{os.path.splitext(f)[0]}.png") if sp_node is not None else f"{os.path.splitext(f)[0]}.png"
+                            if not sp_file.lower().endswith('.png'): sp_file += '.png'
+                            sp_path = os.path.join(s_cloth_dir, sp_file)
+                            rel_xml = os.path.relpath(p, cloth_dir).replace('\\', '/')
+                            return {"category": "Clothes", "xml_filename": rel_xml, "xml_path": p, "sprite_path": sp_path}
+                    except Exception: pass
 
-    # 3. Search in Map Tiles
+    # 3. Search in Map Tiles (including subfolders)
     map_data_dir = os.path.join(GAME_ROOT, 'lib', 'data', 'map')
     s_map_dir = os.path.join(GAME_ROOT, 'lib', 'sprites', 'map')
     if os.path.exists(map_data_dir):
-        for f in os.listdir(map_data_dir):
-            if f.endswith('.xml'):
-                p = os.path.join(map_data_dir, f)
-                stem = os.path.splitext(f)[0].lower()
-                try:
-                    root = ET.parse(p).getroot()
-                    char_val = root.attrib.get('char', '')
-                    r_name = root.attrib.get('name', '').lower()
-                    if char_val == name or r_name in name_alts or stem in name_alts:
-                        sp_node = root.find(".//sprite")
-                        sp_file = sp_node.attrib.get('file', f"{os.path.splitext(f)[0]}.png") if sp_node is not None else f"{os.path.splitext(f)[0]}.png"
-                        if not sp_file.lower().endswith('.png'): sp_file += '.png'
-                        return {"category": "Map", "xml_filename": f, "xml_path": p, "sprite_path": os.path.join(s_map_dir, sp_file)}
-                except Exception: pass
+        for root_d, dirs, files in os.walk(map_data_dir):
+            for f in files:
+                if f.endswith('.xml'):
+                    p = os.path.join(root_d, f)
+                    stem = os.path.splitext(f)[0].lower()
+                    try:
+                        root = ET.parse(p).getroot()
+                        char_val = root.attrib.get('char', '')
+                        r_name = root.attrib.get('name', '').lower()
+                        if char_val == name or r_name in name_alts or stem in name_alts:
+                            sp_node = root.find(".//sprite")
+                            sp_file = sp_node.attrib.get('file', f"{os.path.splitext(f)[0]}.png") if sp_node is not None else f"{os.path.splitext(f)[0]}.png"
+                            if not sp_file.lower().endswith('.png'): sp_file += '.png'
+                            sp_path = os.path.join(s_map_dir, sp_file)
+                            rel_xml = os.path.relpath(p, map_data_dir).replace('\\', '/')
+                            return {"category": "Map", "xml_filename": rel_xml, "xml_path": p, "sprite_path": sp_path}
+                    except Exception: pass
 
     fallback_cat = "Map" if tab_type == "Tiles" else "Items"
     target_dir = map_data_dir if fallback_cat == "Map" else item_dir

@@ -64,7 +64,6 @@ def _load_stat_icons():
         "anxiety": SPRITE_PATH + "ui/axiety.png", 
         "infection": SPRITE_PATH + "ui/infection.png",
         "defence": SPRITE_PATH + "ui/defence.png",
-        "weight": SPRITE_PATH + "ui/weight.png",
         "strength": SPRITE_PATH + "ui/strength.png",
         "fitness": SPRITE_PATH + "ui/fitness.png",
         "melee": SPRITE_PATH + "ui/melee.png",

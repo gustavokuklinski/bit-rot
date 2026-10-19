@@ -114,56 +114,141 @@ class CraftEditor:
         item_xml_dir = os.path.join(GAME_ROOT, 'lib', 'data', 'items')
         
         if os.path.exists(item_xml_dir):
-            for filename in os.listdir(item_xml_dir):
-                if filename.endswith(".xml"):
-                    try:
-                        tree = ET.parse(os.path.join(item_xml_dir, filename))
-                        root = tree.getroot()
-                        if root.tag in ['item', 'cloth'] and root.get('type') == 'recipe':
-                            name = root.get('name', '')
-                            if name:
-                                icon = self.item_tiles.get(name)
-                                self.magazine_opts.append({"label": name, "value": name, "icon": icon})
-                    except: pass
+            for root_d, dirs, files in os.walk(item_xml_dir):
+                for filename in files:
+                    if filename.endswith(".xml"):
+                        try:
+                            tree = ET.parse(os.path.join(root_d, filename))
+                            root = tree.getroot()
+                            if root.tag in ['item', 'cloth'] and root.get('type') == 'recipe':
+                                name = root.get('name', '')
+                                if name:
+                                    icon = self.item_tiles.get(name)
+                                    self.magazine_opts.append({"label": name, "value": name, "icon": icon})
+                        except Exception: pass
 
     def load_xmls(self):
         self.recipes.clear()
-        if not os.path.exists(self.craft_dir): os.makedirs(self.craft_dir)
+        if not os.path.exists(self.craft_dir): 
+            os.makedirs(self.craft_dir)
             
-        for filename in sorted(os.listdir(self.craft_dir)):
-            if filename.endswith(".xml"):
-                path = os.path.join(self.craft_dir, filename)
-                try:
-                    tree = ET.parse(path)
-                    root = tree.getroot()
-                    if root.tag != 'recipe': continue
-                    
-                    data = {}
-                    for attr in ["type", "craft", "output", "magazine", "req_level", "gain_xp", "amount", "time"]:
-                        data[attr] = root.get(attr, "")
+        for root_d, dirs, files in os.walk(self.craft_dir):
+            for filename in sorted(files):
+                if filename.endswith(".xml"):
+                    path = os.path.join(root_d, filename)
+                    rel_path = os.path.relpath(path, self.craft_dir).replace('\\', '/')
+                    try:
+                        tree = ET.parse(path)
+                        root = tree.getroot()
+                        if root.tag != 'recipe': continue
                         
-                    ings = []
-                    for ing in root.findall('ingredient'):
-                        # Ensure destroy boolean is accurately parsed
-                        d_val = ing.get('destroy', 'false').lower() in ['true', '1', 'yes']
-                        ings.append({
-                            "name": ing.get('name', ''),
-                            "destroy": d_val,
-                            "amount": ing.get('amount', '1')
-                        })
-                    data["ingredients"] = ings
+                        data = {}
+                        for attr in ["type", "craft", "output", "magazine", "req_level", "gain_xp", "amount", "time"]:
+                            data[attr] = root.get(attr, "")
+                            
+                        ings = []
+                        for ing in root.findall('ingredient'):
+                            d_val = ing.get('destroy', 'false').lower() in ['true', '1', 'yes']
+                            ings.append({
+                                "name": ing.get('name', ''),
+                                "destroy": d_val,
+                                "amount": ing.get('amount', '1')
+                            })
+                        data["ingredients"] = ings
+                        
+                        ress = []
+                        for res in root.findall('result'):
+                            ress.append({
+                                "name": res.get('name', ''),
+                                "amount": res.get('amount', '1'),
+                                "chance": res.get('chance', '')
+                            })
+                        data["results"] = ress
+                        self.recipes[rel_path] = {"data": data, "path": path}
+                    except Exception: pass
+                        
+        self.build_dynamic_options()
+
+    def save_current_tab(self):
+        tab = self.get_current_tab()
+        if not tab: return
+
+        new_file = tab["base_inputs"]["filename"].text.strip()
+        if not new_file: return
+        if not new_file.endswith(".xml"): new_file += ".xml"
+        
+        orig_key = tab.get("filename", "")
+        subfolder = os.path.dirname(orig_key) if orig_key else ""
+        save_rel = os.path.join(subfolder, os.path.basename(new_file)).replace('\\', '/') if subfolder else os.path.basename(new_file)
+        path = os.path.join(self.craft_dir, save_rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        
+        data = {}
+        for attr in ["type", "craft", "output", "magazine", "req_level", "gain_xp", "time", "amount"]:
+            data[attr] = tab["base_inputs"][attr].text
+
+        merged_ings = []
+        for r in tab["ing_rows"]:
+            item_val = r["item"].text.strip()
+            if not item_val: continue
+            if r["group"] and merged_ings:
+                merged_ings[-1]["names"].append(item_val)
+            else:
+                merged_ings.append({
+                    "names": [item_val],
+                    "destroy": "true" if r["destroy"] else "false",
+                    "amount": r["amount"].text
+                })
+                
+        data["ingredients"] = []
+        for m in merged_ings:
+            name_str = f"[{', '.join(m['names'])}]" if len(m['names']) > 1 else m['names'][0]
+            data["ingredients"].append({"name": name_str, "destroy": m["destroy"], "amount": m["amount"]})
+
+        is_dismantle = tab["base_inputs"]["craft"].text.lower() == "dismantle"
+        data["results"] = []
+        if is_dismantle:
+            merged_res = []
+            for r in tab["res_rows"]:
+                item_val = r["item"].text.strip()
+                if not item_val: continue
+                if r["group"] and merged_res:
+                    merged_res[-1]["names"].append(item_val)
+                else:
+                    merged_res.append({
+                        "names": [item_val],
+                        "amount": r["amount"].text,
+                        "chance": r["chance"].text
+                    })
+            for m in merged_res:
+                name_str = f"[{', '.join(m['names'])}]" if len(m['names']) > 1 else m['names'][0]
+                data["results"].append({"name": name_str, "amount": m["amount"], "chance": m["chance"]})
+        
+        root = ET.Element("recipe")
+        for attr in ["type", "craft", "output", "magazine", "req_level", "gain_xp", "amount", "time"]:
+            if data.get(attr): root.set(attr, data[attr])
+        for ing in data.get("ingredients", []):
+            if ing["name"]: ET.SubElement(root, "ingredient", {"name": ing["name"], "destroy": ing["destroy"], "amount": ing["amount"]})
+        for res in data.get("results", []):
+            if res["name"]:
+                res_attr = {"name": res["name"], "amount": res["amount"]}
+                if res.get("chance"): res_attr["chance"] = res["chance"]
+                ET.SubElement(root, "result", res_attr)
                     
-                    ress = []
-                    for res in root.findall('result'):
-                        ress.append({
-                            "name": res.get('name', ''),
-                            "amount": res.get('amount', '1'),
-                            "chance": res.get('chance', '')
-                        })
-                    data["results"] = ress
-                    self.recipes[filename] = {"data": data}
-                except: pass
-                    
+        tree = ET.ElementTree(root)
+        ET.indent(tree, space="    ", level=0)
+        tree.write(path, encoding="utf-8", xml_declaration=True)
+
+        if orig_key and orig_key != save_rel and orig_key in self.recipes:
+            old_path = os.path.join(self.craft_dir, orig_key)
+            if os.path.exists(old_path):
+                try: os.remove(old_path)
+                except Exception: pass
+            del self.recipes[orig_key]
+
+        self.recipes[save_rel] = {"data": data, "path": path}
+        tab["filename"] = save_rel
+        tab["saved_snapshot"] = self.get_tab_snapshot(tab)
         self.build_dynamic_options()
 
     def ensure_tab_visible(self, idx):

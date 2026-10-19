@@ -149,16 +149,20 @@ class RecipeManager:
 
         for root_dir, _, files in os.walk(craft_path):
             for file_name in files:
-                if file_name.endswith('.xml'):
-                    file_path = os.path.join(root_dir, file_name)
-                    try:
-                        tree = ET.parse(file_path)
-                        root = tree.getroot()
+                if not file_name.endswith('.xml'):
+                    continue
+                file_path = os.path.join(root_dir, file_name)
+                try:
+                    tree = ET.parse(file_path)
+                    root = tree.getroot()
 
-                        if root.tag == 'recipe':
-                            RecipeManager._process_recipe_node(root)
-                    except Exception as e:
-                        print(f"Error loading recipe file {file_name}: {e}")
+                    if root.tag == 'recipe':
+                        RecipeManager._process_recipe_node(root)
+                    else:
+                        for recipe_node in root.findall('.//recipe'):
+                            RecipeManager._process_recipe_node(recipe_node)
+                except Exception as e:
+                    print(f"Error loading recipe file {file_path}: {e}")
         
         print(f"Loaded {len(RecipeManager.RECIPES)} recipes.")
 

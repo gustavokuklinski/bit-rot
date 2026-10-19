@@ -47,30 +47,29 @@ def load_map_tiles_from_xml(xml_dir, sprite_dir):
     if not os.path.exists(xml_dir):
         return map_tiles
         
-    for filename in os.listdir(xml_dir):
-        if filename.endswith(".xml"):
-            filepath = os.path.join(xml_dir, filename)
-            try:
-                tree = ET.parse(filepath)
-                root = tree.getroot()
-                
-                if root.tag == 'map' and 'char' in root.attrib:
-                    char_id = root.attrib['char']
+    for root_dir, dirs, files in os.walk(xml_dir):
+        for filename in sorted(files):
+            if filename.endswith(".xml"):
+                filepath = os.path.join(root_dir, filename)
+                try:
+                    tree = ET.parse(filepath)
+                    root = tree.getroot()
                     
-                    sprite_element = root.find('visuals/sprite')
-                    if sprite_element is not None and 'file' in sprite_element.attrib:
-                        sprite_filename = os.path.splitext(sprite_element.attrib['file'])[0] 
-                        if sprite_filename in sprite_images:
-                            map_tiles[char_id] = sprite_images[sprite_filename]
+                    if root.tag == 'map' and 'char' in root.attrib:
+                        char_id = root.attrib['char']
+                        
+                        sprite_element = root.find('visuals/sprite')
+                        if sprite_element is not None and 'file' in sprite_element.attrib:
+                            sprite_filename = os.path.splitext(sprite_element.attrib['file'])[0] 
+                            if sprite_filename in sprite_images:
+                                map_tiles[char_id] = sprite_images[sprite_filename]
+                            else:
+                                map_tiles[char_id] = create_placeholder(char_id)
                         else:
                             map_tiles[char_id] = create_placeholder(char_id)
-                    else:
-                        map_tiles[char_id] = create_placeholder(char_id)
-                        
-            except ET.ParseError as e:
-                pass
-            except Exception as e:
-                pass
+                            
+                except Exception:
+                    pass
                 
     if 'bg' not in map_tiles and 'bg' in sprite_images:
         map_tiles['bg'] = sprite_images['bg']
@@ -83,29 +82,31 @@ def load_items_from_xml(xml_dir, sprite_dir):
     if not os.path.exists(xml_dir):
         return items
         
-    for filename in os.listdir(xml_dir):
-        if filename.endswith(".xml"):
-            try:
-                tree = ET.parse(os.path.join(xml_dir, filename))
-                root = tree.getroot()
-                
-                if root.tag in ['item', 'cloth'] and 'name' in root.attrib:
-                    name = root.attrib['name']
-                    sprite_node = root.find(".//sprite")
+    for root_dir, dirs, files in os.walk(xml_dir):
+        for filename in sorted(files):
+            if filename.endswith(".xml"):
+                try:
+                    filepath = os.path.join(root_dir, filename)
+                    tree = ET.parse(filepath)
+                    root = tree.getroot()
                     
-                    sprite_key = None
-                    if sprite_node is not None and 'file' in sprite_node.attrib:
-                        sprite_file = sprite_node.attrib['file']
-                        sprite_key = os.path.splitext(os.path.basename(sprite_file))[0]
-                    else:
-                        sprite_key = os.path.splitext(filename)[0]
+                    if root.tag in ['item', 'cloth'] and 'name' in root.attrib:
+                        name = root.attrib['name']
+                        sprite_node = root.find(".//sprite")
                         
-                    if sprite_key and sprite_key in sprites:
-                        items[name] = sprites[sprite_key]
-                    else:
-                        items[name] = create_placeholder(name)
-                                     
-            except Exception as e:
-                pass
-                
+                        sprite_key = None
+                        if sprite_node is not None and 'file' in sprite_node.attrib:
+                            sprite_file = sprite_node.attrib['file']
+                            sprite_key = os.path.splitext(os.path.basename(sprite_file))[0]
+                        else:
+                            sprite_key = os.path.splitext(filename)[0]
+                            
+                        if sprite_key and sprite_key in sprites:
+                            items[name] = sprites[sprite_key]
+                        else:
+                            items[name] = create_placeholder(name)
+                                         
+                except Exception:
+                    pass
+                    
     return items

@@ -170,7 +170,8 @@ class EntityEditor:
                 except: pass
                 
         self.active_category = "Zombie"
-        self.files = []
+        self.tree_structure = []
+        self.folder_expanded = {}
 
         # Multi-tab system
         self.open_tabs = []
@@ -182,6 +183,7 @@ class EntityEditor:
         self.tab_scroll_start_offset = 0
         self.tab_thumb_rect = None
         self.close_confirm_dialog = None
+        self.new_entity_dialog = None
 
         # Dynamic Options
         self.item_opts = [{"label": "None", "value": "", "icon": None}]
@@ -218,47 +220,102 @@ class EntityEditor:
         self.edit_sprite_btn = pygame.Rect(0, 0, 140, 30)
         
         self.refresh_file_list()
-        if self.files:
-            self.open_tab_file(self.files[0])
+        first_row = next((r for r in self.get_visible_rows() if r["type"] == "file"), None)
+        if first_row:
+            self.open_tab_file(first_row["rel_path"])
 
     def _build_options(self):
         types = set(["container", "weapon", "food", "tool", "ammo", "medical", "material", "cloth", "general"])
         
         c_dir = self.categories.get("Clothes")
         if c_dir and os.path.exists(c_dir):
-            for f in os.listdir(c_dir):
-                if f.endswith(".xml"):
-                    try:
-                        root = ET.parse(os.path.join(c_dir, f)).getroot()
-                        name = root.get("name")
-                        t = root.get("type")
-                        if t: types.add(t)
-                        sprite_node = root.find("properties/sprite")
-                        sprite_file = sprite_node.get("file") if sprite_node is not None else ""
-                        if name:
-                            icon = self.all_sprites.get(name)
-                            self.cloth_opts.append({"label": name, "value": name, "icon": icon})
-                            self.cloth_sprites[name] = sprite_file
-                    except: pass
-                    
+            for root_d, dirs, files in os.walk(c_dir):
+                for f in files:
+                    if f.endswith(".xml"):
+                        try:
+                            root = ET.parse(os.path.join(root_d, f)).getroot()
+                            name = root.get("name")
+                            t = root.get("type")
+                            if t: types.add(t)
+                            sprite_node = root.find("properties/sprite")
+                            sprite_file = sprite_node.get("file") if sprite_node is not None else ""
+                            if name:
+                                icon = self.all_sprites.get(name)
+                                self.cloth_opts.append({"label": name, "value": name, "icon": icon})
+                                self.cloth_sprites[name] = sprite_file
+                        except Exception: pass
+                        
         i_dir = os.path.join(GAME_ROOT, 'lib', 'data', 'items')
         if os.path.exists(i_dir):
-            for f in os.listdir(i_dir):
-                if f.endswith(".xml"):
-                    try:
-                        root = ET.parse(os.path.join(i_dir, f)).getroot()
-                        name = root.get("name")
-                        t = root.get("type")
-                        if t: types.add(t)
-                        if name: 
-                            icon = self.all_sprites.get(name)
-                            self.item_opts.append({"label": name, "value": name, "icon": icon})
-                    except: pass
+            for root_d, dirs, files in os.walk(i_dir):
+                for f in files:
+                    if f.endswith(".xml"):
+                        try:
+                            root = ET.parse(os.path.join(root_d, f)).getroot()
+                            name = root.get("name")
+                            t = root.get("type")
+                            if t: types.add(t)
+                            if name: 
+                                icon = self.all_sprites.get(name)
+                                self.item_opts.append({"label": name, "value": name, "icon": icon})
+                        except Exception: pass
 
         self.item_type_opts = [{"label": t, "value": t} for t in sorted(types)]
 
+    def get_subfolders(self, cat_dir):
+        folders = []
+        if os.path.exists(cat_dir):
+            for item in sorted(os.listdir(cat_dir), key=str.lower):
+                if os.path.isdir(os.path.join(cat_dir, item)):
+                    folders.append(item)
+        return folders
+
+    def get_subfolder_options(self, cat_name):
+        cat_dir = self.categories.get(cat_name, "")
+        folders = self.get_subfolders(cat_dir)
+        return [{"label": "/ (Root)", "value": ""}] + [{"label": f, "value": f} for f in folders]
+
+    def refresh_file_list(self):
+        cat_dir = self.categories[self.active_category]
+        self.tree_structure = []
+        if not os.path.exists(cat_dir): return
+
+        # 1. Root XML files
+        for f in sorted(os.listdir(cat_dir), key=str.lower):
+            fp = os.path.join(cat_dir, f)
+            if os.path.isfile(fp) and f.endswith('.xml'):
+                self.tree_structure.append({"type": "file", "name": f, "subfolder": "", "rel_path": f})
+
+        # 2. Subfolders
+        subfolders = self.get_subfolders(cat_dir)
+        for s in subfolders:
+            sub_path = os.path.join(cat_dir, s)
+            sub_files = []
+            for f in sorted(os.listdir(sub_path), key=str.lower):
+                if f.endswith('.xml'):
+                    sub_files.append({"type": "file", "name": f, "subfolder": s, "rel_path": f"{s}/{f}"})
+            self.tree_structure.append({"type": "folder", "name": s, "files": sub_files})
+
+    def get_visible_rows(self):
+        query = self.search_input.text.strip().lower()
+        rows = []
+        for item in self.tree_structure:
+            if item["type"] == "file":
+                if not query or query in item["name"].lower():
+                    rows.append({"type": "file", "name": item["name"], "subfolder": "", "rel_path": item["rel_path"], "indent": 15})
+            elif item["type"] == "folder":
+                folder_name = item["name"]
+                matching = [f for f in item["files"] if not query or query in f["name"].lower() or query in folder_name.lower()]
+                if query and not matching:
+                    continue
+                is_expanded = self.folder_expanded.get(folder_name, False) or bool(query)
+                rows.append({"type": "folder", "name": folder_name, "expanded": is_expanded, "indent": 10})
+                if is_expanded:
+                    for cf in matching:
+                        rows.append({"type": "file", "name": cf["name"], "subfolder": folder_name, "rel_path": cf["rel_path"], "indent": 28})
+        return rows
+
     def get_current_sprite_path(self, tab):
-        """Finds the absolute path to the active entity's sprite PNG file."""
         if not tab: return None
         base_img = None
         root = tab["tree"].getroot()
@@ -276,8 +333,7 @@ class EntityEditor:
         if not base_img and tab["filename"] and tab["filename"] is not False:
             base_img = os.path.splitext(tab["filename"])[0]
 
-        if not base_img:
-            return None
+        if not base_img: return None
 
         base_fname = os.path.basename(base_img)
         stem = os.path.splitext(base_fname)[0]
@@ -285,21 +341,16 @@ class EntityEditor:
         subdirs = [tab["category"].lower(), 'items', 'clothes', 'zombie', 'player', 'npc', 'animals', 'vehicle', 'map', 'editor']
         candidates = [base_fname] if base_fname.endswith('.png') else [base_fname, f"{stem}.png"]
 
-        # Search existing file on disk
         for sub in subdirs:
             for c_file in candidates:
                 p = os.path.join(s_dir, sub, c_file)
-                if os.path.exists(p):
-                    return p
+                if os.path.exists(p): return p
 
-        # Fallback to category folder
         target_name = base_fname if base_fname.endswith('.png') else f"{stem}.png"
         return os.path.join(s_dir, tab["category"].lower(), target_name)
 
     def ensure_tab_visible(self, idx):
-        if not (0 <= idx < len(self.open_tabs)):
-            return
-
+        if not (0 <= idx < len(self.open_tabs)): return
         start_x = self.sidebar_w
         view_w = self.width - start_x
         rel_x = 0
@@ -316,30 +367,17 @@ class EntityEditor:
             if i == idx:
                 target_left = rel_x
                 target_right = rel_x + tab_w
-
             rel_x += tab_w + 2
 
         total_w = rel_x - 2 if rel_x > 0 else 0
         self.max_tab_scroll = max(0, total_w - view_w)
 
-        # Auto-scroll horizontally if tab is outside the visible view
         if target_right > self.tab_scroll_x + view_w:
             self.tab_scroll_x = (target_right + 15) - view_w
         elif target_left < self.tab_scroll_x:
             self.tab_scroll_x = max(0, target_left - 15)
 
         self.tab_scroll_x = max(0, min(self.max_tab_scroll, self.tab_scroll_x))
-
-    @property
-    def filtered_files(self):
-        query = self.search_input.text.strip().lower()
-        if not query:
-            return self.files
-        return [f for f in self.files if query in f.lower()]
-
-    def refresh_file_list(self):
-        cat_dir = self.categories[self.active_category]
-        self.files = sorted([f for f in os.listdir(cat_dir) if f.endswith('.xml')]) if os.path.exists(cat_dir) else []
 
     def get_current_tab(self):
         if 0 <= self.active_tab_idx < len(self.open_tabs):
@@ -348,6 +386,7 @@ class EntityEditor:
 
     def get_tab_snapshot(self, tab):
         return {
+            "subfolder": tab.get("subfolder", ""),
             "fname": tab["filename_input"].text.strip(),
             "root_tag": tab["root_tag_input"].text.strip(),
             "fields": [(f["path"], f["attr"], f["input"].text.strip()) for f in tab["fields"]],
@@ -372,7 +411,7 @@ class EntityEditor:
             "attr_name": attr_name
         }
 
-    def create_tab_structure(self, filename, tree):
+    def create_tab_structure(self, filename, tree, subfolder="", rel_path=None):
         root = tree.getroot()
         fields = []
         loot_rows = []
@@ -405,8 +444,6 @@ class EntityEditor:
 
         def traverse(node, path):
             if node.tag in ["visuals", "sound"]: return
-            
-            # Support both <loot> and <drop> nodes
             if node.tag in ["loot", "drop"]:
                 detected_loot_tag[0] = node.tag
                 for item in node.findall("item"):
@@ -459,7 +496,9 @@ class EntityEditor:
         fname_val = filename if filename is not False else f"new_{self.active_category.lower()}.xml"
         tab = {
             "category": self.active_category,
+            "subfolder": subfolder,
             "filename": filename,
+            "rel_path": rel_path if filename is not False else False,
             "filename_input": UITextBox(0, 0, 200, 30, self.font, fname_val),
             "root_tag_input": UITextBox(0, 0, 150, 30, self.font, root.tag),
             "root_tag": root.tag,
@@ -473,25 +512,29 @@ class EntityEditor:
         tab["saved_snapshot"] = self.get_tab_snapshot(tab)
         return tab
 
-    def open_tab_file(self, filename):
+    def open_tab_file(self, rel_path):
         for i, tab in enumerate(self.open_tabs):
-            if tab["category"] == self.active_category and tab["filename"] == filename:
+            if tab["category"] == self.active_category and tab["rel_path"] == rel_path:
                 self.active_tab_idx = i
                 self.layout_form()
                 self.ensure_tab_visible(self.active_tab_idx)
                 return
 
         cat_dir = self.categories[self.active_category]
-        if filename is False:
+        if rel_path is False:
             tree = ET.ElementTree(ET.fromstring(BOILERPLATES.get(self.active_category, BOILERPLATES["Items"])))
+            filename = False
+            subfolder = ""
         else:
-            path = os.path.join(cat_dir, filename)
+            path = os.path.join(cat_dir, rel_path)
+            subfolder = os.path.dirname(rel_path).replace('\\', '/')
+            filename = os.path.basename(rel_path)
             try: tree = ET.parse(path)
             except Exception as e:
-                print(f"Error loading {filename}: {e}")
+                print(f"Error loading {rel_path}: {e}")
                 tree = ET.ElementTree(ET.fromstring(BOILERPLATES.get(self.active_category, BOILERPLATES["Items"])))
 
-        new_tab = self.create_tab_structure(filename, tree)
+        new_tab = self.create_tab_structure(filename, tree, subfolder=subfolder, rel_path=rel_path)
         self.open_tabs.append(new_tab)
         self.active_tab_idx = len(self.open_tabs) - 1
         self.layout_form()
@@ -513,7 +556,6 @@ class EntityEditor:
         if not self.open_tabs:
             self.active_tab_idx = -1
         elif self.active_tab_idx == idx:
-            # Focus the adjacent tab to the left (or index 0 if the first tab was closed)
             self.active_tab_idx = max(0, idx - 1)
         elif self.active_tab_idx > idx:
             self.active_tab_idx -= 1
@@ -527,7 +569,8 @@ class EntityEditor:
         self.layout_form()
 
     def layout_form(self):
-        content_h = len(self.filtered_files) * 30 + 10
+        visible_rows = self.get_visible_rows()
+        content_h = len(visible_rows) * 28 + 10
         self.max_sidebar_scroll = max(0, content_h - (self.height - self.y_offset - 145))
         
         tab = self.get_current_tab()
@@ -549,7 +592,6 @@ class EntityEditor:
                 row["input"].list_rect.topleft = (form_x + 460, current_y + 28)
             current_y += row["input"].rect.height + 8
             
-        # Allowed for Map, Animal, Zombie, Vehicle, NPC, Clothes
         has_loot = bool(tab["loot_rows"] or tab["category"] in ["Animal", "Zombie", "Vehicle", "NPC", "Clothes", "Map"])
         if has_loot:
             current_y += 20
@@ -638,7 +680,6 @@ class EntityEditor:
                 if len(found) > idx: curr = found[idx]
             return curr
 
-        # In-place field sync
         for f in tab["fields"]:
             node = get_node(root, f["path"])
             if node is not None:
@@ -683,16 +724,22 @@ class EntityEditor:
         ET.indent(tree, space="    ", level=0)
         
         cat_dir = self.categories[tab["category"]]
-        path = os.path.join(cat_dir, fname)
+        sub = tab.get("subfolder", "")
+        target_dir = os.path.join(cat_dir, sub) if sub else cat_dir
+        os.makedirs(target_dir, exist_ok=True)
+        path = os.path.join(target_dir, fname)
         tree.write(path, encoding="utf-8", xml_declaration=True)
         
-        if tab["filename"] and tab["filename"] != fname and tab["filename"] is not False:
-            old_path = os.path.join(cat_dir, tab["filename"])
+        old_rel = tab.get("rel_path")
+        new_rel = f"{sub}/{fname}" if sub else fname
+        if old_rel and old_rel != new_rel and tab["filename"] is not False:
+            old_path = os.path.join(cat_dir, old_rel)
             if os.path.exists(old_path):
                 try: os.remove(old_path)
-                except: pass
+                except Exception: pass
                 
         tab["filename"] = fname
+        tab["rel_path"] = new_rel
         tab["saved_snapshot"] = self.get_tab_snapshot(tab)
         self.refresh_file_list()
 
@@ -703,32 +750,37 @@ class EntityEditor:
         base_name = tab["filename"]
         if base_name.endswith(".xml"): base_name = base_name[:-4]
         base_no_idx = re.sub(r'_\d+$', '', base_name)
+        
         cat_dir = self.categories[tab["category"]]
+        sub = tab.get("subfolder", "")
+        target_dir = os.path.join(cat_dir, sub) if sub else cat_dir
 
         counter = 1
         while True:
             dup_fname = f"{base_no_idx}_{counter}.xml"
-            if dup_fname not in self.files and not os.path.exists(os.path.join(cat_dir, dup_fname)):
+            if not os.path.exists(os.path.join(target_dir, dup_fname)):
                 break
             counter += 1
 
         self.save_current_tab()
-        dup_path = os.path.join(cat_dir, dup_fname)
-        with open(os.path.join(cat_dir, tab["filename"]), 'r', encoding='utf-8') as src:
+        src_path = os.path.join(target_dir, tab["filename"])
+        dup_path = os.path.join(target_dir, dup_fname)
+        with open(src_path, 'r', encoding='utf-8') as src:
             with open(dup_path, 'w', encoding='utf-8') as dst:
                 dst.write(src.read())
 
         self.refresh_file_list()
-        self.open_tab_file(dup_fname)
+        new_rel = f"{sub}/{dup_fname}" if sub else dup_fname
+        self.open_tab_file(new_rel)
 
     def delete_current_tab(self):
         tab = self.get_current_tab()
         if not tab: return
-        if tab["filename"] and tab["filename"] is not False:
-            path = os.path.join(self.categories[tab["category"]], tab["filename"])
+        if tab.get("rel_path") and tab["filename"] is not False:
+            path = os.path.join(self.categories[tab["category"]], tab["rel_path"])
             if os.path.exists(path):
                 try: os.remove(path)
-                except: pass
+                except Exception: pass
         self._force_close_tab(self.active_tab_idx)
         self.refresh_file_list()
 
@@ -770,7 +822,7 @@ class EntityEditor:
                         try:
                             img = pygame.image.load(p).convert_alpha()
                             return pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
-                        except: pass
+                        except Exception: pass
             return None
 
         img = None
@@ -795,7 +847,73 @@ class EntityEditor:
         return surf
 
     def handle_event(self, event):
-        # 1. Close Confirmation Modal
+        # 1. New Entity Modal with Category and Subfolder dropdowns
+        if self.new_entity_dialog:
+            modal_rect = pygame.Rect(self.width//2 - 270, self.height//2 - 130, 540, 260)
+            create_btn = pygame.Rect(modal_rect.x + 130, modal_rect.bottom - 45, 130, 34)
+            cancel_btn = pygame.Rect(modal_rect.x + 280, modal_rect.bottom - 45, 110, 34)
+            
+            c_dd = self.new_entity_dialog["cat_dd"]
+            s_dd = self.new_entity_dialog["sub_dd"]
+            n_box = self.new_entity_dialog["name_box"]
+
+            if c_dd.expanded and c_dd.handle_event(event):
+                if c_dd.text != self.new_entity_dialog["last_cat"]:
+                    self.new_entity_dialog["last_cat"] = c_dd.text
+                    s_dd.options = self.get_subfolder_options(c_dd.text)
+                    s_dd.selected_value = ""
+                    s_dd._update_label()
+                    n_box.text = f"new_{c_dd.text.lower()}.xml"
+                return True
+
+            if s_dd.expanded and s_dd.handle_event(event): return True
+
+            if c_dd.handle_event(event):
+                if c_dd.text != self.new_entity_dialog["last_cat"]:
+                    self.new_entity_dialog["last_cat"] = c_dd.text
+                    s_dd.options = self.get_subfolder_options(c_dd.text)
+                    s_dd.selected_value = ""
+                    s_dd._update_label()
+                    n_box.text = f"new_{c_dd.text.lower()}.xml"
+                return True
+
+            if s_dd.handle_event(event): return True
+            if n_box.handle_event(event): return True
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if create_btn.collidepoint(event.pos):
+                    chosen_cat = c_dd.text or self.active_category
+                    chosen_sub = s_dd.text
+                    name = n_box.text.strip()
+                    if name:
+                        if not name.endswith('.xml'): name += ".xml"
+                        cat_dir = self.categories[chosen_cat]
+                        target_dir = os.path.join(cat_dir, chosen_sub) if chosen_sub else cat_dir
+                        os.makedirs(target_dir, exist_ok=True)
+                        full_p = os.path.join(target_dir, name)
+                        rel_p = f"{chosen_sub}/{name}" if chosen_sub else name
+                        
+                        if not os.path.exists(full_p):
+                            bp = BOILERPLATES.get(chosen_cat, BOILERPLATES["Items"])
+                            with open(full_p, 'w', encoding='utf-8') as f:
+                                f.write(bp)
+
+                        self.active_category = chosen_cat
+                        self.category_dropdown.selected_value = chosen_cat
+                        self.category_dropdown._update_label()
+                        self.refresh_file_list()
+                        self.open_tab_file(rel_p)
+                    self.new_entity_dialog = None
+                    return True
+                elif cancel_btn.collidepoint(event.pos):
+                    self.new_entity_dialog = None
+                    return True
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                self.new_entity_dialog = None
+                return True
+            return True
+
+        # 2. Close Confirmation Modal
         if self.close_confirm_dialog:
             modal_rect = pygame.Rect(self.width//2 - 280, self.height//2 - 95, 560, 190)
             btn_y = modal_rect.bottom - 46
@@ -819,7 +937,7 @@ class EntityEditor:
                     return True
             return True
 
-        # Keyboard Shortcut: CTRL+W closes active tab
+        # Keyboard Shortcut: CTRL+W closes active tab, CTRL+S saves
         if event.type == pygame.KEYDOWN:
             if (event.mod & pygame.KMOD_CTRL) and event.key == pygame.K_w:
                 if 0 <= self.active_tab_idx < len(self.open_tabs):
@@ -871,6 +989,7 @@ class EntityEditor:
                 if self.category_dropdown.text != self.active_category:
                     self.active_category = self.category_dropdown.text
                     self.search_input.text = ""
+                    self.folder_expanded.clear()
                     self.refresh_file_list()
                 return True
 
@@ -878,7 +997,8 @@ class EntityEditor:
 
         # Sidebar Search Bar
         if self.search_input.handle_event(event):
-            self.max_sidebar_scroll = max(0, len(self.filtered_files) * 30 + 10 - (self.height - self.y_offset - 145))
+            visible_rows = self.get_visible_rows()
+            self.max_sidebar_scroll = max(0, len(visible_rows) * 28 + 10 - (self.height - self.y_offset - 145))
             self.sidebar_scroll = max(0, min(self.sidebar_scroll, self.max_sidebar_scroll))
             return True
 
@@ -909,8 +1029,6 @@ class EntityEditor:
                             self.ensure_tab_visible(self.active_tab_idx)
                             return True
 
-        
-
         # Current Form Fields Interactions
         tab = self.get_current_tab()
         if tab:
@@ -928,7 +1046,6 @@ class EntityEditor:
             for row in tab["fields"]:
                 if row["input"].handle_event(event): return True
 
-            # Loot rows events
             for row in tab["loot_rows"]:
                 if row["mode"].handle_event(event):
                     if row["mode"].text != row["last_mode"]:
@@ -974,18 +1091,17 @@ class EntityEditor:
                         return True
                     if self.code_btn.collidepoint(mx, my):
                         self.save_current_tab()
-                        path = os.path.join(self.categories[tab["category"]], tab["filename"])
+                        path = os.path.join(self.categories[tab["category"]], tab.get("rel_path", tab["filename"]))
                         return {"action": "open_in_code", "path": path}
 
                     if self.edit_sprite_btn.collidepoint(mx, my):
                         sprite_path = self.get_current_sprite_path(tab)
                         if sprite_path:
-                            # Create a blank 16x16 PNG if the file doesn't exist yet
                             if not os.path.exists(sprite_path):
                                 try:
                                     os.makedirs(os.path.dirname(sprite_path), exist_ok=True)
                                     pygame.image.save(pygame.Surface((16, 16), pygame.SRCALPHA), sprite_path)
-                                except: pass
+                                except Exception: pass
                             return {"action": "open_in_art", "path": sprite_path}
                         
             if event.type == pygame.MOUSEBUTTONDOWN and event.pos[0] > self.sidebar_w:
@@ -998,7 +1114,7 @@ class EntityEditor:
                     self.layout_form()
                     return True
 
-        # Sidebar File List Selection
+        # Sidebar List Interactions (Folders [+] and Files)
         if event.type == pygame.MOUSEBUTTONDOWN:
             mx, my = event.pos
             if mx <= self.sidebar_w:
@@ -1015,15 +1131,37 @@ class EntityEditor:
                     return True
                 if event.button == 1:
                     if self.new_btn.collidepoint(mx, my):
-                        self.open_tab_file(False)
+                        # Open New Entity Modal
+                        modal_rect = pygame.Rect(self.width//2 - 270, self.height//2 - 130, 540, 260)
+                        cat_opts = [{"label": c, "value": c} for c in self.categories.keys()]
+                        cat_dd = UIDropdown(modal_rect.x + 130, modal_rect.y + 55, 370, 30, self.font, cat_opts, self.active_category)
+                        sub_opts = self.get_subfolder_options(self.active_category)
+                        sub_dd = UIDropdown(modal_rect.x + 130, modal_rect.y + 100, 370, 30, self.font, sub_opts, "", searchable=True)
+                        n_box = UITextBox(modal_rect.x + 130, modal_rect.y + 145, 370, 30, self.font, f"new_{self.active_category.lower()}.xml")
+                        n_box.active = True
+                        FocusManager.set_focus(n_box)
+                        self.new_entity_dialog = {
+                            "cat_dd": cat_dd,
+                            "sub_dd": sub_dd,
+                            "name_box": n_box,
+                            "last_cat": self.active_category
+                        }
                         return True
+
                     list_y = self.y_offset + 150 - self.sidebar_scroll
-                    for fname in self.filtered_files:
-                        if pygame.Rect(10, list_y, self.sidebar_w - 30, 25).collidepoint(mx, my):
-                            if list_y > self.y_offset + 145:
-                                self.open_tab_file(fname)
-                            return True
-                        list_y += 30
+                    visible_rows = self.get_visible_rows()
+                    for row in visible_rows:
+                        r = pygame.Rect(10, list_y, self.sidebar_w - 30, 26)
+                        if r.collidepoint(mx, my) and list_y > self.y_offset + 145:
+                            if row["type"] == "folder":
+                                f_name = row["name"]
+                                self.folder_expanded[f_name] = not self.folder_expanded.get(f_name, False)
+                                self.layout_form()
+                                return True
+                            elif row["type"] == "file":
+                                self.open_tab_file(row["rel_path"])
+                                return True
+                        list_y += 28
         return False
 
     def draw(self, surface):
@@ -1031,24 +1169,30 @@ class EntityEditor:
         pygame.draw.rect(surface, UITheme.BG, bg_rect)
         mouse_pos = pygame.mouse.get_pos()
         
-        # 1. Sidebar List
+        # 1. Sidebar Tree List
         list_view_rect = pygame.Rect(0, self.y_offset + 145, self.sidebar_w, self.height - self.y_offset - 145)
         surface.set_clip(list_view_rect)
         
         active_tab = self.get_current_tab()
-        selected_fname = active_tab["filename"] if active_tab else None
+        selected_rel = active_tab.get("rel_path") if active_tab else None
         
+        visible_rows = self.get_visible_rows()
         list_y = self.y_offset + 150 - self.sidebar_scroll
-        for fname in self.filtered_files:
-            r = pygame.Rect(10, list_y, self.sidebar_w - 30, 25)
-            if fname == selected_fname:
-                pygame.draw.rect(surface, UITheme.LIST_HOVER, r, border_radius=4)
-            elif r.collidepoint(mouse_pos):
-                pygame.draw.rect(surface, UITheme.HOVER_BG, r, border_radius=4)
-                
-            lbl = (fname[:25] + '..') if len(fname) > 27 else fname
-            surface.blit(self.font.render(lbl, True, UITheme.TEXT), (15, list_y + 4))
-            list_y += 30
+        for row in visible_rows:
+            r = pygame.Rect(10, list_y, self.sidebar_w - 30, 26)
+            if row["type"] == "folder":
+                icon = "[-] " if row.get("expanded") else "[+] "
+                surface.blit(self.font.render(f"{icon}{row['name']}", True, UITheme.WARNING), (row["indent"], list_y + 4))
+            else:
+                if row["rel_path"] == selected_rel:
+                    pygame.draw.rect(surface, UITheme.LIST_HOVER, r, border_radius=4)
+                elif r.collidepoint(mouse_pos):
+                    pygame.draw.rect(surface, UITheme.HOVER_BG, r, border_radius=4)
+                    
+                lbl = row["name"]
+                if len(lbl) > 23: lbl = lbl[:21] + ".."
+                surface.blit(self.font.render(lbl, True, UITheme.TEXT), (row["indent"], list_y + 4))
+            list_y += 28
         surface.set_clip(None)
         
         # 2. Sidebar Header
@@ -1064,6 +1208,8 @@ class EntityEditor:
         
         draw_styled_button(surface, self.new_btn, "+ New Entity", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
 
+        content_h = len(visible_rows) * 28 + 10
+        self.max_sidebar_scroll = max(0, content_h - list_view_rect.height)
         if self.max_sidebar_scroll > 0:
             track_rect = pygame.Rect(self.sidebar_w - 8, list_view_rect.y, 8, list_view_rect.height)
             thumb_h = max(20, (list_view_rect.height / (list_view_rect.height + self.max_sidebar_scroll)) * list_view_rect.height)
@@ -1129,6 +1275,9 @@ class EntityEditor:
             surface.set_clip(form_view_rect)
             form_x = self.sidebar_w
             
+            sub_lbl = f"Folder: {tab.get('subfolder') or '/'}"
+            surface.blit(self.font.render(sub_lbl, True, UITheme.TEXT_DIM), (form_x + 20, tab["filename_input"].rect.y - 18))
+
             surface.blit(self.font.render("File Name:", True, UITheme.TEXT_DIM), (form_x + 20, tab["filename_input"].rect.y + 6))
             tab["filename_input"].draw(surface)
             
@@ -1147,7 +1296,6 @@ class EntityEditor:
             else:
                 surface.blit(self.font.render("No Sprite", True, UITheme.TEXT_DIM), (preview_rect.centerx - 45, preview_rect.centery - 8))
 
-            # Edit Sprite Button right below the preview box
             draw_styled_button(surface, self.edit_sprite_btn, "Edit Sprite", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
 
             # Fields Headers
@@ -1238,7 +1386,37 @@ class EntityEditor:
         if self.category_dropdown.expanded:
             self.category_dropdown.draw_list(surface)
 
-        # 5. Unsaved Changes Modal
+        # 5. New Entity Dialog Modal
+        if self.new_entity_dialog:
+            overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 150))
+            surface.blit(overlay, (0, 0))
+            
+            modal_rect = pygame.Rect(self.width//2 - 270, self.height//2 - 130, 540, 260)
+            pygame.draw.rect(surface, UITheme.PANEL_BG, modal_rect, border_radius=8)
+            pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, modal_rect, 2, border_radius=8)
+            surface.blit(self.font.render("Create New Entity", True, UITheme.WARNING), (modal_rect.x + 20, modal_rect.y + 15))
+            pygame.draw.line(surface, UITheme.BORDER, (modal_rect.x, modal_rect.y + 40), (modal_rect.right, modal_rect.y + 40))
+
+            surface.blit(self.font.render("Category:", True, UITheme.TEXT_DIM), (modal_rect.x + 20, modal_rect.y + 60))
+            self.new_entity_dialog["cat_dd"].draw(surface)
+
+            surface.blit(self.font.render("Subfolder:", True, UITheme.TEXT_DIM), (modal_rect.x + 20, modal_rect.y + 105))
+            self.new_entity_dialog["sub_dd"].draw(surface)
+
+            surface.blit(self.font.render("File Name:", True, UITheme.TEXT_DIM), (modal_rect.x + 20, modal_rect.y + 150))
+            self.new_entity_dialog["name_box"].draw(surface)
+
+            btn_y = modal_rect.bottom - 45
+            draw_styled_button(surface, pygame.Rect(modal_rect.x + 130, btn_y, 130, 34), "Create", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
+            draw_styled_button(surface, pygame.Rect(modal_rect.x + 280, btn_y, 110, 34), "Cancel", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
+
+            if self.new_entity_dialog["sub_dd"].expanded:
+                self.new_entity_dialog["sub_dd"].draw_list(surface)
+            if self.new_entity_dialog["cat_dd"].expanded:
+                self.new_entity_dialog["cat_dd"].draw_list(surface)
+
+        # 6. Unsaved Changes Modal
         if self.close_confirm_dialog:
             overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 150))
