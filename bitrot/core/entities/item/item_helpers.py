@@ -48,12 +48,6 @@ def get_transfer_time(player, base_time=0.8, min_time=0.2):
     return max(min_time, round(duration, 2))
 
 def get_container_liquid_capacity_units(container, liquid_item, target_item=None):
-    """
-    Calculates how many units of liquid_item can fit inside container:
-    Checks available volume (max_liquid - current_liquid).
-    Always floors down to the nearest integer (e.g. 1.5 -> 1, 1.9 -> 1).
-    Safely handles float('inf') without raising OverflowError.
-    """
     if not container or not liquid_item:
         return 0
 

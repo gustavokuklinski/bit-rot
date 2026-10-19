@@ -2,6 +2,8 @@
 
 import random
 import os
+import math
+from core.data.config import *
 import core.messages
 from core.messages import display_message
 from core.entities.item.item import Item
@@ -9,6 +11,7 @@ from core.entities.zombie.corpse import Corpse
 from core.data.recipe_manager import RecipeManager
 from core.data.localization import tr
 from core.entities.item.item_helpers import is_container_on_player
+
 
 class PlayerActions:
     def start_action(self, action_name, base_duration_mult, callback, xp_reward=5, 
@@ -64,11 +67,27 @@ class PlayerActions:
             display_message(tr('msg', "Busy..."))
             return False
 
-        # Restrict 'Use' to items in player inventory/possession
+        # Restrict 'Use' to items in player inventory/possession unless allow_use is True
         is_on_player = (source_type in ('inventory', 'belt', 'gear')) or (source_type == 'container' and container_item and is_container_on_player(container_item, self))
-        if not is_on_player:
+        is_allowed = is_on_player or getattr(item, 'allow_use', False)
+        if not is_allowed:
             display_message(tr('msg', "Item must be in inventory to use."))
             return False
+
+        # Proximity check if using from an external container or maptile
+        if not is_on_player:
+            check_obj = container_item if (container_item and hasattr(container_item, 'rect')) else item
+            if check_obj and hasattr(check_obj, 'rect'):
+                dist = math.hypot(self.rect.centerx - check_obj.rect.centerx, self.rect.centery - check_obj.rect.centery)
+                if dist > TILE_SIZE * 2.5:
+                    display_message(tr('msg', "Too far away to use."))
+                    return False
+
+            if container_item:
+                from core.entities.item.item_helpers import is_container_closed_or_locked
+                if is_container_closed_or_locked(container_item, self):
+                    display_message(tr('msg', "Container is closed."))
+                    return False
 
         if getattr(item, 'item_type', '').lower() == 'recipe':
             self.read_recipe_book(item)
@@ -119,11 +138,16 @@ class PlayerActions:
                 return False
 
         source_inventory = self._get_source_inventory(source_type, container_item)
+
+        from core.entities.item.item_helpers import is_infinite_liquid_source
+        is_infinite = container_item and is_infinite_liquid_source(container_item) and getattr(item, 'liquid', False)
+        if is_infinite:
+            item.load = getattr(item, 'capacity', 100) or 100
         
-        if not (item.item_type.startswith('consumable') or item.item_type == 'liquid'):
+        if not (item.item_type.startswith('consumable') or item.item_type == 'liquid' or getattr(item, 'allow_use', False)):
             return False
 
-        if item.load <= 0:
+        if item.load is not None and item.load <= 0 and not is_infinite:
             display_message(f"{tr('msg', 'Cannot use')} {tr('item', item.name)}{tr('msg', ', it is empty.')}")
             return False
             
@@ -134,8 +158,8 @@ class PlayerActions:
         walkable_types = {'consumable_food', 'consumable_drink', 'consumable_drugs', 'consumable_medication', 'liquid'}
         is_book = (item_type == 'consumable_book' or 'book' in item_type.lower() or item_type == 'recipe' or 'book' in getattr(item, 'name', '').lower())
 
-        allow_walk = (item_type in walkable_types) and not is_book
-        cancel_on_move = is_book
+        allow_walk = (item_type in walkable_types) and not is_book and is_on_player
+        cancel_on_move = is_book or (not is_on_player)
         action_sound = 'read.ogg' if is_book else None
 
         def execute_consume():
@@ -180,11 +204,15 @@ class PlayerActions:
                                 consumed = True
             
             if consumed:
-                item.load -= 1
+                if is_infinite:
+                    item.load = getattr(item, 'capacity', 100) or 100
+                elif hasattr(item, 'load') and item.load is not None:
+                    item.load -= 1
+
                 if old_alcohol < 30.0 <= getattr(self, 'drugs', 0.0):
                     display_message(tr('msg', "You feel dizzy and your vision narrows..."))
                     
-                if item.load <= 0:
+                if hasattr(item, 'load') and item.load is not None and item.load <= 0 and not is_infinite:
                     if source_type == 'belt':
                         self.belt[item_index] = None
                     elif source_type == 'inventory':
@@ -192,9 +220,16 @@ class PlayerActions:
                             self.inventory.pop(item_index)
                     elif source_type == 'gear':
                         self.clothes[item_index] = None
-                    elif (source_type == 'container' or source_type == 'nearby') and container_item:
-                        if item_index < len(container_item.inventory) and container_item.inventory[item_index] == item:
-                            container_item.inventory.pop(item_index)
+                    elif (source_type in ('container', 'nearby', 'container_map')) and container_item:
+                        if hasattr(container_item, 'inventory'):
+                            if item_index is not None and 0 <= item_index < len(container_item.inventory) and container_item.inventory[item_index] == item:
+                                container_item.inventory.pop(item_index)
+                            elif item in container_item.inventory:
+                                container_item.inventory.remove(item)
+                    elif source_type == 'ground':
+                        target_game = game or getattr(self, 'game', None) or getattr(core.messages, '_game_instance', None)
+                        if target_game and hasattr(target_game, 'items_on_ground') and item in target_game.items_on_ground:
+                            target_game.items_on_ground.remove(item)
                             
                 if required_item_found:
                     if hasattr(required_item_found, 'load') and required_item_found.load is not None:
@@ -215,7 +250,7 @@ class PlayerActions:
                             
                             display_message(f"{tr('item', required_item_found.name)} {tr('msg', 'used up.')}")
 
-        if is_auto_drink:
+        if is_auto_drink or duration_mult <= 0:
             execute_consume()
             return True
         else:
@@ -465,8 +500,12 @@ class PlayerActions:
             or (source == 'container' and container_item and is_container_on_player(container_item, self))
         )
 
-        # Non-player items in Nearby only get Grab and Send to (handled in mouse_context.py)
+        allow_use = getattr(item, 'allow_use', False)
+
+        # Non-player items in Nearby or external containers only get Grab and Send to (unless allow_use is set)
         if not is_on_player:
+            if allow_use:
+                options.append('Use')
             return options
         
         if item_type == 'text' or item_type == 'recipe' or item_type == 'map':
@@ -487,7 +526,8 @@ class PlayerActions:
             if item_type == 'consumable_ammo' or 'Ammo' in item_name or 'Shells' in item_name:
                 pass
             else:
-                options.append('Use')
+                if 'Use' not in options:
+                    options.append('Use')
             
             if getattr(item, 'allow_belt', False):
                 options.append('Equip')

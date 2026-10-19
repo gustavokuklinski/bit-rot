@@ -49,6 +49,13 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
             allow_belt_str = root.attrib.get('allow_belt', 'false')
             allow_belt = (allow_belt_str.lower() == 'true')
 
+            allow_use_str = root.attrib.get('allow_use', 'false')
+            allow_use = (allow_use_str.lower() == 'true')
+
+            # Parse allow_use
+            allow_use_str = root.attrib.get('allow_use', 'false')
+            allow_use = (allow_use_str.lower() == 'true')
+
             spawn_amount_str = root.attrib.get('spawn_amount_global', '1')
             spawn_amount_global = int(spawn_amount_str)
 
@@ -96,6 +103,7 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                 'allow_type': allow_type,
                 'disallow_type': disallow_type,
                 'allow_belt': allow_belt,
+                'allow_use': allow_use,
                 'consume_time': consume_time,
                 'tip': tip,
                 'safe_radius': safe_radius,

@@ -290,7 +290,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 if available_pool:
                     choice = random.choice(available_pool)
                     clothes_to_equip[slot_name] = choice['name'] if isinstance(choice, dict) else choice
-                else:
+                elif slot_name not in clothes_to_equip:
                     clothes_to_equip[slot_name] = None
                     
         for slot_name, cloth_name in predefined_clothes.items():

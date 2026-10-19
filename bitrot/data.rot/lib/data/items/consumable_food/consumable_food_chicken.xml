@@ -1,4 +1,4 @@
-<item name="Chicken" type="consumable_food" allow_belt="false" consume_time="2.0">
+<item name="Chicken" type="consumable_food" allow_belt="false" consume_time="2.0" allow_use="true">
     <properties>
         <restore status="[food]" value="5" />
         <restore status="[water]" value="1" />

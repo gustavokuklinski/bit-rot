@@ -1031,7 +1031,27 @@ def handle_context_menu_click(game, mouse_pos):
                     item['active'] = not item['active']
                 clicked_on_menu = True
 
-            elif option == 'Use': game.player.consume_item(item, source, index, container_item)
+            elif option == 'Use' or option.startswith('Use '):
+                use_target = item
+                use_source = source
+                use_index = index
+                use_container = container_item
+
+                # If clicked directly on a container maptile on the map
+                if source == 'container_map' and hasattr(item, 'inventory'):
+                    found_it = None
+                    if option.startswith('Use '):
+                        req_name = option[4:].strip().lower()
+                        found_it = next((it for it in item.inventory if it and getattr(it, 'allow_use', False) and (tr('item', it.name).lower() == req_name or it.name.lower() == req_name)), None)
+                    if not found_it:
+                        found_it = next((it for it in item.inventory if it and getattr(it, 'allow_use', False)), None)
+                    if found_it:
+                        use_target = found_it
+                        use_container = item
+                        use_index = item.inventory.index(found_it)
+
+                game.player.consume_item(use_target, use_source, use_index, use_container, game=game)
+                clicked_on_menu = True
 
             elif option == 'Reload':
                 if getattr(item, 'item_type', None) in ['utility', 'mobile']:

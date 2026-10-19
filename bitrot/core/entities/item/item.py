@@ -12,7 +12,7 @@ SPRITE_CACHE = {}
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, allow_belt=False, tip=None, consume_time=1.0, safe_radius=0, max_liquid=None, map_value=None, barricade_health=0, remove_items=None, remove_time=1.5, place_items=None, place_time=1.5, ammo_drop_capsule=None, allow_type=None, disallow_type=None, **kwargs):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, allow_belt=False, tip=None, consume_time=1.0, safe_radius=0, max_liquid=None, map_value=None, barricade_health=0, remove_items=None, remove_time=1.5, place_items=None, place_time=1.5, ammo_drop_capsule=None, allow_type=None, disallow_type=None, allow_use=False,**kwargs):
         self.name = name
         self.item_type = item_type
         self.id = str(uuid.uuid4())
@@ -94,6 +94,7 @@ class Item:
         self.require = require
         
         self.allow_belt = allow_belt
+        self.allow_use = str(allow_use).lower() == 'true' if isinstance(allow_use, str) else bool(allow_use)
         self.in_belt = False
         self.tip = tip
 
@@ -152,6 +153,8 @@ class Item:
             'map_filename': getattr(self, 'map_filename', None),
             'inventory': [i.to_dict() if hasattr(i, 'to_dict') else i for i in self.inventory] if self.inventory else []
         }
+        if getattr(self, 'allow_use', False):
+            data['allow_use'] = self.allow_use
 
         if getattr(self, 'allow_type', None) is not None:
             data['allow_type'] = self.allow_type
@@ -241,6 +244,9 @@ class Item:
 
         if 'map_value' in data:
             item.map_value = data['map_value']
+        
+        if 'allow_use' in data:
+            item.allow_use = data['allow_use']
 
         return item
         

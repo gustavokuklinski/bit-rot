@@ -585,6 +585,9 @@ def handle_right_click(game, mouse_pos):
 
         elif is_nearby:
             options = []
+            if getattr(clicked_item, 'allow_use', False):
+                options.append('Use')
+
             is_item_liq = getattr(clicked_item, 'liquid', False) or getattr(clicked_item, 'item_type', '') in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
             if not isinstance(clicked_item, Corpse) and getattr(clicked_item, 'type', None) not in ('animal', 'zombie'):
                 if not is_item_liq:
@@ -617,6 +620,9 @@ def handle_right_click(game, mouse_pos):
 
         elif click_source == 'ground':
             options = []
+            if getattr(clicked_item, 'allow_use', False):
+                options.append('Use')
+
             is_item_liq = getattr(clicked_item, 'liquid', False) or getattr(clicked_item, 'item_type', '') in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
             if isinstance(clicked_item, Corpse):
                 options.append('Open')
@@ -643,6 +649,37 @@ def handle_right_click(game, mouse_pos):
                         options.append('Reload')
 
                 options.append('Send to')
+
+        elif click_source == 'container_map':
+            options = []
+            # Check for items with allow_use inside this maptile container
+            if hasattr(clicked_item, 'inventory'):
+                if not getattr(clicked_item, 'is_opened', True) and hasattr(clicked_item, 'open') and hasattr(clicked_item, 'tile_def') and clicked_item.tile_def:
+                    t_loot = clicked_item.tile_def.get('loot', [])
+                    if any(ITEM_TEMPLATES.get(l.get('item', ''), {}).get('allow_use', False) for l in t_loot if l.get('item')):
+                        clicked_item.open(game)
+
+                usable_items = [it for it in getattr(clicked_item, 'inventory', []) if it and getattr(it, 'allow_use', False)]
+                if usable_items:
+                    if len(usable_items) == 1:
+                        options.append('Use')
+                    else:
+                        for u_it in usable_items:
+                            options.append(f"Use {tr('item', u_it.name)}")
+            options.append('Open')
+
+        elif click_source == 'container':
+            options = []
+            if getattr(clicked_item, 'allow_use', False):
+                options.append('Use')
+
+            is_item_liq = getattr(clicked_item, 'liquid', False) or getattr(clicked_item, 'item_type', '') in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
+            if not is_item_liq:
+                if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
+                    options.extend(['Grab One', 'Grab Half', 'Grab All'])
+                else:
+                    options.append('Grab')
+            options.append('Send to')
 
         else:
             options = game.player.get_item_context_options(clicked_item, click_source, click_container_item)
