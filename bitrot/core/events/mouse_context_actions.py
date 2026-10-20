@@ -198,41 +198,32 @@ def handle_context_menu_click(game, mouse_pos):
                 elif target_slot:
                     slot_name = target_slot
                     if slot_name == 'hand': slot_name = 'hands'
+
+                    is_util_slot = slot_name in ['util', 'util2', 'util3']
+                    item_slot = getattr(item, 'slot', None)
+                    if item_slot == 'hand': item_slot = 'hands'
+                    is_util_item = item_slot in ['util', 'util1', 'util2', 'util3']
+
+                    if is_util_slot and not is_util_item:
+                        display_message(tr('msg', "Only utility items can be equipped in Util slots."))
+                        game.context_menu['active'] = False
+                        return
+                    if is_util_item and not is_util_slot:
+                        display_message(tr('msg', "Utility items can only be equipped in Util slots."))
+                        game.context_menu['active'] = False
+                        return
+
                     item_from_src = remove_from_source(game, item, source, index, container_item)
-                    if item_from_src:
-                        old_item = game.player.clothes.get(slot_name)
-                        game.player.clothes[slot_name] = item_from_src
-
-                        if hasattr(game, 'sound_manager'):
-                            game.sound_manager.play_sound('equip_gear.ogg', subdir='items', game=game, source_pos=game.player.rect.center, is_critical=True)
-
-                        if old_item:
-                            if getattr(old_item, 'liquid', False):
-                                old_item.rect.center = game.player.rect.center
-                                game.items_on_ground.append(old_item)
-                            elif len(game.player.inventory) < game.player.get_total_inventory_slots():
-                                game.player.inventory.append(old_item)
-                            else:
-                                old_item.rect.center = game.player.rect.center
-                                game.items_on_ground.append(old_item)
-
-                        display_message(f"{tr('msg', 'Equipped')} {tr('item', item_from_src.name)} {tr('msg', 'to')} {tr('ui', slot_name.capitalize())}.")
 
                 else:
                     item_type = getattr(item, 'item_type', '') or ''
                     if item_type in ('cloth', 'container'):
                         target_s = getattr(item, 'slot', None)
                         if target_s == 'hand': target_s = 'hands'
-                        if target_s == 'util' or not target_s:
+                        if target_s in ('util', 'util1', 'util2', 'util3'):
                             target_s = next((s for s in ['util', 'util2', 'util3'] if game.player.clothes.get(s) is None), 'util')
-                        item_from_src = remove_from_source(game, item, source, index, container_item)
-                        if item_from_src:
-                            old_item = game.player.clothes.get(target_s)
-                            game.player.clothes[target_s] = item_from_src
-                            if old_item:
-                                game.player.inventory.append(old_item)
-                    else:
-                        game.player.equip_item_to_belt(item, source, index, container_item)
+                        elif not target_s:
+                            target_s = None
 
                 clicked_on_menu = True
 

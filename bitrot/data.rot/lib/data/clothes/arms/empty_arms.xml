@@ -1,4 +1,4 @@
-<cloth name="Empty Body" type="cloth" id="body">
+<cloth name="Empty Body" type="cloth" id="arms">
     <properties>
         <sprite file="empty.png" />
     </properties>

@@ -732,6 +732,9 @@ def load_game(game, save_folder_name):
                     game.player.clothes[slot] = Item.create_from_name(item_data)
             else:
                 game.player.clothes[slot] = None
+
+        # Synchronize belt slots with equipped util clothes
+        game.player.sync_belt_slots(game)
         
         game.player.quests = player_data.get('quests', [])
         game.player.completed_quests = player_data.get('completed_quests', [])

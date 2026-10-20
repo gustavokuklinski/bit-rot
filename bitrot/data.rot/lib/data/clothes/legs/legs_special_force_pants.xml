@@ -4,7 +4,6 @@
         <capacity value="6" />
         <durability min="50" max="100" />
         <sprite file="legs_special_force_pants.png" />
-        <weight weight="0.2" reduction="10%" />
     </properties>
     <loot>
         <item name="9mm Ammo" chance="1.0" />

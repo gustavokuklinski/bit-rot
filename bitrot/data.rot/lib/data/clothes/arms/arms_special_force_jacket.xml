@@ -4,10 +4,9 @@
         <capacity value="5" />
         <durability min="50" max="100" />
         <sprite file="arms_special_force_jacket.png" />
-        <weight weight="0.3" reduction="10%" />
     </properties>
     <loot>
-        <item name="9mm Ammo" chance="1.0" />
+        <item name="9mm Ammo" chance="0.2" />
     </loot>
     <spawn chance="1" />
 </cloth>

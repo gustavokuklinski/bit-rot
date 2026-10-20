@@ -298,6 +298,9 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                     builder_str = root.attrib.get('builder', 'false')
                     template['builder'] = (builder_str.lower() == 'true')
 
+                    hotbar_str = root.attrib.get('hotbar', 'false')
+                    template['hotbar'] = (hotbar_str.lower() == 'true')
+
                     hide_cloth_str = root.attrib.get('hide_cloth')
                     if hide_cloth_str:
                         template['properties']['hide_cloth'] = [t.strip() for t in hide_cloth_str.replace('[', '').replace(']', '').split(',')]

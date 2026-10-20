@@ -760,11 +760,19 @@ def handle_mouse_up(game, event, mouse_pos):
                                     item_slot = getattr(dragged_item, 'slot', None)
                                     if item_slot == 'hand': item_slot = 'hands'
                                     
+                                    # 1. Identify if the target slot or the item is a 'util' type
                                     is_util_slot = slot_name in ['util', 'util2', 'util3']
-                                    is_container = getattr(dragged_item, 'item_type', '') == 'container'
-                                    is_util_item = item_slot == 'util'
+                                    is_util_item = item_slot in ['util', 'util1', 'util2', 'util3']
 
-                                    if item_slot == slot_name or (is_util_slot and (is_container or is_util_item)):
+                                    # 2. Strict Rule:
+                                    # - Util slots ONLY accept items with id="util"
+                                    # - Normal slots ONLY accept items matching their slot name (and never id="util")
+                                    if is_util_slot:
+                                        can_equip = is_util_item
+                                    else:
+                                        can_equip = (item_slot == slot_name) and not is_util_item
+
+                                    if can_equip:
                                         if getattr(dragged_item, 'liquid', False):
                                             display_message(tr('msg', "Liquid spills."))
                                             dropped_successfully = True; break

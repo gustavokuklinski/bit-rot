@@ -85,11 +85,12 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
         self.inventory = []
         self.active_weapon = None
-        self.belt = [None] * 3
-        self.last_decay_time = time.time()
+        self.belt = [None] * 2
         self.base_inventory_slots = 15
+
+        self.last_decay_time = time.time()
         
-        self.clothes_slots =  ['hair', 'head','legs', 'feet', 'body','util','arms', 'hands', 'facial', 'util2', 'util3']
+        self.clothes_slots = ['hair', 'head','legs', 'feet', 'body','util','arms', 'hands', 'facial', 'util2', 'util3']
         self.clothes = {slot: None for slot in self.clothes_slots}
         
         chosen_clothes_dict = data.get('clothes', {})
@@ -117,6 +118,8 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
                         tinted = self.clothes[slot].image.copy()
                         tinted.fill((*assigned_color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
                         self.clothes[slot].image = tinted
+
+        self.sync_belt_slots()
 
         self.melee_swing_timer = 0
         self.gun_flash_timer = 0
@@ -235,6 +238,8 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
             display_message(tr('msg', "Action cancelled."))
 
     def update_stats(self, game):
+        self.sync_belt_slots(game)
+        
         if self.active_weapon is not None and self.active_weapon not in self.belt:
             self.active_weapon = None
 

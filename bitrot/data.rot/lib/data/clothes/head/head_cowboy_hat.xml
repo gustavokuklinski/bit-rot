@@ -2,7 +2,6 @@
     <properties>
         <defence value="0" />
         <sprite file="head_cowboy_hat.png" />
-        <weight weight="0.1" />
     </properties>
     <spawn chance="1" />
 </cloth>

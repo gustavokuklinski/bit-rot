@@ -71,10 +71,19 @@ def is_item_allowed_in_slot(item, slot_type, index_or_name, target_obj=None):
         item_slot = getattr(item, 'slot', None)
         if item_slot == 'hand':
             item_slot = 'hands'
+
         is_util_slot = slot_name in ['util', 'util2', 'util3']
-        is_container = getattr(item, 'item_type', '') == 'container'
-        is_util_item = (item_slot == 'util')
-        return (item_slot == slot_name) or (is_util_slot and (is_container or is_util_item))
+        is_util_item = item_slot in ['util', 'util1', 'util2', 'util3']
+
+        # Util slots ONLY accept items with id="util"
+        if is_util_slot:
+            return is_util_item
+
+        # Items with id="util" cannot be placed in non-util slots
+        if is_util_item:
+            return False
+
+        return item_slot == slot_name
 
     elif slot_type == 'container':
         if not target_obj:

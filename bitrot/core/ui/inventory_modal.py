@@ -85,7 +85,7 @@ def draw_belt_hud(surface, game, player, mouse_pos, dynamic_h=None):
 
 def get_belt_hud_slot_rect(i, game=None, dynamic_h=None, **kwargs):
     from core.data.config import GAME_WIDTH, GAME_HEIGHT
-    belt_count = len(game.player.belt) if (game and getattr(game, 'player', None)) else 3
+    belt_count = len(game.player.belt) if (game and getattr(game, 'player', None)) else 2
     slot_size = 40 
     gap = 6        
     total_width = (slot_size * belt_count) + (gap * (belt_count - 1))

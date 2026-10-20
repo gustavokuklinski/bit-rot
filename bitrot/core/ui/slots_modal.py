@@ -23,7 +23,7 @@ def draw_slots_modal(surface, game, player, modal, assets, mouse_pos):
 
     if hasattr(player, 'clothes') and player.clothes:
         for slot_name, item in player.clothes.items():
-            if item and getattr(item, 'item_type', '') in valid_types and get_safe_capacity(item) > 0:
+            if item and getattr(item, 'item_type', '') in valid_types and get_safe_capacity(item) > 0 and not getattr(item, 'hotbar', False):
                 slot_tr = tr('ui', str(slot_name).capitalize())
                 item_tr = tr('item', getattr(item, 'name', 'Unknown'))
                 bc = f"{tr('ui', 'Gear')} > {slot_tr} > {item_tr}"

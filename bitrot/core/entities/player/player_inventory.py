@@ -11,6 +11,48 @@ from core.entities.item.item_helpers import is_infinite_liquid_source
 class PlayerInventory:
     def get_total_inventory_slots(self):
         return self.base_inventory_slots
+    
+    def get_max_belt_slots(self):
+        """Default is 2 slots. Adds capacity for every id='util' cloth equipped in util, util2, util3 with hotbar='true'."""
+        base_slots = 2
+        if hasattr(self, 'clothes') and self.clothes:
+            for slot_key in ('util', 'util2', 'util3'):
+                util_item = self.clothes.get(slot_key)
+                if util_item and getattr(util_item, 'hotbar', False):
+                    item_slot = getattr(util_item, 'slot', None)
+                    if item_slot in ('util', 'util1', 'util2', 'util3'):
+                        cap = getattr(util_item, 'capacity', 0) or 0
+                        base_slots += max(0, int(cap))
+        return base_slots
+
+    def sync_belt_slots(self, game=None):
+        """Dynamically expands or shrinks player.belt without losing items."""
+        target_slots = self.get_max_belt_slots()
+        current_len = len(self.belt)
+
+        if current_len < target_slots:
+            self.belt.extend([None] * (target_slots - current_len))
+        elif current_len > target_slots:
+            # Safely move items from the removed slots into inventory or drop them
+            overflow_items = [item for item in self.belt[target_slots:] if item is not None]
+            self.belt = self.belt[:target_slots]
+
+            for item in overflow_items:
+                item.in_belt = False
+                if getattr(self, 'active_weapon', None) == item:
+                    self.active_weapon = None
+
+                if len(self.inventory) < self.get_total_inventory_slots():
+                    self.inventory.append(item)
+                    if hasattr(self, 'stack_item_in_inventory'):
+                        self.stack_item_in_inventory(item)
+                else:
+                    target_game = game or getattr(self, 'game', None) or getattr(core.messages, '_game_instance', None)
+                    if target_game and hasattr(target_game, 'items_on_ground'):
+                        item.rect.center = self.rect.center
+                        item.x, item.y = item.rect.topleft
+                        target_game.items_on_ground.append(item)
+
 
     def find_consumable_at_mouse(self, mouse_pos):
         for i, item in enumerate(self.inventory):

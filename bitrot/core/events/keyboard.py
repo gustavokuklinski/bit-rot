@@ -740,24 +740,34 @@ def handle_keyboard_events(game, event, action_triggered=None):
 
 
         # Hardcoded Hotbar & Zoom bindings
-        if game.game_state == 'PLAYING':
-            if pygame.K_1 <= event.key <= pygame.K_3:
-                slot_index = event.key - pygame.K_1
-                if game.player:
-                    item = game.player.belt[slot_index]
-                    if item:
-                        if item.item_type.startswith('consumable'):
-                            game.player.consume_item(item, 'belt', slot_index, game=game)
-                        elif item.item_type in ['weapon_melee', 'weapon_ranged', 'weapon_throw', 'tool']:
-                            if game.player.active_weapon == item:
-                                game.player.active_weapon = None
-                                print(f"Unequipped {tr('item', item.name)}.")
-                            else:
-                                game.player.active_weapon = item
-                                print(f"Equipped {tr('item', item.name)}.")
-                    else:
-                        game.player.active_weapon = None
-                        print(f"Belt slot {slot_index + 1} is empty. Unequipped.")
+        if game.game_state == 'PLAYING' and getattr(game, 'player', None):
+            belt_len = len(game.player.belt)
+            slot_index = None
+
+            # Keys 1 through 9
+            if pygame.K_1 <= event.key <= pygame.K_9:
+                idx = event.key - pygame.K_1
+                if idx < belt_len:
+                    slot_index = idx
+            # Key 0 for slot 10
+            elif event.key == pygame.K_0 and belt_len >= 10:
+                slot_index = 9
+
+            if slot_index is not None:
+                item = game.player.belt[slot_index]
+                if item:
+                    if item.item_type.startswith('consumable'):
+                        game.player.consume_item(item, 'belt', slot_index, game=game)
+                    elif item.item_type in ['weapon_melee', 'weapon_ranged', 'weapon_throw', 'tool']:
+                        if game.player.active_weapon == item:
+                            game.player.active_weapon = None
+                            print(f"Unequipped {tr('item', item.name)}.")
+                        else:
+                            game.player.active_weapon = item
+                            print(f"Equipped {tr('item', item.name)}.")
+                else:
+                    game.player.active_weapon = None
+                    print(f"Belt slot {slot_index + 1} is empty. Unequipped.")
 
             zoom_step = 0.1
             if event.key == pygame.K_EQUALS or event.key == pygame.K_PLUS: 

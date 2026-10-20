@@ -389,6 +389,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     allow_belt = template.get('allow_belt', False)
 
     allow_use = template.get('allow_use', False)
+    hotbar = template.get('hotbar', False)
 
     require = get_prop_val(props, 'require', 'type', None)
     if require and require.startswith('[') and require.endswith(']'):
@@ -429,7 +430,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
         barricade_health=barricade_health, remove_items=remove_items, remove_time=remove_time,
         place_items=place_items, place_time=place_time, ammo_drop_capsule=ammo_drop_capsule,
         allow_type=allow_type, disallow_type=disallow_type,
-        allow_use=allow_use
+        allow_use=allow_use, hotbar=hotbar
     )
 
     # Use shared cache instead of item.image.copy()

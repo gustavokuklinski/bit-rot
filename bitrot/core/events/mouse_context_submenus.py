@@ -41,9 +41,10 @@ def build_equip_submenu(clicked_item, click_source, game):
             slot = 'hands'
         
         gear_slots = []
-        if slot in ('util', 'util1', 'util2', 'util3') or (item_type == 'container' and not slot):
+        # ONLY items with id="util" get the Util 1, Util 2, Util 3 options
+        if slot in ('util', 'util1', 'util2', 'util3'):
             gear_slots = ['util', 'util2', 'util3']
-        elif slot:
+        elif slot and slot not in ('util', 'util1', 'util2', 'util3'):
             gear_slots = [slot]
             
         for s in gear_slots:

@@ -19,13 +19,10 @@ def draw_gear_modal(surface, game, player, modal, assets, mouse_pos):
     # 2. Add tabs for clothes with capacity (e.g. Vests, Cargo Pants)
     if hasattr(player, 'clothes'):
         for slot, item in player.clothes.items():
-            
-
-            # Check if item exists and acts as a container
-            if item and hasattr(item, 'capacity') and item.capacity and item.capacity > 0:
+            # Check if item exists and acts as an independent container
+            if item and hasattr(item, 'capacity') and (item.capacity or 0) > 0 and not getattr(item, 'hotbar', False):
                  if hasattr(item, 'inventory'):
                      default_name = tr('item', item.name)
-                     # Handle duplicates (e.g. two items with same name)
                      count = sum(1 for label in container_mapping if label.startswith(default_name))
                      label = f"{default_name} #{count + 1}" if count > 0 else default_name
                      
