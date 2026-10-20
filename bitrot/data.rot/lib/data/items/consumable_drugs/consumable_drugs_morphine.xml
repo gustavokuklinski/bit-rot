@@ -1,4 +1,4 @@
-<item name="Morphine" type="consumable_drugs" allow_belt="true" consume_time="1.2">
+<item name="Morphine" type="consumable_drugs" allow_belt="true"  allow_use="true" consume_time="1.2">
     <properties>
         <restore status="[health]" value="50" />
         <reduce status="[infection]" value="5" />

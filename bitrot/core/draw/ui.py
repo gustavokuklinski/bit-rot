@@ -34,7 +34,7 @@ from core.ui.mobile_map_tab import generate_minimap_cache, MINIMAP_PLAYER_COLOR
 
 # Hardcoded default English fallbacks for interaction tooltips
 DEFAULT_TOOLTIPS = {
-    'inspect_container': "Inspect [{key}]",
+    'inspect_container': "Open [{key}]",
     'generic_interact': "Interact [{key}]",
     'stair_interact': "Climb [{key}]",
     'interact_npc': "Talk [{key}]",
@@ -776,7 +776,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
 
     for obj in find_nearby_containers(game):
         if getattr(obj, 'item_type', '') != 'vehicle' and (getattr(obj, 'item_type', '') in ['container', 'maptile_container', 'corpse'] or type(obj).__name__ == 'Corpse') and screen_rect.colliderect(obj.rect):
-            tip_text = get_tooltip_tr('inspect_container', "Inspect [{key}]").replace('{key}', get_key_name('interact'))
+            tip_text = get_tooltip_tr('inspect_container', "Open [{key}]").replace('{key}', get_key_name('interact'))
             interactables.append({'rect': obj.rect, 'tip': tip_text})
 
     p_grid_x = int(game.player.rect.centerx // TILE_SIZE)

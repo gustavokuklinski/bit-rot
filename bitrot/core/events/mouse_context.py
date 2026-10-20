@@ -229,6 +229,25 @@ def handle_right_click(game, mouse_pos):
                     else:
                         display_message(tr('msg', "Item is too far away to interact with."))
 
+        # If not clicked directly on the rect, check if the grid tile belongs to a container
+        if not clicked_item:
+            grid_x = int(world_pos[0] // TILE_SIZE)
+            grid_y = int(world_pos[1] // TILE_SIZE)
+            tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            for i, container in enumerate(game.containers):
+                if hasattr(container, 'rect') and container.rect.colliderect(tile_rect):
+                    dx = game.player.rect.centerx - container.rect.centerx
+                    dy = game.player.rect.centery - container.rect.centery
+                    dist_sq = dx*dx + dy*dy
+                    if dist_sq < max_interact_dist_sq:
+                        clicked_item = container
+                        click_source = 'container_map'
+                        click_index = i
+                        click_container_item = None
+                        break
+                    else:
+                        display_message(tr('msg', "Item is too far away to interact with."))
+
         if not clicked_item:
             if game.player.rect.collidepoint(world_pos):
                 clicked_item = game.player
@@ -585,6 +604,7 @@ def handle_right_click(game, mouse_pos):
 
         elif is_nearby:
             options = []
+            # 'Use' is ONLY allowed on items inside the container
             if getattr(clicked_item, 'allow_use', False):
                 options.append('Use')
 
@@ -618,15 +638,19 @@ def handle_right_click(game, mouse_pos):
             if item_type not in invalid_types and not isinstance(clicked_item, Corpse) and not is_maptile:
                 options.append('Send to')
 
+
         elif click_source == 'ground':
             options = []
-            if getattr(clicked_item, 'allow_use', False):
-                options.append('Use')
-
             is_item_liq = getattr(clicked_item, 'liquid', False) or getattr(clicked_item, 'item_type', '') in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
-            if isinstance(clicked_item, Corpse):
+            is_container = isinstance(clicked_item, Corpse) or getattr(clicked_item, 'item_type', '') in ('container', 'maptile_container') or hasattr(clicked_item, 'inventory')
+
+            if is_container:
+                # Containers on ground only allow Open (never Use)
                 options.append('Open')
             else:
+                if getattr(clicked_item, 'allow_use', False):
+                    options.append('Use')
+
                 if not is_item_liq:
                     if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
                         options.extend(['Grab One', 'Grab Half', 'Grab All'])
@@ -651,25 +675,65 @@ def handle_right_click(game, mouse_pos):
                 options.append('Send to')
 
         elif click_source == 'container_map':
+            # Containers in the world ONLY show Open (Use is for items inside)
+            options = ['Open']
+        
+        elif click_source == 'container':
             options = []
-            # Check for items with allow_use inside this maptile container
-            if hasattr(clicked_item, 'inventory'):
-                if not getattr(clicked_item, 'is_opened', True) and hasattr(clicked_item, 'open') and hasattr(clicked_item, 'tile_def') and clicked_item.tile_def:
-                    t_loot = clicked_item.tile_def.get('loot', [])
-                    if any(ITEM_TEMPLATES.get(l.get('item', ''), {}).get('allow_use', False) for l in t_loot if l.get('item')):
-                        clicked_item.open(game)
+            # Items inside the container show Use if allow_use is set
+            if getattr(clicked_item, 'allow_use', False):
+                options.append('Use')
 
-                usable_items = [it for it in getattr(clicked_item, 'inventory', []) if it and getattr(it, 'allow_use', False)]
-                if usable_items:
-                    if len(usable_items) == 1:
-                        options.append('Use')
+            is_item_liq = getattr(clicked_item, 'liquid', False) or getattr(clicked_item, 'item_type', '') in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
+            if not is_item_liq:
+                if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
+                    options.extend(['Grab One', 'Grab Half', 'Grab All'])
+                else:
+                    options.append('Grab')
+            options.append('Send to')
+
+        elif click_source == 'ground':
+            options = []
+            is_item_liq = getattr(clicked_item, 'liquid', False) or getattr(clicked_item, 'item_type', '') in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
+            is_container = isinstance(clicked_item, Corpse) or getattr(clicked_item, 'item_type', '') in ('container', 'maptile_container') or hasattr(clicked_item, 'inventory')
+
+            if is_container:
+                # Containers on ground only allow Open
+                options.append('Open')
+            else:
+                if getattr(clicked_item, 'allow_use', False):
+                    options.append('Use')
+
+                if not is_item_liq:
+                    if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
+                        options.extend(['Grab One', 'Grab Half', 'Grab All'])
                     else:
-                        for u_it in usable_items:
-                            options.append(f"Use {tr('item', u_it.name)}")
-            options.append('Open')
+                        options.append('Grab')
+
+                # Toggle utility items on the ground (Campfire, Lantern)
+                item_state = getattr(clicked_item, 'state', None)
+                if item_state in ('on', 'off'):
+                    is_restricted_toggle = any(name in getattr(clicked_item, 'name', '') for name in ["Campfire"])
+                    can_toggle = True
+                    if is_restricted_toggle and not getattr(clicked_item, 'is_placed', False):
+                        can_toggle = False
+                    if can_toggle:
+                        if item_state == 'on':
+                            options.insert(0, 'Turn off')
+                        elif item_state == 'off':
+                            options.insert(0, 'Turn on')
+                    if getattr(clicked_item, 'fuel_type', None):
+                        options.append('Reload')
+
+                options.append('Send to')
+
+        elif click_source == 'container_map':
+            # Containers in the world only show Open (Use belongs to items inside)
+            options = ['Open']
 
         elif click_source == 'container':
             options = []
+            # Items inside the container show Use if allow_use is set
             if getattr(clicked_item, 'allow_use', False):
                 options.append('Use')
 

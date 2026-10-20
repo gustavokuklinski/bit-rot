@@ -1,4 +1,4 @@
-<item name="Mobile on" type="mobile" state="on" allow_belt="true" tip="Use Powerbank to Reload">
+<item name="Mobile on" type="mobile" state="on" allow_belt="true" tip="Use as a light source\Use Powerbank to Reload">
     <properties>
         <durability min="1" max="100" />
         

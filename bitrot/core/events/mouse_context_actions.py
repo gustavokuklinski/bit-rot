@@ -1,8 +1,7 @@
-# In core/events/mouse_context_actions.py
-
 import uuid
 import math
 import pygame
+import core.data.config
 from core.data.config import *
 from core.entities.item.item import Item
 from core.messages import display_message
@@ -14,7 +13,7 @@ from core.entities.item.item_helpers import (
     get_container_available_liquid, is_container_on_player,
     item_allows_belt, is_valid_send_to_container, does_allow_liquid,
     is_item_liquid, get_container_liquid_capacity_units, is_infinite_liquid_source,
-    get_transfer_time
+    get_transfer_time, has_app
 )
 from core.events.mouse_drag_utils import check_container_weight_limit
 from core.events.mouse_context_helpers import (
@@ -25,6 +24,7 @@ from core.ui.crafting_common import (
     execute_recipe_craft, get_recipe_status_details,
     get_crafting_item_locations, prioritize_locations_for_craft
 )
+
 def remove_from_source(game, target_item, source, index, container_item=None):
     if source == 'inventory':
         if 0 <= index < len(game.player.inventory) and game.player.inventory[index] == target_item:
@@ -1179,7 +1179,11 @@ def handle_context_menu_click(game, mouse_pos):
                     game.player.read_recipe_book(item)
                 clicked_on_menu = True
 
-            elif option == 'Open' or option == 'Inspect':
+            elif option == 'Use':
+                game.player.consume_item(item, source, index, container_item, game=game)
+                clicked_on_menu = True
+
+            elif option in ('Open', 'Inspect'):
                 if getattr(item, 'item_type', None) == 'map':
                     game.modals = [m for m in game.modals if m['type'] != 'big_map']
                     default_pos = (GAME_WIDTH / 2 - CRAFTING_MODAL_WIDTH / 2, GAME_HEIGHT / 2 - CRAFTING_MODAL_HEIGHT / 2)
@@ -1212,18 +1216,35 @@ def handle_context_menu_click(game, mouse_pos):
                     clicked_on_menu = True
 
                 elif getattr(item, 'inventory', None) is not None:
-                    is_closed_maptile = getattr(item, 'item_type', '') == 'maptile_container' and not getattr(item, 'is_opened', False)
-
+                    # Prevent multiple opens if already in progress or player is busy
                     if getattr(item, 'is_opening', False):
                         display_message(tr('msg', "Someone is already opening this container."))
                         game.context_menu['active'] = False
                         return
 
+                    if game.player.action_timer > 0:
+                        display_message(tr('msg', "Busy..."))
+                        game.context_menu['active'] = False
+                        return
+
                     def open_and_show_modal():
+                        item.is_opening = False
                         if hasattr(item, 'open'):
                             item.open(game)
                         else:
                             item.is_opened = True
+
+                        # Play opening sound consistently for all containers (maptiles, corpses, containers)
+                        if game and hasattr(game, 'sound_manager'):
+                            sound_pos = item.rect.center if hasattr(item, 'rect') else game.player.rect.center
+                            game.sound_manager.play_sound(
+                                'open_maptile.ogg',
+                                subdir='map',
+                                game=game,
+                                source_pos=sound_pos,
+                                base_volume=0.5,
+                                is_critical=True
+                            )
 
                         nearby_modal = next((m for m in game.modals if m['type'] == 'nearby'), None)
                         is_nearby_tab = False
@@ -1273,24 +1294,33 @@ def handle_context_menu_click(game, mouse_pos):
                                     game.modals.remove(existing)
                                     game.modals.append(existing)
 
-                    if is_closed_maptile:
-                        from core.entities.item.item_helpers import has_app
-                        if getattr(core.data.config, 'ALL_VISIBLE', False) or has_app(game, 'open_container_instant'):
-                            open_and_show_modal()
-                        else:
-                            agility = game.player.progression.get_level('agility')
-                            open_time = max(0.2, 1.8 - (agility * 0.2))
+                    # Containers in the world / ground and closed maptiles perform the loader
+                    is_on_player = is_container_on_player(item, game.player)
+                    is_closed_maptile = getattr(item, 'item_type', '') == 'maptile_container' and not getattr(item, 'is_opened', False)
+                    needs_loader = (not is_on_player) or is_closed_maptile
 
-                            item.is_opening = True
-                            
-                            
-                            def cancel_open():
-                                item.is_opening = False
+                    instant = getattr(core.data.config, 'ALL_VISIBLE', False) or has_app(game, 'open_container_instant')
 
-                            game.player.start_action(f"{game.player.name} {tr('ui', 'Opening')}", open_time, open_and_show_modal, xp_reward=1.5, cancel_on_move=True, on_cancel=cancel_open)
+                    if needs_loader and not instant:
+                        agility = game.player.progression.get_level('agility')
+                        open_time = max(0.2, 1.8 - (agility * 0.2))
+
+                        item.is_opening = True
+
+                        def cancel_open():
+                            item.is_opening = False
+
+                        game.player.start_action(
+                            f"{game.player.name} {tr('ui', 'Opening')}", 
+                            open_time, 
+                            open_and_show_modal, 
+                            xp_reward=1.5, 
+                            cancel_on_move=True, 
+                            on_cancel=cancel_open
+                        )
                     else:
                         open_and_show_modal()
-                        
+
                     clicked_on_menu = True
 
             elif option == 'Unequip':
