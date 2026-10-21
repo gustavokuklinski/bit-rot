@@ -403,12 +403,9 @@ class PlayerMovement:
             move_y = self.vehicle.velocity[1]
 
             if self.vehicle.active and speed > 0.1:
-                fuel_item = self.vehicle.equipment.get('fuel')
-                if fuel_item:
-                    fuel_item.load = max(0, fuel_item.load - 0.005 * game.dt_mult) 
-                
                 self.vehicle.battery = min(1.0, self.vehicle.battery + 0.0005 * game.dt_mult)
 
+            # move() now performs the single authoritative fuel and tire deduction
             self.vehicle.move(move_x, move_y, obstacles, game=game)
             vehicle_rect = self.vehicle.rect
             

@@ -187,7 +187,7 @@ class Vehicle:
 
         # Only randomize fuel on brand new vehicle spawns if initial fuel was not explicitly set
         if self.equipment.get('fuel') is None:
-            if self.fuel > 0:
+            if self.fuel > 1.0:
                 tank_item = Item.create_from_name("Fuel Unit")
                 if tank_item:
                     tank_item.capacity = int(self.max_fuel)
@@ -197,9 +197,12 @@ class Vehicle:
                 tank_item = Item.create_from_name("Fuel Unit")
                 if tank_item:
                     tank_item.capacity = int(self.max_fuel)
-                    tank_item.load = round(random.uniform(5.0, self.max_fuel * 0.5), 1)
+                    # Spawns with random fuel between 10.0 and 50% tank capacity
+                    tank_item.load = round(random.uniform(10.0, max(12.0, self.max_fuel * 0.5)), 1)
                     self.fuel = float(tank_item.load)
                     self.equipment['fuel'] = tank_item
+            else:
+                self.fuel = 0.0
         
         if random.random() < veh_has_motor:
             motor_item = Item.create_from_name("Car Engine")
@@ -261,7 +264,11 @@ class Vehicle:
             key_item = self.equipment.get('key')
             if not key_item or key_item.name != required_key:
                  return False
-        
+
+        # Strictly disallow driving if fuel is zero or empty
+        if self.fuel <= 0.0:
+            return False
+
         fuel_item = self.equipment.get('fuel')
         if not fuel_item or (hasattr(fuel_item, 'load') and fuel_item.load <= 0):
             return False
@@ -313,14 +320,37 @@ class Vehicle:
 
         dist = math.hypot(dx, dy)
         if dist > 0:
-            tire_degradation = dist * 0.0005 
+            # 1. FUEL: 1 unit per 2 tiles
+            fuel_drain = dist / (5.0 * TILE_SIZE)
+            self.fuel = max(0.0, self.fuel - fuel_drain)
+
+            fuel_item = self.equipment.get('fuel')
+            if fuel_item:
+                fuel_item.load = self.fuel
+
+            if self.fuel <= 0.0:
+                self.fuel = 0.0
+                if fuel_item:
+                    fuel_item.load = 0.0
+                self.active = False
+                self.car_state = "Off"
+                self.velocity = [0, 0]
+                if self.engine_channel:
+                    self.engine_channel.stop()
+                    self.engine_channel = None
+                    self._current_sound_type = None
+                display_message(tr('msg', "Engine died (No Fuel)."))
+                return
+
+            # 2. TIRES: 1 durability loss per 10 tiles
+            tire_degradation = dist / (20.0 * TILE_SIZE)
             broken_tire = False
             for tire_slot in self.required_tires:
                 tire = self.equipment.get(tire_slot)
-                if tire and hasattr(tire, 'durability'):
-                    tire.durability -= tire_degradation
-                    if tire.durability <= 0:
-                        tire.durability = 0
+                if tire and hasattr(tire, 'durability') and tire.durability is not None:
+                    tire.durability = max(0.0, tire.durability - tire_degradation)
+                    if tire.durability <= 0.0:
+                        tire.durability = 0.0
                         broken_tire = True
             
             if broken_tire:
@@ -328,7 +358,11 @@ class Vehicle:
                 self.velocity = [0, 0]
                 self.active = False
                 self.car_state = "Off"
-                return 
+                if self.engine_channel:
+                    self.engine_channel.stop()
+                    self.engine_channel = None
+                    self._current_sound_type = None
+                return
         
         def check_collision(rect_check):
             for obstacle in obstacles:
@@ -521,7 +555,7 @@ class Vehicle:
                     has_power = True
 
             fuel_item = self.equipment.get('fuel')
-            has_fuel = fuel_item and (not hasattr(fuel_item, 'load') or fuel_item.load > 0)
+            has_fuel = self.fuel > 0.0 and fuel_item and (not hasattr(fuel_item, 'load') or fuel_item.load > 0.0)
             
             missing_tires = []
             for t_slot in self.required_tires:
@@ -758,12 +792,9 @@ class Vehicle:
                 if hasattr(game, 'emit_noise'):
                     game.emit_noise(self.rect.center, radius=TILE_SIZE * 18, source_type="vehicle")
 
-            fuel_drain = 0.0001 * dt_mult
-            if self.fuel > 0:
-                self.fuel -= fuel_drain
-                if fuel_item and hasattr(fuel_item, 'load') and fuel_item.load is not None:
-                    fuel_item.load = max(0, fuel_item.load - fuel_drain)
-            else:
+            if self.fuel <= 0.0:
+                self.fuel = 0.0
+                if fuel_item: fuel_item.load = 0.0
                 self.active = False
                 self.car_state = "Off"
                 display_message(tr('msg', "Engine died (No Fuel)."))

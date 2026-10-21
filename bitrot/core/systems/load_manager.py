@@ -230,30 +230,25 @@ def respawn_player_in_world(game, new_player_data, save_folder_name):
         game.player.inventory = [Item.create_from_name(name) for name in initial_loot if Item.create_from_name(name)]
 
         # Locate safe spawn position in the existing map
-        if hasattr(game, 'generator') and hasattr(game.generator, 'lobby_chunk'):
+        start_at_lobby = getattr(core.data.config, 'START_AT_THE_LOBBY', True)
+        if start_at_lobby and hasattr(game, 'generator') and hasattr(game.generator, 'lobby_chunk'):
             lobby_gx, lobby_gy = game.generator.lobby_chunk
             teleport_player_to_chunk(game, lobby_gx, lobby_gy)
         else:
-            spawn_pos = None
-            if getattr(game, 'player_spawn', None):
-                spawn_pos = find_free_tile(game.player.rect, game.obstacles, initial_pos=game.player_spawn, max_radius=15)
-                
-            if not spawn_pos:
-                house_pos = get_house_spawn_position(game)
-                if house_pos:
-                    spawn_pos = find_free_tile(game.player.rect, game.obstacles, initial_pos=house_pos, max_radius=15)
-                    
-            if not spawn_pos:
-                cx = getattr(game, 'map_width_pixels', 1000) // 2
-                cy = getattr(game, 'map_height_pixels', 1000) // 2
-                spawn_pos = find_free_tile(game.player.rect, game.obstacles, initial_pos=(cx, cy), max_radius=25)
-
-            if spawn_pos:
-                game.player.x, game.player.y = spawn_pos
-                game.player.rect.topleft = spawn_pos
+            # Pick a random island chunk with a Port
+            gen = getattr(game, 'generator', None)
+            if gen and hasattr(gen, 'active_chunks'):
+                port_candidates = [
+                    c for c in gen.active_chunks 
+                    if c != getattr(gen, 'military_chunk', None) and c != getattr(gen, 'lobby_chunk', None)
+                ]
+                if port_candidates:
+                    dest_gx, dest_gy = random.choice(port_candidates)
+                    teleport_player_to_chunk(game, dest_gx, dest_gy)
+                else:
+                    teleport_player_to_chunk(game, 0, 0)
             else:
-                game.player.x, game.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
-                game.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
+                teleport_player_to_chunk(game, 0, 0)
 
             game._chunk_loading_title = tr('ui', 'Respawning')
             game._chunk_loading_bg_type = 'load'
@@ -565,15 +560,39 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         game.player.x, game.player.y = game.player_spawn
         game.player.rect.topleft = game.player_spawn
     else:
-        house_spawn = get_house_spawn_position(game)
-        if house_spawn:
-            game.logger.info(f"House spawn point found at {house_spawn}. Setting player position.")
-            game.player.x, game.player.y = house_spawn
-            game.player.rect.topleft = house_spawn
+        # Fallback to nearest Port / Boat sand tile if starting on an island
+        boat_char = 'tp_boat'
+        found_port_spawn = None
+        if hasattr(game, 'map_data') and hasattr(game, 'ground_data'):
+            h = len(game.map_data)
+            w = len(game.map_data[0]) if h > 0 else 0
+            for y in range(h):
+                for x in range(w):
+                    b_char = game.map_data[y][x]
+                    if b_char in ('tp_boat', 'teleport_boat'):
+                        # Find walkable sand adjacent to the boat
+                        for dy in range(-3, 4):
+                            for dx in range(-3, 4):
+                                sx, sy = x + dx, y + dy
+                                if 0 <= sx < w and 0 <= sy < h:
+                                    g_tile = str(game.ground_data[sy][sx]).lower()
+                                    if 'sand' in g_tile and game.map_data[sy][sx] == ' ':
+                                        found_port_spawn = (sx * TILE_SIZE, sy * TILE_SIZE)
+                                        break
+                                if found_port_spawn: break
+                    if found_port_spawn: break
+
+        if found_port_spawn:
+            game.player.x, game.player.y = found_port_spawn
+            game.player.rect.topleft = found_port_spawn
         else:
-            game.logger.info("CRITICAL WARNING: No player spawn ('P') found in starting chunk!")
-            game.player.x, game.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
-            game.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
+            house_spawn = get_house_spawn_position(game)
+            if house_spawn:
+                game.player.x, game.player.y = house_spawn
+                game.player.rect.topleft = house_spawn
+            else:
+                game.player.x, game.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
+                game.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
 
     if spawn_entities:
         nearby_spawns = []

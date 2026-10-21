@@ -455,8 +455,21 @@ class ProceduralGenerator(
     lobby_gx = cand_lx + shift_x
     lobby_gy = cand_ly + shift_y
     self.lobby_chunk = (lobby_gx, lobby_gy)
-    self.start_chunk = self.lobby_chunk
     self.active_chunks.add(self.lobby_chunk)
+    
+    start_at_lobby = getattr(core.data.config, 'START_AT_THE_LOBBY', True)
+    if start_at_lobby:
+        self.start_chunk = self.lobby_chunk
+    else:
+        # Choose a random island chunk that contains a Port building
+        port_candidates = [
+            c for c in all_cells 
+            if c != self.military_chunk and c != self.lobby_chunk
+        ]
+        if port_candidates:
+            self.start_chunk = random.choice(port_candidates)
+        else:
+            self.start_chunk = island_start_chunk
 
     needed_w = max(self.grid_w, lobby_gx + 1)
     needed_h = max(self.grid_h, lobby_gy + 1)
