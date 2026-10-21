@@ -173,6 +173,11 @@ def find_closest_vehicle(game):
     return None
 
 def toggle_pause(game):
+    current_time = pygame.time.get_ticks()
+    if current_time - getattr(game, '_last_pause_toggle_time', 0) < 250:
+        return
+    game._last_pause_toggle_time = current_time
+
     if game.game_state == 'PLAYING':
         game.game_state = 'PAUSED'
         game.capture_pause_screen()
@@ -581,6 +586,11 @@ def reset_modal_positions(game):
     toggle_default_ui(game)
 
 def toggle_default_ui(game):
+    current_time = pygame.time.get_ticks()
+    if current_time - getattr(game, '_last_ui_toggle_time', 0) < 250:
+        return
+    game._last_ui_toggle_time = current_time
+
     if hasattr(game, 'notifications'):
         game.notifications = [n for n in game.notifications if not n.get('persistent')]
         
@@ -597,7 +607,7 @@ def toggle_default_ui(game):
         if hasattr(game, 'saved_modals'):
             game.saved_modals.clear()
     else:
-        # If hidden (or only a container is open) -> close container, show and reset default UI
+        # If hidden -> show and reset default UI
         game.modals.clear()
         if hasattr(game, 'saved_modals'):
             game.saved_modals.clear()

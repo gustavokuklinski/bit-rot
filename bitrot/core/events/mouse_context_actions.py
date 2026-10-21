@@ -162,6 +162,20 @@ def handle_context_menu_click(game, mouse_pos):
             elif option == 'Equip':
                 target_slot = target_sub_slot
 
+                # Helper to normalize all slot alias variants to player.clothes keys
+                def normalize_slot(s):
+                    if not s: return None
+                    s_low = str(s).lower().strip()
+                    if s_low in ('hand', 'hands', 'glove', 'gloves'): return 'hands'
+                    if s_low in ('foot', 'feet', 'shoe', 'shoes', 'boot', 'boots', 'sneakers'): return 'feet'
+                    if s_low in ('body', 'torso', 'chest', 'tshirt', 'shirt'): return 'body'
+                    if s_low in ('head', 'hat', 'helmet', 'cap'): return 'head'
+                    if s_low in ('leg', 'legs', 'pant', 'pants', 'jeans'): return 'legs'
+                    if s_low in ('arm', 'arms', 'jacket'): return 'arms'
+                    if s_low in ('face', 'facial', 'mask'): return 'facial'
+                    return s_low
+
+                # 1. Equip to Belt Slot
                 if target_slot and target_slot.startswith('belt_'):
                     if not item_allows_belt(item):
                         display_message(tr('msg', "This item cannot be equipped to belt."))
@@ -171,8 +185,12 @@ def handle_context_menu_click(game, mouse_pos):
                         bi = int(target_slot.split('_')[1])
                         item_from_src = remove_from_source(game, item, source, index, container_item)
                         if item_from_src:
-                            old_item = game.player.belt[bi]
-                            game.player.belt[bi] = item_from_src
+                            old_item = game.player.belt[bi] if bi < len(game.player.belt) else None
+                            if bi < len(game.player.belt):
+                                game.player.belt[bi] = item_from_src
+                            else:
+                                game.player.belt.append(item_from_src)
+
                             item_from_src.in_belt = True
 
                             if str(getattr(item_from_src, 'item_type', '')).startswith('weapon'):
@@ -195,13 +213,18 @@ def handle_context_menu_click(game, mouse_pos):
                     except Exception as e:
                         print(f"Error equipping to belt: {e}")
 
+                # 2. Equip to Specific Gear Slot from Submenu
                 elif target_slot:
-                    slot_name = target_slot
-                    if slot_name == 'hand': slot_name = 'hands'
+                    slot_name = normalize_slot(target_slot)
+
+                    # Validate slot against player's valid equipment slots
+                    if slot_name not in game.player.clothes:
+                        display_message(tr('msg', "Invalid gear slot."))
+                        game.context_menu['active'] = False
+                        return
 
                     is_util_slot = slot_name in ['util', 'util2', 'util3']
-                    item_slot = getattr(item, 'slot', None)
-                    if item_slot == 'hand': item_slot = 'hands'
+                    item_slot = normalize_slot(getattr(item, 'slot', None))
                     is_util_item = item_slot in ['util', 'util1', 'util2', 'util3']
 
                     if is_util_slot and not is_util_item:
@@ -214,16 +237,75 @@ def handle_context_menu_click(game, mouse_pos):
                         return
 
                     item_from_src = remove_from_source(game, item, source, index, container_item)
+                    if item_from_src:
+                        old_item = game.player.clothes.get(slot_name)
+                        game.player.clothes[slot_name] = item_from_src
 
+                        if hasattr(game, 'sound_manager'):
+                            game.sound_manager.play_sound('equip_gear.ogg', subdir='items', game=game, source_pos=game.player.rect.center, is_critical=True)
+
+                        # Return previously equipped item to inventory safely
+                        if old_item:
+                            if getattr(old_item, 'liquid', False):
+                                old_item.rect.center = game.player.rect.center
+                                game.items_on_ground.append(old_item)
+                            elif len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                game.player.inventory.append(old_item)
+                                if hasattr(game.player, 'stack_item_in_inventory'):
+                                    game.player.stack_item_in_inventory(old_item)
+                            else:
+                                old_item.rect.center = game.player.rect.center
+                                game.items_on_ground.append(old_item)
+
+                        # Sync belt slots immediately if this was a utility item with hotbar="true"
+                        if hasattr(game.player, 'sync_belt_slots'):
+                            game.player.sync_belt_slots(game)
+
+                        display_message(f"{tr('msg', 'Equipped')} {tr('item', item_from_src.name)} {tr('msg', 'to')} {tr('ui', slot_name.capitalize())}.")
+
+                # 3. Direct Click Fallback on "Equip" (Auto-detects appropriate slot)
                 else:
                     item_type = getattr(item, 'item_type', '') or ''
-                    if item_type in ('cloth', 'container'):
-                        target_s = getattr(item, 'slot', None)
-                        if target_s == 'hand': target_s = 'hands'
-                        if target_s in ('util', 'util1', 'util2', 'util3'):
-                            target_s = next((s for s in ['util', 'util2', 'util3'] if game.player.clothes.get(s) is None), 'util')
-                        elif not target_s:
-                            target_s = None
+                    item_slot = normalize_slot(getattr(item, 'slot', None))
+                    
+                    target_s = None
+                    if item_slot in ('util', 'util1', 'util2', 'util3'):
+                        target_s = next((s for s in ['util', 'util2', 'util3'] if game.player.clothes.get(s) is None), 'util')
+                    elif item_slot and item_slot in game.player.clothes:
+                        target_s = item_slot
+                    elif item_allows_belt(item):
+                        # If it's a weapon or tool without clothing slot, send to first empty belt slot
+                        game.player.equip_item_to_belt(item, source, index, container_item)
+                        clicked_on_menu = True
+                        game.context_menu['active'] = False
+                        return
+
+                    if not target_s:
+                        display_message(tr('msg', "Cannot equip this item."))
+                        game.context_menu['active'] = False
+                        return
+
+                    item_from_src = remove_from_source(game, item, source, index, container_item)
+                    if item_from_src:
+                        old_item = game.player.clothes.get(target_s)
+                        game.player.clothes[target_s] = item_from_src
+
+                        if hasattr(game, 'sound_manager'):
+                            game.sound_manager.play_sound('equip_gear.ogg', subdir='items', game=game, source_pos=game.player.rect.center, is_critical=True)
+
+                        if old_item:
+                            if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                                game.player.inventory.append(old_item)
+                                if hasattr(game.player, 'stack_item_in_inventory'):
+                                    game.player.stack_item_in_inventory(old_item)
+                            else:
+                                old_item.rect.center = game.player.rect.center
+                                game.items_on_ground.append(old_item)
+
+                        if hasattr(game.player, 'sync_belt_slots'):
+                            game.player.sync_belt_slots(game)
+
+                        display_message(f"{tr('msg', 'Equipped')} {tr('item', item_from_src.name)} {tr('msg', 'to')} {tr('ui', target_s.capitalize())}.")
 
                 clicked_on_menu = True
 

@@ -129,11 +129,17 @@ def run_paused(game):
 
         if event.type == pygame.QUIT:
             game.running = False
+            
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_F2:
-            pygame.mixer.unpause()
-            pygame.mixer.music.unpause()
-            game.is_mixer_paused = False
-            game.game_state = 'PLAYING'
+            toggle_pause(game)
+            return
+
+        elif event.type == pygame.JOYBUTTONDOWN:
+            from core.ui.helpers.keybinds import keybind_manager
+            for action, val in keybind_manager.joy_binds.items():
+                if val == getattr(event, 'button', None) and action == 'pause':
+                    toggle_pause(game)
+                    return
             
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:

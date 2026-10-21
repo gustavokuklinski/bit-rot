@@ -1,35 +1,34 @@
+# core/events/joystick.py
+
 import pygame
 import sys
 import math
 import time
-from core.ui.inventory_modal import get_inventory_slot_rect, get_belt_slot_rect_in_modal, get_belt_hud_slot_rect
+from core.ui.inventory_modal import get_inventory_slot_rect, get_belt_hud_slot_rect
 from core.ui.container_modal import get_container_slot_rect
+from core.ui.helpers.keybinds import keybind_manager
 
 # XBOX Controller mapping for Pygame 2 (SDL2 standard)
 BTN_A = 0
 BTN_B = 1
 BTN_X = 2
 BTN_Y = 3
-BTN_LB = 4  # Used for Zoom Out (-) / Prev Tab
-BTN_RB = 5  # Used for Zoom In (+) / Next Tab
+BTN_LB = 4  # Prev Tab
+BTN_RB = 5  # Next Tab
 BTN_SELECT = 6
-BTN_START = 7  # Toggle Modals (TAB behavior)
+BTN_START = 7  # Toggle Modals
 BTN_L3 = 8     # Pause Game
 BTN_R3 = 9
 
-# ---------------------------------------------------------
 # Dynamic Axis Mapping (Cross-Platform)
-# ---------------------------------------------------------
 if sys.platform.startswith('linux'):
-    # Linux / 8BitDo quirk mapping
     AXIS_LX = 0
     AXIS_LY = 1
-    AXIS_LT = 2  # Linux slides LT into Axis 2
-    AXIS_RX = 3  # Shifted down
-    AXIS_RY = 4  # Shifted down
+    AXIS_LT = 2
+    AXIS_RX = 3
+    AXIS_RY = 4
     AXIS_RT = 5
 else:
-    # Standard Windows / macOS XInput mapping
     AXIS_LX = 0
     AXIS_LY = 1
     AXIS_RX = 2
@@ -43,14 +42,17 @@ class JoystickHandler:
         self.joysticks = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
         self.active_controller = None
         
-        # ---> INCREASED SENSITIVITY <---
         self.cursor_speed = 12.0 
         self.deadzone = 0.2
-        self.last_snap_time = 0
         
         # Logical Navigation Memory for Context Menus
         self.c_main_idx = None 
         self.c_sub_idx = -1
+
+        # Slot Navigation State (Exclusively driven by D-Pad)
+        self.in_slot_mode = False
+        self.cursor_hidden = False
+        self.current_slot_rect = None
         
         self.set_xbox_controller(logger)
 
@@ -80,17 +82,80 @@ class JoystickHandler:
             self.joysticks = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
             self.set_xbox_controller(logger)
 
-    def get_all_ui_slots(self, game):
+    def get_all_interactive_slots(self, game):
+        """Gathers all currently visible and clickable item slot rectangles."""
         if getattr(game, 'context_menu', {}).get('active', False):
             return game.context_menu.get('rects', [])
-            
-        rects = []
-        if hasattr(game, 'modal_buttons'):
-            for b in game.modal_buttons:
-                if b:
-                    if isinstance(b, pygame.Rect): rects.append(b)
-                    elif isinstance(b, dict) and 'rect' in b: rects.append(b['rect'])
-        return rects
+
+        slots = []
+
+        # 1. Topmost Modal Slots
+        top_modal = None
+        for modal in reversed(getattr(game, 'modals', [])):
+            if modal.get('rect'):
+                top_modal = modal
+                break
+
+        if top_modal:
+            m_type = top_modal.get('type')
+            pos = top_modal.get('position', (0, 0))
+
+            if m_type == 'inventory':
+                active_tab = top_modal.get('active_tab', 'Inventory')
+                if active_tab == 'Inventory':
+                    slots.extend([get_inventory_slot_rect(i, pos) for i in range(15)])
+                elif active_tab in top_modal.get('container_mapping', {}):
+                    c = top_modal['container_mapping'][active_tab]
+                    if c and hasattr(c, 'capacity'):
+                        c_pos = (top_modal['rect'].x, top_modal['rect'].y + 40)
+                        slots.extend([get_container_slot_rect(c_pos, i) for i in range(c.capacity or 0)])
+
+            elif m_type == 'gear':
+                active_tab = top_modal.get('active_tab', 'Gear')
+                if active_tab == 'Gear':
+                    slots.extend(list(top_modal.get('gear_slot_rects', {}).values()))
+                elif active_tab in top_modal.get('container_mapping', {}):
+                    c = top_modal['container_mapping'][active_tab]
+                    if c and hasattr(c, 'capacity'):
+                        c_pos = (top_modal['rect'].x, top_modal['rect'].y + 40)
+                        slots.extend([get_container_slot_rect(c_pos, i) for i in range(c.capacity or 0)])
+
+            elif m_type == 'container':
+                c = top_modal.get('item')
+                if c and hasattr(c, 'capacity'):
+                    slots.extend([get_container_slot_rect(pos, i) for i in range(c.capacity or 0)])
+
+            elif m_type == 'nearby':
+                content_rect = top_modal.get('content_rect')
+                active_tab = top_modal.get('active_tab')
+                target_container = None
+                for t in top_modal.get('tabs_data', []):
+                    if t.get('label') == active_tab:
+                        target_container = t.get('container')
+                        break
+                if target_container and content_rect:
+                    slots.extend([get_container_slot_rect(content_rect.topleft, i) for i in range(target_container.capacity or 0)])
+
+            elif m_type == 'slots':
+                slots.extend([s['rect'] for s in top_modal.get('slot_rects', [])])
+
+            elif m_type == 'vehicle':
+                if top_modal.get('active_tab') == 'Mechanics':
+                    slots.extend(list(top_modal.get('equipment_rects', {}).values()))
+
+            elif m_type == 'mobile':
+                if top_modal.get('active_tab') == 'Apps':
+                    slots.extend([s['rect'] for s in top_modal.get('app_slot_rects', [])])
+
+            elif m_type == 'npc_dialog':
+                if top_modal.get('active_tab_index') == 2:
+                    slots.extend([s['rect'] for s in top_modal.get('trade_slot_rects', [])])
+
+        # 2. Belt HUD Slots
+        if getattr(game, 'player', None) and getattr(game.player, 'belt', None):
+            slots.extend([get_belt_hud_slot_rect(i, game=game) for i in range(len(game.player.belt))])
+
+        return slots
 
     def _set_mouse_pos_scaled(self, game, logic_x, logic_y):
         phys_x, phys_y = logic_x, logic_y
@@ -119,142 +184,77 @@ class JoystickHandler:
             {'pos': (int(logic_x), int(logic_y)), 'rel': (0, 0), 'buttons': pygame.mouse.get_pressed()}
         ))
 
+    def _find_neighbor_slot(self, current_slot, all_slots, dir_x, dir_y):
+        """Finds the geometrically closest slot in the specified D-Pad direction."""
+        cx, cy = current_slot.center
+        best_slot = None
+        best_score = float('inf')
+
+        for s in all_slots:
+            if s == current_slot:
+                continue
+            sx, sy = s.center
+            dx = sx - cx
+            dy = sy - cy
+
+            valid = False
+            score = float('inf')
+
+            # Horizontal Navigation (Right / Left)
+            if dir_x > 0 and dx > 8:
+                valid = True
+                score = dx + abs(dy) * 2.2
+            elif dir_x < 0 and dx < -8:
+                valid = True
+                score = -dx + abs(dy) * 2.2
+
+            # Vertical Navigation (Down / Up)
+            elif dir_y > 0 and dy > 8:
+                valid = True
+                score = dy + abs(dx) * 2.2
+            elif dir_y < 0 and dy < -8:
+                valid = True
+                score = -dy + abs(dx) * 2.2
+
+            if valid and score < best_score:
+                best_score = score
+                best_slot = s
+
+        return best_slot
+
     def update_cursor(self, game):
         self.last_game_ref = game 
         
         if not getattr(game, 'context_menu', {}).get('active', False):
             self.c_main_idx = None 
 
-        keys = pygame.key.get_pressed()
-        rx, ry = 0.0, 0.0
-        
-        #if keys[pygame.K_LEFT]:  rx -= 1.0
-        #if keys[pygame.K_RIGHT]: rx += 1.0
-        #if keys[pygame.K_UP]:    ry -= 1.0
-        #if keys[pygame.K_DOWN]:  ry += 1.0
-        
-        if rx != 0 and ry != 0:
-            length = math.hypot(rx, ry)
-            rx /= length
-            ry /= length
+        if not self.active_controller:
+            self.cursor_hidden = False
+            self.in_slot_mode = False
+            return
 
-        joy_numaxes = 4 if not self.active_controller else self.active_controller.get_numaxes()
-        if self.active_controller and joy_numaxes >= 4:
+        # 1. Read Analog Stick Input (Right Stick)
+        rx, ry = 0.0, 0.0
+        if self.active_controller.get_numaxes() >= 4:
             j_rx = self.active_controller.get_axis(AXIS_RX)
             j_ry = self.active_controller.get_axis(AXIS_RY)
             if abs(j_rx) >= self.deadzone: rx = j_rx
             if abs(j_ry) >= self.deadzone: ry = j_ry
 
-        if joy_numaxes >= 4:
-            if rx != 0 or ry != 0:
-                self.c_main_idx = None 
-                
-                if hasattr(game, '_get_scaled_mouse_pos'):
-                    mx, my = game._get_scaled_mouse_pos()
-                else:
-                    mx, my = pygame.mouse.get_pos()
-                    
-                is_aiming = False
-                joy = self.active_controller
-                
-                if joy and joy.get_numaxes() > AXIS_RT and joy.get_axis(AXIS_RT) > 0.0:
-                    is_aiming = True
-                elif hasattr(game, 'player') and getattr(game.player, 'is_aiming', False):
-                    is_aiming = True
-                    
-                ui_rects = [] if is_aiming else self.get_all_ui_slots(game)
-                
-                current_slot = None
-                for r in ui_rects:
-                    if r.collidepoint((mx, my)):
-                        current_slot = r
-                        break
-                
-                current_time = time.time()
-                is_snapping = False
-                
-                if current_slot:
-                    if current_time - self.last_snap_time > 0.2: 
-                        dx = 1 if rx > 0 else -1 if rx < 0 else 0
-                        dy = 1 if ry > 0 else -1 if ry < 0 else 0
-                        if abs(rx) > abs(ry): dy = 0
-                        else: dx = 0
-                        
-                        best_rect = None
-                        best_dist = float('inf')
-                        cx, cy = current_slot.center
-                        target_angle = math.atan2(dy, dx)
-                        
-                        for r in ui_rects:
-                            if r == current_slot: continue
-                            tx, ty = r.center
-                            angle = math.atan2(ty - cy, tx - cx)
-                            
-                            diff = abs(angle - target_angle)
-                            if diff > math.pi: diff = 2 * math.pi - diff
-                            
-                            if diff < math.pi / 4:
-                                gap_x = max(0, abs(tx - cx) - (current_slot.width + r.width) / 2)
-                                gap_y = max(0, abs(ty - cy) - (current_slot.height + r.height) / 2)
-                                gap = math.hypot(gap_x, gap_y)
-                                
-                                if gap <= 35:
-                                    dist = math.hypot(tx - cx, ty - cy)
-                                    if dist < best_dist:
-                                        best_dist = dist
-                                        best_rect = r
-                        
-                        if best_rect:
-                            self._set_mouse_pos_scaled(game, best_rect.centerx, best_rect.centery)
-                            self.last_snap_time = current_time
-                        else:
-                            escape_x, escape_y = mx, my
-                            if dx > 0: escape_x = current_slot.right + 15
-                            elif dx < 0: escape_x = current_slot.left - 15
-                            
-                            if dy > 0: escape_y = current_slot.bottom + 15
-                            elif dy < 0: escape_y = current_slot.top - 15
-                            
-                            screen_w, screen_h = game.game_screen.get_size() if hasattr(game, 'game_screen') else pygame.display.get_surface().get_size()
-                            escape_x = max(0, min(escape_x, screen_w))
-                            escape_y = max(0, min(escape_y, screen_h))
-                            
-                            self._set_mouse_pos_scaled(game, escape_x, escape_y)
-                            self.last_snap_time = current_time
-                            
-                    is_snapping = True
-                
-                if not is_snapping:
-                    screen_w, screen_h = game.game_screen.get_size() if hasattr(game, 'game_screen') else pygame.display.get_surface().get_size()
-                    new_x = max(0, min(mx + int(rx * self.cursor_speed), screen_w))
-                    new_y = max(0, min(my + int(ry * self.cursor_speed), screen_h))
-                    
-                    entered_slot = None
-                    for r in ui_rects:
-                        if r.inflate(20, 20).collidepoint((new_x, new_y)):
-                            entered_slot = r
-                            break
-                    
-                    if entered_slot:
-                        self._set_mouse_pos_scaled(game, entered_slot.centerx, entered_slot.centery)
-                    else:
-                        self._set_mouse_pos_scaled(game, new_x, new_y)
+        # 2. IF ANALOG STICK MOVES: IMMEDIATELY LOSE FOCUS, SHOW CURSOR, AND MOVE FREELY!
+        if rx != 0.0 or ry != 0.0:
+            self.in_slot_mode = False
+            self.cursor_hidden = False
+            self.current_slot_rect = None
 
-            if hasattr(game, 'modals') and game.modals:
-                if hasattr(game, '_get_scaled_mouse_pos'):
-                    logic_x, logic_y = game._get_scaled_mouse_pos()
-                else:
-                    logic_x, logic_y = pygame.mouse.get_pos()
-                    
-                hovered_modal = None
-                for m in reversed(game.modals):
-                    if m.get('rect') and m['rect'].collidepoint((logic_x, logic_y)):
-                        hovered_modal = m
-                        break
-                        
-                if hovered_modal and game.modals[-1] != hovered_modal:
-                    game.modals.remove(hovered_modal)
-                    game.modals.append(hovered_modal)
+            mx, my = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+            screen_w, screen_h = game.game_screen.get_size() if hasattr(game, 'game_screen') else pygame.display.get_surface().get_size()
+
+            new_x = max(0, min(mx + int(rx * self.cursor_speed), screen_w))
+            new_y = max(0, min(my + int(ry * self.cursor_speed), screen_h))
+
+            # Free movement — never magnetic, never stuck!
+            self._set_mouse_pos_scaled(game, new_x, new_y)
 
     def get_movement_axes(self):
         if not self.active_controller:
@@ -341,15 +341,7 @@ class JoystickHandler:
             if event.button == BTN_X:
                 pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 3}))
             
-            # ---> System State Hotkeys (6, 7, 8) <---
-            elif event.button == BTN_L3: 
-                # Button 8 -> Pause Game (F2)
-                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_F2, 'unicode': ''}))
-            elif event.button == BTN_START: 
-                # Button 7 -> Toggle Modals (TAB)
-                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_TAB, 'unicode': '\t'}))
-            
-            # ---> Navigation triggers not natively covered by Keybinds.xml <---
+            # Modal Tab Navigation (LB/RB)
             elif event.button in (BTN_LB, BTN_RB):
                 handled_tab = False
                 
@@ -410,8 +402,6 @@ class JoystickHandler:
 
         elif event.type == pygame.JOYBUTTONUP:
             mouse_pos = pygame.mouse.get_pos()
-            
-            # ---> Release Right Click <---
             if event.button == BTN_X:
                 pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, {'pos': mouse_pos, 'button': 3}))
                 
@@ -420,6 +410,7 @@ class JoystickHandler:
             mouse_pos = pygame.mouse.get_pos()
             game = getattr(self, 'last_game_ref', None)
             
+            # 1. Context Menu D-Pad Navigation
             if game and getattr(game, 'context_menu', {}).get('active', False):
                 options = game.context_menu.get('options', [])
                 if options and (x != 0 or y != 0):
@@ -473,7 +464,6 @@ class JoystickHandler:
                             self.c_sub_idx = -1
 
                     target_rect = None
-                    
                     if self.c_sub_idx != -1:
                         target_action = f"{options[self.c_main_idx]['label']}::{options[self.c_main_idx]['sub'][self.c_sub_idx]}"
                         for i, action in enumerate(action_map):
@@ -514,21 +504,52 @@ class JoystickHandler:
                         self._set_mouse_pos_scaled(game, target_rect.centerx, target_rect.centery)
                 return 
 
-            if y == 1: # Up
+            # 2. D-PAD EXCLUSIVE SLOT NAVIGATION
+            if game and (x != 0 or y != 0):
+                interactive_slots = self.get_all_interactive_slots(game)
+                if interactive_slots:
+                    logic_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else mouse_pos
+                    
+                    # If not yet in slot mode, lock to the slot under or nearest to the cursor
+                    if not self.in_slot_mode or not self.current_slot_rect:
+                        current_slot = next((s for s in interactive_slots if s.collidepoint(logic_pos)), None)
+                        if not current_slot:
+                            current_slot = min(interactive_slots, key=lambda s: (s.centerx - logic_pos[0])**2 + (s.centery - logic_pos[1])**2)
+
+                        self.current_slot_rect = current_slot
+                        self.in_slot_mode = True
+                        self.cursor_hidden = True
+                        self._set_mouse_pos_scaled(game, current_slot.centerx, current_slot.centery)
+                        if hasattr(game, 'sound_manager'):
+                            game.sound_manager.play_ui_hover()
+
+                    # Navigate to neighbor in D-pad direction
+                    dir_x = x
+                    dir_y = -y  # Invert D-pad Y so Up (y=1) moves to negative y
+                    neighbor = self._find_neighbor_slot(self.current_slot_rect, interactive_slots, dir_x, dir_y)
+                    if neighbor:
+                        self.current_slot_rect = neighbor
+                        self.in_slot_mode = True
+                        self.cursor_hidden = True
+                        self._set_mouse_pos_scaled(game, neighbor.centerx, neighbor.centery)
+                        if hasattr(game, 'sound_manager'):
+                            game.sound_manager.play_ui_hover()
+                    return
+
+            # 3. Fallback when no slots exist
+            if y == 1:
                 pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_UP, 'unicode': ''}))
                 pygame.event.post(pygame.event.Event(pygame.MOUSEWHEEL, {'y': 1, 'x': 0, 'from_dpad': True})) 
-                pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 4}))
-            elif y == -1: # Down
+            elif y == -1:
                 pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_DOWN, 'unicode': ''}))
                 pygame.event.post(pygame.event.Event(pygame.MOUSEWHEEL, {'y': -1, 'x': 0, 'from_dpad': True})) 
-                pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': mouse_pos, 'button': 5}))
                 
-            if x != 0:
+            if x != 0 and not getattr(game, 'modals', []):
                 current_index = getattr(self, 'belt_index', -1)
                 max_idx = (len(game.player.belt) - 1) if (game and getattr(game, 'player', None)) else 1
-                if x == -1: # Left
+                if x == -1:
                     current_index = max_idx if current_index <= 0 else current_index - 1
-                elif x == 1: # Right
+                elif x == 1:
                     current_index = 0 if current_index >= max_idx else current_index + 1
                     
                 self.belt_index = current_index
