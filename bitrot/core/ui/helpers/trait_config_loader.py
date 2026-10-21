@@ -56,8 +56,7 @@ def load_trait_definitions():
                     try: trait_data['stats'][stat_name] = float(val)
                     except ValueError: pass
 
-            config_node = trait_node.find('config')
-            if config_node is not None:
+            for config_node in trait_node.findall('config'):
                 set_str = config_node.get('set')
                 if set_str:
                     clean_str = set_str.strip("[] ")
@@ -65,8 +64,10 @@ def load_trait_definitions():
                     for part in parts:
                         if ':' in part:
                             key, val = part.split(':')
-                            try: trait_data['config_modifiers'][key.strip()] = float(val)
-                            except ValueError: pass
+                            try: 
+                                trait_data['config_modifiers'][key.strip()] = float(val)
+                            except ValueError: 
+                                pass
 
             disable_str = trait_node.get('disable')
             if disable_str:

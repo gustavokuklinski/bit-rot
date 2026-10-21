@@ -97,6 +97,7 @@ BASE_PLAYER_VIEW_RADIUS = 9 * 16
 ZOMBIE_SPEED = 0.3
 MAX_ZOMBIES_GLOBAL = 500
 ZOMBIE_MAX_CHUNK = 6
+BASE_ZOMBIE_MAX_CHUNK = 6
 ZOMBIE_DROP = 1
 ZOMBIE_DETECTION_RADIUS = 5 * 16
 ZOMBIE_WANDER_ENABLED = True
@@ -285,7 +286,7 @@ def load_settings(world_preset="world"):
     global MAX_NPCS_GLOBAL, NPC_SPAWN_CHANCE, NPC_HEALTH_MULTIPLIER
     global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS, NPC_STATIC_PERCENT, NPC_HOSTILE_PERCENT
     global MAX_VEH_CHUNK, VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY, VEH_HAS_TIRES
-    global NPC_MAX_CHUNK, NPCS_PER_SPAWN, NPC_RESPAWN, ZOMBIE_MAX_CHUNK
+    global NPC_MAX_CHUNK, NPCS_PER_SPAWN, NPC_RESPAWN, ZOMBIE_MAX_CHUNK, BASE_ZOMBIE_MAX_CHUNK
     global MAP_CHUNKS, CHUNK_SIZE, WORLD_SEED
     global UI_BACKGROUND_MUSIC, UI_SHOW_TUTORIAL_DEFAULT, RESOLUTION, WINDOW_MODE
     global UI_CRT_FILTER, CRT_FILTER
@@ -403,6 +404,7 @@ def load_settings(world_preset="world"):
                 ZOMBIES_PER_SPAWN = int(_get_val(zombie_config, ['spawn', 'spawns', 'zombies_per_spawn', 'spawn_count'], '3'))
                 ZOMBIE_RESPAWN = str(_get_val(zombie_config, ['respawn', 'zombie_respawn'], 'true')).lower() == 'true'
                 ZOMBIE_MAX_CHUNK = int(_get_val(zombie_config, ['zombie_spawn_per_chunk', 'spawn_per_chunk', 'max_chunk', 'zombie_max_chunk'], '6'))
+                BASE_ZOMBIE_MAX_CHUNK = ZOMBIE_MAX_CHUNK
                 ZOMBIE_INFECTION_CHANCE = float(_get_val(zombie_config, ['infection_chance', 'zombie_infection_chance'], '0.25'))
                 ZOMBIE_LINE_OF_SIGHT_CHECK = str(_get_val(zombie_config, ['sight_check', 'line_of_sight_check'], 'true')).lower() == 'true'
                 ZOMBIE_SPEED = float(_get_val(zombie_config, ['zombie_speed', 'speed'], '0.3'))
@@ -453,6 +455,33 @@ def load_settings(world_preset="world"):
         font_16 = ImageFontWrapper(FONT_FACE, 16)
         font_14 = ImageFontWrapper(FONT_FACE, 8)
         font_12 = ImageFontWrapper(FONT_FACE, 12)
+
+
+def apply_player_traits_config(player_or_traits):
+    """
+    Recalculates ZOMBIE_MAX_CHUNK by adding trait modifiers to BASE_ZOMBIE_MAX_CHUNK.
+    Example: Base (4) + Runner (2) + Vaccine (5) = 11.
+    """
+    global ZOMBIE_MAX_CHUNK, BASE_ZOMBIE_MAX_CHUNK
+    base = BASE_ZOMBIE_MAX_CHUNK
+
+    traits = []
+    if isinstance(player_or_traits, (list, tuple, set)):
+        traits = list(player_or_traits)
+    elif hasattr(player_or_traits, 'traits'):
+        traits = list(player_or_traits.traits)
+
+    bonus_zombies = 0
+    from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
+    for trait_id in traits:
+        t_def = TRAIT_DEFINITIONS.get(trait_id)
+        if t_def and 'config_modifiers' in t_def:
+            val = t_def['config_modifiers'].get('ZOMBIE_MAX_CHUNK')
+            if val is not None:
+                bonus_zombies += int(val)
+
+    ZOMBIE_MAX_CHUNK = max(0, int(base + bonus_zombies))
+    return ZOMBIE_MAX_CHUNK
 
 def save_language_to_config(lang_code):
     global GAME_LANGUAGE

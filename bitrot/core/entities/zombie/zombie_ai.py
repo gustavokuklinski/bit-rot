@@ -247,6 +247,11 @@ class ZombieAI:
     def update_ai(self, player_rect, obstacles, nearby_entities, game):
         if getattr(self, 'is_dead', False) or getattr(self, 'health', 0) <= 0:
             return
+
+        # Prevent underground zombies from playing audio or targeting surface players
+        if getattr(self, 'layer', 1) != getattr(game, 'current_layer_index', 1):
+            return
+
         current_time = pygame.time.get_ticks()
 
         # Update noise alert timer

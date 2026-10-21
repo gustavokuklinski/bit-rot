@@ -3,7 +3,7 @@
     <sex value="RANDOM" />
     
     <stats>
-        <health min="100" max="100" />
+        <health min="10" max="80" />
         <speed min="1" max="1" />
         <attack min="1" max="15" />
         <infection min="1" max="5" />

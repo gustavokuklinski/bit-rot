@@ -5,17 +5,17 @@
         
     </properties>
     <loot>
-        <item name="Screwdriver" chance="1.0" />
-        <item name="Wrench" chance="1.0" />
-        <item name="Saw" chance="1.0" />
-        <item name="Screws" chance="1.0" />
-        <item name="Nails" chance="1.0" />
-        <item name="Hammer" chance="1.0" />
-        <item name="Picaxe" chance="1.0" />
-        <item name="Knife" chance="1.0" />
-        <item name="Axe" chance="1.0" />
-        <item name="Portable Hand Saw" chance="1.0" />
-        <item name="Duck Tape" chance="1.0" />
+        <item name="Screwdriver" chance="0.8" />
+        <item name="Wrench" chance="0.6" />
+        <item name="Saw" chance="0.6" />
+        <item name="Screws" chance="0.7" />
+        <item name="Nails" chance="0.7" />
+        <item name="Hammer" chance="0.6" />
+        <item name="Picaxe" chance="0.3" />
+        <item name="Knife" chance="0.3" />
+        <item name="Axe" chance="0.3" />
+        <item name="Portable Hand Saw" chance="0.4" />
+        <item name="Duck Tape" chance="0.4" />
     </loot>
     <spawn chance="1" />
 </item>

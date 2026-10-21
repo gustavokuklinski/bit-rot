@@ -1,0 +1,18 @@
+<item name="Camp Kit" type="container" allow_belt="false" allow_type="[camp, utility]" disallow_type="[container]">
+    <properties>
+        <capacity value="4" />
+        <sprite file="container_survivor_kit.png" />
+        
+    </properties>
+    <loot>
+        <item name="Tent" chance="0.5" />
+        <item name="Sleeping Bag" chance="0.5" />
+        <item name="Campfire off" chance="0.5" />
+        <item name="Matches" chance="0.5" />
+        <item name="Lantern off" chance="0.5" />
+        <item name="Lighter off" chance="0.5" />
+        <item name="Lighter fluid" chance="0.5" />
+    </loot>
+    <spawn chance="1" />
+</item>
+

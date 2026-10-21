@@ -24,11 +24,12 @@ CLOTHING_COLORS = [
 ]
 
 class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.Sprite):
-    def __init__(self, x, y, template):
+    def __init__(self, x, y, template, layer=1):
         super().__init__()
         
         self.x = x
         self.y = y
+        self.layer = layer
         self.id = str(uuid.uuid4())
 
         sex_val = template.get('sex', 'Male')
@@ -148,6 +149,10 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         if getattr(self, 'is_dead', False) or getattr(self, 'health', 0) <= 0:
             return
 
+        # Do not update or process audio if on a different layer than the active player
+        if getattr(self, 'layer', 1) != getattr(game, 'current_layer_index', 1):
+            return
+
         if self.knockback_timer > 0:
             obstacles = game.obstacles
             multiplier = 1.0
@@ -181,7 +186,7 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
         super().update(game)
 
     @staticmethod
-    def create_random(x, y):
+    def create_random(x, y, layer=1):
         if not ZombieData.ZOMBIE_TEMPLATES:
             print("Error: No zombie templates loaded. Creating default zombie.")
             default_template = {
@@ -197,20 +202,13 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
                 'max_infection':1,
                 'sex': 'Male', 
             }
-            return Zombie(x, y, default_template)
+            return Zombie(x, y, default_template, layer=layer)
 
-        #type_weights = {
-        #    'common': 55,
-        #    'worker': 20,
-        #    'doctor': 10,
-        #    'military': 20,
-        #    'special_force': 5
-        #}
         template_weights = [t.get('spawn_weight', 10) for t in ZombieData.ZOMBIE_TEMPLATES]
-        
         template = random.choices(ZombieData.ZOMBIE_TEMPLATES, weights=template_weights, k=1)[0]
         
-        zombie = Zombie(x, y, template)
+        zombie = Zombie(x, y, template, layer=layer)
+        zombie.layer = layer
 
         zombie.state = 'wandering'
         zombie.noise_target = None

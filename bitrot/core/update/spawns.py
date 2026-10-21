@@ -1,6 +1,7 @@
 # core/update/spawns.py
 
 import math
+import re
 import core.data.config
 from core.data.config import TILE_SIZE
 from core.map.spawn_manager import async_spawner
@@ -13,6 +14,12 @@ def check_dynamic_zombie_spawns(game, grid_size=128):
 
   if not getattr(game, 'player', None):
     return
+  
+  curr_map = getattr(game.map_manager, 'current_map_filename', '')
+  match = re.match(r'map_L(\d+)_(\d+)_(\d+)_map\.csv', curr_map)
+  if match and getattr(game, 'generator', None) and hasattr(game.generator, 'lobby_chunk'):
+      if int(match.group(1)) == 1 and (int(match.group(2)), int(match.group(3))) == game.generator.lobby_chunk:
+          return
 
   player_pos = game.player.rect.center
   grid_scale = getattr(game, 'SPAWN_GRID_SIZE', 512)

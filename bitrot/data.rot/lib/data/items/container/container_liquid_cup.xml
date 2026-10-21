@@ -6,5 +6,12 @@
         <sprite file="container_liquid_cup.png" />
         <max_liquid value="2" />
     </properties>
+    <loot>
+        <item name="Water Unit" chance="0.1" />
+        <item name="Red Wine Unit" chance="0.1" />
+        <item name="White Wine Unit" chance="0.1" />
+        <item name="Whiskey Unit" chance="0.1" />
+        <item name="Coffee Unit" chance="0.1" />
+    </loot>
     <spawn chance="1" />
 </item>

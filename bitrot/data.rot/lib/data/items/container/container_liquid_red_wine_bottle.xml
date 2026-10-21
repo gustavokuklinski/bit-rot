@@ -6,7 +6,7 @@
         <max_liquid value="10" />
     </properties>
     <loot>
-        <item name="Red Wine Unit" chance="1.0" />
+        <item name="Red Wine Unit" chance="0.9" />
     </loot>
     <spawn chance="1" />
 </item>

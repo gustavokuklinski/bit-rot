@@ -66,6 +66,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.sex = data.get('sex', 'Male')
         self.traits = data.get('traits', [])
         self.quests = data.get('quests', [])
+        core.data.config.apply_player_traits_config(self.traits)
         self.completed_quests = data.get('completed_quests', [])
         self.known_recipes = data.get('known_recipes', [])
         self.dialog_history = data.get('dialog_history', [])

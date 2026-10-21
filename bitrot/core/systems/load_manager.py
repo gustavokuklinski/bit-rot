@@ -182,7 +182,7 @@ def handle_player_death(game):
 
     # 3. Clear dead player's items to avoid duplication
     game.player.inventory = []
-    game.player.belt = [None] * 3
+    game.player.belt = [None] * game.player.get_max_belt_slots()
     game.player.clothes = {}
     game.player.active_weapon = None
 
@@ -221,6 +221,7 @@ def respawn_player_in_world(game, new_player_data, save_folder_name):
 
         # Generate a fresh unique ID for this new player
         new_player_data['player_id'] = str(uuid.uuid4())
+        core.data.config.apply_player_traits_config(new_player_data.get('traits', []))
         new_player = Player(player_data=new_player_data)
         new_player.game = game
         new_player.player_id = new_player_data['player_id']
@@ -392,6 +393,9 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     if os.path.exists(world_xml_path):
         core.data.config.load_settings(world_xml_path)
 
+    # Apply trait-based config modifiers (e.g. 4 base + 5 vaccine + 2 runner = 11)
+    core.data.config.apply_player_traits_config(player_data.get('traits', []))
+
     if 'attributes' not in player_data:
         player_data['attributes'] = {} 
 
@@ -538,17 +542,18 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
                 spawn_random_vehicles(game, count=getattr(core.data.config, 'MAX_VEH_CHUNK', 6))
 
         # Always initialize Layer 2 and Layer 3 underground populations
-        if 2 in game.all_map_layers:
-            game.logger.info("Initializing Layer 2 Population (Zombies, Animals)...")
-            z_l2_count = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
-            if z_l2_count > 0 and getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500) > 0:
-                spawn_l2_population(game, count=z_l2_count, target_layer=2)
+        if not is_in_lobby:
+            if 2 in game.all_map_layers:
+                game.logger.info("Initializing Layer 2 Population (Zombies, Animals)...")
+                z_l2_count = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
+                if z_l2_count > 0 and getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500) > 0:
+                    spawn_l2_population(game, count=z_l2_count, target_layer=2)
 
-        if 3 in game.all_map_layers:
-            game.logger.info("Initializing Layer 3 Population (Zombies, Animals)...")
-            z_l3_count = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
-            if z_l3_count > 0 and getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500) > 0:
-                spawn_l2_population(game, count=z_l3_count, target_layer=3)
+            if 3 in game.all_map_layers:
+                game.logger.info("Initializing Layer 3 Population (Zombies, Animals)...")
+                z_l3_count = getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6)
+                if z_l3_count > 0 and getattr(core.data.config, 'MAX_ZOMBIES_GLOBAL', 500) > 0:
+                    spawn_l2_population(game, count=z_l3_count, target_layer=3)
 
     if hasattr(game, 'map_manager') and hasattr(game.map_manager, 'update_chunks'):
         center_x = getattr(game, 'map_width_pixels', 1000) // 2
@@ -594,7 +599,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
                 game.player.x, game.player.y = (10 * TILE_SIZE, 10 * TILE_SIZE)
                 game.player.rect.topleft = (10 * TILE_SIZE, 10 * TILE_SIZE)
 
-    if spawn_entities:
+    if spawn_entities and not is_in_lobby:
         nearby_spawns = []
         GRID_SIZE_SPAWNS = getattr(game, 'SPAWN_GRID_SIZE', 512)
         p_grid_x = int(game.player.x // GRID_SIZE_SPAWNS)
@@ -617,7 +622,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
                 game.obstacles, 
                 nearby_spawns, 
                 game.items_on_ground + [game.player],
-                limit=1000, 
+                limit=core.data.config.ZOMBIE_MAX_CHUNK, 
                 spawns_per_marker=core.data.config.ZOMBIES_PER_SPAWN,
                 map_width_px=game.map_width_pixels,
                 map_height_px=game.map_height_pixels,
@@ -706,7 +711,8 @@ def load_game(game, save_folder_name):
             player_data = {'name': 'Player', 'stats': {'health': 100}}
 
         start_new_game(game, player_data, save_dir_name=save_folder_name, spawn_entities=False)
-        
+        core.data.config.apply_player_traits_config(player_data.get('traits', []))
+
         game.zombies_killed = player_data.get('zombies_killed', 0)
 
         target_map = player_data.get('map_filename')

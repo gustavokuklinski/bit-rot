@@ -49,9 +49,13 @@ class SpatialManager:
             if z_id not in valid_ids:
                 del g.last_zombie_grid_positions[z_id]
 
+        curr_layer = getattr(g, 'current_layer_index', 1)
         g.zombie_grid.clear()
         for z in g.zombies:
             if getattr(z, 'is_dead', False) or getattr(z, 'health', 0) <= 0:
+                continue
+            # Filter out entities that are not on the active layer
+            if getattr(z, 'layer', 1) != curr_layer:
                 continue
             key = (int(z.rect.centerx // g.GRID_CELL_SIZE), int(z.rect.centery // g.GRID_CELL_SIZE))
             if key not in g.zombie_grid: g.zombie_grid[key] = []
@@ -60,6 +64,8 @@ class SpatialManager:
         for item in g.items_on_ground:
             if isinstance(item, Animal):
                 if getattr(item, 'is_dead', False) or getattr(item, 'health', 0) <= 0:
+                    continue
+                if getattr(item, 'layer', 1) != curr_layer:
                     continue
                 key = (int(item.rect.centerx // g.GRID_CELL_SIZE), int(item.rect.centery // g.GRID_CELL_SIZE))
                 if key not in g.zombie_grid: g.zombie_grid[key] = []

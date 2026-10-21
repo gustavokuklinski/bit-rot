@@ -1,4 +1,4 @@
-<item name="Dirty Water Unit" type="liquid" liquid="true" consume_time="0.1">
+<item name="Dirty Water Unit" type="liquid" liquid="true" allow_use="true" consume_time="0.1">
     <properties>
         <restore status="[water]" value="1" />
         <restore status="[infection]" value="25" />

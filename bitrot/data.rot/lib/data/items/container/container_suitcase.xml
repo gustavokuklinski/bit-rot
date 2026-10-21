@@ -5,8 +5,8 @@
         <sprite file="container_suitcase.png" />
     </properties>
     <loot>
-        <item name="Money WBRL" chance="1.0" />
-        <item name="Laptop" chance="1.0" />
+        <item name="Money WBRL" chance="0.6" />
+        <item name="Laptop" chance="0.1" />
     </loot>
     <spawn chance="1" />
 </item>

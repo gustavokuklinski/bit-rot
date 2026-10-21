@@ -5,9 +5,9 @@
         
     </properties>
     <loot>
-        <item name="Survivor Guide Basic" chance="1.0" />
-        <item name="Island Map" chance="1.0" />
-        <item name="Knife" chance="1.0" />
+        <item name="Survivor Guide Basic" chance="0.5" />
+        <item name="Island Map" chance="0.5" />
+        <item name="Knife" chance="0.5" />
     </loot>
     <spawn chance="1" />
 </item>
