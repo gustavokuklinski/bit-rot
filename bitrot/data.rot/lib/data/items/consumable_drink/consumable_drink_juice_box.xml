@@ -1,0 +1,12 @@
+<item name="Juice Box" type="consumable_drink" allow_belt="false" consume_time="0.3" allow_use="true">
+    <properties>
+        <restore status="[water]" value="15" />
+        <restore status="[stamina]" value="10" />
+        <reduce status="[anxiety]" value="8" />
+        <load value="1" />
+        <capacity value="5" />
+        
+        <sprite file="consumable_drink_juice_box.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

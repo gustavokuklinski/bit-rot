@@ -1,0 +1,6 @@
+<item name="Can Opener" type="utility" allow_belt="false">
+    <properties>
+        <sprite file="utility_can_opener.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

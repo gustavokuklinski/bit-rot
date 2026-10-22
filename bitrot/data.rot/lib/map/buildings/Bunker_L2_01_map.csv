@@ -5,6 +5,6 @@
 outside_metal_door_01_close,,@@,lab_cupboard_01,,,,,house_computer,@@,,house_bath,@@,,outside_metal_door_01_close
 @@,garden_dirty_1,@@,house_table,house_bench,,,,,door_02_close,,misc_barrel,@@,garden_dirty_2,@@
 @@,garden_grass_1,@@,house_wardrobe,house_small_library,house_library,house_bed,military_crate,,@@,crate,@@,@@,,@@
-@@,,@@,@@,@@,@@,window_02_close,@@,outside_metal_door_01_close,@@,@@,factory_industrial_pipe_valve,factory_industrial_pipe_right,garden_dirty_2,@@
-@@,garden_dirty_1,garden_grass_1,,,garden_dirty_1,,@@,,stair_l4,@@,crate,military_crate,,@@
+@@,garden_tall_grass,@@,@@,@@,@@,window_02_close,@@,outside_metal_door_01_close,@@,@@,factory_industrial_pipe_valve,factory_industrial_pipe_right,garden_dirty_2,@@
+@@,garden_dirty_1,garden_grass_1,,,garden_dirty_1,,@@,,stair_l4,@@,crate,military_crate,garden_tall_grass,@@
 @@,@@,@@,@@,@@,@@,outside_metal_door_01_close,@@,@@,@@,@@,@@,@@,@@,@@

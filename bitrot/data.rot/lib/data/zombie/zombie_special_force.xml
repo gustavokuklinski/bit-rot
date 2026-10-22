@@ -31,6 +31,7 @@
     
     <loot>
         <item item="Money WBRL" chance="1.0" />
+        <item item="Coin WBRL" chance="0.5" />
         <item item="Rot Meat" chance="1.0" />
         <item item="Lighter off" chance="0.2" />
         <item item="MPK5" chance="0.1" />

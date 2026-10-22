@@ -1,5 +1,6 @@
 <item name="Infection Pills" type="consumable_drugs" allow_belt="true"  allow_use="true" consume_time="0.1">
     <properties>
+        <restore status="[health]" value="1" />
         <reduce status="[infection]" value="5" />
         <load value="1" />
         <capacity value="10" />

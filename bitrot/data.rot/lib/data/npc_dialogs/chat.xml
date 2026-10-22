@@ -1,11 +1,168 @@
 <?xml version='1.0' encoding='utf-8'?>
 <npc_dialog>
     <node id="greeting">
-        <options player_question="How's it going?" npc_answer="I just escaped with: [inventory_list]. You look like you've seen better days too. See, I have some good stuff here if you needed." priority="50" />
+        <options player_question="Hello! How's it going?" npc_answer="I just escaped with: [inventory_list]. You look like you've seen better days too. See, I have some good stuff here if you needed." priority="50" />
     </node>
     <node id="lore_branch">
-        <options player_question="I've heard a helicopter landed with survivors, is this true?" npc_answer="Yes! They brought the plague to us, some asymptomatic carriers from the continent. It became hell after they arrived! *cough* *cough*" priority="10" gain_xp="[lucky:10]" />
-        <options player_question="What happened to the continent?" npc_answer="Brazil fell first. Then the rest. The Plague didn't care about borders. Only the islands survived. For now." priority="10" gain_xp="[lucky:10]" />
-        <options player_question="What happened to the boat?!" npc_answer="We are stuck here. We probably need some specific tools to get this crap running again!" priority="10" gain_xp="[lucky:10]" />
+        <options player_question="What was it like when the Plague first hit?" npc_answer="It was chaos. The news said it was a new flu. Then people started bleeding from their eyes. Rio was a warzone in three days." priority="10" />
+        <options player_question="Why did Brazil fall so fast?" npc_answer="Carnival, my friend. Millions of people, sweaty and packed together. The perfect breeding ground for the Plague. The government tried to lock us down, but it was too late." priority="10" />
+        <options player_question="Is the continent really gone?" npc_answer="Gone? No. Burning? Maybe. The last radio signals from the mainland were just screams and static. We don't look back anymore." priority="10" />
+        <options player_question="Did anyone try to escape Brazil?" npc_answer="Thousands. Boats, planes, anything that could float. Most were shot down by the Navy to contain the spread. We were the lucky ones who slipped through the cracks." priority="10" />
+        <options player_question="I heard the President tried to negotiate with the Plague?" npc_answer="Negotiate? He tried to call it a 'media hoax'. He's probably a carrier now, wandering the ruins of Brasília. Sad state of affairs." priority="10" />
+        <options player_question="What happened to the Amazon?" npc_answer="The Plague hit the tribes first. It moved down the river like a tide. Now, the jungle is quiet. Too quiet. The animals are afraid." priority="10" />
+        <options player_question="Did the world blame Brazil?" npc_answer="Of course they did. The UN sanctions didn't help the dead. But the Plague didn't care about borders. It hit Europe a week later. We were just the first domino." priority="10" />
+        <options player_question="Is it true the mainland is full of 'The Screamers'?" npc_answer="That's what we call the infected now. They don't just attack; they scream. It's a sound that doesn't leave you, even when the radio is off." priority="10" />
+        <options player_question="Was there a cure being developed?" npc_answer="In São Paulo. The lab is probably a tomb now. I heard they got close, but the Plague mutated. It's smarter than we are." priority="10" />
+        <options player_question="How did the survivors from the continent get here?" npc_answer="Stole a military transport chopper. They were desperate. We thought we were saving them, but we were just bringing the fire to our doorstep." priority="10" />
+
+        <!-- ============================================= -->
+        <!-- THE ARCHIPELAGO & INLAND DRILLING             -->
+        <!-- ============================================= -->
+        <options player_question="What is this place, exactly?" npc_answer="This is the Next Petrol Archipelago. A chain of islands in the middle of the Atlantic. Rich in oil. We drill inland, on the islands themselves. No offshore rigs needed." priority="10" />
+        <options player_question="How does the oil drilling work here?" npc_answer="Inland wells. Pumpjacks, pipelines, storage tanks. The oil is under the islands. We just drill straight down. It's messy, but it works." priority="10" />
+        <options player_question="Why is the archipelago called 'Next Petrol'?" npc_answer="It was a branding thing before the outbreak. 'The Next Step in Petrol'. Now it's just ironic. We're not the next petrol; we're the last survivors." priority="10" />
+        <options player_question="Is the oil still flowing?" npc_answer="Some wells are still running. The pumpjacks need maintenance, and the pipelines leak. But we have enough fuel to keep the generators going. For now." priority="10" />
+        <options player_question="Who runs the oil fields?" npc_answer="The original drilling crews. The ones who didn't go crazy. They're a tough bunch. They keep the wells pumping and the refineries running." priority="10" />
+        <options player_question="How many people are on the archipelago?" npc_answer="Maybe a few thousand? Most are in Rio de Janeiro, the main settlement on the biggest island. The oil fields are scattered across the smaller islands." priority="10" />
+        <options player_question="Why are you still working the oil fields during the apocalypse?" npc_answer="We need the fuel. If the generators stop, the water filters stop. And if the water filters stop, we get sick. It's not a job, it's a lifeline." priority="10" />
+        <options player_question="Is the main island safe?" npc_answer="Safer than the continent, but that's not saying much. There are zones you don't go after dark. The 'Crazy Workers' have taken over the western oil fields." priority="10" />
+        <options player_question="Are there any other safe zones in the Atlantic?" npc_answer="There's chatter on the radio about a flotilla near the Azores. A moving city of ships. But they don't respond to our calls. We're alone out here." priority="10" />
+        <options player_question="What's the deal with the supply drops?" npc_answer="They're rare. We use drones to drop packages from the mainland, but there's always a risk of the cargo being contaminated. Quarantine is mandatory." priority="10" />
+        <options player_question="Who's in charge of the radio room?" npc_answer="Old Man Silva. He's been listening to the static for two years. He says he can hear the Plague in the noise. I think it's just trauma." priority="10" />
+        <options player_question="I heard the oil wells are running dry?" npc_answer="Some are. But we keep drilling new ones. The archipelago is rich. The oil is deep. We just need the equipment and the manpower to get it out." priority="10" />
+        <options player_question="What are the pipelines for?" npc_answer="They carry the crude oil from the wells to the storage tanks and the small refinery. They're above ground, rusting. We patch them with duct tape and hope." priority="10" />
+        <options player_question="Do you have a refinery here?" npc_answer="A small one. It's not pretty, but it turns crude into diesel and gasoline. Enough to keep the boats and generators running. Barely." priority="10" />
+        <options player_question="Why is Rio de Janeiro here in the Atlantic?" npc_answer="It's a namesake. The original settlers were from Rio. They named the main settlement after their home city. Now it's the last Rio left." priority="10" />
+        <options player_question="What happened to the original oil workers?" npc_answer="Most died in the first wave. The ones who survived either joined the settlement or went mad. The Crazy Workers are the ones who snapped." priority="10" />
+        <options player_question="Can I work the oil fields?" npc_answer="If you can lift a wrench and don't mind the smell. We need all the hands we can get. But watch out for the Crazy Workers. They don't like strangers." priority="10" />
+        <options player_question="Are there any oil reserves left?" npc_answer="The geologists say we've barely tapped the surface. There are whole islands we haven't drilled yet. But we don't have the equipment to reach them." priority="10" />
+        <options player_question="What's the biggest threat to the oil fields?" npc_answer="The infected. They wander in from the coast. And the Crazy Workers. They sabotage the wells for fun. We have to guard them day and night." priority="10" />
+
+        <!-- ============================================= -->
+        <!-- THE PLAGUE & INFECTED                         -->
+        <!-- ============================================= -->
+        <options player_question="What are the symptoms of the Plague?" npc_answer="It starts with a cough, then a fever. Then the skin turns grey and the bleeding starts. By the end, you're just a walking virus." priority="10" />
+        <options player_question="Can you catch it by breathing the air?" npc_answer="We don't know. We wear masks. We burn the bodies. We stay upwind. The scientific method is dead; we're back to superstition and survival." priority="10" />
+        <options player_question="Can the infected swim?" npc_answer="That's the worst part. They can't swim, but they don't need to breathe. We've seen them walking on the ocean floor, trying to reach the islands. We call it the 'Deep Walk'." priority="10" />
+        <options player_question="Are the Crazy Workers actually infected?" npc_answer="They are the ones who snapped. They're not sick, just broken. They hear the whispers of the Plague and they obey. They're more dangerous than the infected." priority="10" />
+        <options player_question="What do the infected sound like?" npc_answer="Like a broken radio. A wet, gurgling cough mixed with a scream. If you hear it, don't look. Run." priority="10" />
+        <options player_question="Is there a way to tell who is infected before they turn?" npc_answer="Check their eyes. If the whites are yellow and the pupils are pinned, they're gone. Don't wait for the cough. Put them down." priority="10" />
+        <options player_question="Why do some people turn faster than others?" npc_answer="The doctors said it depends on the blood type. But the doctors are dead. We just know the old and the sick go first." priority="10" />
+        <options player_question="Do the infected have a hive mind?" npc_answer="They don't need one. They just follow the noise. If you fire a gun, you attract every infected from a mile away. That's why we use melee weapons." priority="10" />
+        <options player_question="Is the Plague in the water?" npc_answer="The ocean is our best ally. The salt water kills the virus. That's why the archipelago is safe. We just have to watch the rain." priority="10" />
+        <options player_question="I've seen infected climbing the oil derricks!" npc_answer="They can't climb. But they can pile up. If they get enough bodies, they can reach the top. That's why we have the 'Sweeper' duty. Clear the towers." priority="10" />
+
+        <!-- ============================================= -->
+        <!-- SURVIVAL & RESOURCES (INLAND)                 -->
+        <!-- ============================================= -->
+        <options player_question="Where do you get food?" npc_answer="Fish. Lots of fish. And we have a hydroponics bay growing beans and potatoes. We used to have chickens, but we ate them in the first month." priority="10" />
+        <options player_question="How do you get fresh water?" npc_answer="Desalination plants. They're power-hungry. If the oil pumps stop, the water stops. That's why the oil fields are so important." priority="10" />
+        <options player_question="Do you have electricity?" npc_answer="Sometimes. The generators are old. We run them on the oil we drill. But if a storm hits, we're in the dark for days." priority="10" />
+        <options player_question="What kind of weapons do you have?" npc_answer="Mostly repurposed tools. Harpoons, wrenches, and a few rusty pistols. Ammo is worth more than gold. Don't waste it." priority="10" />
+        <options player_question="Where do you get medicine?" npc_answer="We raid the mainland when we can. But the hospitals are the worst places. That's where the infected congregate. We're running low on antibiotics." priority="10" />
+        <options player_question="What's the most valuable resource right now?" npc_answer="Batteries. Without them, we can't use the radios or the flashlights. That, and bullets." priority="10" />
+        <options player_question="How do you repair the oil equipment?" npc_answer="We strip parts from the abandoned wells and the sunken ships around the archipelago. It's dangerous work, but better than letting the pumpjacks seize up." priority="10" />
+        <options player_question="Do you have a doctor?" npc_answer="We have a vet. He's the closest thing we have. He treats everything from infected wounds to migraines. He's grumpy, but he keeps us alive." priority="10" />
+        <options player_question="Is there a way off this archipelago?" npc_answer="The boat is the only way. And it's busted. We need a new fuel pump and a propeller shaft. Until then, we're stuck here." priority="10" />
+        <options player_question="I heard about a hidden cache on the mainland." npc_answer="That's what they said about the last three caches. We lost two men looking for the last one. It's probably a trap by the Crazy Workers." priority="10" />
+
+        <!-- ============================================= -->
+        <!-- THE BOAT & ESCAPE                             -->
+        <!-- ============================================= -->
+        <options player_question="What kind of boat is it?" npc_answer="An old fishing trawler. We retrofitted it with armor plates. It's slow, ugly, and smells like fish, but it's our ticket out of here." priority="10" />
+        <options player_question="Where would you even go?" npc_answer="There's a rumor of an uninfected zone in the southern hemisphere. Antarctica. The cold might have stopped the Plague. Or maybe it's just a frozen grave." priority="10" />
+        <options player_question="Can we take everyone on the boat?" npc_answer="No. The boat holds maybe 20 people. There are hundreds here. If we fix it, we have to choose. That's not a decision I want to make." priority="10" />
+        <options player_question="What parts do we need to fix the boat?" npc_answer="A fuel pump, a starter motor, and a lot of prayers. The engine is seized. We need to find a replacement in the sunken ships." priority="10" />
+        <options player_question="Did the last repair attempt fail?" npc_answer="We lost three divers to the infected in the water. They were torn apart before they could reach the surface. The boat might be cursed." priority="10" />
+        <options player_question="Is the boat armed?" npc_answer="We have a mounted harpoon and some flares. It's not a warship, but it can scare off the smaller infected boats." priority="10" />
+        <options player_question="What happens if the boat sinks?" npc_answer="Then we float on debris. Or we join the deep. The archipelago is the only safe place. If the boat fails, we're done." priority="10" />
+        <options player_question="I heard there's a map on the boat?" npc_answer="Aye. A map of the archipelago. It shows the shallow channels. We need it to navigate the reefs. But the Captain keeps it hidden. He trusts no one." priority="10" />
+        <options player_question="Can the boat handle the open ocean?" npc_answer="In calm seas, yes. But a storm would break it apart. We need to be desperate to risk the Atlantic." priority="10" />
+        <options player_question="Who is the Captain?" npc_answer="Captain Rodrigues. He's a drunk, but he knows the sea. He's the only one who can pilot us out of here." priority="10" />
+
+        <!-- ============================================= -->
+        <!-- THE CRAZY WORKERS & THE STRANGE SOUNDS        -->
+        <!-- ============================================= -->
+        <options player_question="You mentioned the crazy people who work here. Who are they?" npc_answer="The original oil crews. The ones who saw the Plague coming and lost their minds. They wear the rig uniforms. They're dangerous, but they might have the parts we need." priority="10" />
+        <options player_question="What do the Crazy Workers do?" npc_answer="They collect scrap and hoard it. They speak in riddles. They think the infected are 'holy'. They're a cult. Stay away from them." priority="10" />
+        <options player_question="Are they hostile?" npc_answer="They're unpredictable. Sometimes they ignore you. Sometimes they try to feed you to the infected. It depends on their mood. Keep your weapon ready." priority="10" />
+        <options player_question="Where do they live?" npc_answer="In the abandoned oil fields on the western islands. The dark, rusty parts. They've set up traps. It's a maze down there. Don't go in alone." priority="10" />
+        <options player_question="Can we negotiate with them?" npc_answer="They only understand trade. They want shiny things. Mirrors, glass, silver. If you have something shiny, you might get out alive." priority="10" />
+        <options player_question="I heard strange sounds coming from the oil fields." npc_answer="That's just the pumpjacks groaning. Or the Crazy Workers. Or the infected climbing up. I try not to think about it." priority="10" />
+        <options player_question="Is there a specific one I should look out for?" npc_answer="A guy they call 'The Mechanic'. He's the leader. He's seven feet tall and carries a pipe wrench. If you see him, run." priority="10" />
+        <options player_question="Do the Crazy Workers have the fuel pump?" npc_answer="Probably. They hoard all the good stuff. But getting it from them will cost you. Maybe your sanity." priority="10" />
+        <options player_question="Can I disguise myself as a Crazy Worker?" npc_answer="You could try. But they smell fear. And soap. They don't use soap. If you smell clean, they'll know you're an outsider." priority="10" />
+        <options player_question="Why do they serve the Plague?" npc_answer="They think the Plague is a cleansing fire. They believe they are immune. They are not. They're just too crazy to notice they're rotting." priority="10" />
+
+        <!-- ============================================= -->
+        <!-- CHARACTER-SPECIFIC / ROLEPLAY                 -->
+        <!-- ============================================= -->
+        <options player_question="Who are you?" npc_answer="I'm a mechanic. I keep the oil pumps running so we don't freeze or starve. It's a thankless job, but it keeps my mind off the world." priority="10" />
+        <options player_question="Have you lost anyone?" npc_answer="Everyone. My wife, my kids. They were in Rio. I was here, working the wells. I survived because I was on this island. Is that luck? I don't know." priority="10" />
+        <options player_question="Do you think we can win?" npc_answer="Win? No. We can survive. We can outlast the virus. But the world we knew is gone. We're just playing for time." priority="10" />
+        <options player_question="What do you do for fun?" npc_answer="We play cards. We listen to old vinyl records on the jukebox. We watch the sunset. Small things. The big things are too heavy." priority="10" />
+        <options player_question="Is there a chain of command?" npc_answer="Respect your elders. We follow the Captain, and we follow the mechanic. If you're useless, you're bait. Simple as that." priority="10" />
+        <options player_question="I need a favor." npc_answer="I'm not a charity. What do you have to trade? I need batteries for my flashlight. Or a new knife. The blade on mine is dull." priority="10" />
+        <options player_question="Can I trust you?" npc_answer="Trust no one. Not me, not the Captain, not the guy who smiles too much. In the apocalypse, trust gets you killed." priority="10" />
+        <options player_question="What's your name?" npc_answer="They call me 'Patch'. I fix things. I fix the pumps, I fix the wounds, I fix the radios. I fix everything except my own life." priority="10" />
+        <options player_question="What do you miss most?" npc_answer="Fresh bread. And the silence. The silence of the city before the outbreak. Now, everything is engines and screaming and the ocean." priority="10" />
+        <options player_question="I'm new here. Any advice?" npc_answer="Keep your head down. Don't ask questions. Don't go near the water alone. And for God's sake, don't eat the fish from the eastern cove. They glow." priority="10" />
+
+        <!-- ============================================= -->
+        <!-- VAGUE LORE & MYSTERIES                        -->
+        <!-- ============================================= -->
+        <options player_question="I've heard rumors of a ship called 'The Exodus'?" npc_answer="Old ghost story. A cruise ship that was supposed to take people to the Azores. It vanished. The radio picks up weird signals from it sometimes. Just echoes." priority="10" />
+        <options player_question="What is 'The Red Tide'?" npc_answer="When the infected die in the water, they turn the sea red. We stay on the islands when the tide is red. It means the mainland is dying again." priority="10" />
+        <options player_question="I saw a light on the horizon last night." npc_answer="That was probably the mainland. A fire. Or a lighthouse. Or a signal from someone trying to find us. We didn't respond. It's too risky." priority="10" />
+        <options player_question="What is the 'Project Genesis'?" npc_answer="Heard that on a dead radio channel. It was a government project to restart society. One of the scientists was on this archipelago. But he's gone now. Took the codes with him." priority="10" />
+        <options player_question="Are there submarines out there?" npc_answer="We've seen periscopes. They're military, but we don't know whose. They don't surface. They just watch us. It's unsettling." priority="10" />
+        <options player_question="Is the Plague man-made?" npc_answer="There are theories. A lab leak in China. A weapon gone rogue. But what does it matter? The result is the same. The world is dead." priority="10" />
+        <options player_question="What happened to the birds?" npc_answer="They're still here. Seagulls. They're fat and happy. They feast on the dead. They're the only ones benefiting from this apocalypse." priority="10" />
+        <options player_question="Do you believe in God?" npc_answer="I believe in the ocean. It's the only thing that's constant. It takes and it takes. Maybe the ocean is God. And it's angry." priority="10" />
+        <options player_question="I found a strange symbol on a crate." npc_answer="That's the mark of the 'Lazarus Cult'. They believe the Plague is a gift. They're worse than the Crazy Workers. Burn the crate." priority="10" />
+        <options player_question="Is there any hope?" npc_answer="Hope? It's a luxury. We have work to do. Fix the boat, get the fuel, survive the night. That's our hope. Survival." priority="10" />
+
+        <!-- ============================================= -->
+        <!-- PERSONAL & TRIVIAL (To make characters feel real) -->
+        <!-- ============================================= -->
+        <options player_question="It's hot today." npc_answer="It's the humidity. The Atlantic heat. It makes the infected slower, but it makes us sweat. Stay hydrated." priority="10" />
+        <options player_question="I'm tired." npc_answer="Sleep when you're dead. Or sleep when the sun's up. The nights are dangerous. The infected are more active in the cool air." priority="10" />
+        <options player_question="Do you have a cigarette?" npc_answer="I gave up smoking when the apocalypse started. It was too hard to find them. Now, I just chew on seaweed. It's not the same." priority="10" />
+        <options player_question="What's for dinner?" npc_answer="Rice and beans. Again. The beans are getting old. We might have to start eating the rats if the supply drops stop." priority="10" />
+        <options player_question="Can I get some rest?" npc_answer="Not here. The oil fields are not a hotel. If you want to sleep, go to the barracks. But keep one eye open. The noise from the pumps might hide something." priority="10" />
+        <options player_question="The radio is acting up again." npc_answer="Hit it on the side. If that doesn't work, I'll take a look at it. It's old tech. The vacuum tubes are dying." priority="10" />
+        <options player_question="I think I saw a shark." npc_answer="There are sharks out there. Big ones. They eat the infected when they fall in. It's a nice circle of life moment. Just stay out of the water." priority="10" />
+        <options player_question="This coffee tastes like mud." npc_answer="That's because it is mud. We ran out of beans months ago. We make it from roasted dandelions. Enjoy." priority="10" />
+        <options player_question="Do you have any music?" npc_answer="We have a guitar with a broken string. And a tape deck. We play the same three songs by the Beatles. It's driving me crazy." priority="10" />
+        <options player_question="I'm going to scout the oil fields." npc_answer="Don't go alone. Take the flashlight. The abandoned wells are dark. And be careful. If you hear singing, close your ears." priority="10" />
+
+        <!-- ============================================= -->
+        <!-- SPECIFIC GAMEPLAY HINTS (Lore-flavored)       -->
+        <!-- ============================================= -->
+        <options player_question="Where can I find tools?" npc_answer="Try the maintenance shed near the main oil well. But watch out for the Crazy Workers. They think the wrenches are holy relics." priority="10" />
+        <options player_question="How do I make a torch?" npc_answer="Cloth, oil, and a stick. Keep it away from the fuel lines. We don't need to burn down the oil fields before the plague gets us." priority="10" />
+        <options player_question="Is there a safe place to swim?" npc_answer="The enclosed pool on the main island. But check the water for bodies first. The infected sometimes wash up there." priority="10" />
+        <options player_question="How do I get to the mainland?" npc_answer="The boat is the only way. But unless you have the fuel pump, you're not going anywhere. Talk to the Captain." priority="10" />
+        <options player_question="I need medical attention." npc_answer="Talk to Patch. He's in the med bay near the refinery. If he's drunk, wait until he's sober. Or bribe him with booze. He's a good doctor, but a terrible drunk." priority="10" />
+        <options player_question="I found a key. What's it for?" npc_answer="Looks like a key for the armory. Or maybe the Captain's liquor cabinet. Either way, keep it. It might open a door that saves your life." priority="10" />
+        <options player_question="Can I upgrade my weapon?" npc_answer="See the blacksmith on the main island. He can turn a pipe into a spear. Or a nail into a club. It's not pretty, but it's deadly." priority="10" />
+        <options player_question="Where is the radio tower?" npc_answer="On the highest point of the main island. It's guarded by the militia. They shoot first and ask questions later. Be careful." priority="10" />
+        <options player_question="I need fuel." npc_answer="Talk to the pump hands at the refinery. But they're stingy. Unless you have something to trade. Booze, cigarettes, or a good story." priority="10" />
+        <options player_question="How do I craft a silencer?" npc_answer="You don't. The infected don't care about noise. The Crazy Workers do. Just use a knife. It's quieter and it saves ammo." priority="10" />
+
+        <!-- ============================================= -->
+        <!-- ENDGAME / HOPE / THE FUTURE                   -->
+        <!-- ============================================= -->
+        <options player_question="Do you think the world will ever go back to normal?" npc_answer="Normal is a myth. We are the new normal. We have to rebuild from the ashes. It will take generations, but maybe, one day." priority="10" />
+        <options player_question="What is the 'Safe Zone'?" npc_answer="It's a rumor. A place where the Plague didn't reach. Maybe in the mountains. Maybe on a distant island. If we fix the boat, we can look for it." priority="10" />
+        <options player_question="I want to lead us out of here." npc_answer="Ambition? That's dangerous. But we need leaders. Prove yourself. Fix the boat, kill the infected, and maybe people will follow you." priority="10" />
+        <options player_question="What is the ultimate goal?" npc_answer="Survival. That's it. Not victory, not revenge. Just to live one more day. To see the sun rise on the Atlantic." priority="10" />
+        <options player_question="The Plague is mutating." npc_answer="It's getting faster. The infected are smarter. We need to adapt. We need to find a cure. Or we need to find a hole deep enough to hide in." priority="10" />
+        <options player_question="I'm ready to leave the archipelago." npc_answer="Are you? The ocean is vast and unforgiving. The mainland is a graveyard. But if you have the guts, the boat is waiting. Just find the parts." priority="10" />
+        <options player_question="I found a map to a cure." npc_answer="Don't believe it. That's a wild goose chase. Many have died following those maps. It's usually a trap set by the mainland raiders." priority="10" />
+        <options player_question="What happens if the oil fields are overrun?" npc_answer="We blow the wells. We set the oil on fire and retreat to the boats. Better to burn it all than let the infected have the fuel. That's the plan." priority="10" />
+        <options player_question="Is there anyone left in Europe?" npc_answer="The radio is silent. The satellites are dead. We're the last outpost of humanity. Or maybe we're just the last ones talking." priority="10" />
+        <options player_question="If we fix the boat, where do we go first?" npc_answer="To the mainland. We need supplies. Fuel, food, medicine. Then, we sail south. To the cold. To the unknown." priority="10" />
+        
     </node>
 </npc_dialog>

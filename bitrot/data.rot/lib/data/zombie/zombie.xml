@@ -27,6 +27,7 @@
     </visuals>
     <loot>
         <item item="Money WBRL" min="1" max="1" chance="1.0" />
+        <item item="Coin WBRL" chance="0.5" />
         <item item="Rot Meat" min="1" max="1" chance="1.0" />
         <item item="Kukaroach (Bit Rot publisher)" min="1" max="1" chance="0.5" />
     </loot>
