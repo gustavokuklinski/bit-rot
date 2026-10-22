@@ -1,113 +1,83 @@
-# core/ui/helpers/trait_config_loader.py
+# In core/ui/helpers/trait_config_loader.py
+
 import os
 import json
-import xml.etree.ElementTree as ET
 from core.data.config import *
 
 def load_trait_definitions():
     traits = {}
-    filepath = os.path.join(DATA_PATH, 'player', 'traits.xml')
-    
+    filepath = os.path.join(DATA_PATH, 'player', 'traits.json')
+
     if not os.path.exists(filepath):
-        print(f"Warning: Traits definition file not found at {filepath}")
+        print(f"Warning: Traits JSON definition file not found at {filepath}")
         return {}
 
     try:
-        tree = ET.parse(filepath)
-        root = tree.getroot()
-        
+        with open(filepath, 'r', encoding='utf-8') as f:
+            raw = json.load(f)
+        root = raw.get('player_traits', raw)
+
         nodes_to_parse = []
-        prof_node = root.find('profession')
-        if prof_node is not None:
-            for t in prof_node.findall('trait'): nodes_to_parse.append((t, True))
-            
-        traits_node = root.find('traits')
-        if traits_node is not None:
-            for t in traits_node.findall('trait'): nodes_to_parse.append((t, False))
-            
-        if prof_node is None and traits_node is None:
-            for t in root.findall('trait'): nodes_to_parse.append((t, False))
-        
-        for trait_node, is_prof in nodes_to_parse:
-            trait_id = trait_node.get('id')
-            if not trait_id:
-                continue
-                
-            try: cost = int(trait_node.get('cost', 0))
-            except ValueError: cost = 0
-                
+        for pid, pdata in root.get('professions', {}).items():
+            nodes_to_parse.append((pid, pdata, True))
+
+        for tid, tdata in root.get('traits', {}).items():
+            nodes_to_parse.append((tid, tdata, False))
+
+        for trait_id, t_dict, is_prof in nodes_to_parse:
+            try:
+                cost = int(t_dict.get('cost', 0))
+            except (ValueError, TypeError):
+                cost = 0
+
             trait_data = {
-                'cost': cost, 
-                'stats': {}, 
+                'cost': cost,
+                'stats': {},
                 'attributes': {},
-                'config_modifiers': {}, 
+                'config_modifiers': {},
                 'starting_levels': {},
-                'conflicts': [],
-                'recipes': [],
-                'name': trait_node.get('name', trait_id),
-                'tooltip': trait_node.get('tooltip'),
-                'is_profession': is_prof 
+                'conflicts': list(t_dict.get('disable', [])),
+                'recipes': list(t_dict.get('recipe', t_dict.get('recipes', []))),
+                'name': t_dict.get('name', trait_id),
+                'tooltip': t_dict.get('tooltip', ''),
+                'is_profession': is_prof
             }
-            
-            stats_node = trait_node.find('stats')
-            if stats_node is not None:
-                trait_data['stats'] = {}
-                for stat_name, val in stats_node.attrib.items():
-                    try: trait_data['stats'][stat_name] = float(val)
-                    except ValueError: pass
 
-            for config_node in trait_node.findall('config'):
-                set_str = config_node.get('set')
-                if set_str:
-                    clean_str = set_str.strip("[] ")
-                    parts = clean_str.split(',')
-                    for part in parts:
-                        if ':' in part:
-                            key, val = part.split(':')
-                            try: 
-                                trait_data['config_modifiers'][key.strip()] = float(val)
-                            except ValueError: 
-                                pass
+            # Stats modifiers
+            for sname, sval in t_dict.get('stats', {}).items():
+                try:
+                    trait_data['stats'][sname] = float(sval)
+                except (ValueError, TypeError):
+                    pass
 
-            disable_str = trait_node.get('disable')
-            if disable_str:
-                clean_str = disable_str.strip("[] ")
-                if clean_str:
-                    parts = clean_str.split(',')
-                    for part in parts:
-                        t_id = part.strip()
-                        if t_id: trait_data['conflicts'].append(t_id)
+            # Config modifiers
+            for cname, cval in t_dict.get('config', {}).items():
+                try:
+                    trait_data['config_modifiers'][cname] = float(cval)
+                except (ValueError, TypeError):
+                    pass
 
-            attrs_node = trait_node.find('attributes')
-            if attrs_node is not None:
-                trait_data['attributes'] = {}
-                level_str = attrs_node.get('level')
-                if level_str:
-                    clean_str = level_str.strip("[] ")
-                    if clean_str:
-                        parts = clean_str.split(',')
-                        for part in parts:
-                            if ':' in part:
-                                attr_key, lvl_val = part.split(':')
-                                try: trait_data['starting_levels'][attr_key.strip()] = int(lvl_val)
-                                except ValueError: pass
-
-                for attr_name, val in attrs_node.attrib.items():
-                    if attr_name == 'level': continue
-                    try: trait_data['attributes'][attr_name] = float(val)
-                    except ValueError: pass
-            
-            for r_node in trait_node.findall('recipe'):
-                mag = r_node.get('magazine')
-                if mag: trait_data['recipes'].append(mag)
+            # Attributes & Starting Levels
+            for aname, aval in t_dict.get('attributes', {}).items():
+                if aname == 'level' and isinstance(aval, dict):
+                    for lvl_attr, lvl_val in aval.items():
+                        try:
+                            trait_data['starting_levels'][lvl_attr] = int(lvl_val)
+                        except (ValueError, TypeError):
+                            pass
+                else:
+                    try:
+                        trait_data['attributes'][aname] = float(aval)
+                    except (ValueError, TypeError):
+                        pass
 
             traits[trait_id] = trait_data
 
-        print(f"Loaded {len(traits)} traits from XML.")
-        
+        print(f"Loaded {len(traits)} traits from traits.json.")
+
     except Exception as e:
-        print(f"Error loading traits XML: {e}")
-        
+        print(f"Error loading traits JSON: {e}")
+
     return traits
 
 def load_config_data(filepath):
@@ -140,7 +110,7 @@ def save_config_json(data, filepath):
     except Exception as e:
         print(f"Error saving config JSON: {e}")
 
-save_config_json = save_config_json  # Seamless backward-compatibility alias
+save_config_xml = save_config_json
 
 def _load_config_presets(state):
     preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "config")

@@ -16,7 +16,7 @@
       "water_threshold": { "value": 100, "name": "Minimum % to start autodrink", "default": 100 }
     },
     "map": {
-      "map_chunks": { "value": 3, "name": "Map size", "default": 3 },
+      "map_chunks": { "value": 4, "name": "Map size", "default": 4 },
       "seed": { "value": "", "name": "World seed", "default": "" }
     },
     "item_spawning": {

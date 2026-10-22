@@ -1,8 +1,7 @@
 # core/ui/helpers/player_setup.py
 
 import pygame
-import xml.etree.ElementTree as ET
-import xml.dom.minidom
+import json
 import os
 import random
 from datetime import datetime
@@ -11,11 +10,11 @@ from types import SimpleNamespace
 
 from core.data.config import *
 import core.data.config
-import core.data.player_xml_parser
+import core.data.player_xml_parser  # Points to the updated parser
 from core.entities.item.item import Item, ITEM_TEMPLATES
 from core.entities.zombie.zombie import Zombie
 from core.ui.tooltip import draw_tooltip
-from core.ui.helpers.trait_config_loader import _load_config_presets, save_config_json, load_config_data, TRAIT_DEFINITIONS
+from core.ui.helpers.trait_config_loader import _load_config_presets, save_config_xml, load_config_data, TRAIT_DEFINITIONS
 from core.ui.helpers.world import _draw_world_screen, handle_world_events
 from core.data.localization import tr
 from core.ui.modals import draw_scrollbar
@@ -1087,7 +1086,7 @@ def run_player_setup(game):
         try:
             state['base_data'], trait_names = core.data.player_xml_parser.parse_player_data()
         except Exception as e:
-            print(f"FATAL: Could not parse player.xml: {e}")
+            print(f"FATAL: Could not parse player.json: {e}")
             game.running = False
             return
         state['all_traits'] = TRAIT_DEFINITIONS
@@ -1322,18 +1321,50 @@ def run_player_setup(game):
     game._update_screen()
 
 def _load_presets(state):
-    preset_dir = "./data.rot/save/player"
+    preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "player")
     if not os.path.exists(preset_dir):
-        os.makedirs(preset_dir)
+        os.makedirs(preset_dir, exist_ok=True)
     
     presets = ["None"]
     try:
-        files = [f for f in os.listdir(preset_dir) if f.endswith('.xml')]
-        presets.extend([f.replace('.xml', '') for f in files])
+        files = [f for f in os.listdir(preset_dir) if f.endswith('.json')]
+        presets.extend([f[:-5] for f in sorted(files)])
     except Exception as e:
         print(f"Error loading presets: {e}")
         
     state['preset_list'] = presets
+
+def _save_preset(state):
+    player_name = state.get('player_name')
+    if not player_name or player_name == "Survivor" or player_name == tr('ui', 'Survivor'):
+        print("Cannot save preset with default name.")
+        return 
+
+    preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "player")
+    os.makedirs(preset_dir, exist_ok=True)
+    filepath = os.path.join(preset_dir, f"{player_name}.json")
+
+    preset_dict = {
+        "preset": {
+            "name": player_name,
+            "sex": state['base_data'].get('sex', 'Male'),
+            "traits": list(state.get('chosen_traits', [])),
+            "clothes": dict(state.get('chosen_clothes', {})),
+            "clothes_colors": {
+                slot: list(col) for slot, col in state.get('clothes_colors', {}).items()
+            }
+        }
+    }
+
+    try:
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(preset_dict, f, indent=2)
+            
+        print(f"Preset saved: {filepath}")
+        _load_presets(state) 
+        state['selected_preset'] = player_name 
+    except Exception as e:
+        print(f"Error saving preset: {e}")
 
 def _save_preset(state):
     player_name = state.get('player_name')
@@ -1374,51 +1405,86 @@ def _save_preset(state):
     except Exception as e:
         print(f"Error saving preset: {e}")
 
+def _load_presets(state):
+    preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "player")
+    if not os.path.exists(preset_dir):
+        os.makedirs(preset_dir, exist_ok=True)
+    
+    presets = ["None"]
+    try:
+        files = [f for f in os.listdir(preset_dir) if f.endswith('.json')]
+        presets.extend([f[:-5] for f in sorted(files)])
+    except Exception as e:
+        print(f"Error loading presets: {e}")
+        
+    state['preset_list'] = presets
+
+def _save_preset(state):
+    player_name = state.get('player_name')
+    if not player_name or player_name == "Survivor" or player_name == tr('ui', 'Survivor'):
+        print("Cannot save preset with default name.")
+        return 
+
+    preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "player")
+    os.makedirs(preset_dir, exist_ok=True)
+    filepath = os.path.join(preset_dir, f"{player_name}.json")
+
+    preset_dict = {
+        "name": player_name,
+        "sex": state['base_data'].get('sex', 'Male'),
+        "traits": list(state.get('chosen_traits', [])),
+        "clothes": dict(state.get('chosen_clothes', {})),
+        "clothes_colors": {
+            slot: list(col) for slot, col in state.get('clothes_colors', {}).items()
+        }
+    }
+
+    try:
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(preset_dict, f, indent=2)
+            
+        print(f"Preset saved: {filepath}")
+        _load_presets(state) 
+        state['selected_preset'] = player_name 
+    except Exception as e:
+        print(f"Error saving preset: {e}")
+
 def _load_preset(state):
     preset_name = state.get('selected_preset')
     if not preset_name or preset_name == "None":
         return
 
-    filepath = os.path.join("./data.rot/save/player", f"{preset_name}.xml")
+    filepath = os.path.join(get_writable_dir(), "data.rot", "save", "player", f"{preset_name}.json")
     if not os.path.exists(filepath):
         print(f"Error: Preset file not found: {filepath}")
         return
 
     try:
-        tree = ET.parse(filepath)
-        root = tree.getroot()
-        
-        name_node = root.find('name')
-        if name_node is not None:
-            state['player_name'] = name_node.text
-        
-        sex_node = root.find('sex')
-        if sex_node is not None:
-            state['base_data']['sex'] = sex_node.text
+        with open(filepath, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        p_data = raw.get('preset', raw)
 
-        new_traits = []
-        traits_node = root.find('traits')
-        if traits_node is not None:
-            new_traits = [node.text for node in traits_node.findall('trait')]
-            
-        state['chosen_traits'] = new_traits
-        _update_available_traits(state)
-        
-        clothes_node = root.find('clothes')
-        if clothes_node is not None:
-            for node in clothes_node.findall('slot'):
-                slot_name = node.attrib.get('name')
-                item_name = node.text
-                if slot_name in state['chosen_clothes']:
-                    state['chosen_clothes'][slot_name] = item_name
-                    r = int(node.attrib.get('r', 255))
-                    g = int(node.attrib.get('g', 255))
-                    b = int(node.attrib.get('b', 255))
-                    state['clothes_colors'][slot_name] = (r, g, b)
-                    
+        if 'name' in p_data:
+            state['player_name'] = p_data['name']
+        if 'sex' in p_data:
+            state['base_data']['sex'] = p_data['sex']
+        if 'traits' in p_data:
+            state['chosen_traits'] = list(p_data['traits'])
+            _update_available_traits(state)
+
+        if 'clothes' in p_data:
+            for slot, item_name in p_data['clothes'].items():
+                if slot in state['chosen_clothes']:
+                    state['chosen_clothes'][slot] = item_name
+
+        if 'clothes_colors' in p_data:
+            for slot, col in p_data['clothes_colors'].items():
+                if isinstance(col, (list, tuple)) and len(col) >= 3:
+                    state['clothes_colors'][slot] = tuple(int(c) for c in col[:3])
+
         print(f"Preset loaded: {preset_name}")
     except Exception as e:
-        print(f"Error parsing preset file {filepath}: {e}")
+        print(f"Error parsing preset JSON {filepath}: {e}")
 
 def _delete_preset(state):
     preset_name = state.get('selected_preset')
@@ -1426,7 +1492,7 @@ def _delete_preset(state):
         print("No preset selected to delete.")
         return
 
-    filepath = os.path.join("./data.rot/save/player", f"{preset_name}.xml")
+    filepath = os.path.join(get_writable_dir(), "data.rot", "save", "player", f"{preset_name}.json")
     if not os.path.exists(filepath):
         print(f"Error: Preset file not found: {filepath}")
         return

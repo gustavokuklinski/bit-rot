@@ -1,0 +1,23 @@
+{
+  "player_builds": {
+    "worker": {
+      "name": "Worker",
+      "subtitle": "Deep Extraction and Refine",
+      "description": "The tech to deep explore the rocks and wells to refine and distribuite vaccines to the world.",
+      "color": [255, 206, 149],
+      "clothes": {
+        "head": "Worker Helmet",
+        "feet": "Military Boots",
+        "body": "Gethulius Tshirt",
+        "legs": "Jeans Pants"
+      },
+      "items": [
+        "ID",
+        "Wallet",
+        "38 Revolver",
+        "Crowbar",
+        "Cartography Sector [MAP_POS]"
+      ]
+    }
+  }
+}

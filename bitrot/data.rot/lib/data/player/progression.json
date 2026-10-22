@@ -1,0 +1,112 @@
+{
+  "progression": {
+    "attributes": {
+      "strength": {
+        "name": "Strength",
+        "image": "ui/strength.png",
+        "base_xp": 750,
+        "effects": [
+          { "target": "unarmed_damage", "value": 0.05, "type": "multiplier_add" },
+          { "target": "carry_weight", "value": 1.5, "type": "flat" }
+        ]
+      },
+      "fitness": {
+        "name": "Fitness",
+        "image": "ui/fitness.png",
+        "base_xp": 750,
+        "effects": [
+          { "target": "stamina_regen", "value": 0.01, "type": "flat" }
+        ]
+      },
+      "melee": {
+        "name": "Melee",
+        "image": "ui/melee.png",
+        "base_xp": 200,
+        "effects": [
+          { "target": "melee_damage", "value": 0.05, "type": "multiplier_add" },
+          { "target": "durability_save_chance_minor", "value": 2.0, "type": "flat" }
+        ]
+      },
+      "ranged": {
+        "name": "Aiming",
+        "image": "ui/range.png",
+        "base_xp": 200,
+        "effects": [
+          { "target": "ranged_damage", "value": 0.05, "type": "multiplier_add" },
+          { "target": "headshot_chance", "value": 0.015, "type": "flat" }
+        ]
+      },
+      "maintenance": {
+        "name": "Maintenance",
+        "image": "ui/maintenance.png",
+        "base_xp": 150,
+        "effects": [
+          { "target": "durability_save_chance", "value": 2.5, "type": "flat" }
+        ]
+      },
+      "agility": {
+        "name": "Agility",
+        "image": "ui/agility.png",
+        "base_xp": 200,
+        "effects": [
+          { "target": "stamina_consumption_reduction", "value": 0.01, "type": "flat" }
+        ]
+      },
+      "lucky": {
+        "name": "Luck",
+        "image": "ui/lucky.png",
+        "base_xp": 300,
+        "effects": [
+          { "target": "xp_gain", "value": 0.02, "type": "multiplier_add" }
+        ]
+      },
+      "intelligence": {
+        "name": "Intelligence",
+        "image": "ui/intelligence.png",
+        "base_xp": 300,
+        "effects": [
+          { "target": "reading_speed", "value": 0.4, "type": "flat" },
+          { "target": "crafting_speed", "value": 0.2, "type": "flat" },
+          { "target": "xp_gain", "value": 0.02, "type": "multiplier_add" },
+          { "target": "durability_save_chance", "value": 1.0, "type": "flat" }
+        ]
+      }
+    },
+    "stats": {
+      "stamina": {
+        "regen_base": 0.025,
+        "run_cost_base": 0.08,
+        "run_drain": 0.08,
+        "bed_recovery_mult": 3.0,
+        "melee_cost": 0.03,
+        "alert_threshold": 20.0
+      },
+      "health": {
+        "bed_sleep_regen": 0.05,
+        "alert_threshold": 40.0
+      },
+      "metabolism": {
+        "decay_rate_seconds": 10.0
+      },
+      "food": {
+        "decay_amount": 0.1,
+        "alert_threshold": 20.0
+      },
+      "water": {
+        "decay_amount": 0.15,
+        "alert_threshold": 20.0
+      },
+      "anxiety": {
+        "horde_gain": 0.05,
+        "passive_gain": 0.001,
+        "alert_threshold": 30.0
+      },
+      "infection": {
+        "passive_gain": 0.001,
+        "passive_gain_on_rain": 0.005,
+        "death_threshold": 100.0,
+        "alert_threshold": 70.0
+      }
+    }
+  }
+}

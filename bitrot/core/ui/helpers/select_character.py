@@ -1,10 +1,10 @@
 # core/ui/helpers/select_character.py
 
 import os
+import json
 import random
 import pygame
 import uuid
-import xml.etree.ElementTree as ET
 from types import SimpleNamespace
 from faker import Faker
 
@@ -43,74 +43,68 @@ NATURAL_HAIR_COLORS = [
 
 
 def load_player_builds():
-    """Dynamically loads player build classes from the XML files."""
+    """Dynamically loads player build classes from JSON files in player_builds/."""
     classes = []
     builds_dir = os.path.join(BASE_DIR, "data.rot", "lib", "data", "player_builds")
     
-    
-        
-    for filename in os.listdir(builds_dir):
-        if filename.endswith(".xml"):
-            filepath = os.path.join(builds_dir, filename)
-            try:
-                tree = ET.parse(filepath)
-                root = tree.getroot()
-                if root.tag == "player_build":
-                    cid = root.get('id', 'unknown')
-                    
-                    name_node = root.find('name')
-                    name = name_node.get('value') if name_node is not None else "Unknown"
-                    
-                    sub_node = root.find('subtitle')
-                    subtitle = sub_node.get('value') if sub_node is not None else ""
-                    
-                    desc_node = root.find('description')
-                    desc = desc_node.get('value') if desc_node is not None else ""
-                    
-                    accent = (255, 255, 255)
-                    color_node = root.find('color')
-                    if color_node is not None:
-                        color_str = color_node.get('value', '(255, 255, 255)')
-                        try:
-                            # Safely parse "(R, G, B)"
-                            parts = color_str.strip("() ").split(',')
-                            accent = tuple(int(p.strip()) for p in parts)
-                        except ValueError:
-                            pass
-                            
-                    clothes = []
-                    clothes_node = root.find('clothes')
-                    if clothes_node is not None:
-                        for cloth in clothes_node.findall('cloth'):
-                            cname = cloth.get('name')
-                            if cname: clothes.append(cname)
-                            
-                    items = []
-                    items_node = root.find('items')
-                    if items_node is not None:
-                        for item in items_node.findall('item'):
-                            iname = item.get('name')
-                            if iname: items.append(iname)
-                            
-                    classes.append({
-                        'id': cid,
-                        'name': name,
-                        'subtitle': subtitle,
-                        'description': desc,
-                        'accent': accent,
-                        'clothes': clothes,
-                        'items': items
-                    })
-            except Exception as e:
-                print(f"[SelectCharacter] Error loading build {filename}: {e}")
-                
+    if os.path.exists(builds_dir):
+        for filename in os.listdir(builds_dir):
+            if filename.endswith(".json"):
+                filepath = os.path.join(builds_dir, filename)
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+
+                    raw_builds = data.get("player_builds", {})
+                    # Support single build per file or a collection of builds
+                    if not raw_builds and ("name" in data or "clothes" in data):
+                        raw_builds = {os.path.splitext(filename)[0]: data}
+
+                    for cid, b_info in raw_builds.items():
+                        name = b_info.get('name', cid.capitalize())
+                        subtitle = b_info.get('subtitle', "")
+                        desc = b_info.get('description', "")
+
+                        raw_color = b_info.get('color', b_info.get('accent', [255, 255, 255]))
+                        if isinstance(raw_color, (list, tuple)) and len(raw_color) >= 3:
+                            accent = tuple(int(p) for p in raw_color[:3])
+                        else:
+                            accent = (255, 255, 255)
+
+                        raw_clothes = b_info.get('clothes', {})
+                        if isinstance(raw_clothes, dict):
+                            clothes_list = list(raw_clothes.values())
+                            clothes_dict = dict(raw_clothes)
+                        elif isinstance(raw_clothes, list):
+                            clothes_list = list(raw_clothes)
+                            clothes_dict = {}
+                        else:
+                            clothes_list = []
+                            clothes_dict = {}
+
+                        raw_items = b_info.get('items', [])
+                        items_list = list(raw_items) if isinstance(raw_items, list) else []
+
+                        classes.append({
+                            'id': cid,
+                            'name': name,
+                            'subtitle': subtitle,
+                            'description': desc,
+                            'accent': accent,
+                            'color': accent,
+                            'clothes': clothes_list,
+                            'clothes_dict': clothes_dict,
+                            'items': items_list
+                        })
+                except Exception as e:
+                    print(f"[SelectCharacter] Error loading build {filename}: {e}")
+
     if not classes:
-        print("[SelectCharacter] No valid XML builds found.")
-       
-        
-    # Sort them by name to keep the UI consistent
+        print("[SelectCharacter] No valid JSON player builds found.")
+
     classes.sort(key=lambda x: x['name'])
     return classes
+
 
 # Initialize the classes directly
 CHARACTER_CLASSES = load_player_builds()
@@ -213,12 +207,10 @@ def init_class_colors(dynamic_gear=None, randomize=False):
         cid = c['id']
         base = DEFAULT_TINTABLE_COLORS.get(cid, {}).copy()
 
-        # Fetch actual clothes for this class to verify which ones are tintable
         all_gear = c['clothes']
         if dynamic_gear and cid in dynamic_gear:
             all_gear = dynamic_gear[cid]['clothes']
 
-        # Determine which slots contain tintable clothes
         tintable_slots = set()
         for it_name in all_gear:
             if is_tintable_cloth(it_name):
@@ -230,12 +222,10 @@ def init_class_colors(dynamic_gear=None, randomize=False):
             for slot in tintable_slots:
                 base[slot] = random.choice(CLOTHING_COLORS)
         else:
-            # Ensure every tintable slot has a color assigned
             for slot in tintable_slots:
                 if slot not in base:
                     base[slot] = random.choice(CLOTHING_COLORS)
 
-        # Hair color
         if dynamic_gear and cid in dynamic_gear:
             base['hair'] = dynamic_gear[cid]['hair_color']
         else:
@@ -281,6 +271,7 @@ def generate_random_traits():
                 disabled.add(c)
 
     return chosen
+
 
 
 def init_all_class_traits():
@@ -355,7 +346,15 @@ def _start_with_class(game, state, class_def):
     clothes_slots = state.get('clothes_slots', ['hair', 'head', 'legs', 'feet', 'body', 'util', 'arms', 'hands', 'facial'])
     chosen_clothes = {slot: "None" for slot in clothes_slots}
 
-    active_clothes = state.get('class_dynamic_gear', {}).get(class_def['id'], {}).get('clothes', class_def.get('clothes', []))
+    # 1. Apply slot-mapped clothes directly from the JSON definition
+    if class_def.get('clothes_dict'):
+        for slot, c_name in class_def['clothes_dict'].items():
+            if slot in chosen_clothes:
+                chosen_clothes[slot] = c_name
+
+    # 2. Overlay dynamic gear (hair, procedural head equips)
+    active_gear = state.get('class_dynamic_gear', {}).get(class_def['id'], {})
+    active_clothes = active_gear.get('clothes', class_def.get('clothes', []))
 
     for c_name in active_clothes:
         it = _find_cloth_item(c_name)
@@ -410,7 +409,7 @@ def _start_with_class(game, state, class_def):
                     else:
                         final_attrs[attr] = max(0, cur + val)
 
-    # Ensure no attribute can start below 0
+    # Ensure no attribute starts below 0
     for attr in final_attrs:
         if isinstance(final_attrs[attr], dict):
             final_attrs[attr]['level'] = max(0, final_attrs[attr].get('level', 0))
@@ -419,13 +418,11 @@ def _start_with_class(game, state, class_def):
 
     final_player_data['attributes'] = final_attrs
 
-    # World seed and preset resolution
+    # Visuals and Audio
     final_player_data['visuals'] = {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'}
     final_player_data['sounds'] = {'steps': 'steps.ogg'}
 
-    
-
-    # Singleplayer branch below...
+    # Save and launch environment
     w_state = getattr(game, 'world_setup_state', {})
     preset_to_load = state.get('selected_config_preset') or w_state.get('selected_config_preset', 'world')
 
@@ -444,22 +441,20 @@ def _start_with_class(game, state, class_def):
         if not world_data:
             from core.ui.helpers.trait_config_loader import load_config_data
             world_data = load_config_data(core.data.config.get_world_config_path("world"))
-        from core.ui.helpers.trait_config_loader import save_config_json
-        save_config_json(world_data, world_json_path)
-        core.data.config.load_settings(world_json_path)
-
+        from core.ui.helpers.trait_config_loader import save_config_xml
+        save_config_xml(world_data, world_json_path)
     elif save_folder:
         save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_folder)
-        world_xml_path = os.path.join(save_path, "world.xml")
+        world_json_path = os.path.join(save_path, "world.json")
     else:
-        world_xml_path = None
+        world_json_path = None
 
-    if world_xml_path and os.path.exists(world_xml_path):
-        core.data.config.load_settings(world_xml_path)
+    if world_json_path and os.path.exists(world_json_path):
+        core.data.config.load_settings(world_json_path)
 
     game.current_save_folder_name = save_folder
     final_player_data['save_folder_name'] = save_folder
-    final_player_data['world_xml_path'] = world_xml_path
+    final_player_data['world_xml_path'] = world_json_path
     final_player_data['selected_config_preset'] = preset_to_load
     final_player_data['game_settings'] = world_data
 
@@ -477,7 +472,6 @@ def _start_with_class(game, state, class_def):
     game.loading_data = final_player_data
     game.game_state = 'LOADING'
     game.loading_done = False
-
 
 def draw_select_character_screen(game, state, mouse_pos):
     scale = UI_SCALE

@@ -1,0 +1,52 @@
+{
+  "player": {
+    "name": "Player",
+    "sex": "Male",
+    "traits": [],
+    "stats": {
+      "health": 100.0,
+      "stamina": 100.0,
+      "water": 100.0,
+      "food": 100.0,
+      "anxiety": 0.0,
+      "infection": 0.0,
+      "defence": 0.0
+    },
+    "attributes": {
+      "strength": 0.0,
+      "fitness": 0.0,
+      "melee": 0.0,
+      "ranged": 0.0,
+      "maintenance": 0.0,
+      "lucky": 0.0,
+      "agility": 0.0,
+      "intelligence": 0.0
+    },
+    "initial_loot": [
+      { "name": "ID", "chance": 1.0 },
+      { "name": "Wallet", "chance": 1.0 },
+      { "name": "Cartography Sector [MAP_POS]", "chance": 1.0 },
+      { "name": "38 Revolver", "chance": 1.0 },
+      { "name": "Ammo Box 38", "chance": 1.0 }
+    ],
+    "visuals": {
+      "center": "player.png",
+      "left": "player_left.png",
+      "right": "player_right.png"
+    },
+    "clothes": {
+      "head": null,
+      "util": null,
+      "hair": null,
+      "facial": null,
+      "feet": null,
+      "hand": null,
+      "body": null,
+      "arms": null,
+      "legs": null,
+      "util2": null,
+      "util3": null
+    },
+    "recipes": []
+  }
+}

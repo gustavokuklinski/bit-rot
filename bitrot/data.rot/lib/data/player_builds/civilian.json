@@ -1,0 +1,22 @@
+{
+  "player_builds": {
+    "civilian": {
+      "name": "Civilian",
+      "subtitle": "Main Work Force",
+      "description": "The main work force who paid to be safe and get a part of the new world.",
+      "color": [255, 206, 149],
+      "clothes": {
+        "feet": "Sneakers",
+        "body": "Next Petrol Tshirt",
+        "legs": "Jeans Short"
+      },
+      "items": [
+        "ID",
+        "Wallet",
+        "38 Revolver",
+        "Ammo Box 38",
+        "Cartography Sector [MAP_POS]"
+      ]
+    }
+  }
+}

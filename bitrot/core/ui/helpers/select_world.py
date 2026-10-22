@@ -1,11 +1,11 @@
 # core/ui/helpers/select_world.py
 
 import os
+import json
 import pygame
 import random
 from datetime import datetime
 from types import SimpleNamespace
-import xml.etree.ElementTree as ET
 from core.systems.save_manager import delete_pending_world_save
 
 import core.data.config
@@ -43,47 +43,39 @@ def _get_mode_icon(filename_or_relpath, size=(48, 48)):
     return fallback
 
 def load_world_builds():
-    """Dynamically loads world build modes from XML files in world_builds/."""
+    """Dynamically loads world build modes from JSON files in world_builds/."""
     builds = []
     builds_dir = os.path.join(BASE_DIR, "data.rot", "lib", "data", "world_builds")
     
     if os.path.exists(builds_dir):
         for filename in os.listdir(builds_dir):
-            if filename.endswith(".xml"):
+            if filename.endswith(".json"):
                 filepath = os.path.join(builds_dir, filename)
                 try:
-                    tree = ET.parse(filepath)
-                    root = tree.getroot()
-                    if root.tag == "build":
-                        bid = root.get('id', 'unknown')
-                        props = root.find('properties')
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+
+                    raw_builds = data.get("builds", {})
+                    # Support single build per file or multiple builds
+                    if not raw_builds and "properties" in data:
+                        raw_builds = {os.path.splitext(filename)[0]: data}
+
+                    for bid, b_info in raw_builds.items():
+                        props = b_info.get("properties", {})
+                        name = props.get("name", bid.capitalize())
+                        subtitle = props.get("subtitle", "")
+                        icon_path = props.get("icon_path", "ui/infection.png")
                         
-                        name, subtitle, icon_path = "Unknown", "", "ui/infection.png"
-                        accent, tooltips = (255, 255, 255), []
-                        
-                        if props is not None:
-                            n_node = props.find('name')
-                            if n_node is not None: name = n_node.get('value', 'Unknown')
+                        raw_accent = props.get("accent", [255, 255, 255])
+                        if isinstance(raw_accent, (list, tuple)) and len(raw_accent) >= 3:
+                            accent = tuple(int(c) for c in raw_accent[:3])
+                        else:
+                            accent = (255, 255, 255)
                             
-                            s_node = props.find('subtitle')
-                            if s_node is not None: subtitle = s_node.get('value', '')
-                            
-                            i_node = props.find('icon_path')
-                            if i_node is not None: icon_path = i_node.get('value', 'ui/infection.png')
-                            
-                            c_node = props.find('accent')
-                            if c_node is not None:
-                                try:
-                                    parts = c_node.get('value', '(255,255,255)').strip("() ").split(',')
-                                    accent = tuple(int(p.strip()) for p in parts)
-                                except: pass
-                                
-                            t_node = props.find('tooltips')
-                            if t_node is not None:
-                                tt_str = t_node.get('value', '[]')
-                                if tt_str.startswith('[') and tt_str.endswith(']'):
-                                    tooltips = [s.strip() for s in tt_str[1:-1].split(',')]
-                                    
+                        tooltips = props.get("tooltips", [])
+                        if not isinstance(tooltips, list):
+                            tooltips = [str(tooltips)]
+
                         builds.append({
                             'id': bid,
                             'name': name,
@@ -91,7 +83,8 @@ def load_world_builds():
                             'icon_path': icon_path,
                             'accent': accent,
                             'tooltip_lines': tooltips,
-                            'filename': filename
+                            'filename': filename,
+                            'world_data': b_info.get("world", {})
                         })
                 except Exception as e:
                     print(f"[SelectWorld] Error loading {filename}: {e}")
@@ -101,40 +94,36 @@ def load_world_builds():
 
 WORLD_MODES = load_world_builds()
 
-def _load_world_build_config(filename):
-    """Parses the <world> block from the chosen XML file."""
+def _load_world_build_config(filename, mode_id=None):
+    """Parses the 'world' block from the chosen JSON file."""
+    if filename.endswith(".xml"):
+        filename = os.path.splitext(filename)[0] + ".json"
+
     path = os.path.join(BASE_DIR, "data.rot", "lib", "data", "world_builds", filename)
-    if not os.path.exists(path): return {}
+    if not os.path.exists(path):
+        return {}
     try:
-        tree = ET.parse(path)
-        world_node = tree.getroot().find('world')
-        data = {}
-        if world_node is not None:
-            for child in world_node:
-                block_name = child.tag
-                data[block_name] = {}
-                for setting in child:
-                    key = setting.tag
-                    val = setting.get('value')
-                    display_name = setting.get('name', key)
-                    default_val = setting.get('default')
-                    setting_dict = {'value': val, 'name': display_name}
-                    if default_val is not None:
-                        setting_dict['default'] = default_val
-                    data[block_name][key] = setting_dict
-        return data
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        builds = data.get("builds", {})
+        if mode_id and mode_id in builds:
+            return builds[mode_id].get("world", {})
+        if builds:
+            first_build = next(iter(builds.values()))
+            return first_build.get("world", {})
+        return data.get("world", data)
     except Exception as e:
         print(f"Error parsing world data from {filename}: {e}")
         return {}
 
 def _apply_build_and_proceed(game, state, mode_id, filename):
-    """Loads world settings in memory, creates save folder with world.xml, and proceeds to Character Selection."""
+    """Loads world settings from JSON, creates save folder with world.json, and proceeds to Character Selection."""
     from datetime import datetime
     from core.data.config import get_writable_dir
     from core.ui.helpers.trait_config_loader import save_config_json
 
     if filename:
-        world_data = _load_world_build_config(filename)
+        world_data = _load_world_build_config(filename, mode_id=mode_id)
     else:
         path = core.data.config.get_world_config_path('world')
         world_data = load_config_data(path)
@@ -173,7 +162,7 @@ def _apply_build_and_proceed(game, state, mode_id, filename):
     if not state.get('world_seed'):
         state['world_seed'] = "".join(str(random.randint(0, 9)) for _ in range(12))
 
-    # Create the save folder immediately with world.xml inside
+    # Create the save folder with world.json
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     save_name = f"save_{mode_id}_{timestamp}"
     save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_name)
@@ -193,7 +182,7 @@ def _apply_build_and_proceed(game, state, mode_id, filename):
     game.world_setup_state['chosen_mode'] = mode_id
     game.world_setup_state['world_seed'] = state['world_seed']
     game.world_setup_state['save_folder_name'] = save_name
-    game.world_setup_state['world_json_path'] = world_json_path
+    game.world_setup_state['world_xml_path'] = world_json_path
     game.world_setup_state['world_unsaved'] = False
 
     state['current_tab'] = 'SelectCharacter'
