@@ -131,7 +131,7 @@ def _apply_build_and_proceed(game, state, mode_id, filename):
     """Loads world settings in memory, creates save folder with world.xml, and proceeds to Character Selection."""
     from datetime import datetime
     from core.data.config import get_writable_dir
-    from core.ui.helpers.trait_config_loader import save_config_xml
+    from core.ui.helpers.trait_config_loader import save_config_json
 
     if filename:
         world_data = _load_world_build_config(filename)
@@ -179,12 +179,12 @@ def _apply_build_and_proceed(game, state, mode_id, filename):
     save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_name)
     os.makedirs(save_path, exist_ok=True)
 
-    world_xml_path = os.path.join(save_path, "world.xml")
-    save_config_xml(world_data, world_xml_path)
+    world_json_path = os.path.join(save_path, "world.json")
+    save_config_json(world_data, world_json_path)
 
     game.current_save_folder_name = save_name
     state['save_folder_name'] = save_name
-    state['world_xml_path'] = world_xml_path
+    state['world_json_path'] = world_json_path
 
     if not hasattr(game, 'world_setup_state'):
         game.world_setup_state = {}
@@ -193,7 +193,7 @@ def _apply_build_and_proceed(game, state, mode_id, filename):
     game.world_setup_state['chosen_mode'] = mode_id
     game.world_setup_state['world_seed'] = state['world_seed']
     game.world_setup_state['save_folder_name'] = save_name
-    game.world_setup_state['world_xml_path'] = world_xml_path
+    game.world_setup_state['world_json_path'] = world_json_path
     game.world_setup_state['world_unsaved'] = False
 
     state['current_tab'] = 'SelectCharacter'

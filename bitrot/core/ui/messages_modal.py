@@ -73,22 +73,24 @@ def draw_messages_modal(surface, game, modal, assets):
     for msg in active_log:
         color = WHITE
         
-        # Check if the message is from the Player
-        if msg.startswith("[") and "]: " in msg:
+        # 1. Distinguish incoming/outgoing radio transmissions
+        if msg.startswith("[Radio "):
+            color = (50, 220, 255)  # Cyan Radio Color
+        # 2. Local player speech
+        elif msg.startswith("[") and "]: " in msg:
             color = YELLOW
         else:
-            # Check if the message is from a Radio Station
+            # 3. Radio Stations
             for st_name in radio_stations:
                 if msg.startswith(st_name + ":"):
                     if "Exxoil" in st_name:
                         color = ORANGE
                     elif "Military" in st_name:
-                        color = (100, 200, 255) # Light Blue
+                        color = (100, 200, 255)
                     else:
-                        color = (100, 255, 100) # Generic Green for custom radios
+                        color = (100, 255, 100)
                     break
 
-        # Wrap text and append with its assigned color
         for line in wrap_text(msg, font_12, max_text_width):
             wrapped_log.append((line, color))
 

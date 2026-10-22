@@ -1,7 +1,7 @@
 # core/ui/helpers/trait_config_loader.py
 import os
+import json
 import xml.etree.ElementTree as ET
-import xml.dom.minidom
 from core.data.config import *
 
 def load_trait_definitions():
@@ -111,74 +111,50 @@ def load_trait_definitions():
     return traits
 
 def load_config_data(filepath):
+    if filepath.endswith('.xml'):
+        filepath = os.path.splitext(filepath)[0] + '.json'
     if not os.path.exists(filepath):
         print(f"Config file not found: {filepath}")
         return {}
 
     try:
-        tree = ET.parse(filepath)
-        root = tree.getroot()
-        data = {}
-        
-        for child in root:
-            block_name = child.tag
-            data[block_name] = {}
-            for setting in child:
-                key = setting.tag
-                val = setting.get('value')
-                display_name = setting.get('name', key)
-                default_val = setting.get('default')
-                setting_dict = {'value': val, 'name': display_name}
-                if default_val is not None:
-                    setting_dict['default'] = default_val
-
-                data[block_name][key] = setting_dict
+        with open(filepath, 'r', encoding='utf-8') as f:
+            raw = json.load(f)
+        data = raw.get('world', raw.get('preferences', raw))
         return data
     except Exception as e:
         print(f"Error loading config {filepath}: {e}")
         return {}
 
-def save_config_xml(data, filepath):
-    # Determine root element name based on file path to maintain clean XML
+def save_config_json(data, filepath):
+    if filepath.endswith('.xml'):
+        filepath = os.path.splitext(filepath)[0] + '.json'
     root_tag = "world" if "world" in os.path.basename(filepath).lower() else "preferences"
-    root = ET.Element(root_tag)
-    
-    for block_name, settings in data.items():
-        block_node = ET.SubElement(root, block_name)
-        for key, val_data in settings.items():
-            if isinstance(val_data, dict):
-                val = val_data.get('value', '')
-                name = val_data.get('name', '')
-                default_val = val_data.get('default')
-                elem = ET.SubElement(block_node, key, value=str(val))
-                if name:
-                    elem.set('name', name)
-                if default_val is not None:
-                    elem.set('default', str(default_val))
-            else:
-                ET.SubElement(block_node, key, value=str(val_data))
+    out = {root_tag: data}
 
     try:
-        raw_xml = ET.tostring(root, 'utf-8')
-        parsed = xml.dom.minidom.parseString(raw_xml)
-        pretty_xml = parsed.toprettyxml(indent="    ")
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        with open(filepath, "w") as f:
-            f.write(pretty_xml)
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(out, f, indent=2)
         print(f"Config saved to {filepath}")
     except Exception as e:
-        print(f"Error saving config XML: {e}")
+        print(f"Error saving config JSON: {e}")
+
+save_config_json = save_config_json  # Seamless backward-compatibility alias
 
 def _load_config_presets(state):
-    preset_dir = "./data.rot/save/config"
+    preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "config")
     if not os.path.exists(preset_dir):
-        os.makedirs(preset_dir)
+        os.makedirs(preset_dir, exist_ok=True)
     presets = ["world"] 
     try:
-        files = [f for f in os.listdir(preset_dir) if f.endswith('.xml') and f != "preferences.xml"]
-        for f in files:
-            name = f.replace('.xml', '')
-            if name != 'world':
+        files = [
+            f for f in os.listdir(preset_dir) 
+            if f.endswith('.json') and not f.startswith("preferences") and not f.startswith("keybinds") and not f.startswith("voip")
+        ]
+        for f in sorted(files):
+            name = os.path.splitext(f)[0]
+            if name != 'world' and name not in presets:
                 presets.append(name)
     except Exception:
         pass

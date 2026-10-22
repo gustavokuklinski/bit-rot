@@ -5,7 +5,7 @@ import random
 from datetime import datetime
 import core.data.config
 from core.data.config import *
-from core.ui.helpers.trait_config_loader import load_config_data, save_config_xml
+from core.ui.helpers.trait_config_loader import load_config_data, save_config_json
 from core.data.localization import tr
 from core.ui.modals import draw_scrollbar
 
@@ -44,9 +44,9 @@ def _load_world_presets(state):
     
     presets = ["world"]
     try:
-        files = [f for f in os.listdir(preset_dir) if f.startswith('world-') and f.endswith('.xml')]
+        files = [f for f in os.listdir(preset_dir) if f.startswith('world-') and f.endswith('.json')]
         for f in sorted(files):
-            presets.append(f.replace('.xml', ''))
+            presets.append(f.replace('.json', ''))
     except Exception:
         pass
     state['config_preset_list'] = presets
@@ -61,8 +61,8 @@ def _save_world_preset(state):
         preset_name = 'world'
     preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "config")
     os.makedirs(preset_dir, exist_ok=True)
-    save_path = os.path.join(preset_dir, f"{preset_name}.xml")
-    save_config_xml(state['world_data'], save_path)
+    save_path = os.path.join(preset_dir, f"{preset_name}.json")
+    save_config_json(state['world_data'], save_path)
     state['world_unsaved'] = False
     _load_world_presets(state)
 
@@ -464,32 +464,28 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
             if state.get('world_unsaved', False) or preset_name != 'world':
                 _save_world_preset(state)
 
-            # Create the save folder with world.xml for Sandbox mode
+            # Create the save folder with world.json for Sandbox mode
             mode_id = state.get('chosen_mode', 'sandbox')
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             save_name = f"save_{mode_id}_{timestamp}"
             save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_name)
             os.makedirs(save_path, exist_ok=True)
 
-            world_xml_path = os.path.join(save_path, "world.xml")
-            save_config_xml(state['world_data'], world_xml_path)
+            world_json_path = os.path.join(save_path, "world.json")
+            save_config_json(state['world_data'], world_json_path)
 
             game.current_save_folder_name = save_name
             state['save_folder_name'] = save_name
-            state['world_xml_path'] = world_xml_path
+            state['world_json_path'] = world_json_path
 
             game.player_setup_state['save_folder_name'] = save_name
-            game.player_setup_state['world_xml_path'] = world_xml_path
+            game.player_setup_state['world_json_path'] = world_json_path
             game.player_setup_state['world_data'] = state['world_data']
             game.player_setup_state['world_seed'] = state.get('world_seed', '')
             game.player_setup_state['selected_config_preset'] = preset_name
             game.player_setup_state['world_preset_name'] = preset_name
             game.player_setup_state['chosen_mode'] = mode_id
-            game.player_setup_state['current_tab'] = 'Player'  # Go directly to Player Builder
-            return
-
-        if clickable_rects.get('name_input') and clickable_rects['name_input'].collidepoint(mouse_pos):
-            state['name_input_active'] = True
+            game.player_setup_state['current_tab'] = 'Player'
             return
 
         if clickable_rects.get('seed_input') and clickable_rects['seed_input'].collidepoint(mouse_pos):

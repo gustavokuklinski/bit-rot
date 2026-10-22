@@ -80,58 +80,33 @@ def _get_friendly_value_display(key, value):
     return ""
 
 def load_preferences_data(filepath):
+    if filepath.endswith('.xml'):
+        filepath = os.path.splitext(filepath)[0] + '.json'
     if not os.path.exists(filepath):
         return {}
     try:
-        import xml.etree.ElementTree as ET
-        tree = ET.parse(filepath)
-        root = tree.getroot()
-        data = {}
-        for child in root:
-            block_name = child.tag
-            data[block_name] = {}
-            for setting in child:
-                key = setting.tag
-                val = setting.get('value')
-                display_name = setting.get('name', key)
-                default_val = setting.get('default')
-                setting_dict = {'value': val, 'name': display_name}
-                if default_val is not None:
-                    setting_dict['default'] = default_val
-                data[block_name][key] = setting_dict
-        return data
+        with open(filepath, 'r', encoding='utf-8') as f:
+            raw = json.load(f)
+        return raw.get('preferences', raw)
     except Exception as e:
         print(f"Error loading preferences {filepath}: {e}")
         return {}
 
-def save_preferences_xml(data, filepath=None):
+def save_preferences_json(data, filepath=None):
     if filepath is None:
         filepath = core.data.config.get_preferences_path(for_save=True)
+    if filepath.endswith('.xml'):
+        filepath = os.path.splitext(filepath)[0] + '.json'
 
-    import xml.etree.ElementTree as ET
-    import xml.dom.minidom
-    root = ET.Element("preferences")
-    for block_name, settings in data.items():
-        block_node = ET.SubElement(root, block_name)
-        for key, val_data in settings.items():
-            val = val_data.get('value', '')
-            name = val_data.get('name', '')
-            default_val = val_data.get('default')
-            elem = ET.SubElement(block_node, key, value=str(val))
-            if name and name != key:
-                elem.set('name', name)
-            if default_val is not None:
-                elem.set('default', str(default_val))
-
+    out = {"preferences": data}
     try:
-        raw_xml = ET.tostring(root, 'utf-8')
-        parsed = xml.dom.minidom.parseString(raw_xml)
-        pretty_xml = parsed.toprettyxml(indent="    ")
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        with open(filepath, "w") as f:
-            f.write(pretty_xml)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(out, f, indent=2)
     except Exception as e:
-        print(f"Error saving preferences XML: {e}")
+        print(f"Error saving preferences JSON: {e}")
+
+save_preferences_xml = save_preferences_json
 
 class PreferencesMenuUI:
     def __init__(self):

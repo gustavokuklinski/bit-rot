@@ -193,12 +193,11 @@ def handle_mouse_down(game, event, mouse_pos):
                                 topmost_modal['map_zoom'] = max(2, current_zoom - 1)
                         return
                     elif button.get('type') == 'send_msg':
-                        if game.chat_input_text.strip():
-                            game.player.chat_text = game.chat_input_text
-                            game.player.chat_timer = game.player.chat_duration
-                            display_message(game, f"[{tr('msg', 'You')}]: {game.chat_input_text}")
+                        if getattr(game, 'chat_input_text', '').strip():
+                            from core.events.keyboard import send_chat_message
+                            send_chat_message(game, game.chat_input_text)
                             game.chat_input_text = ""
-                            game.chat_active = True 
+                            game.chat_active = False
                         return
                     elif button.get('type') == 'chat_input':
                         game.chat_active = True

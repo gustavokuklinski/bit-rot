@@ -440,12 +440,14 @@ def _start_with_class(game, state, class_def):
         save_folder = f"save_{final_mode}_{timestamp}"
         save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_folder)
         os.makedirs(save_path, exist_ok=True)
-        world_xml_path = os.path.join(save_path, "world.xml")
+        world_json_path = os.path.join(save_path, "world.json")
         if not world_data:
             from core.ui.helpers.trait_config_loader import load_config_data
             world_data = load_config_data(core.data.config.get_world_config_path("world"))
-        from core.ui.helpers.trait_config_loader import save_config_xml
-        save_config_xml(world_data, world_xml_path)
+        from core.ui.helpers.trait_config_loader import save_config_json
+        save_config_json(world_data, world_json_path)
+        core.data.config.load_settings(world_json_path)
+
     elif save_folder:
         save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_folder)
         world_xml_path = os.path.join(save_path, "world.xml")

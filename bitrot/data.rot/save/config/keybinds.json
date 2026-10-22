@@ -1,0 +1,47 @@
+{
+  "keybinds": {
+    "keyboard_mouse": {
+      "move_up": { "key": 119, "default": 119 },
+      "move_down": { "key": 115, "default": 115 },
+      "move_left": { "key": 97, "default": 97 },
+      "move_right": { "key": 100, "default": 100 },
+      "run": { "key": 1073742049, "default": 1073742049 },
+      "aim": { "key": 1073742048, "default": 1073742048 },
+      "interact": { "key": 101, "default": 101 },
+      "chat": { "key": 116, "default": 116 },
+      "help": { "key": 1073741882, "default": 1073741882 },
+      "pause": { "key": 1073741883, "default": 1073741883 },
+      "toggle_menu": { "key": 1073741884, "default": 1073741884 },
+      "reset_modals": { "key": 1073741885, "default": 1073741885 },
+      "toggle_status": { "key": 104, "default": 1073741886 },
+      "toggle_inventory": { "key": 105, "default": 1073741887 },
+      "toggle_gear": { "key": 103, "default": 1073741888 },
+      "toggle_nearby": { "key": 110, "default": 1073741889 },
+      "toggle_slots": { "key": 1073741890, "default": 1073741890 },
+      "toggle_messages": { "key": 1073741891, "default": 1073741891 },
+      "toggle_crafting": { "key": 99, "default": 99 },
+      "reload": { "key": 114, "default": 114 },
+      "vehicle_engine": { "key": 113, "default": 113 },
+      "action_shove": { "key": 32, "default": 32 },
+      "toggle_modals": { "key": 9, "default": 9 },
+      "shoot": { "key": -1, "default": -1 },
+      "aim_trigger": { "key": -3, "default": -3 }
+    },
+    "joystick": {
+      "move_up": { "key": 11, "default": 11 },
+      "move_down": { "key": 12, "default": 12 },
+      "move_left": { "key": 13, "default": 13 },
+      "move_right": { "key": 14, "default": 14 },
+      "interact": { "key": 0, "default": 0 },
+      "run": { "key": 1, "default": 1 },
+      "reload": { "key": 3, "default": 3 },
+      "vehicle_engine": { "key": 4, "default": 4 },
+      "action_shove": { "key": 5, "default": 5 },
+      "toggle_modals": { "key": 7, "default": 7 },
+      "pause": { "key": 8, "default": 8 },
+      "reset_modals": { "key": 9, "default": 9 },
+      "shoot": { "key": 15, "default": 15 },
+      "aim_trigger": { "key": 16, "default": 16 }
+    }
+  }
+}

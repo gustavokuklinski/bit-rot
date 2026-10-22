@@ -381,17 +381,17 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
 
     game.map_manager.map_folder = map_path
 
-    world_xml_path = os.path.join(save_path, "world.xml")
-    if not os.path.exists(world_xml_path):
-        from core.ui.helpers.trait_config_loader import save_config_xml, load_config_data
+    world_json_path = os.path.join(save_path, "world.json")
+    if not os.path.exists(world_json_path):
+        from core.ui.helpers.trait_config_loader import save_config_json, load_config_data
         game_settings = player_data.get('game_settings')
         if not game_settings:
-            default_path = os.path.join(DATA_PATH, "world.xml")
+            default_path = os.path.join(DATA_PATH, "world.json")
             game_settings = load_config_data(default_path)
-        save_config_xml(game_settings, world_xml_path)
+        save_config_json(game_settings, world_json_path)
 
-    if os.path.exists(world_xml_path):
-        core.data.config.load_settings(world_xml_path)
+    if os.path.exists(world_json_path):
+        core.data.config.load_settings(world_json_path)
 
     # Apply trait-based config modifiers (e.g. 4 base + 5 vaccine + 2 runner = 11)
     core.data.config.apply_player_traits_config(player_data.get('traits', []))
@@ -652,11 +652,11 @@ def load_game(game, save_folder_name):
     
     game.logger.info(f"Loading game from {save_path}...")
 
-    world_xml_path = os.path.join(save_path, "world.xml")
-    if os.path.exists(world_xml_path):
-        core.data.config.load_settings(world_xml_path)
+    world_json_path = os.path.join(save_path, "world.json")
+    if os.path.exists(world_json_path):
+        core.data.config.load_settings(world_json_path)
     else:
-        core.data.config.load_settings(os.path.join(DATA_PATH, "world.xml"))
+        core.data.config.load_settings(os.path.join(DATA_PATH, "world.json"))
         
     try:
         host_file = os.path.join(save_path, "host.rot")
@@ -1067,7 +1067,7 @@ def load_game(game, save_folder_name):
                     game.map_states[z_map].setdefault('zombies', []).append(z)
 
         # Load Animals
-        animal_path = os.path.join(save_path, "animal.rot")
+        animal_path = os.path.join(save_path, "animal.json")
         if os.path.exists(animal_path):
             with open(animal_path, "r") as f:
                 animal_list = json.load(f)

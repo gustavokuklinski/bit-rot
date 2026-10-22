@@ -15,7 +15,7 @@ import core.data.player_xml_parser
 from core.entities.item.item import Item, ITEM_TEMPLATES
 from core.entities.zombie.zombie import Zombie
 from core.ui.tooltip import draw_tooltip
-from core.ui.helpers.trait_config_loader import _load_config_presets, save_config_xml, load_config_data, TRAIT_DEFINITIONS
+from core.ui.helpers.trait_config_loader import _load_config_presets, save_config_json, load_config_data, TRAIT_DEFINITIONS
 from core.ui.helpers.world import _draw_world_screen, handle_world_events
 from core.data.localization import tr
 from core.ui.modals import draw_scrollbar
@@ -928,16 +928,16 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                     save_folder = f"save_{final_mode}_{timestamp}"
                     save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_folder)
                     os.makedirs(save_path, exist_ok=True)
-                    world_xml_path = os.path.join(save_path, "world.xml")
-                    save_config_xml(final_world_data, world_xml_path)
+                    world_json_path = os.path.join(save_path, "world.json")
+                    save_config_json(final_world_data, world_json_path)
                 elif save_folder:
                     save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_folder)
-                    world_xml_path = os.path.join(save_path, "world.xml")
+                    world_json_path = os.path.join(save_path, "world.json")
                 else:
-                    world_xml_path = None
+                    world_json_path = None
 
-                if world_xml_path and os.path.exists(world_xml_path):
-                    core.data.config.load_settings(world_xml_path)
+                if world_json_path and os.path.exists(world_json_path):
+                    core.data.config.load_settings(world_json_path)
 
                 game.current_save_folder_name = save_folder
                 final_player_data['save_folder_name'] = save_folder

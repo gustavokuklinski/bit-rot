@@ -18,10 +18,18 @@
     </node>
     <node id="Quest: Harddrive">
         <options stage="offer" player_question="I've been scavenging after the island fell." npc_answer="Everybody is. Have you found anything important?" priority="10" req_item="[Laptop]" gain_xp="[lucky:100]" dialog_type="once" unlock_flag="Quest: Harddrive" />
-        <options stage="turn_in" player_question="Just got this Harddrive" npc_answer="This is what people were saying about the black market pharmas around here. I don't have much, take this Blueprint." rqst_item="[Harddrive]" req_item="[Laptop]" gain_xp="[lucky:200]" award_item="[Blueprint]" dialog_type="once" tip="The raw genome data of the flu." complete_flag="Quest: Harddrive" />
+        <options stage="turn_in" player_question="Just got this Harddrive" npc_answer="This is what people were saying about the black market pharmas around here. I don't have much, take this Blueprint." rqst_item="[Harddrive]" req_item="[Laptop]" gain_xp="[lucky:200]" award_item="[Harddrive]" dialog_type="once" tip="The raw genome data of the flu." complete_flag="Quest: Harddrive" />
     </node>
     <node id="Quest: Pendrive">
         <options stage="offer" player_question="Do you know anything about the files?" npc_answer="I'm trying to stay alive here, but people are talking about pharmas trying to steal some shit." priority="10" req_item="[Laptop]" gain_xp="[lucky:100]" dialog_type="once" unlock_flag="Quest: Pendrive" />
-        <options stage="turn_in" player_question="I don't know if you are the right person, but here it is." npc_answer="The vaccine simulations! We need to get out of here fast." rqst_item="[Pendrive]" req_item="[Laptop]" gain_xp="[lucky:200]" award_item="[Vaccine]" dialog_type="once" tip="Some presentations and leaked data due to bad security and public usage." complete_flag="Quest: Pendrive" />
+        <options stage="turn_in" player_question="I don't know if you are the right person, but here it is." npc_answer="The vaccine simulations! We need to get out of here fast." rqst_item="[Pendrive]" req_item="[Laptop]" gain_xp="[lucky:200]" award_item="[Laptop]" dialog_type="once" tip="Some presentations and leaked data due to bad security and public usage." complete_flag="Quest: Pendrive" />
+    </node>
+    <node id="Quest: Reports">
+        <options stage="offer" player_question="What is this reports about? Just found it attached the laptop" npc_answer="This docs are the complement! See at the parts of the code, it cypher them to replicate the test vaccines up and running again!" priority="10" req_item="[Laptop, Harddrive, Pendrive]" gain_xp="[lucky:100]" dialog_type="once" unlock_flag="Quest: Reports" />
+        <options stage="turn_in" player_question="Let's check together!" npc_answer="Take this pendrive with everything syntetized and translated." rqst_item="[Pendrive]" req_item="[Laptop]" gain_xp="[lucky:200]" award_item="[Reports, Pendrive]" dialog_type="once" tip="Cypher to open the Harddrive" complete_flag="Quest: Reports" />
+    </node>
+    <node id="Quest: Radio">
+        <options stage="offer" player_question="This Radio might be useful! Almost died to get it." npc_answer="You just found the Family private radio. This is useless without a translator." priority="10" req_item="[Laptop, Harddrive]" gain_xp="[lucky:100]" dialog_type="once" unlock_flag="Quest: Radio" />
+        <options stage="turn_in" player_question="Let's check together!" npc_answer="Take this pendrive with everything syntetized and translated." rqst_item="[Pendrive]" req_item="[Laptop]" gain_xp="[lucky:200]" award_item="[Vaccine]" dialog_type="once" tip="The hidden family frequency" complete_flag="Quest: Radio" />
     </node>
 </npc_dialog>

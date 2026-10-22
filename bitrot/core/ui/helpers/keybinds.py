@@ -1,8 +1,7 @@
 # core/ui/helpers/keybinds.py
+import json
 import pygame
 import os
-import xml.etree.ElementTree as ET
-import xml.dom.minidom
 import core.data.config as config
 from core.ui.modals import draw_scrollbar
 from core.data.localization import tr
@@ -151,7 +150,7 @@ class KeybindManager:
     def __init__(self):
         self.kb_binds = {k: v['val'] for k, v in DEFAULT_KB_MOUSE_BINDS.items()}
         self.joy_binds = {k: v['val'] for k, v in DEFAULT_JOYSTICK_BINDS.items()}
-        self.filepath = os.path.join(config.get_writable_dir(), "data.rot", "save", "config", "keybinds.xml")
+        self.filepath = os.path.join(config.get_writable_dir(), "data.rot", "save", "config", "keybinds.json")
         self.load()
 
     def load(self):
@@ -159,26 +158,20 @@ class KeybindManager:
             self.save()
             return
         try:
-            tree = ET.parse(self.filepath)
-            root = tree.getroot()
+            with open(self.filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
 
-            kb_node = root.find('keyboard_mouse')
-            if kb_node is not None:
-                for bind_node in kb_node.findall('bind'):
-                    action = bind_node.get('action')
-                    key_val = bind_node.get('key')
-                    if action in self.kb_binds and key_val is not None:
-                        self.kb_binds[action] = int(key_val)
+            kb_data = data.get('keybinds', {}).get('keyboard_mouse', {})
+            for action, info in kb_data.items():
+                if action in self.kb_binds and 'key' in info:
+                    self.kb_binds[action] = int(info['key'])
 
-            joy_node = root.find('joystick')
-            if joy_node is not None:
-                for bind_node in joy_node.findall('bind'):
-                    action = bind_node.get('action')
-                    key_val = bind_node.get('key')
-                    if action in self.joy_binds and key_val is not None:
-                        self.joy_binds[action] = int(key_val)
+            joy_data = data.get('keybinds', {}).get('joystick', {})
+            for action, info in joy_data.items():
+                if action in self.joy_binds and 'key' in info:
+                    self.joy_binds[action] = int(info['key'])
 
-            # Auto-migrate legacy 'M' keybind to F9
+            # Auto-migrate legacy keybinds
             needs_save = False
             if self.kb_binds.get('toggle_messages') in (pygame.K_m, pygame.K_F9):
                 self.kb_binds['toggle_messages'] = pygame.K_F10
@@ -195,29 +188,29 @@ class KeybindManager:
     def save(self):
         try:
             os.makedirs(os.path.dirname(self.filepath), exist_ok=True)
-            root = ET.Element('keybinds')
+            out = {
+                "keybinds": {
+                    "keyboard_mouse": {},
+                    "joystick": {}
+                }
+            }
 
-            kb_node = ET.SubElement(root, 'keyboard_mouse')
             for action, key in self.kb_binds.items():
-                node = ET.SubElement(kb_node, 'bind')
-                node.set('action', action)
-                node.set('key', str(key))
-                if action in DEFAULT_KB_MOUSE_BINDS:
-                    node.set('default', str(DEFAULT_KB_MOUSE_BINDS[action]['val']))
+                default_key = DEFAULT_KB_MOUSE_BINDS.get(action, {}).get('val', key)
+                out["keybinds"]["keyboard_mouse"][action] = {
+                    "key": key,
+                    "default": default_key
+                }
 
-            joy_node = ET.SubElement(root, 'joystick')
             for action, key in self.joy_binds.items():
-                node = ET.SubElement(joy_node, 'bind')
-                node.set('action', action)
-                node.set('key', str(key))
-                if action in DEFAULT_JOYSTICK_BINDS:
-                    node.set('default', str(DEFAULT_JOYSTICK_BINDS[action]['val']))
+                default_key = DEFAULT_JOYSTICK_BINDS.get(action, {}).get('val', key)
+                out["keybinds"]["joystick"][action] = {
+                    "key": key,
+                    "default": default_key
+                }
 
-            raw_xml = ET.tostring(root, 'utf-8')
-            pretty_xml = xml.dom.minidom.parseString(raw_xml).toprettyxml(indent="    ")
-            pretty_xml = os.linesep.join([s for s in pretty_xml.splitlines() if s.strip()])
-            with open(self.filepath, "w") as f:
-                f.write(pretty_xml)
+            with open(self.filepath, 'w', encoding='utf-8') as f:
+                json.dump(out, f, indent=2)
         except Exception as e:
             print(f"Error saving keybinds: {e}")
 

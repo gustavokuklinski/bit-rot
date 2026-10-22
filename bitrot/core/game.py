@@ -32,6 +32,7 @@ from core.states.playing import run_playing
 from core.states.paused import run_paused
 from core.states.game_over import run_game_over
 from core.states.chunk_loading import run_chunk_loading
+from core.systems.network_manager import NetworkManager
 
 class Game:
     def __init__(self):
@@ -254,6 +255,7 @@ class Game:
         self.dynamic_w = GAME_WIDTH
         self.dynamic_h = GAME_HEIGHT
 
+        self.network_manager = NetworkManager(self)
 
     def respawn_player_in_world(self, player_data, save_folder_name):
         return respawn_player_in_world(self, player_data, save_folder_name)
@@ -450,6 +452,8 @@ class Game:
             self.running = False
             raise e
         finally:
+            if hasattr(self, 'network_manager') and self.network_manager:
+                self.network_manager.disconnect()
             self.logger.info("Game Execution Ended safely.")
 
     def _draw_crt_filter(self):

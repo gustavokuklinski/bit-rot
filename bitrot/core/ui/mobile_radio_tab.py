@@ -1,13 +1,81 @@
 # core/ui/mobile_radio_tab.py
 
 import pygame
+import math
+import threading
 from core.data.config import *
 from core.data.localization import tr
 from core.data.radio_manager import RadioManager
 
-def draw_radio_tab(surface, game, modal, assets):
-    # Ensure all XML radio stations are loaded and synchronized
+def get_all_radio_targets(game):
+    """
+    Collects and sorts all valid radio frequencies:
+    - Base XML radio stations (from game.radio_frequencies)
+    - Connected LAN VOIP peers/server (from game.network_manager)
+    Returns: (sorted_freqs, freq_info_map)
+    """
+    # Ensure XML stations are synchronized
     RadioManager.sync_game_frequencies(game)
+
+    freq_info_map = {}
+
+    # 1. Base Radio Stations
+    for name, st_f in getattr(game, 'radio_frequencies', {}).items():
+        if isinstance(st_f, (int, float)):
+            f_key = round(float(st_f), 2)
+            freq_info_map.setdefault(f_key, []).append({
+                'name': name,
+                'type': 'station',
+                'color': ORANGE if "Exxoil" in name else ((100, 200, 255) if "Military" in name else GREEN)
+            })
+
+    # 2. Connected LAN VOIP Peers & Host Frequency
+    net_mgr = getattr(game, 'network_manager', None)
+    if net_mgr and getattr(net_mgr, 'is_connected', False):
+        # Local player's own broadcast frequency
+        my_f = round(float(getattr(net_mgr, 'my_frequency', 114.0)), 2)
+        freq_info_map.setdefault(my_f, []).append({
+            'name': f"My Radio ({my_f:.2f} MHz)",
+            'type': 'self',
+            'color': (0, 255, 255)
+        })
+
+        # Connected remote peers
+        lock = getattr(net_mgr, 'peer_lock', None)
+        peers_copy = []
+        if lock:
+            with lock:
+                peers_copy = list(getattr(net_mgr, 'connected_peers', []))
+        else:
+            peers_copy = list(getattr(net_mgr, 'connected_peers', []))
+
+        for p in peers_copy:
+            p_freq = p.get('freq')
+            if p_freq is not None:
+                f_key = round(float(p_freq), 2)
+                p_role = p.get('role', 'C')
+                p_ip = p.get('ip', 'LAN')
+                label = f"Survivor [{p_role}] ({p_ip})"
+                freq_info_map.setdefault(f_key, []).append({
+                    'name': label,
+                    'type': 'peer',
+                    'color': (50, 255, 120) if p_role == 'S' else (0, 220, 255)
+                })
+
+    # Fallback if no stations exist
+    if not freq_info_map:
+        freq_info_map[114.20] = [{'name': 'Emergency Broadcast', 'type': 'station', 'color': GREEN}]
+
+    sorted_freqs = sorted(freq_info_map.keys())
+    return sorted_freqs, freq_info_map
+
+
+def draw_radio_tab(surface, game, modal, assets):
+    sorted_freqs, freq_info_map = get_all_radio_targets(game)
+
+    min_f = sorted_freqs[0]
+    max_f = sorted_freqs[-1]
+    span = max(0.01, max_f - min_f)
 
     y_offset = modal['rect'].y + 70
     center_x = modal['rect'].centerx
@@ -17,20 +85,20 @@ def draw_radio_tab(surface, game, modal, assets):
     surface.blit(title_surf, title_surf.get_rect(center=(center_x, y_offset)))
     y_offset += 35
 
-    # 2. Dynamic Frequency Range covering all stations
-    station_freqs = [f for f in game.radio_frequencies.values() if isinstance(f, (int, float))]
-    min_f = min([110.42] + station_freqs)
-    max_f = max([123.58] + station_freqs)
-
-    freq = getattr(game, 'current_radio_freq', min_f)
-    freq = max(min_f, min(freq, max_f))
+    # 2. Current Frequency (Snap to valid list if uninitialized or out of bounds)
+    freq = getattr(game, 'current_radio_freq', None)
+    if freq is None or not any(abs(freq - f_cand) < 0.001 for f_cand in sorted_freqs):
+        # Snap to closest existing valid frequency
+        closest_f = min(sorted_freqs, key=lambda f_val: abs(f_val - (freq if freq is not None else min_f)))
+        game.current_radio_freq = closest_f
+        freq = closest_f
 
     # Frequency Text Display
     freq_surf = font_16.render(f"{freq:.2f} MHz", False, GREEN)
     surface.blit(freq_surf, freq_surf.get_rect(center=(center_x, y_offset)))
     y_offset += 45
 
-    # 3. Slider and Navigation Buttons Layout
+    # 3. Slider Track and Button Layout
     track_w, track_h = 140, 10
     btn_size = 24
 
@@ -38,59 +106,40 @@ def draw_radio_tab(surface, game, modal, assets):
     btn_back_rect = pygame.Rect(track_rect.left - btn_size - 8, y_offset - (btn_size - track_h) // 2, btn_size, btn_size)
     btn_fwd_rect = pygame.Rect(track_rect.right + 8, y_offset - (btn_size - track_h) // 2, btn_size, btn_size)
 
-    # 4. Handle Mouse Interactions
+    # 4. Mouse Interactions
     mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
     mouse_pressed = pygame.mouse.get_pressed()[0]
     mouse_just_pressed = mouse_pressed and not modal.get('radio_mouse_last', False)
     modal['radio_mouse_last'] = mouse_pressed
 
-    # Sorted list of stations for seeking
-    sorted_stations = sorted(game.radio_frequencies.items(), key=lambda item: item[1])
-
-    # Button Clicks: Back (<) and Forward (>)
     is_back_hover = btn_back_rect.collidepoint(mouse_pos)
     is_fwd_hover = btn_fwd_rect.collidepoint(mouse_pos)
 
+    # Find current index in discrete frequency list
+    cur_idx = min(range(len(sorted_freqs)), key=lambda i: abs(sorted_freqs[i] - freq))
+
+    # --- ONE-BY-ONE ARROW LOOPING ---
     if mouse_just_pressed:
         if is_back_hover:
-            # Slide to previous station
-            prev_station_freq = None
-            for _, st_f in reversed(sorted_stations):
-                if st_f < freq - 0.05:
-                    prev_station_freq = st_f
-                    break
-            if prev_station_freq is not None:
-                game.current_radio_freq = prev_station_freq
-            elif sorted_stations:
-                # Wrap around to highest frequency station
-                game.current_radio_freq = sorted_stations[-1][1]
-            else:
-                game.current_radio_freq = max(min_f, round(freq - 0.20, 2))
+            new_idx = (cur_idx - 1) % len(sorted_freqs)
+            game.current_radio_freq = sorted_freqs[new_idx]
             freq = game.current_radio_freq
+            if hasattr(game, 'sound_manager'):
+                game.sound_manager.play_ui_hover()
 
         elif is_fwd_hover:
-            # Slide to next station
-            next_station_freq = None
-            for _, st_f in sorted_stations:
-                if st_f > freq + 0.05:
-                    next_station_freq = st_f
-                    break
-            if next_station_freq is not None:
-                game.current_radio_freq = next_station_freq
-            elif sorted_stations:
-                # Wrap around to lowest frequency station
-                game.current_radio_freq = sorted_stations[0][1]
-            else:
-                game.current_radio_freq = min(max_f, round(freq + 0.20, 2))
+            new_idx = (cur_idx + 1) % len(sorted_freqs)
+            game.current_radio_freq = sorted_freqs[new_idx]
             freq = game.current_radio_freq
+            if hasattr(game, 'sound_manager'):
+                game.sound_manager.play_ui_hover()
 
-    # Slider Handle Position
-    span = max(0.01, max_f - min_f)
-    pct = (freq - min_f) / span
+    # Slider Handle Geometry
+    pct = (freq - min_f) / span if span > 0 else 0.5
     handle_x = track_rect.x + int(pct * track_w)
     handle_rect = pygame.Rect(handle_x - 8, y_offset - 8, 16, 26)
 
-    # Click-and-Drag Slider Interaction
+    # --- SLIDER DRAG SNAPPING (Discrete step-by-step) ---
     if 'radio_dragging' not in modal:
         modal['radio_dragging'] = False
 
@@ -102,20 +151,21 @@ def draw_radio_tab(surface, game, modal, assets):
         modal['radio_dragging'] = False
 
     if modal['radio_dragging']:
-        new_x = max(track_rect.x, min(mouse_pos[0], track_rect.right))
-        new_pct = (new_x - track_rect.x) / track_w
-        raw_freq = round(min_f + new_pct * span, 2)
+        clamped_x = max(track_rect.x, min(mouse_pos[0], track_rect.right))
+        drag_pct = (clamped_x - track_rect.x) / float(track_w)
+        target_f = min_f + (drag_pct * span)
 
-        # Magnetic snapping within 0.12 MHz of any station
-        snapped_freq = raw_freq
-        for _, st_f in sorted_stations:
-            if abs(raw_freq - st_f) <= 0.12:
-                snapped_freq = st_f
-                break
+        # Snap directly to the closest valid frequency
+        snapped_f = min(sorted_freqs, key=lambda f_val: abs(f_val - target_f))
+        
+        if snapped_f != game.current_radio_freq:
+            game.current_radio_freq = snapped_f
+            if hasattr(game, 'sound_manager'):
+                game.sound_manager.play_ui_hover()
 
-        game.current_radio_freq = snapped_freq
-        freq = snapped_freq
-        handle_x = track_rect.x + int(((freq - min_f) / span) * track_w)
+        freq = game.current_radio_freq
+        pct = (freq - min_f) / span if span > 0 else 0.5
+        handle_x = track_rect.x + int(pct * track_w)
         handle_rect.x = handle_x - 8
 
     # 5. Render Buttons and Slider
@@ -127,9 +177,19 @@ def draw_radio_tab(surface, game, modal, assets):
     txt_back = font_12.render("<", False, YELLOW if is_back_hover else WHITE)
     surface.blit(txt_back, txt_back.get_rect(center=btn_back_rect.center))
 
-    # Track
+    # Track Background
     pygame.draw.rect(surface, GRAY_40, track_rect, border_radius=5)
     pygame.draw.rect(surface, GRAY_60, track_rect, 1, border_radius=5)
+
+    # Dial Frequency Ticks on the Track
+    for f_val in sorted_freqs:
+        t_pct = (f_val - min_f) / span if span > 0 else 0.5
+        tick_x = track_rect.x + int(t_pct * track_w)
+        
+        is_peer_target = any(info['type'] in ('peer', 'self') for info in freq_info_map.get(f_val, []))
+        tick_color = (0, 220, 255) if is_peer_target else (120, 120, 120)
+        tick_h = 6 if is_peer_target else 4
+        pygame.draw.line(surface, tick_color, (tick_x, track_rect.centery - tick_h // 2), (tick_x, track_rect.centery + tick_h // 2), 1)
 
     # Handle
     pygame.draw.rect(surface, WHITE, handle_rect, border_radius=4)
@@ -145,17 +205,25 @@ def draw_radio_tab(surface, game, modal, assets):
 
     y_offset += 45
 
-    # 6. Tuned Status / Noise Indication
+    # 6. Tuned Status Display
     status_text = "[ STATIC NOISE ]"
     color = GRAY
 
-    for name, st_freq in sorted_stations:
-        if abs(freq - st_freq) <= 0.08:
-            status_text = f"Tuned: {name}"
-            color = ORANGE if "Exxoil" in name else (BLUE if "Military" in name else GREEN)
-            break
+    # Exact match lookup
+    target_entries = freq_info_map.get(freq, [])
+    if not target_entries:
+        # Near match fallback
+        for f_val, entries in freq_info_map.items():
+            if abs(freq - f_val) <= 0.05:
+                target_entries = entries
+                break
 
-    # Keep text pixel-sharp and truncate with ellipsis if it exceeds the modal width
+    if target_entries:
+        entry = target_entries[0]
+        status_text = f"Tuned: {entry['name']}"
+        color = entry['color']
+
+    # Text wrapping and truncation
     max_status_w = modal['rect'].width - 24
     if font_12.size(status_text)[0] > max_status_w:
         trimmed = status_text

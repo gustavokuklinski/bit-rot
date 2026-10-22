@@ -18,7 +18,7 @@
         <trait id="Profession_Scientist" name="Scientist" cost="3" tooltip="High intelligence, but severely lacking in physical prowess." disable="[Profession_Maintenance, Profession_CEO_assistant, Profession_Mechanic, Profession_Spy, Profession_Unemployed, Profession_Nurse, Profession_Police_Officer]">
             <attributes level="[strength:5, fitness:5, agility: 1, lucky: 2, maintenance: 2, intelligence: 5]" />
             <recipe magazine="Survivor Guide Basic" />
-            
+
         </trait>
         
         <trait id="Profession_Mechanic" name="Mechanic" cost="3" tooltip="Knows how vehicles work and maintains tools well." disable="[Profession_Maintenance, Profession_Scientist, Profession_CEO_assistant, Profession_Unemployed, Profession_Spy, Profession_Nurse, Profession_Police_Officer]">

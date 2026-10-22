@@ -7,6 +7,7 @@ from core.ui.mobile_clock_tab import draw_clock_tab
 from core.ui.mobile_map_tab import draw_map_tab
 from core.ui.mobile_apps_tab import draw_apps_tab
 from core.ui.mobile_radio_tab import draw_radio_tab
+from core.ui.mobile_voip_tab import draw_voip_tab
 
 def draw_mobile_modal(surface, game, modal, assets):
     try:
@@ -26,6 +27,7 @@ def draw_mobile_modal(surface, game, modal, assets):
         {'label': 'Map', 'icon_path':  SPRITE_PATH + 'ui/map.png'},
         {'label': 'Apps', 'icon_path':  SPRITE_PATH + 'ui/sd_card.png'},
         {'label': 'Radio', 'icon_path': SPRITE_PATH + 'ui/radio.png'},
+        {'label': 'VOIP', 'icon_path': SPRITE_PATH + 'ui/radio.png'},
     ]
     modal['tabs_data'] = tabs_data
 
@@ -47,5 +49,7 @@ def draw_mobile_modal(surface, game, modal, assets):
         draw_apps_tab(surface, game, modal, assets)
     elif modal['active_tab'] == 'Radio':
         draw_radio_tab(surface, game, modal, assets)
+    elif modal['active_tab'] == 'VOIP':
+        draw_voip_tab(surface, game, modal, assets)
 
     return [close_button]

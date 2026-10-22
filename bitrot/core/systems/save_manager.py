@@ -32,7 +32,7 @@ def delete_pending_world_save(game, state=None):
         return
 
     save_dir = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_name)
-    host_rot = os.path.join(save_dir, "host.rot")
+    host_rot = os.path.join(save_dir, "host.json")
     world_rot = os.path.join(save_dir, "world.rot")
 
     # Safety: ONLY delete if it's an unstarted save (host.rot or world.rot does not exist)
@@ -86,16 +86,16 @@ def save_game(game):
 
         game.map_manager.save_map_to_file(map_dst)
 
-        world_xml_path = os.path.join(save_path, "world.xml")
-        if not os.path.exists(world_xml_path):
-            from core.ui.helpers.trait_config_loader import save_config_xml, load_config_data
+        world_json_path = os.path.join(save_path, "world.json")
+        if not os.path.exists(world_json_path):
+            from core.ui.helpers.trait_config_loader import save_config_json, load_config_data
             w_data = getattr(game, 'world_setup_state', {}).get('world_data')
             if not w_data:
-                w_data = load_config_data(os.path.join(DATA_PATH, "world.xml"))
-            save_config_xml(w_data, world_xml_path)
+                w_data = load_config_data(os.path.join(DATA_PATH, "world.json"))
+            save_config_json(w_data, world_json_path)
         
         # --- 1. PREPARE INDIVIDUAL PLAYER DATA ---
-        host_path = os.path.join(save_path, "host.rot")
+        host_path = os.path.join(save_path, "host.json")
         host_data = {
             "os": platform.system(),
             "host": {},
@@ -115,7 +115,7 @@ def save_game(game):
                             host_data["remote"] = existing_host["remote"]
             except Exception as e:
                 if hasattr(game, 'logger'):
-                    game.logger.info(f"Could not read existing host.rot: {e}")
+                    game.logger.info(f"Could not read existing host.json: {e}")
 
         # --- 1. PREPARE INDIVIDUAL PLAYER DATA (Only if local player exists) ---
         if getattr(game, 'player', None):
@@ -172,13 +172,13 @@ def save_game(game):
                 "milestone_progress": getattr(game.player, 'milestone_progress', {})
             }
 
-            player_file_path = os.path.join(player_dir, f"{player_id}.rot")
+            player_file_path = os.path.join(player_dir, f"{player_id}.json")
             with open(player_file_path, "w") as f:
                 json.dump(player_data, f, indent=4)
 
             host_data["host"][player_id] = {
                 "name": game.player.name,
-                "playerID": f"{player_id}.rot",
+                "playerID": f"{player_id}.json",
                 "alive": is_player_alive,
                 "x": int(game.player.x),
                 "y": int(game.player.y)
@@ -188,7 +188,7 @@ def save_game(game):
             json.dump(host_data, f, indent=4)
 
         # --- 2. PREPARE & UPDATE host.rot REGISTRY ---
-        host_path = os.path.join(save_path, "host.rot")
+        host_path = os.path.join(save_path, "host.json")
         host_data = {
             "os": platform.system(),
             "host": {},
@@ -207,11 +207,11 @@ def save_game(game):
                         if "remote" in existing_host:
                             host_data["remote"] = existing_host["remote"]
             except Exception as e:
-                game.logger.info(f"Could not read existing host.rot: {e}")
+                game.logger.info(f"Could not read existing host.json: {e}")
 
         host_data["host"][player_id] = {
             "name": game.player.name,
-            "playerID": f"{player_id}.rot",
+            "playerID": f"{player_id}.json",
             "alive": is_player_alive,
             "x": int(game.player.x),
             "y": int(game.player.y)
@@ -272,7 +272,7 @@ def save_game(game):
             for n in m_state.get('npcs', []):
                 add_npc_to_save(n, map_fname, l_idx)
 
-        with open(os.path.join(save_path, "npc.rot"), "w") as f:
+        with open(os.path.join(save_path, "npc.json"), "w") as f:
             json.dump(npc_data, f, indent=4)
 
         # --- 4. SAVE ZOMBIES ---
@@ -322,7 +322,7 @@ def save_game(game):
             for z in m_state.get('zombies', []):
                 add_zombie_to_save(z, map_fname, l_idx)
 
-        with open(os.path.join(save_path, "zombies.rot"), "w") as f:
+        with open(os.path.join(save_path, "zombies.json"), "w") as f:
             json.dump(zombie_data, f, indent=4)
 
         # --- 5. SAVE ANIMALS ---
@@ -351,7 +351,7 @@ def save_game(game):
                     "sprites": getattr(item, 'sprites_data', {})
                 })
 
-        with open(os.path.join(save_path, "animal.rot"), "w") as f:
+        with open(os.path.join(save_path, "animal.json"), "w") as f:
             json.dump(animal_data, f, indent=4)
 
         # --- 6. SAVE VEHICLES ---
@@ -376,7 +376,7 @@ def save_game(game):
                 "lights": getattr(v, 'lights', 'off')
             })
 
-        with open(os.path.join(save_path, "vehicles.rot"), "w") as f:
+        with open(os.path.join(save_path, "vehicles.json"), "w") as f:
             json.dump(vehicle_data, f, indent=4)
 
         # --- 7. SAVE CONTAINERS & GROUND ITEMS ACROSS ALL LAYERS ---
@@ -520,7 +520,7 @@ def save_game(game):
             "explored_tiles": saved_explored_tiles
         }
 
-        with open(os.path.join(save_path, "world.rot"), "w") as f:
+        with open(os.path.join(save_path, "world.jsonl"), "w") as f:
             json.dump(world_data, f, indent=4)
 
         game.logger.info("Game saved successfully!")

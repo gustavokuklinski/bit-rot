@@ -184,15 +184,94 @@ def toggle_pause(game):
     elif game.game_state == 'PAUSED':
         game.game_state = 'PLAYING'
 
+
 def process_chat_command(game, text):
-    """Processes debug cheat commands entered in chat."""
+    """Processes debug cheat commands and LAN VOIP radio commands entered in chat."""
     import re
     text = text.strip()
-    if not (text.startswith("%rot ") or text.startswith("/rot ")):
+    if not (text.startswith("%rot ") or text.startswith("/rot ") or text == "%rot server"):
         return False
         
-    raw_command = text[5:].strip()
+    raw_command = text[5:].strip() if (text.startswith("%rot ") or text.startswith("/rot ")) else text.strip()
     command = raw_command.lower()
+
+    net = getattr(game, 'network_manager', None)
+
+    # --- LAN VOIP COMMANDS ---
+    # 1. %rot server (info report)
+    if command == "server":
+        if not net or not net.is_connected:
+            display_message(game, "[LAN RADIO] Server is not open. Type '%rot server open' to start.")
+            return True
+
+        with net.peer_lock:
+            cur_peers = len(net.connected_peers)
+            ping_str = f"{net.last_ping_rtt:.0f}ms" if net.last_ping_rtt > 0 else "0ms"
+            
+            lines = [
+                f"Server {net.server_ip}:{net.server_port} - Max peers: {cur_peers}/{net.max_peers}",
+                f"Ping: {ping_str}",
+                "Connected:"
+            ]
+            for p in net.connected_peers:
+                role = p.get('role', 'C')
+                lines.append(f" - [{role}] {p['ip']} : {p['freq']:.2f}mhz")
+
+        for l in lines:
+            display_message(game, l)
+        return True
+
+    # 2. %rot server open / %rot server port <PORT> / %rot server peer <N>
+    if command.startswith("server "):
+        sub = raw_command[7:].strip()
+        sub_low = sub.lower()
+
+        if sub_low == "open":
+            if net:
+                net.open_server(port=7170, max_peers=4)
+            return True
+
+        port_match = re.match(r'port\s+(\d+)(?:\s+(\d+))?', sub_low)
+        if port_match:
+            port = int(port_match.group(1))
+            peers = int(port_match.group(2)) if port_match.group(2) else (net.max_peers if net else 4)
+            if net:
+                net.open_server(port=port, max_peers=peers)
+            return True
+
+        peer_match = re.match(r'peer\s+(\d+)', sub_low)
+        if peer_match:
+            peers = int(peer_match.group(1))
+            port = net.server_port if (net and net.server_port) else 7170
+            if net:
+                net.open_server(port=port, max_peers=peers)
+            return True
+
+    # 3. %rot <FREQUENCY> send "<ITEM_NAME>"
+    send_match = re.match(r'(\d+(?:\.\d+)?)\s+send\s+"([^"]+)"', raw_command, re.IGNORECASE)
+    if send_match:
+        freq_val = float(send_match.group(1))
+        item_name = send_match.group(2).strip()
+        if net:
+            net.send_item(freq_val, item_name)
+        return True
+
+    # 4. %rot <FREQUENCY> ping
+    ping_match = re.match(r'(\d+(?:\.\d+)?)\s+ping', raw_command, re.IGNORECASE)
+    if ping_match:
+        freq_val = float(ping_match.group(1))
+        if net:
+            net.send_ping(freq_val)
+        return True
+
+    # 5. %rot <FREQUENCY> "<DIRECT_MESSAGE>"
+    msg_match = re.match(r'(\d+(?:\.\d+)?)\s+"([^"]+)"', raw_command)
+    if msg_match:
+        freq_val = float(msg_match.group(1))
+        direct_msg = msg_match.group(2).strip()
+        if net:
+            net.send_radio_message(freq_val, direct_msg)
+        return True
 
     
 
@@ -628,29 +707,69 @@ def toggle_default_ui(game):
             if nearby_modal:
                 nearby_modal['active_tab'] = getattr(container_to_dock, 'name', 'Ground')
 
+
+def send_chat_message(game, text):
+    """
+    Submits a chat message. If connected to a LAN network and tuned to a radio frequency,
+    it transmits across that frequency. Otherwise, it sends locally.
+    """
+    clean_text = text.strip()
+    if not clean_text:
+        return
+
+    # Record into chat history
+    if not hasattr(game, 'chat_history'):
+        game.chat_history = []
+    game.chat_history.append(clean_text)
+    game.chat_history_index = len(game.chat_history)
+
+    # Check for %rot command syntax
+    if process_chat_command(game, clean_text):
+        return
+
+    net_mgr = getattr(game, 'network_manager', None)
+    cur_freq = getattr(game, 'current_radio_freq', None)
+
+    # When connected and tuned to a radio frequency, transmit over that frequency
+    if net_mgr and getattr(net_mgr, 'is_connected', False) and cur_freq is not None:
+        net_mgr.send_radio_message(cur_freq, clean_text)
+        if getattr(game, 'player', None):
+            game.player.chat_text = clean_text
+            game.player.chat_timer = getattr(game.player, 'chat_duration', 300)
+    else:
+        # Local speech
+        if getattr(game, 'player', None):
+            game.player.chat_text = clean_text
+            game.player.chat_timer = getattr(game.player, 'chat_duration', 300)
+            display_message(game, f"[{game.player.name}]: {clean_text}")
+        else:
+            display_message(game, clean_text)
+
 def handle_keyboard_events(game, event, action_triggered=None):
     
     # --- 1. KEYBOARD-ONLY UI & CHAT HANDLING (Strictly KEYDOWN) ---
     if event.type == pygame.KEYDOWN:
+
+        for modal in game.modals:
+            if modal.get('type') == 'mobile' and modal.get('active_tab') == 'VOIP' and modal.get('voip_input_active'):
+                if event.key == pygame.K_BACKSPACE:
+                    modal['voip_input_text'] = modal.get('voip_input_text', '')[:-1]
+                elif event.key in (pygame.K_RETURN, pygame.K_ESCAPE):
+                    modal['voip_input_active'] = False
+                    modal['voip_dropdown_open'] = False
+                elif len(modal.get('voip_input_text', '')) < 26 and event.unicode.isprintable():
+                    modal['voip_input_text'] = modal.get('voip_input_text', '') + event.unicode
+                return
         
         # When typing in chat, all other shortcuts are completely disabled
         if getattr(game, 'chat_active', False):
             if event.key == pygame.K_RETURN:
                 if getattr(game, 'chat_input_text', '').strip():
-                    if not hasattr(game, 'chat_history'):
-                        game.chat_history = []
-                    game.chat_history.append(game.chat_input_text)
-                    game.chat_history_index = len(game.chat_history)
-                    
-                    is_command = process_chat_command(game, game.chat_input_text)
-                    
-                    if not is_command:
-                        game.player.chat_text = game.chat_input_text
-                        game.player.chat_timer = game.player.chat_duration
-                        display_message(game, f"{game.player.name}: {game.chat_input_text}")
+                    send_chat_message(game, game.chat_input_text)
                 
                 game.chat_input_text = ""
                 game.chat_active = False
+                return
 
             elif event.key == pygame.K_BACKSPACE:
                 if len(getattr(game, 'chat_input_text', '')) > 0:

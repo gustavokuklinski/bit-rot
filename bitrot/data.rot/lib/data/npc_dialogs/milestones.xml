@@ -2,12 +2,12 @@
 <npc_dialog>
     <node id="milestones">
         <milestone type="kill" entity="zombie" name="First Rotter" number="1" message="First Blood!" />
-        <milestone type="kill" entity="zombie" name="10th Rotter" number="10" message="10 rotters died!" />
-        <milestone type="kill" entity="zombie" name="20th Rotter" number="20" message="20 rotters died!" />
-        <milestone type="kill" entity="zombie" name="50th Rotter" number="50" message="50 rotters died!" />
-        <milestone type="kill" entity="zombie" name="100th Rotter" number="100" message="100 rotters died!" />
-        <milestone type="kill" entity="zombie" name="200th Rotter" number="200" message="200 rotters died!" />
-        <milestone type="kill" entity="zombie" name="500th Rotter" number="500" message="500 rotters died!" />
+        <milestone type="kill" entity="zombie" name="10th Rotter" number="10" message="0010 rotters died!" />
+        <milestone type="kill" entity="zombie" name="20th Rotter" number="20" message="0020 rotters died!" />
+        <milestone type="kill" entity="zombie" name="50th Rotter" number="50" message="0050 rotters died!" />
+        <milestone type="kill" entity="zombie" name="100th Rotter" number="100" message="0100 rotters died!" />
+        <milestone type="kill" entity="zombie" name="200th Rotter" number="200" message="0200 rotters died!" />
+        <milestone type="kill" entity="zombie" name="500th Rotter" number="500" message="0500 rotters died!" />
         <milestone type="kill" entity="zombie" name="1000th Rotter" number="1000" message="1000 rotters died!" />
         <milestone type="kill" entity="hostile_npc" name="Hostile" number="1" message="Killed first hostile!" />
         <milestone type="kill" entity="animal" name="Animal" number="1" message="Some animals can provide food or death!" />

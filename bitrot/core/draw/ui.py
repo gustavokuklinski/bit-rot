@@ -666,7 +666,9 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
 
         for msg in recent_messages:
             color = WHITE
-            if msg.startswith("[") and "]: " in msg:
+            if msg.startswith("[Radio "):
+                color = (50, 220, 255)  # Cyan Radio Color
+            elif msg.startswith("[") and "]: " in msg:
                 color = YELLOW
             else:
                 for st_name in radio_stations:
