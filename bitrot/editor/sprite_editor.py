@@ -5,6 +5,7 @@ from editor.ui import (
     UITextBox, UIDropdown, UITheme, 
     draw_styled_button, FocusManager
 )
+from editor.config import get_sprites_dir, LIB_ROOT
 
 # 10 Base Colors
 BASE_COLORS = [
@@ -54,10 +55,9 @@ class SpriteEditor:
         self.height = height
         self.font = font
         
-        self.sprite_root = SPRITE_ROOT
-        if not os.path.exists(self.sprite_root):
-            try: os.makedirs(self.sprite_root)
-            except: pass
+        
+        self.sprite_root = get_sprites_dir()
+        self.vanilla_sprite_root = os.path.join(LIB_ROOT, 'sprites')
 
         self.toolbar_h = 42
         self.tab_bar_h = 36
@@ -65,9 +65,9 @@ class SpriteEditor:
         self.palette_panel_w = 310
         self.canvas_size = 16
 
-        # Robust category path resolution checking both singular and plural forms
+        # Robust category path resolution without creating unwanted folders
         self.categories = self._resolve_categories()
-        self.active_category = "Items" if "Items" in self.categories else list(self.categories.keys())[0]
+        self.active_category = list(self.categories.keys())[0] if self.categories else "Items"
         self.files = []
 
         # Tabs
@@ -109,18 +109,15 @@ class SpriteEditor:
         self.selected_color = (220, 50, 50)
         self.palette = PALETTE_GRID
 
-        # Selection, Copy & Paste state
         self.sel_rect = None
         self.sel_start = None
         self.is_selecting = False
         self.clipboard_surf = None
 
-        # Top Toolbar Buttons
         self.save_btn = pygame.Rect(self.sidebar_w + 10, y_offset + 6, 110, 30)
         self.undo_btn = pygame.Rect(self.sidebar_w + 128, y_offset + 6, 70, 30)
         self.redo_btn = pygame.Rect(self.sidebar_w + 206, y_offset + 6, 70, 30)
         
-        # Tool selectors: Pencil, Fill, Eraser, Select, Copy, Paste
         self.tool_pencil_btn = pygame.Rect(self.sidebar_w + 284, y_offset + 6, 80, 30)
         self.tool_fill_btn = pygame.Rect(self.sidebar_w + 372, y_offset + 6, 70, 30)
         self.tool_eraser_btn = pygame.Rect(self.sidebar_w + 450, y_offset + 6, 80, 30)
@@ -129,50 +126,71 @@ class SpriteEditor:
         self.tool_paste_btn = pygame.Rect(self.sidebar_w + 704, y_offset + 6, 70, 30)
 
         self.refresh_file_list()
-        if self.files:
+        if self.files and self.active_category in self.categories:
             self.open_tab_sprite(os.path.join(self.categories[self.active_category], self.files[0]))
 
     def _resolve_categories(self):
-        """Scans and resolves directory paths supporting singular/plural folder variants."""
-        aliases = [
-            ("Items", ["items", "item"]),
-            ("Clothes", ["clothes", "cloth"]),
-            ("Map", ["map", "maps"]),
-            ("Zombie", ["zombie", "zombies"]),
-            ("Player", ["player", "players"]),
-            ("NPC", ["npc", "npcs"]),
-            ("Animals", ["animals", "animal"]),
-            ("Vehicle", ["vehicle", "vehicles"]),
-        ]
+        """Discovers existing sprite categories in the active Mod without creating folders."""
         resolved = {}
-        for label, variants in aliases:
-            for v in variants:
-                p = os.path.join(self.sprite_root, v)
-                if os.path.exists(p) and os.path.isdir(p):
-                    resolved[label] = p
-                    break
-            if label not in resolved:
-                p = os.path.join(self.sprite_root, variants[0])
-                os.makedirs(p, exist_ok=True)
-                resolved[label] = p
 
-        # Dynamically discover any other folders in SPRITE_ROOT
-        if os.path.exists(self.sprite_root):
-            for entry in sorted(os.listdir(self.sprite_root)):
-                full_p = os.path.join(self.sprite_root, entry)
-                if os.path.isdir(full_p):
-                    lbl = entry.capitalize()
-                    if lbl not in resolved:
-                        resolved[lbl] = full_p
+        # 1. Dynamically discover folders inside the mod's sprite root
+        if os.path.exists(self.sprite_root) and os.path.isdir(self.sprite_root):
+            try:
+                for entry in sorted(os.listdir(self.sprite_root)):
+                    p = os.path.join(self.sprite_root, entry)
+                    if os.path.isdir(p):
+                        resolved[entry.capitalize()] = p
+                # If loose png files exist in the root of mod sprites
+                if any(f.lower().endswith('.png') for f in os.listdir(self.sprite_root) if os.path.isfile(os.path.join(self.sprite_root, f))):
+                    resolved["Root"] = self.sprite_root
+            except OSError: pass
+
+        # 2. Fall back to Vanilla if mod has no sprite folders
+        if not resolved and os.path.exists(self.vanilla_sprite_root):
+            try:
+                for entry in sorted(os.listdir(self.vanilla_sprite_root)):
+                    p = os.path.join(self.vanilla_sprite_root, entry)
+                    if os.path.isdir(p):
+                        resolved[entry.capitalize()] = p
+            except OSError: pass
+
+        if not resolved:
+            resolved["Items"] = os.path.join(self.sprite_root, "items")
         return resolved
 
+    def reload_for_mod(self, mod_sprites_dir=None):
+        """Dynamically refreshes the dropdown and file listing when switching mods."""
+        if mod_sprites_dir:
+            self.sprite_root = mod_sprites_dir
+        else:
+            self.sprite_root = get_sprites_dir()
+            
+        self.categories = self._resolve_categories()
+        if self.categories:
+            if self.active_category not in self.categories:
+                self.active_category = list(self.categories.keys())[0]
+            cat_opts = [{"label": c, "value": c} for c in self.categories.keys()]
+        else:
+            self.active_category = ""
+            cat_opts = [{"label": "None", "value": ""}]
+
+        self.category_dropdown.options = cat_opts
+        self.category_dropdown.selected_value = self.active_category
+        self.category_dropdown._update_label()
+        self.sidebar_scroll = 0
+        self.refresh_file_list()
+        
     def resize(self, width, height):
         self.width = width
         self.height = height
 
     def refresh_file_list(self):
-        """Recursively scans the active category using os.walk to find all PNGs in subdirectories."""
-        cat_dir = self.categories[self.active_category]
+        """Scans the active category for PNGs without creating any directories."""
+        self.categories = self._resolve_categories()
+        if self.active_category not in self.categories:
+            self.active_category = list(self.categories.keys())[0]
+
+        cat_dir = self.categories.get(self.active_category)
         self.files = []
         if cat_dir and os.path.exists(cat_dir):
             for root, dirs, files in os.walk(cat_dir):

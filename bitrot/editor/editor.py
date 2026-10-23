@@ -3,18 +3,19 @@ import sys
 import os
 import re
 import csv
-
+import json
 from editor.config import (
     GAME_ROOT, SCREEN_WIDTH, SCREEN_HEIGHT, SIDEBAR_WIDTH, TILE_SIZE, ZOOM_LEVELS, 
     INITIAL_ZOOM_INDEX, FILE_TREE_WIDTH, TOOLBAR_HEIGHT, 
-    BUILDINGS_DIR, TAB_BAR_HEIGHT
+    BUILDINGS_DIR, TAB_BAR_HEIGHT, MODS_DIR, get_active_content_root,
+    get_available_mods, get_mod_descriptor, LIB_ROOT
 )
 
 from editor.assets import load_map_tiles_from_xml, load_sprite_images, load_items_from_xml
 from editor.map import Map
 from editor.ui import (
     Sidebar, Toolbar, NewBuildingModal, MenuBar, UITheme, 
-    draw_tooltips, draw_styled_button, RenameBuildingModal
+    draw_tooltips, draw_styled_button, RenameBuildingModal, UIDropdown
 )
 
 import xml.etree.ElementTree as ET
@@ -25,12 +26,48 @@ from editor.crafts import CraftEditor
 from editor.code_editor import CodeEditor
 from editor.entity_editor import EntityEditor
 from editor.sprite_editor import SpriteEditor
+import editor.config as editor_config
 
 pygame.init()
 pygame.font.init()
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Rot Engine - Game Editor")
+
+def get_installed_mods():
+    mods = ["Vanilla"]
+    for m in get_available_mods().keys():
+        if m not in mods:
+            mods.append(m)
+    return mods
+
+def resolve_allowed_modes(mod_name):
+    """Maps editor_config list to MenuBar tab titles. Vanilla enables all."""
+    all_modes = ["Building", "NPC Dialog", "Crafts", "Entities", "Code", "Art"]
+    if not mod_name or mod_name == "Vanilla":
+        return all_modes
+
+    desc = get_mod_descriptor(mod_name)
+    if not desc or "editor_config" not in desc:
+        return all_modes
+
+    raw_config = [str(c).lower().strip() for c in desc.get("editor_config", [])]
+    mode_map = {
+        "building": "Building", "map": "Building", "buildings": "Building",
+        "dialog": "NPC Dialog", "dialogs": "NPC Dialog", "npc dialog": "NPC Dialog", "npc_dialog": "NPC Dialog",
+        "craft": "Crafts", "crafts": "Crafts",
+        "entity": "Entities", "entities": "Entities",
+        "code": "Code",
+        "art": "Art", "sprite": "Art", "sprites": "Art"
+    }
+
+    allowed = []
+    for c in raw_config:
+        m = mode_map.get(c)
+        if m and m not in allowed:
+            allowed.append(m)
+
+    return allowed if allowed else all_modes
 
 try:
     from pygame._sdl2 import Window
@@ -53,81 +90,42 @@ MAP_PATTERN = re.compile(r"(map_L\d+_P(?:\d+_)*\d+)(_light|_roof|_map|_spawn|_gr
 BUILDING_PATTERN = re.compile(r"(.+)(_light|_roof|_map|_spawn|_ground)\.csv")
 
 def resolve_item_metadata(name, tab_type="Items"):
-    """Finds the corresponding XML file, entity category, and sprite PNG for an item or tile across subfolders."""
+    """Finds the corresponding XML or JSON file, category, and sprite PNG across subfolders."""
     clean_name = name.strip("[]")
     name_alts = {clean_name.lower(), clean_name.lower().replace(" ", "_"), clean_name.lower().replace("_", " ")}
 
-    # 1. Search in Items (including subfolders)
-    item_dir = os.path.join(GAME_ROOT, 'lib', 'data', 'items')
-    s_item_dir = os.path.join(GAME_ROOT, 'lib', 'sprites', 'items')
+    active_root = get_active_content_root()
+    item_dir = os.path.join(active_root, 'data', 'items')
+    s_item_dir = os.path.join(active_root, 'sprites', 'items')
+
     if os.path.exists(item_dir):
         for root_d, dirs, files in os.walk(item_dir):
             for f in files:
+                p = os.path.join(root_d, f)
+                stem = os.path.splitext(f)[0].lower()
                 if f.endswith('.xml'):
-                    p = os.path.join(root_d, f)
-                    stem = os.path.splitext(f)[0].lower()
                     try:
                         root = ET.parse(p).getroot()
-                        r_name = root.attrib.get('name', '').lower()
-                        if r_name in name_alts or stem in name_alts:
+                        if root.attrib.get('name', '').lower() in name_alts or stem in name_alts:
                             sp_node = root.find(".//sprite")
-                            sp_file = sp_node.attrib.get('file', f"{os.path.splitext(f)[0]}.png") if sp_node is not None else f"{os.path.splitext(f)[0]}.png"
+                            sp_file = sp_node.attrib.get('file', f"{stem}.png") if sp_node is not None else f"{stem}.png"
                             if not sp_file.lower().endswith('.png'): sp_file += '.png'
-                            sp_path = os.path.join(s_item_dir, sp_file)
-                            rel_xml = os.path.relpath(p, item_dir).replace('\\', '/')
-                            return {"category": "Items", "xml_filename": rel_xml, "xml_path": p, "sprite_path": sp_path}
+                            return {"category": "Items", "xml_filename": f, "xml_path": p, "sprite_path": os.path.join(s_item_dir, sp_file)}
                     except Exception: pass
-
-    # 2. Search in Clothes (including subfolders)
-    cloth_dir = os.path.join(GAME_ROOT, 'lib', 'data', 'clothes')
-    s_cloth_dir = os.path.join(GAME_ROOT, 'lib', 'sprites', 'clothes')
-    if os.path.exists(cloth_dir):
-        for root_d, dirs, files in os.walk(cloth_dir):
-            for f in files:
-                if f.endswith('.xml'):
-                    p = os.path.join(root_d, f)
-                    stem = os.path.splitext(f)[0].lower()
+                elif f.endswith('.json'):
                     try:
-                        root = ET.parse(p).getroot()
-                        r_name = root.attrib.get('name', '').lower()
-                        if r_name in name_alts or stem in name_alts:
-                            sp_node = root.find(".//sprite")
-                            sp_file = sp_node.attrib.get('file', f"{os.path.splitext(f)[0]}.png") if sp_node is not None else f"{os.path.splitext(f)[0]}.png"
-                            if not sp_file.lower().endswith('.png'): sp_file += '.png'
-                            sp_path = os.path.join(s_cloth_dir, sp_file)
-                            rel_xml = os.path.relpath(p, cloth_dir).replace('\\', '/')
-                            return {"category": "Clothes", "xml_filename": rel_xml, "xml_path": p, "sprite_path": sp_path}
+                        with open(p, 'r', encoding='utf-8') as jf:
+                            jd = json.load(jf)
+                        if stem in name_alts or any(stem in k.lower() for k in jd.keys()):
+                            return {"category": "Items", "xml_filename": f, "xml_path": p, "sprite_path": os.path.join(s_item_dir, f"{stem}.png")}
                     except Exception: pass
 
-    # 3. Search in Map Tiles (including subfolders)
-    map_data_dir = os.path.join(GAME_ROOT, 'lib', 'data', 'map')
-    s_map_dir = os.path.join(GAME_ROOT, 'lib', 'sprites', 'map')
-    if os.path.exists(map_data_dir):
-        for root_d, dirs, files in os.walk(map_data_dir):
-            for f in files:
-                if f.endswith('.xml'):
-                    p = os.path.join(root_d, f)
-                    stem = os.path.splitext(f)[0].lower()
-                    try:
-                        root = ET.parse(p).getroot()
-                        char_val = root.attrib.get('char', '')
-                        r_name = root.attrib.get('name', '').lower()
-                        if char_val == name or r_name in name_alts or stem in name_alts:
-                            sp_node = root.find(".//sprite")
-                            sp_file = sp_node.attrib.get('file', f"{os.path.splitext(f)[0]}.png") if sp_node is not None else f"{os.path.splitext(f)[0]}.png"
-                            if not sp_file.lower().endswith('.png'): sp_file += '.png'
-                            sp_path = os.path.join(s_map_dir, sp_file)
-                            rel_xml = os.path.relpath(p, map_data_dir).replace('\\', '/')
-                            return {"category": "Map", "xml_filename": rel_xml, "xml_path": p, "sprite_path": sp_path}
-                    except Exception: pass
-
-    fallback_cat = "Map" if tab_type == "Tiles" else "Items"
-    target_dir = map_data_dir if fallback_cat == "Map" else item_dir
-    target_s_dir = s_map_dir if fallback_cat == "Map" else s_item_dir
+    target_dir = os.path.join(active_root, 'data', 'map' if tab_type == "Tiles" else 'items')
+    target_s_dir = os.path.join(active_root, 'sprites', 'map' if tab_type == "Tiles" else 'items')
     return {
-        "category": fallback_cat,
-        "xml_filename": f"{clean_name}.xml",
-        "xml_path": os.path.join(target_dir, f"{clean_name}.xml"),
+        "category": "Map" if tab_type == "Tiles" else "Items",
+        "xml_filename": f"{clean_name}.json",
+        "xml_path": os.path.join(target_dir, f"{clean_name}.json"),
         "sprite_path": os.path.join(target_s_dir, f"{clean_name}.png")
     }
 
@@ -175,20 +173,6 @@ def save_map_layers(game_map, map_name, map_dir):
         game_map.save_to_csv(path, layer)
         print(f"Saved {path}")
 
-def get_next_building_number(buildings_dir):
-    """Scans all existing files to find the next sequential building number."""
-    max_num = 0
-    if os.path.exists(buildings_dir):
-        for root, dirs, files in os.walk(buildings_dir):
-            for f in files:
-                m = re.search(r"_L\d+_(\d+)", f, re.IGNORECASE)
-                if m:
-                    try:
-                        n = int(m.group(1))
-                        if n > max_num: max_num = n
-                    except ValueError: pass
-    return max_num + 1
-
 def editor():
     pygame.event.pump()
     current_screen_width, current_screen_height = screen.get_size()
@@ -215,32 +199,87 @@ def editor():
     }
     all_render_tiles = {**map_tiles, **item_tiles}
 
-    menu_bar = MenuBar(current_screen_width, TAB_BAR_HEIGHT, FONT, ["Building", "NPC Dialog", "Crafts", "Entities", "Code", "Art"])
-    editor_mode = "Building" 
+    installed_mods = get_installed_mods()
+    mod_options = [{"label": f"Mod: {m}", "value": m} for m in installed_mods]
+    mod_dropdown = UIDropdown(current_screen_width - 220, 5, 210, 30, FONT, mod_options, editor_config.ACTIVE_MOD)
 
-    # Hidden Log: File tree extends to screen bottom
+    initial_modes = resolve_allowed_modes(editor_config.ACTIVE_MOD)
+    menu_bar = MenuBar(current_screen_width - 230, TAB_BAR_HEIGHT, FONT, initial_modes)
+    editor_mode = initial_modes[0]
+
     building_file_tree = FileTree(0, TAB_BAR_HEIGHT, FILE_TREE_WIDTH, current_screen_height - TAB_BAR_HEIGHT, BUILDINGS_DIR, BUILDING_PATTERN, FONT)
     toolbar = Toolbar(FILE_TREE_WIDTH, TAB_BAR_HEIGHT, current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH, TOOLBAR_HEIGHT, FONT)
     sidebar = Sidebar(current_screen_width - SIDEBAR_WIDTH, TAB_BAR_HEIGHT, map_tiles, item_tiles, FONT)
 
-    # Sub-editors
     dialog_editor = DialogEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT, item_tiles)
     craft_editor = CraftEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT, item_tiles)
     entity_editor = EntityEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT, all_sprites_dict)
     code_editor = CodeEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT)
     sprite_editor = SpriteEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT)
 
-    # Building Modals
     new_building_modal = NewBuildingModal(current_screen_width//2-150, current_screen_height//2-150, 300, 300, FONT)
     rename_modal = RenameBuildingModal(FONT)
 
-    # Multi-Tab System for Buildings
     building_tabs = []
     active_b_idx = -1
     b_tab_scroll_x = 0
     max_b_tab_scroll = 0
     b_tab_bar_h = 34
     content_y = TAB_BAR_HEIGHT + TOOLBAR_HEIGHT + b_tab_bar_h
+
+    def reload_editor_environment(selected_mod):
+        nonlocal map_tiles, item_tiles, all_sprites_dict, all_render_tiles, editor_mode
+        editor_config.ACTIVE_MOD = selected_mod
+
+        # 1. Update MenuBar modes according to mod editor_config
+        allowed_modes = resolve_allowed_modes(selected_mod)
+        menu_bar.set_modes(allowed_modes)
+        if editor_mode not in allowed_modes:
+            editor_mode = allowed_modes[0]
+
+        active_root = get_active_content_root(selected_mod)
+        b_dir = os.path.join(active_root, 'map', 'buildings')
+
+        # 2. Reload sprites: Vanilla baseline + Mod overrides
+        vanilla_sprites = os.path.join(LIB_ROOT, 'sprites')
+        mod_sprites = os.path.join(active_root, 'sprites')
+
+        base_sprites = {}
+        for sub in ['map', 'items', 'clothes', 'zombie', 'vehicle', 'animals', 'npc', 'player']:
+            v_sub = os.path.join(vanilla_sprites, sub)
+            if os.path.exists(v_sub):
+                base_sprites.update(load_sprite_images(v_sub))
+
+        if os.path.exists(mod_sprites):
+            for sub in ['map', 'items', 'clothes', 'zombie', 'vehicle', 'animals', 'npc', 'player']:
+                m_sub = os.path.join(mod_sprites, sub)
+                if os.path.exists(m_sub):
+                    base_sprites.update(load_sprite_images(m_sub))
+
+        all_sprites_dict = base_sprites
+
+        x_map = os.path.join(active_root, 'data', 'map')
+        s_map = os.path.join(active_root, 'sprites', 'map')
+        x_item = os.path.join(active_root, 'data', 'items')
+        s_item = os.path.join(active_root, 'sprites', 'items')
+        
+        map_tiles = load_map_tiles_from_xml(x_map, s_map if os.path.exists(s_map) else os.path.join(vanilla_sprites, 'map'))
+        item_tiles = load_items_from_xml(x_item, s_item if os.path.exists(s_item) else os.path.join(vanilla_sprites, 'items')) if os.path.exists(x_item) else {}
+        all_render_tiles = {**map_tiles, **item_tiles}
+
+        # 3. Dynamic sync across all sub-editors
+        building_file_tree.root_dir = b_dir
+        building_file_tree.refresh()
+
+        dialog_editor.refresh_files()
+        craft_editor.craft_dir = os.path.join(active_root, 'data', 'craft')
+        craft_editor.load_xmls()
+
+        code_editor.file_tree.root_dir = os.path.join(active_root, 'data')
+        code_editor.file_tree.refresh()
+
+        sprite_editor.reload_for_mod(mod_sprites)
+        entity_editor.reload_for_mod(all_sprites_dict)
 
     RULER_W = 28
     RULER_H = 18
@@ -257,7 +296,6 @@ def editor():
         g_map = Map(width=20, height=20)
         load_map_layers(g_map, name, root_dir)
         
-        # Sync per-building layer visibility from file_tree
         for l_name in g_map.layers.keys():
             l_key = (folder, name, l_name)
             if l_key in building_file_tree.layer_properties:
@@ -312,7 +350,6 @@ def editor():
             active_b_idx -= 1
         ensure_b_tab_visible(active_b_idx)
 
-    # Open first building
     if building_file_tree.selected_map:
         fld, m_name = building_file_tree.selected_map
         b_root = os.path.join(BUILDINGS_DIR, fld) if fld else BUILDINGS_DIR
@@ -327,7 +364,6 @@ def editor():
     while running:
         cur_tab = building_tabs[active_b_idx] if 0 <= active_b_idx < len(building_tabs) else None
         
-        # Viewport boundaries with Ruler offsets
         total_view_rect = pygame.Rect(FILE_TREE_WIDTH + 10, content_y + 10, current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH - 20, current_screen_height - content_y - 20)
         ruler_top_rect = pygame.Rect(total_view_rect.left + RULER_W, total_view_rect.top, total_view_rect.width - RULER_W, RULER_H)
         ruler_left_rect = pygame.Rect(total_view_rect.left, total_view_rect.top + RULER_H, RULER_W, total_view_rect.height - RULER_H)
@@ -341,7 +377,9 @@ def editor():
             if event.type == pygame.VIDEORESIZE:
                 current_screen_width, current_screen_height = event.w, event.h
                 pygame.display.set_mode((current_screen_width, current_screen_height), pygame.RESIZABLE)
-                menu_bar.resize(current_screen_width)
+                mod_dropdown.rect.x = current_screen_width - 220
+                mod_dropdown.list_rect.x = mod_dropdown.rect.x
+                menu_bar.resize(current_screen_width - 230)
                 sidebar.resize(current_screen_width - SIDEBAR_WIDTH, TAB_BAR_HEIGHT, current_screen_height)
                 building_file_tree.resize(current_screen_height - TAB_BAR_HEIGHT)
                 toolbar.resize(current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH)
@@ -350,6 +388,17 @@ def editor():
                 entity_editor.resize(current_screen_width, current_screen_height)
                 code_editor.resize(current_screen_width, current_screen_height)
                 sprite_editor.resize(current_screen_width, current_screen_height)
+
+            # Mod Switcher Interaction
+            if mod_dropdown.expanded:
+                if mod_dropdown.handle_event(event):
+                    if mod_dropdown.text != editor_config.ACTIVE_MOD:
+                        reload_editor_environment(mod_dropdown.text)
+                    continue
+            if mod_dropdown.handle_event(event):
+                if mod_dropdown.text != editor_config.ACTIVE_MOD:
+                    reload_editor_environment(mod_dropdown.text)
+                continue
 
             menu_action = menu_bar.handle_event(event)
             if menu_action:
@@ -389,21 +438,19 @@ def editor():
                 sprite_editor.handle_event(event)
                 continue
 
-            # ----------------------------------------------------------
-            # BUILDING EDITOR EVENT HANDLING (Z-INDEX ORDER)
-            # ----------------------------------------------------------
-            # 1. Modals
+            # Building Modals
             if new_building_modal.active:
                 res = new_building_modal.handle_event(event)
                 if isinstance(res, dict) and res.get('action') == 'create_building':
                     b_name, w, h = res['name'], res['width'], res['height']
-                    os.makedirs(BUILDINGS_DIR, exist_ok=True)
+                    target_b_dir = os.path.join(get_active_content_root(), 'map', 'buildings')
+                    os.makedirs(target_b_dir, exist_ok=True)
                     for suffix in ['light', 'roof', 'map', 'ground', 'spawn']:
-                        path = os.path.join(BUILDINGS_DIR, f"{b_name}_{suffix}.csv")
+                        path = os.path.join(target_b_dir, f"{b_name}_{suffix}.csv")
                         with open(path, 'w', newline='') as f:
                             csv.writer(f).writerows([[''] * w for _ in range(h)])
                     building_file_tree.refresh()
-                    open_building_tab("", b_name, BUILDINGS_DIR)
+                    open_building_tab("", b_name, target_b_dir)
                 continue
 
             if rename_modal.active:
@@ -422,7 +469,6 @@ def editor():
                     building_file_tree.refresh()
                 continue
 
-            # 2. Priority Floating Menus: Right-Click Context Menu & Hamburger Dropdown
             if sidebar.context_menu:
                 sb_res = sidebar.handle_event(event)
                 if sb_res and isinstance(sb_res, dict) and sb_res.get("action") == "item_context_action":
@@ -461,7 +507,6 @@ def editor():
                             menu_bar.active_mode = "Code"
                 continue
 
-            # Prioritize hamburger dropdown events so clicks are never intercepted by tab bar
             if toolbar.tools_expanded:
                 tb_action = toolbar.handle_event(event)
                 if tb_action and tb_action is not True:
@@ -490,7 +535,6 @@ def editor():
                         cur_tab["modified"] = True
                 continue
 
-            # 3. Keyboard Shortcuts
             if event.type == pygame.KEYDOWN:
                 ctrl = (event.mod & pygame.KMOD_CTRL)
                 if ctrl and event.key == pygame.K_s and cur_tab:
@@ -512,7 +556,6 @@ def editor():
                     tile_to_place = None
                     toolbar.active_tool = None
 
-            # 4. Building Tab Strip Clicks
             b_tabs_rect = pygame.Rect(FILE_TREE_WIDTH, TAB_BAR_HEIGHT + TOOLBAR_HEIGHT, current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH, b_tab_bar_h)
             if event.type == pygame.MOUSEBUTTONDOWN and b_tabs_rect.collidepoint(event.pos):
                 if event.button == 4:
@@ -537,7 +580,6 @@ def editor():
                         cur_tx += tw + 2
                     continue
 
-            # 5. Direct Toolbar actions
             tb_action = toolbar.handle_event(event)
             if tb_action:
                 if tb_action == "NEW BUILDING":
@@ -549,7 +591,6 @@ def editor():
                     cur_tab["modified"] = False
                 continue
 
-            # 6. Sidebar interaction
             sb_res = sidebar.handle_event(event)
             if sb_res:
                 if isinstance(sb_res, dict) and sb_res.get("action") == "item_context_action":
@@ -593,7 +634,6 @@ def editor():
                         toolbar.active_tool = None
                     continue
 
-            # 7. File Tree
             ft_res = building_file_tree.handle_event(event)
             if ft_res:
                 if isinstance(ft_res, dict):
@@ -609,7 +649,6 @@ def editor():
                         cur_tab["map"].set_active_layer(ft_res['layer_name'])
                 continue
 
-            # 8. Canvas Navigation (Zoom, Pan, Drawing)
             if cur_tab:
                 z_scale = ZOOM_LEVELS[cur_tab["zoom_idx"]]
                 if event.type == pygame.MOUSEBUTTONDOWN and map_view_rect.collidepoint(event.pos):
@@ -667,9 +706,6 @@ def editor():
                             cur_tab["map"].set_tile(map_x, map_y, sidebar.selected_item)
                             cur_tab["modified"] = True
 
-        # --------------------------------------------------------------
-        # RENDERING
-        # --------------------------------------------------------------
         screen.fill(UITheme.BG)
         
         if editor_mode == "NPC Dialog": dialog_editor.draw(screen)
@@ -678,7 +714,6 @@ def editor():
         elif editor_mode == "Code": code_editor.draw(screen)
         elif editor_mode == "Art": sprite_editor.draw(screen)
         else:
-            # 1. Map Rendering inside viewport
             surface_clip = screen.get_clip()
             screen.set_clip(map_view_rect)
             if cur_tab:
@@ -699,13 +734,11 @@ def editor():
                     pygame.draw.rect(screen, UITheme.WARNING, (sx, sy, cur_tab["sel_rect"].width * TILE_SIZE * z_scale, cur_tab["sel_rect"].height * TILE_SIZE * z_scale), 2)
             screen.set_clip(surface_clip)
 
-            # 2. Rulers Rendering (Columns & Rows)
             if cur_tab:
                 z_scale = ZOOM_LEVELS[cur_tab["zoom_idx"]]
                 scaled_ts = int(TILE_SIZE * z_scale)
                 step = 1 if scaled_ts >= 20 else (2 if scaled_ts >= 10 else 5)
 
-                # Top Ruler (Columns)
                 screen.set_clip(ruler_top_rect)
                 pygame.draw.rect(screen, UITheme.PANEL_BG, ruler_top_rect)
                 pygame.draw.line(screen, UITheme.BORDER, (ruler_top_rect.left, ruler_top_rect.bottom - 1), (ruler_top_rect.right, ruler_top_rect.bottom - 1))
@@ -721,7 +754,6 @@ def editor():
                     pygame.draw.line(screen, UITheme.BORDER, (end_x, ruler_top_rect.bottom - 8), (end_x, ruler_top_rect.bottom - 1))
                 screen.set_clip(surface_clip)
 
-                # Left Ruler (Rows)
                 screen.set_clip(ruler_left_rect)
                 pygame.draw.rect(screen, UITheme.PANEL_BG, ruler_left_rect)
                 pygame.draw.line(screen, UITheme.BORDER, (ruler_left_rect.right - 1, ruler_left_rect.top), (ruler_left_rect.right - 1, ruler_left_rect.bottom))
@@ -737,13 +769,11 @@ def editor():
                     pygame.draw.line(screen, UITheme.BORDER, (ruler_left_rect.right - 8, end_y), (ruler_left_rect.right - 1, end_y))
                 screen.set_clip(surface_clip)
 
-                # Corner Box
                 pygame.draw.rect(screen, UITheme.PANEL_BG, ruler_corner_rect)
                 pygame.draw.rect(screen, UITheme.BORDER, ruler_corner_rect, 1)
                 lbl_xy = RULER_FONT.render("XY", True, UITheme.TEXT_DIM)
                 screen.blit(lbl_xy, (ruler_corner_rect.centerx - lbl_xy.get_width() // 2, ruler_corner_rect.centery - lbl_xy.get_height() // 2))
 
-            # 3. Building Tab Bar
             tab_bar_rect = pygame.Rect(FILE_TREE_WIDTH, TAB_BAR_HEIGHT + TOOLBAR_HEIGHT, current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH, b_tab_bar_h)
             pygame.draw.rect(screen, UITheme.PANEL_BG, tab_bar_rect)
             pygame.draw.line(screen, UITheme.BORDER, (tab_bar_rect.left, tab_bar_rect.bottom - 1), (tab_bar_rect.right, tab_bar_rect.bottom - 1))
@@ -778,7 +808,6 @@ def editor():
                 cur_tx += tw + 2
             screen.set_clip(surface_clip)
 
-            # 4. Left Tree, Right Sidebar & Top Toolbar (drawn on top for dropdown overlays)
             building_file_tree.draw(screen, cur_tab["name"] if cur_tab else "", cur_tab["folder"] if cur_tab else "", cur_tab["map"].active_layer_name if cur_tab else "")
             sidebar.draw(screen)
             toolbar.draw(screen)
@@ -787,6 +816,9 @@ def editor():
             if rename_modal.active: rename_modal.draw(screen)
 
         menu_bar.draw(screen)
+        mod_dropdown.draw(screen)
+        if mod_dropdown.expanded:
+            mod_dropdown.draw_list(screen)
         draw_tooltips(screen, FONT)
         pygame.display.flip()
 

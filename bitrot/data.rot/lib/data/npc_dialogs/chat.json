@@ -1,29 +1,29 @@
 {
-    "npc_chat": [
-      {
-        "id": "greeting",
-        "options": [
-          {
-            "player_question": "Hello! How's it going?",
-            "npc_answer": "I just escaped with: [inventory_list]. You look like you've seen better days too. See, I have some good stuff here if you needed.",
-            "priority": 50
-          }
-        ]
-      },
-      {
-        "id": "lore_branch",
-        "options": [
-          {
-            "player_question": "What was it like when the Plague first hit?",
-            "npc_answer": "It was chaos. The news said it was a new flu. Then people started bleeding from their eyes. Rio was a warzone in three days.",
-            "priority": 10
-          },
-          {
-            "player_question": "Why did Brazil fall so fast?",
-            "npc_answer": "Carnival, my friend. Millions of people, sweaty and packed together. The perfect breeding ground for the Plague. The government tried to lock us down, but it was too late.",
-            "priority": 10
-          }
-        ]
-      }
-    ]
+  "npc_chat": [
+    {
+      "id": "greeting",
+      "options": [
+        {
+          "player_question": "Hello! How's it going?",
+          "npc_answer": "I just escaped with: [inventory_list]. You look like you've seen better days too. See, I have some good stuff here if you needed.",
+          "priority": 50
+        }
+      ]
+    },
+    {
+      "id": "lore_branch",
+      "options": [
+        {
+          "player_question": "What was it like when the Plague first hit?",
+          "npc_answer": "It was chaos. The news said it was a new flu. Then people started bleeding from their eyes. Rio was a warzone in three days.",
+          "priority": 10
+        },
+        {
+          "player_question": "Why did Brazil fall so fast?",
+          "npc_answer": "Carnival, my friend. Millions of people, sweaty and packed together. The perfect breeding ground for the Plague. The government tried to lock us down, but it was too late.",
+          "priority": 10
+        }
+      ]
+    }
+  ]
 }

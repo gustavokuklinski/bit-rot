@@ -1,10 +1,13 @@
 {
     "name": "BitRot_Vanilla_pt_br",
     "version": "0.0.0.1",
-    "description": "Translation to Brazilian Portuguese",
+    "description": "Translation to Brazilian Portuguese - Official game mod",
     "repository": "https://github.com/gustavokuklinski/bit-rot/",
     "overide_dir":[
         "./data.rot/lib/lang/*"
+    ],
+    "editor_config": [
+        "code"
     ],
     "fallack": true 
 }

@@ -130,7 +130,7 @@ class CraftEditor:
     def load_xmls(self):
         self.recipes.clear()
         if not os.path.exists(self.craft_dir): 
-            os.makedirs(self.craft_dir)
+            return
             
         for root_d, dirs, files in os.walk(self.craft_dir):
             for filename in sorted(files):

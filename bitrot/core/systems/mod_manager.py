@@ -19,29 +19,71 @@ class ModManager:
         self.initialized = True
         
         self.base_dir = config.BASE_DIR
-        self.mods_dir = os.path.join(self.base_dir, "data.rot", "mods")
         self.available_mods = {}
         self.enabled_mods = []
+        
+        # Ensure the active runtime mod directory exists
+        primary_mods_dir = os.path.abspath(os.path.join(config.get_writable_dir(), "data.rot", "mods"))
+        try:
+            os.makedirs(primary_mods_dir, exist_ok=True)
+        except OSError:
+            pass
+
         self.load_configs()
 
+    def get_mod_search_dirs(self):
+        """
+        Returns all candidate mod directories in priority order:
+        1. ./data.rot/mods (current working directory / writable dir)
+        2. ../data.rot/mods (parent directory when running python bitrot/bitrot.py)
+        3. BASE_DIR/data.rot/mods (executable / package base directory)
+        4. BASE_DIR/../data.rot/mods
+        """
+        candidates = [
+            os.path.abspath(os.path.join(config.get_writable_dir(), "data.rot", "mods")),
+            os.path.abspath(os.path.join(".", "data.rot", "mods")),
+            os.path.abspath(os.path.join("..", "data.rot", "mods")),
+            os.path.abspath(os.path.join(self.base_dir, "data.rot", "mods")),
+            os.path.abspath(os.path.join(self.base_dir, "..", "data.rot", "mods"))
+        ]
+
+        seen = set()
+        unique_dirs = []
+        for d in candidates:
+            norm = os.path.normpath(d)
+            if norm not in seen:
+                seen.add(norm)
+                unique_dirs.append(norm)
+
+        return unique_dirs
+
     def load_configs(self):
+        """Discovers mods across all candidate search directories without duplicates."""
         self.available_mods = {}
-        if os.path.exists(self.mods_dir):
-            for folder in os.listdir(self.mods_dir):
-                mod_path = os.path.join(self.mods_dir, folder)
+
+        for search_dir in self.get_mod_search_dirs():
+            if not os.path.exists(search_dir) or not os.path.isdir(search_dir):
+                continue
+
+            for folder in os.listdir(search_dir):
+                mod_path = os.path.join(search_dir, folder)
                 config_path = os.path.join(mod_path, "config.json")
+
                 if os.path.isdir(mod_path) and os.path.exists(config_path):
                     try:
                         with open(config_path, "r", encoding="utf-8") as f:
                             cfg = json.load(f)
                             mod_name = cfg.get("name", folder)
-                            self.available_mods[mod_name] = {
-                                "folder": folder,
-                                "path": mod_path,
-                                "config": cfg
-                            }
+
+                            # First search location takes priority; avoid duplicate registrations
+                            if mod_name not in self.available_mods:
+                                self.available_mods[mod_name] = {
+                                    "folder": folder,
+                                    "path": mod_path,
+                                    "config": cfg
+                                }
                     except Exception as e:
-                        print(f"[ModManager] Error loading mod {folder}: {e}")
+                        print(f"[ModManager] Error loading mod {folder} from {search_dir}: {e}")
 
         pref_path = config.get_preferences_path(for_save=False)
         try:
@@ -49,7 +91,7 @@ class ModManager:
                 with open(pref_path, "r", encoding="utf-8") as f:
                     pref_data = json.load(f)
                 mods_pref = pref_data.get("preferences", {}).get("mods")
-                # If explicit list exists in preferences, honor it; otherwise enable all available mods by default
+                # Honor user preference if explicitly set; otherwise default to enabling all discovered mods
                 if mods_pref is not None and "enabled" in mods_pref:
                     self.enabled_mods = [m for m in mods_pref["enabled"] if m in self.available_mods]
                 else:
@@ -89,7 +131,7 @@ class ModManager:
         try:
             rel_path = os.path.relpath(original_path, self.base_dir).replace('\\', '/')
         except ValueError:
-            return original_path
+            rel_path = original_path.replace('\\', '/')
 
         filename = os.path.basename(original_path)
 
@@ -119,7 +161,7 @@ class ModManager:
                         for idx in range(1, len(parts)):
                             candidates.append(os.path.join(mod_path, *parts[idx:]))
 
-                    # 2. Directly in the mod root
+                    # 2. Directly in the mod root (e.g., arms_hoodie.png)
                     candidates.append(os.path.join(mod_path, filename))
 
                     # 3. Full relative path from base_dir

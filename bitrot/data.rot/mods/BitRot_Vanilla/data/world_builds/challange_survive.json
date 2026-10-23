@@ -7,8 +7,8 @@
         "icon_path": "ui/infection.png",
         "accent": [220, 60, 60],
         "tooltips": [
-          "Survive at only one chunk",
-          "Dynamic respawn spawn",
+          "Small map",
+          "Dynamic respawn",
           "High loot"
         ]
       },

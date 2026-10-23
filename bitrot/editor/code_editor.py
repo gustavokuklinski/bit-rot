@@ -16,16 +16,33 @@ class CodeTheme:
     XML_TEXT = (220, 220, 220)   # White
     XML_MISC = (220, 220, 220)   
 
-    MD_HEADER = (86, 156, 214)   # Blue
-    MD_CODE = (206, 145, 120)    # Orange
-    MD_LIST = (220, 220, 170)    # Yellowish
-    MD_BOLD = (197, 134, 192)    # Purple
-    MD_ITALIC = (78, 201, 176)   # Cyan
-    MD_LINK = (55, 148, 255)     # Deep Blue
+    JSON_KEY = (156, 220, 254)   # Light Blue
+    JSON_STRING = (206, 145, 120)# Orange
+    JSON_NUM = (181, 206, 168)   # Light Green
+    JSON_BOOL = (86, 156, 214)   # Blue
+    JSON_PUNCT = (218, 218, 218) # Gray/White brackets
+    JSON_MISC = (220, 220, 220)
+
+    MD_HEADER = (86, 156, 214)
+    MD_CODE = (206, 145, 120)
+    MD_LIST = (220, 220, 170)
+    MD_BOLD = (197, 134, 192)
+    MD_ITALIC = (78, 201, 176)
+    MD_LINK = (55, 148, 255)
     MD_TEXT = (220, 220, 220)
     MD_MISC = (220, 220, 220)
 
     TEXT = (220, 220, 220)
+
+# 2. Add JSON Regex Pattern:
+JSON_PATTERN = re.compile(
+    r'(?P<key>"(\\.|[^"\\])*"(?=\s*:))|'
+    r'(?P<string>"(\\.|[^"\\])*")|'
+    r'(?P<bool>\b(true|false|null)\b)|'
+    r'(?P<num>-?\b\d+(\.\d+)?([eE][+-]?\d+)?\b)|'
+    r'(?P<punct>[\[\]\{\},:])|'
+    r'(?P<misc>[^\s\[\]\{\},:]+)'
+)
 
 XML_PATTERN = re.compile(
     r'(?P<comment><!--.*?-->)|'
@@ -196,6 +213,14 @@ class CodeTextArea(UITextArea):
                     ts = self.font.render(val, True, color)
                     surface.blit(ts, (cur_x, y_pos))
                     cur_x += ts.get_width()
+            elif self.file_type == 'json':
+                for match in JSON_PATTERN.finditer(l_text):
+                    kind = match.lastgroup
+                    val = match.group()
+                    color = getattr(CodeTheme, f"JSON_{kind.upper()}", CodeTheme.TEXT)
+                    ts = self.font.render(val, True, color)
+                    surface.blit(ts, (cur_x, y_pos))
+                    cur_x += ts.get_width()
             elif self.file_type == 'md':
                 for match in MD_PATTERN.finditer(l_text):
                     kind = match.lastgroup
@@ -266,7 +291,7 @@ class CodeFileTree:
                         'expanded': self.expanded.get(full_path, False),
                         'children': build_tree(full_path, depth + 1)
                     })
-                elif name.lower().endswith(('.xml', '.md')):
+                elif name.lower().endswith(('.xml', '.md', '.json')):
                     items.append({
                         'name': name, 'path': full_path, 'is_dir': False, 'depth': depth,
                         'children': []
@@ -472,7 +497,7 @@ class CodeEditor:
             data = self.file_data.get(path)
             if data:
                 ext = os.path.splitext(path)[1].lower()
-                self.text_area.file_type = 'xml' if ext == '.xml' else 'md' if ext == '.md' else 'txt'
+                self.text_area.file_type = 'xml' if ext == '.xml' else ('json' if ext == '.json' else ('md' if ext == '.md' else 'txt'))
 
                 self.text_area.text = data["content"]
                 self.text_area._update_lines()

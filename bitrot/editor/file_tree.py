@@ -87,13 +87,14 @@ class FileTree:
         return "General"
 
     def refresh(self):
-        if not os.path.exists(self.root_dir):
-            os.makedirs(self.root_dir)
-            
         self.folders = []
         self.map_data = {}
         self.grouped_maps = {}
-        
+
+        # Strictly prevent generating empty map/buildings folders
+        if not os.path.exists(self.root_dir):
+            return
+
         try: items = sorted(os.listdir(self.root_dir))
         except OSError: items = []
             
@@ -116,19 +117,16 @@ class FileTree:
                             self.expanded_folders[item] = False
                 except OSError: continue
 
-        # Group and sort maps by number and layer
         for folder in self.folders:
             self.grouped_maps[folder] = {}
             for map_name in self.map_data[folder].keys():
                 grp = self._determine_group(map_name)
                 if grp not in self.grouped_maps[folder]:
                     self.grouped_maps[folder][grp] = []
-                    # Collapsed by default
                     if (folder, grp) not in self.expanded_groups:
                         self.expanded_groups[(folder, grp)] = False
                 self.grouped_maps[folder][grp].append(map_name)
 
-            # Sort maps within the group so L1_06 and L2_06 are consecutive
             for grp in self.grouped_maps[folder]:
                 self.grouped_maps[folder][grp].sort(key=parse_building_sort_key)
 

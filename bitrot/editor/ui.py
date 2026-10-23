@@ -879,8 +879,15 @@ class MenuBar:
         self.rect = pygame.Rect(0, 0, width, height)
         self.font = font
         self.modes = modes
-        self.active_mode = modes[0]
+        self.active_mode = modes[0] if modes else "Building"
         self.tabs = []
+        self._update_tabs()
+
+    def set_modes(self, new_modes):
+        if not new_modes: return
+        self.modes = new_modes
+        if self.active_mode not in self.modes:
+            self.active_mode = self.modes[0]
         self._update_tabs()
 
     def resize(self, width):
@@ -889,11 +896,11 @@ class MenuBar:
 
     def _update_tabs(self):
         self.tabs = []
-        tab_w = 160
+        tab_w = 150
         for i, mode in enumerate(self.modes):
             self.tabs.append({
                 "mode": mode,
-                "rect": pygame.Rect(i*tab_w, self.rect.y, tab_w, self.rect.height),
+                "rect": pygame.Rect(i * tab_w, self.rect.y, tab_w, self.rect.height),
                 "label": mode
             })
 

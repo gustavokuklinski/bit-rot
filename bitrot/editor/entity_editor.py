@@ -1,16 +1,14 @@
 import pygame
 import os
 import re
+import json
 import xml.etree.ElementTree as ET
-from editor.config import GAME_ROOT, TILE_SIZE
+from editor.config import GAME_ROOT, TILE_SIZE, get_data_dir, get_sprites_dir, LIB_ROOT
 from editor.ui import (
     UITextBox, UIDropdown, UITextArea, UITheme, 
     draw_styled_button, register_tooltip, FocusManager
 )
 
-# ----------------------------------------------------------------------
-# CUSTOM UI COMPONENTS FOR ENTITY EDITOR
-# ----------------------------------------------------------------------
 class UIToggle:
     def __init__(self, x, y, width, height, font, state=False):
         self.rect = pygame.Rect(x, y, width, height)
@@ -73,33 +71,172 @@ class UIStepButton:
         mouse_pos = pygame.mouse.get_pos()
         draw_styled_button(surface, self.rect, self.text, self.font, mouse_pos, UITheme.PANEL_BG, UITheme.HOVER_BG, tooltip="L-Click: Up | R-Click: Down")
 
-# ----------------------------------------------------------------------
-# STATIC BOILERPLATES
-# ----------------------------------------------------------------------
 BOILERPLATES = {
-    "Animal": """<animal name="Boar" attack_player="true" type="animal" spawn_weight="20" spawn_layer="[1, 2]">
-    <name value="Boar" />
-    <stats><health min="20" max="30" /><speed min="1" max="2" /><attack min="6" max="15" /><infection min="15" max="35" /></stats>
-    <capacity value="3" />
-    <visuals><sprite id="center" file="boar.png" /><sprite id="left" file="boar_left.png" /><sprite id="right" file="boar_right.png" /></visuals>
-    <loot><item item="Rot Meat" chance="1.0" /></loot>
-    <sound><hit src="" /><attack src="" /><dead src="" /><steps src="" /></sound>
-</animal>""",
+    "Zombie": """{
+  "zombies": {
+    "common": {
+      "spawn_weight": 70,
+      "name": "RANDOM",
+      "sex": "RANDOM",
+      "xp": { "min": 1, "max": 10 },
+      "stats": {
+        "health": { "min": 10, "max": 50 },
+        "speed": { "min": 1, "max": 2 },
+        "attack": { "min": 1, "max": 10 },
+        "infection": { "min": 1, "max": 5 }
+      },
+      "clothes": {
+        "head": null,
+        "util": null,
+        "hair": null,
+        "facial": null,
+        "feet": null,
+        "hand": null,
+        "body": null,
+        "arms": null,
+        "legs": null
+      },
+      "visuals": {
+        "center": "zombie.png",
+        "left": "zombie_left.png",
+        "right": "zombie_right.png"
+      },
+      "loot": [
+        { "item": "Money WBRL", "min": 1, "max": 1, "chance": 1.0 },
+        { "item": "Coin WBRL", "chance": 0.5 },
+        { "item": "Rot Meat", "min": 1, "max": 1, "chance": 1.0 }
+      ],
+      "sound": {
+        "hit": "zombie_hit.ogg",
+        "wander": "zombie_wandering.ogg",
+        "dead": "zombie_dead.ogg",
+        "attack": "zombie_attack.ogg",
+        "steps": "zombie_steps.ogg"
+      }
+    }
+  }
+}""",
 
-    "Clothes": """<cloth name="New Cloth" type="cloth" id="body" builder="true">
-    <properties><defence value="1" /><durability min="1" max="100" /><sprite file="" /><weight weight="0.0" /></properties>
-    <spawn chance="1" />
-</cloth>""",
+    "NPC": """{
+  "npcs": {
+    "common": {
+      "spawn_weight": 55,
+      "is_friendly": false,
+      "is_static": false,
+      "spawn_zombies_multiplier": 1,
+      "name": "RANDOM",
+      "sex": "RANDOM",
+      "stats": {
+        "health": { "min": 10, "max": 80 },
+        "speed": { "min": 1, "max": 1 },
+        "attack": { "min": 1, "max": 15 },
+        "infection": { "min": 1, "max": 5 }
+      },
+      "clothes": {
+        "head": null,
+        "util": null,
+        "hair": null,
+        "facial": null,
+        "feet": null,
+        "hand": null,
+        "body": null,
+        "arms": null,
+        "legs": null
+      },
+      "visuals": {
+        "center": "npc_zombie.png",
+        "left": "npc_zombie_left.png",
+        "right": "npc_zombie_right.png"
+      },
+      "loot": [
+        { "item": "Rot Meat", "chance": 1.0 }
+      ],
+      "sound": {
+        "hit": "npc_hit.ogg",
+        "attack": "npc_attack.ogg",
+        "dead": "npc_dead.ogg",
+        "steps": "npc_steps.ogg"
+      }
+    }
+  }
+}""",
 
-    "NPC": """<npc type="common" spawn_weight="55" is_friendly="false" is_static="false">
-    <name value="RANDOM" />
-    <sex value="RANDOM" />
-    <stats><health min="100" max="100" /><speed min="1" max="1" /><attack min="1" max="15" /><infection min="1" max="5" /></stats>
-    <clothes><head></head><util></util><hair></hair><facial></facial><feet></feet><hand></hand><body></body><arms></arms><legs></legs></clothes>
-    <visuals><sprite id="center" file="player.png" /><sprite id="left" file="player_left.png" /><sprite id="right" file="player_right.png" /></visuals>
-    <loot><item item="Kukaroach" chance="0.1" /></loot>
-    <sound><hit src="npc_hit.ogg" /><attack src="npc_attack.ogg" /><dead src="npc_dead.ogg" /><steps src="npc_steps.ogg" /></sound>
-</npc>""",
+    "Animal": """{
+  "animals": {
+    "boar": {
+      "name": "Boar",
+      "type": "animal",
+      "attack_player": false,
+      "spawn_weight": 100,
+      "spawn_layer": ["L1", "L2"],
+      "spawn_zombies_multiplier": 1,
+      "capacity": 3,
+      "stats": {
+        "health": { "min": 20, "max": 30 },
+        "speed": { "min": 0.5, "max": 0.8 },
+        "attack": { "min": 6, "max": 15 },
+        "infection": { "min": 10, "max": 15 }
+      },
+      "visuals": {
+        "center": "boar.png",
+        "left": "boar.png",
+        "right": "boar.png"
+      },
+      "loot": [
+        { "item": "Rot Meat", "chance": 1.0 }
+      ],
+      "sound": {
+        "hit": "animal_rat_hit.ogg",
+        "attack": "animal_rat_attack.ogg",
+        "dead": "animal_dead.ogg",
+        "steps": "animal_rat_steps.ogg"
+      }
+    }
+  }
+}""",
+
+    "Player": """{
+  "player": {
+    "name": "Player",
+    "sex": "Male",
+    "traits": [],
+    "stats": {
+      "health": 100.0,
+      "stamina": 100.0,
+      "water": 100.0,
+      "food": 100.0,
+      "anxiety": 0.0,
+      "infection": 0.0,
+      "defence": 0.0
+    },
+    "attributes": {
+      "strength": 0.0,
+      "fitness": 0.0,
+      "melee": 0.0,
+      "ranged": 0.0,
+      "maintenance": 0.0,
+      "lucky": 0.0,
+      "agility": 0.0,
+      "intelligence": 0.0
+    },
+    "visuals": {
+      "center": "player.png",
+      "left": "player_left.png",
+      "right": "player_right.png"
+    },
+    "clothes": {
+      "head": null,
+      "util": null,
+      "hair": null,
+      "facial": null,
+      "feet": null,
+      "hand": null,
+      "body": null,
+      "arms": null,
+      "legs": null
+    }
+  }
+}""",
 
     "Vehicle": """<vehicle name="car_new" type="car" is_obstacle="true" spawn_weight="40">
     <capacity value="10" />
@@ -112,25 +249,21 @@ BOILERPLATES = {
     <visuals><sprite id="top" file="car_top.png" /><sprite id="down" file="car_down.png" /><sprite id="left" file="car_left.png" /><sprite id="right" file="car_right.png" /></visuals>
 </vehicle>""",
 
-    "Zombie": """<zombie type="common">
-    <name value="RANDOM" />
-    <sex value="RANDOM" />
-    <xp min="1" max="15" />
-    <stats><health min="10" max="100" /><speed min="1" max="2" /><attack min="1" max="15" /><infection min="1" max="5" /></stats>
-    <clothes><head></head><util></util><hair></hair><facial></facial><feet></feet><hand></hand><body></body><arms></arms><legs></legs></clothes>
-    <visuals><sprite id="center" file="zombie.png" /><sprite id="left" file="zombie_left.png" /><sprite id="right" file="zombie_right.png" /></visuals>
-    <loot><item item="Zombie Meat" chance="1.0" /></loot>
-    <sound><hit src="zombie_hit.ogg" /><wander src="zombie_wandering.ogg" /><dead src="zombie_dead.ogg" /><attack src="zombie_attack.ogg" /><steps src="zombie_steps.ogg" /></sound>
-</zombie>"""
-}
-BOILERPLATES["Radio"] = """<radio name="New Radio" frequency="100.0" stream="[general]">
+    "Clothes": """<cloth name="New Cloth" type="cloth" id="body" builder="true">
+    <properties><defence value="1" /><durability min="1" max="100" /><sprite file="" /><weight weight="0.0" /></properties>
+    <spawn chance="1" />
+</cloth>""",
+
+    "Radio": """<radio name="New Radio" frequency="100.0" stream="[general]">
     <stream text="[STATIC]..." />
-</radio>"""
-BOILERPLATES["Items"] = """<item name="New Item" type="general" allow_belt="false">
+</radio>""",
+
+    "Items": """<item name="New Item" type="general" allow_belt="false">
     <properties><weight weight="0.01" /><sprite file="" /><description text="" /></properties>
     <spawn chance="1" />
-</item>"""
-BOILERPLATES["Map"] = """<map char="." name="New Map Tile" obstacle="false">
+</item>""",
+
+    "Map": """<map char="." name="New Map Tile" obstacle="false">
     <visuals>
         <sprite file="" />
     </visuals>
@@ -138,10 +271,170 @@ BOILERPLATES["Map"] = """<map char="." name="New Map Tile" obstacle="false">
         <item type="container" min="1" max="1" chance="0.1" />
     </loot>
 </map>"""
+}
 
-# ----------------------------------------------------------------------
-# MAIN ENTITY EDITOR WITH TAB SYSTEM & MAP / DROP SUPPORT
-# ----------------------------------------------------------------------
+CATEGORY_EXTENSIONS = {
+    "Zombie": ".json",
+    "NPC": ".json",
+    "Animal": ".json",
+    "Player": ".json",
+    "Vehicle": ".xml",
+    "Clothes": ".xml",
+    "Radio": ".xml",
+    "Items": ".xml",
+    "Map": ".xml"
+}
+
+def json_to_element_tree(data, category):
+    root_tag = category.lower()
+    entity_key = None
+    entity_data = data
+
+    for group_key in ["zombies", "npcs", "animals", "builds"]:
+        if group_key in data and isinstance(data[group_key], dict) and data[group_key]:
+            entity_key = list(data[group_key].keys())[0]
+            entity_data = data[group_key][entity_key]
+            break
+
+    if "player" in data and isinstance(data["player"], dict):
+        entity_key = "player"
+        entity_data = data["player"]
+
+    root = ET.Element(root_tag)
+    if entity_key and entity_key != "player":
+        root.set("type", str(entity_key))
+
+    for k, v in entity_data.items():
+        if k in ["stats", "clothes", "visuals", "sound", "loot", "properties"]: continue
+        if isinstance(v, dict):
+            child = ET.SubElement(root, k)
+            for sub_k, sub_v in v.items(): child.set(sub_k, str(sub_v))
+        elif isinstance(v, list):
+            child = ET.SubElement(root, k)
+            child.text = str(v)
+        else:
+            if v is not None: root.set(k, str(v))
+
+    if "stats" in entity_data and isinstance(entity_data["stats"], dict):
+        stats_el = ET.SubElement(root, "stats")
+        for stat_name, stat_val in entity_data["stats"].items():
+            s_child = ET.SubElement(stats_el, stat_name)
+            if isinstance(stat_val, dict):
+                for sk, sv in stat_val.items(): s_child.set(sk, str(sv))
+            else:
+                s_child.set("value", str(stat_val))
+
+    if "clothes" in entity_data and isinstance(entity_data["clothes"], dict):
+        clothes_el = ET.SubElement(root, "clothes")
+        for slot, cloth_item in entity_data["clothes"].items():
+            slot_el = ET.SubElement(clothes_el, slot)
+            if cloth_item:
+                ET.SubElement(slot_el, "cloth", {"name": str(cloth_item)})
+
+    if "visuals" in entity_data and isinstance(entity_data["visuals"], dict):
+        vis_el = ET.SubElement(root, "visuals")
+        for sprite_id, sprite_file in entity_data["visuals"].items():
+            ET.SubElement(vis_el, "sprite", {"id": str(sprite_id), "file": str(sprite_file)})
+
+    if "sound" in entity_data and isinstance(entity_data["sound"], dict):
+        sound_el = ET.SubElement(root, "sound")
+        for snd_id, snd_file in entity_data["sound"].items():
+            ET.SubElement(sound_el, str(snd_id), {"src": str(snd_file)})
+
+    loot_list = entity_data.get("loot") or entity_data.get("initial_loot") or []
+    if isinstance(loot_list, list):
+        loot_el = ET.SubElement(root, "loot")
+        for item_entry in loot_list:
+            if isinstance(item_entry, dict):
+                attribs = {lk: str(lv) for lk, lv in item_entry.items()}
+                ET.SubElement(loot_el, "item", attribs)
+
+    return ET.ElementTree(root)
+
+def element_tree_to_json(tree, loot_rows, category):
+    root = tree.getroot()
+    entity_key = root.get("type", "common")
+
+    entity_dict = {}
+    for k, v in root.attrib.items():
+        if k != "type":
+            try:
+                if v.lower() == "true": entity_dict[k] = True
+                elif v.lower() == "false": entity_dict[k] = False
+                elif "." in v: entity_dict[k] = float(v)
+                else: entity_dict[k] = int(v)
+            except ValueError:
+                entity_dict[k] = v
+
+    stats_dict = {}
+    stats_el = root.find("stats")
+    if stats_el is not None:
+        for s in stats_el:
+            stat_name = s.tag
+            if "min" in s.attrib or "max" in s.attrib:
+                s_dict = {}
+                for sk, sv in s.attrib.items():
+                    try: s_dict[sk] = int(sv) if sv.isdigit() else float(sv)
+                    except: s_dict[sk] = sv
+                stats_dict[stat_name] = s_dict
+            elif "value" in s.attrib:
+                try: stats_dict[stat_name] = float(s.get("value"))
+                except: stats_dict[stat_name] = s.get("value")
+    if stats_dict: entity_dict["stats"] = stats_dict
+
+    clothes_dict = {slot: None for slot in ['head', 'util', 'hair', 'facial', 'feet', 'hand', 'body', 'arms', 'legs']}
+    clothes_el = root.find("clothes")
+    if clothes_el is not None:
+        for slot_el in clothes_el:
+            c = slot_el.find("cloth")
+            if c is not None and c.get("name"):
+                clothes_dict[slot_el.tag] = c.get("name")
+    if clothes_el is not None: entity_dict["clothes"] = clothes_dict
+
+    vis_dict = {}
+    vis_el = root.find("visuals")
+    if vis_el is not None:
+        for sp in vis_el.findall("sprite"):
+            vis_dict[sp.get("id", "center")] = sp.get("file", "")
+    if vis_dict: entity_dict["visuals"] = vis_dict
+
+    sound_dict = {}
+    sound_el = root.find("sound")
+    if sound_el is not None:
+        for snd in sound_el: sound_dict[snd.tag] = snd.get("src", "")
+    if sound_dict: entity_dict["sound"] = sound_dict
+
+    loot_list = []
+    for r in loot_rows:
+        target_val = r["target"].text.strip()
+        if not target_val: continue
+        entry = {}
+        if r["mode"].text == "type": entry["type"] = target_val
+        else: entry["item"] = target_val
+
+        min_val = r["min"].text.strip()
+        max_val = r["max"].text.strip()
+        chance_val = r["chance"].text.strip()
+
+        if min_val:
+            try: entry["min"] = int(min_val)
+            except: entry["min"] = min_val
+        if max_val:
+            try: entry["max"] = int(max_val)
+            except: entry["max"] = max_val
+        if chance_val:
+            try: entry["chance"] = float(chance_val)
+            except: entry["chance"] = chance_val
+        loot_list.append(entry)
+    entity_dict["loot"] = loot_list
+
+    cat_low = category.lower()
+    if cat_low == "zombie": return {"zombies": {entity_key: entity_dict}}
+    elif cat_low == "npc": return {"npcs": {entity_key: entity_dict}}
+    elif cat_low == "animal": return {"animals": {entity_key: entity_dict}}
+    elif cat_low == "player": return {"player": entity_dict}
+    return {f"{cat_low}s": {entity_key: entity_dict}}
+
 class EntityEditor:
     def __init__(self, y_offset, width, height, font, all_sprites):
         self.y_offset = y_offset
@@ -153,27 +446,12 @@ class EntityEditor:
         self.tab_bar_h = 36
         self.sidebar_w = 300
         
-        self.categories = {
-            "Zombie": os.path.join(GAME_ROOT, 'lib', 'data', 'zombie'),
-            "Vehicle": os.path.join(GAME_ROOT, 'lib', 'data', 'vehicle'),
-            "Clothes": os.path.join(GAME_ROOT, 'lib', 'data', 'clothes'),
-            "Animal": os.path.join(GAME_ROOT, 'lib', 'data', 'animals'),
-            "NPC": os.path.join(GAME_ROOT, 'lib', 'data', 'npc'),
-            "Radio": os.path.join(GAME_ROOT, 'lib', 'data', 'radio'),
-            "Items": os.path.join(GAME_ROOT, 'lib', 'data', 'items'),
-            "Map": os.path.join(GAME_ROOT, 'lib', 'data', 'map')
-        }
-        
-        for path in self.categories.values():
-            if not os.path.exists(path):
-                try: os.makedirs(path)
-                except: pass
-                
-        self.active_category = "Zombie"
+        # Dynamic discovery of categories from mod data directory
+        self.categories = self._resolve_categories()
+        self.active_category = list(self.categories.keys())[0] if self.categories else "Zombie"
         self.tree_structure = []
         self.folder_expanded = {}
 
-        # Multi-tab system
         self.open_tabs = []
         self.active_tab_idx = -1
         self.tab_scroll_x = 0
@@ -185,14 +463,12 @@ class EntityEditor:
         self.close_confirm_dialog = None
         self.new_entity_dialog = None
 
-        # Dynamic Options
         self.item_opts = [{"label": "None", "value": "", "icon": None}]
         self.item_type_opts = []
         self.cloth_opts = [{"label": "None", "value": "", "icon": None}]
         self.cloth_sprites = {} 
         self._build_options()
         
-        # Sidebar UI State
         self.sidebar_scroll = 0
         self.max_sidebar_scroll = 0
         self.dragging_sidebar = False
@@ -200,7 +476,6 @@ class EntityEditor:
         self.sidebar_start_offset = 0
         self.sidebar_thumb_rect = None
 
-        # Form Scroll Dragging
         self.dragging_form = False
         self.form_start_y = 0
         self.form_start_offset = 0
@@ -211,7 +486,6 @@ class EntityEditor:
         self.search_input = UITextBox(10, self.y_offset + 74, self.sidebar_w - 20, 28, self.font, "")
         self.new_btn = pygame.Rect(10, self.y_offset + 108, self.sidebar_w - 20, 30)
 
-        # Form Action Buttons
         self.save_btn = pygame.Rect(0, 0, 130, 35)
         self.duplicate_btn = pygame.Rect(0, 0, 130, 35)
         self.delete_btn = pygame.Rect(0, 0, 110, 35)
@@ -223,6 +497,48 @@ class EntityEditor:
         first_row = next((r for r in self.get_visible_rows() if r["type"] == "file"), None)
         if first_row:
             self.open_tab_file(first_row["rel_path"])
+
+    def _resolve_categories(self):
+        """Dynamically scans existing data directories without creating any folders."""
+        base_data = get_data_dir()
+        vanilla_data = os.path.join(LIB_ROOT, 'data')
+
+        known = {
+            "Zombie": "zombie", "NPC": "npc", "Animal": "animals",
+            "Player": "player", "Vehicle": "vehicle", "Clothes": "clothes",
+            "Radio": "radio", "Items": "items", "Map": "map"
+        }
+        cats = {}
+
+        # 1. Discover whatever actually exists in active mod
+        if os.path.exists(base_data):
+            try:
+                for entry in sorted(os.listdir(base_data)):
+                    full_p = os.path.join(base_data, entry)
+                    if os.path.isdir(full_p):
+                        matched = next((k for k, v in known.items() if v == entry.lower() or k.lower() == entry.lower()), entry.capitalize())
+                        cats[matched] = full_p
+            except OSError: pass
+
+        # 2. Add remaining known categories pointing to mod or vanilla
+        for label, folder in known.items():
+            if label not in cats:
+                mod_sub = os.path.join(base_data, folder)
+                vanilla_sub = os.path.join(vanilla_data, folder)
+                cats[label] = mod_sub if os.path.exists(mod_sub) else (vanilla_sub if os.path.exists(vanilla_sub) else mod_sub)
+        return cats
+
+    def reload_for_mod(self, all_sprites):
+        """Called when active mod changes to refresh sprites, options, and file paths."""
+        self.all_sprites = all_sprites
+        self.categories = self._resolve_categories()
+        if self.active_category not in self.categories:
+            self.active_category = list(self.categories.keys())[0] if self.categories else "Zombie"
+        self.category_dropdown.options = [{"label": c, "value": c} for c in self.categories.keys()]
+        self.category_dropdown.selected_value = self.active_category
+        self.category_dropdown._update_label()
+        self._build_options()
+        self.refresh_file_list()
 
     def _build_options(self):
         types = set(["container", "weapon", "food", "tool", "ammo", "medical", "material", "cloth", "general"])
@@ -245,8 +561,8 @@ class EntityEditor:
                                 self.cloth_sprites[name] = sprite_file
                         except Exception: pass
                         
-        i_dir = os.path.join(GAME_ROOT, 'lib', 'data', 'items')
-        if os.path.exists(i_dir):
+        i_dir = self.categories.get("Items")
+        if i_dir and os.path.exists(i_dir):
             for root_d, dirs, files in os.walk(i_dir):
                 for f in files:
                     if f.endswith(".xml"):
@@ -264,10 +580,12 @@ class EntityEditor:
 
     def get_subfolders(self, cat_dir):
         folders = []
-        if os.path.exists(cat_dir):
-            for item in sorted(os.listdir(cat_dir), key=str.lower):
-                if os.path.isdir(os.path.join(cat_dir, item)):
-                    folders.append(item)
+        if cat_dir and os.path.exists(cat_dir):
+            try:
+                for item in sorted(os.listdir(cat_dir), key=str.lower):
+                    if os.path.isdir(os.path.join(cat_dir, item)):
+                        folders.append(item)
+            except OSError: pass
         return folders
 
     def get_subfolder_options(self, cat_name):
@@ -276,23 +594,26 @@ class EntityEditor:
         return [{"label": "/ (Root)", "value": ""}] + [{"label": f, "value": f} for f in folders]
 
     def refresh_file_list(self):
-        cat_dir = self.categories[self.active_category]
+        cat_dir = self.categories.get(self.active_category, "")
         self.tree_structure = []
-        if not os.path.exists(cat_dir): return
+        if not cat_dir or not os.path.exists(cat_dir): return
 
-        # 1. Root XML files
-        for f in sorted(os.listdir(cat_dir), key=str.lower):
+        try: entries = sorted(os.listdir(cat_dir), key=str.lower)
+        except OSError: return
+
+        for f in entries:
             fp = os.path.join(cat_dir, f)
-            if os.path.isfile(fp) and f.endswith('.xml'):
+            if os.path.isfile(fp) and (f.endswith('.xml') or f.endswith('.json')):
                 self.tree_structure.append({"type": "file", "name": f, "subfolder": "", "rel_path": f})
 
-        # 2. Subfolders
         subfolders = self.get_subfolders(cat_dir)
         for s in subfolders:
             sub_path = os.path.join(cat_dir, s)
             sub_files = []
-            for f in sorted(os.listdir(sub_path), key=str.lower):
-                if f.endswith('.xml'):
+            try: sub_entries = sorted(os.listdir(sub_path), key=str.lower)
+            except OSError: sub_entries = []
+            for f in sub_entries:
+                if f.endswith('.xml') or f.endswith('.json'):
                     sub_files.append({"type": "file", "name": f, "subfolder": s, "rel_path": f"{s}/{f}"})
             self.tree_structure.append({"type": "folder", "name": s, "files": sub_files})
 
@@ -316,6 +637,7 @@ class EntityEditor:
         return rows
 
     def get_current_sprite_path(self, tab):
+        """Finds sprite path checking Mod first, then Vanilla fallback."""
         if not tab: return None
         base_img = None
         root = tab["tree"].getroot()
@@ -337,36 +659,38 @@ class EntityEditor:
 
         base_fname = os.path.basename(base_img)
         stem = os.path.splitext(base_fname)[0]
-        s_dir = os.path.join(GAME_ROOT, 'lib', 'sprites')
-        subdirs = [tab["category"].lower(), 'items', 'clothes', 'zombie', 'player', 'npc', 'animals', 'vehicle', 'map', 'editor']
         candidates = [base_fname] if base_fname.endswith('.png') else [base_fname, f"{stem}.png"]
 
-        for sub in subdirs:
-            for c_file in candidates:
-                p = os.path.join(s_dir, sub, c_file)
-                if os.path.exists(p): return p
+        # Search Mod sprites first, then Vanilla fallback
+        search_roots = [get_sprites_dir(), os.path.join(LIB_ROOT, 'sprites')]
+        subdirs = [tab["category"].lower(), 'items', 'clothes', 'zombie', 'player', 'npc', 'animals', 'vehicle', 'map', 'editor']
+
+        for s_root in search_roots:
+            if not os.path.exists(s_root): continue
+            for sub in subdirs:
+                for c_file in candidates:
+                    p = os.path.join(s_root, sub, c_file)
+                    if os.path.exists(p): return p
 
         target_name = base_fname if base_fname.endswith('.png') else f"{stem}.png"
-        return os.path.join(s_dir, tab["category"].lower(), target_name)
+        return os.path.join(get_sprites_dir(), tab["category"].lower(), target_name)
 
     def ensure_tab_visible(self, idx):
         if not (0 <= idx < len(self.open_tabs)): return
         start_x = self.sidebar_w
         view_w = self.width - start_x
         rel_x = 0
-        target_left = 0
-        target_right = 0
+        target_left, target_right = 0, 0
 
         for i, tab in enumerate(self.open_tabs):
-            fname = tab["filename"] or tab["filename_input"].text or "new_entity.xml"
+            fname = tab["filename"] or tab["filename_input"].text or "new_entity"
             modified = self.is_tab_modified(tab)
             display_name = f"*{fname}" if modified else fname
             text_w = self.font.size(display_name)[0]
             tab_w = max(90, text_w + 44)
 
             if i == idx:
-                target_left = rel_x
-                target_right = rel_x + tab_w
+                target_left, target_right = rel_x, rel_x + tab_w
             rel_x += tab_w + 2
 
         total_w = rel_x - 2 if rel_x > 0 else 0
@@ -411,7 +735,7 @@ class EntityEditor:
             "attr_name": attr_name
         }
 
-    def create_tab_structure(self, filename, tree, subfolder="", rel_path=None):
+    def create_tab_structure(self, filename, tree, subfolder="", rel_path=None, is_json=False):
         root = tree.getroot()
         fields = []
         loot_rows = []
@@ -493,12 +817,14 @@ class EntityEditor:
 
         traverse(root, "")
 
-        fname_val = filename if filename is not False else f"new_{self.active_category.lower()}.xml"
+        ext = ".json" if is_json else CATEGORY_EXTENSIONS.get(self.active_category, ".xml")
+        fname_val = filename if filename is not False else f"new_{self.active_category.lower()}{ext}"
         tab = {
             "category": self.active_category,
             "subfolder": subfolder,
             "filename": filename,
             "rel_path": rel_path if filename is not False else False,
+            "is_json": is_json,
             "filename_input": UITextBox(0, 0, 200, 30, self.font, fname_val),
             "root_tag_input": UITextBox(0, 0, 150, 30, self.font, root.tag),
             "root_tag": root.tag,
@@ -513,6 +839,7 @@ class EntityEditor:
         return tab
 
     def open_tab_file(self, rel_path):
+        cat_dir = self.categories.get(self.active_category, "")
         for i, tab in enumerate(self.open_tabs):
             if tab["category"] == self.active_category and tab["rel_path"] == rel_path:
                 self.active_tab_idx = i
@@ -520,21 +847,39 @@ class EntityEditor:
                 self.ensure_tab_visible(self.active_tab_idx)
                 return
 
-        cat_dir = self.categories[self.active_category]
+        is_json = False
         if rel_path is False:
-            tree = ET.ElementTree(ET.fromstring(BOILERPLATES.get(self.active_category, BOILERPLATES["Items"])))
+            ext = CATEGORY_EXTENSIONS.get(self.active_category, ".xml")
+            is_json = (ext == ".json")
+            bp = BOILERPLATES.get(self.active_category, BOILERPLATES["Items"])
+            if is_json:
+                try: tree = json_to_element_tree(json.loads(bp), self.active_category)
+                except: tree = ET.ElementTree(ET.Element(self.active_category.lower()))
+            else:
+                tree = ET.ElementTree(ET.fromstring(bp))
             filename = False
             subfolder = ""
         else:
             path = os.path.join(cat_dir, rel_path)
             subfolder = os.path.dirname(rel_path).replace('\\', '/')
             filename = os.path.basename(rel_path)
-            try: tree = ET.parse(path)
-            except Exception as e:
-                print(f"Error loading {rel_path}: {e}")
-                tree = ET.ElementTree(ET.fromstring(BOILERPLATES.get(self.active_category, BOILERPLATES["Items"])))
+            is_json = filename.endswith('.json')
 
-        new_tab = self.create_tab_structure(filename, tree, subfolder=subfolder, rel_path=rel_path)
+            if is_json:
+                try:
+                    with open(path, 'r', encoding='utf-8') as jf:
+                        j_data = json.load(jf)
+                    tree = json_to_element_tree(j_data, self.active_category)
+                except Exception as e:
+                    print(f"Error loading JSON entity {rel_path}: {e}")
+                    tree = ET.ElementTree(ET.Element(self.active_category.lower()))
+            else:
+                try: tree = ET.parse(path)
+                except Exception as e:
+                    print(f"Error loading XML entity {rel_path}: {e}")
+                    tree = ET.ElementTree(ET.fromstring(BOILERPLATES.get("Items")))
+
+        new_tab = self.create_tab_structure(filename, tree, subfolder=subfolder, rel_path=rel_path, is_json=is_json)
         self.open_tabs.append(new_tab)
         self.active_tab_idx = len(self.open_tabs) - 1
         self.layout_form()
@@ -582,8 +927,6 @@ class EntityEditor:
         tab["filename_input"].rect.topleft = (form_x + 130, current_y)
         tab["root_tag_input"].rect.topleft = (form_x + 450, current_y)
         current_y += 60
-        
-        col_y = current_y
         current_y += 30
         
         for row in tab["fields"]:
@@ -592,7 +935,7 @@ class EntityEditor:
                 row["input"].list_rect.topleft = (form_x + 460, current_y + 28)
             current_y += row["input"].rect.height + 8
             
-        has_loot = bool(tab["loot_rows"] or tab["category"] in ["Animal", "Zombie", "Vehicle", "NPC", "Clothes", "Map"])
+        has_loot = bool(tab["loot_rows"] or tab["category"] in ["Animal", "Zombie", "Vehicle", "NPC", "Clothes", "Map", "Player"])
         if has_loot:
             current_y += 20
             tab["loot_header_y"] = current_y
@@ -635,7 +978,7 @@ class EntityEditor:
         tabs_y = self.y_offset
         
         for i, tab in enumerate(self.open_tabs):
-            fname = tab["filename"] or tab["filename_input"].text or "new_entity.xml"
+            fname = tab["filename"] or tab["filename_input"].text or "new_entity"
             modified = self.is_tab_modified(tab)
             display_name = f"*{fname}" if modified else fname
             
@@ -665,7 +1008,8 @@ class EntityEditor:
         
         fname = tab["filename_input"].text.strip()
         if not fname: return
-        if not fname.endswith(".xml"): fname += ".xml"
+        ext = ".json" if tab.get("is_json") else CATEGORY_EXTENSIONS.get(tab["category"], ".xml")
+        if not fname.endswith(('.xml', '.json')): fname += ext
         
         root = tab["tree"].getroot()
         root.tag = tab["root_tag_input"].text.strip() or tab["root_tag"]
@@ -692,43 +1036,38 @@ class EntityEditor:
                 else:
                     node.set(f["attr"], val)
                     
-        loot_tag = tab.get("loot_tag", "loot")
-        if tab["loot_rows"] or tab["category"] in ["Animal", "Zombie", "Vehicle", "NPC", "Clothes", "Map"]:
-            loot_node = root.find(loot_tag)
-            if loot_node is not None: loot_node.clear()
-            else: loot_node = ET.SubElement(root, loot_tag)
-                
-            for row in tab["loot_rows"]:
-                mode = row["mode"].text
-                target_val = row["target"].text.strip()
-                if not target_val: continue
-                
-                attribs = {}
-                if mode == "type":
-                    attribs["type"] = target_val
-                else:
-                    attr_key = row.get("attr_name", "item" if tab["category"] != "Clothes" else "name")
-                    attribs[attr_key] = target_val
-                    
-                min_val = row["min"].text.strip()
-                max_val = row["max"].text.strip()
-                chance_val = row["chance"].text.strip()
-                
-                if min_val: attribs["min"] = min_val
-                if max_val: attribs["max"] = max_val
-                if chance_val: attribs["chance"] = chance_val
-                
-                ET.SubElement(loot_node, "item", attribs)
-                
-        tree = ET.ElementTree(root)
-        ET.indent(tree, space="    ", level=0)
-        
         cat_dir = self.categories[tab["category"]]
         sub = tab.get("subfolder", "")
         target_dir = os.path.join(cat_dir, sub) if sub else cat_dir
+        
+        # Generated only on user save action
         os.makedirs(target_dir, exist_ok=True)
         path = os.path.join(target_dir, fname)
-        tree.write(path, encoding="utf-8", xml_declaration=True)
+
+        if fname.endswith('.json'):
+            json_data = element_tree_to_json(tab["tree"], tab["loot_rows"], tab["category"])
+            with open(path, 'w', encoding='utf-8') as jf:
+                json.dump(json_data, jf, indent=2)
+        else:
+            loot_tag = tab.get("loot_tag", "loot")
+            if tab["loot_rows"] or tab["category"] in ["Animal", "Zombie", "Vehicle", "NPC", "Clothes", "Map"]:
+                loot_node = root.find(loot_tag)
+                if loot_node is not None: loot_node.clear()
+                else: loot_node = ET.SubElement(root, loot_tag)
+                    
+                for row in tab["loot_rows"]:
+                    mode = row["mode"].text
+                    target_val = row["target"].text.strip()
+                    if not target_val: continue
+                    attribs = {"type": target_val} if mode == "type" else {"item": target_val}
+                    if row["min"].text.strip(): attribs["min"] = row["min"].text.strip()
+                    if row["max"].text.strip(): attribs["max"] = row["max"].text.strip()
+                    if row["chance"].text.strip(): attribs["chance"] = row["chance"].text.strip()
+                    ET.SubElement(loot_node, "item", attribs)
+
+            tree = ET.ElementTree(root)
+            ET.indent(tree, space="    ", level=0)
+            tree.write(path, encoding="utf-8", xml_declaration=True)
         
         old_rel = tab.get("rel_path")
         new_rel = f"{sub}/{fname}" if sub else fname
@@ -740,6 +1079,7 @@ class EntityEditor:
                 
         tab["filename"] = fname
         tab["rel_path"] = new_rel
+        tab["is_json"] = fname.endswith('.json')
         tab["saved_snapshot"] = self.get_tab_snapshot(tab)
         self.refresh_file_list()
 
@@ -748,8 +1088,9 @@ class EntityEditor:
         if not tab or tab["filename"] is False: return
 
         base_name = tab["filename"]
-        if base_name.endswith(".xml"): base_name = base_name[:-4]
-        base_no_idx = re.sub(r'_\d+$', '', base_name)
+        ext = os.path.splitext(base_name)[1]
+        base_stem = os.path.splitext(base_name)[0]
+        base_no_idx = re.sub(r'_\d+$', '', base_stem)
         
         cat_dir = self.categories[tab["category"]]
         sub = tab.get("subfolder", "")
@@ -757,7 +1098,7 @@ class EntityEditor:
 
         counter = 1
         while True:
-            dup_fname = f"{base_no_idx}_{counter}.xml"
+            dup_fname = f"{base_no_idx}_{counter}{ext}"
             if not os.path.exists(os.path.join(target_dir, dup_fname)):
                 break
             counter += 1
@@ -811,18 +1152,21 @@ class EntityEditor:
             if stem in self.all_sprites: return self.all_sprites[stem]
             if base_fname in self.all_sprites: return self.all_sprites[base_fname]
             
-            s_dir = os.path.join(GAME_ROOT, 'lib', 'sprites')
-            subdirs = ['items', 'clothes', 'zombie', 'player', 'npc', 'animals', 'vehicle', 'map']
+            # Check Mod sprites first, then Vanilla fallback
             candidates = [base_fname] if base_fname.endswith('.png') else [base_fname, f"{stem}.png"]
+            search_dirs = [get_sprites_dir(), os.path.join(LIB_ROOT, 'sprites')]
+            subdirs = ['items', 'clothes', 'zombie', 'player', 'npc', 'animals', 'vehicle', 'map']
                 
-            for sub in subdirs:
-                for c_file in candidates:
-                    p = os.path.join(s_dir, sub, c_file)
-                    if os.path.exists(p):
-                        try:
-                            img = pygame.image.load(p).convert_alpha()
-                            return pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
-                        except Exception: pass
+            for s_root in search_dirs:
+                if not os.path.exists(s_root): continue
+                for sub in subdirs:
+                    for c_file in candidates:
+                        p = os.path.join(s_root, sub, c_file)
+                        if os.path.exists(p):
+                            try:
+                                img = pygame.image.load(p).convert_alpha()
+                                return pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
+                            except Exception: pass
             return None
 
         img = None
@@ -847,7 +1191,6 @@ class EntityEditor:
         return surf
 
     def handle_event(self, event):
-        # 1. New Entity Modal with Category and Subfolder dropdowns
         if self.new_entity_dialog:
             modal_rect = pygame.Rect(self.width//2 - 270, self.height//2 - 130, 540, 260)
             create_btn = pygame.Rect(modal_rect.x + 130, modal_rect.bottom - 45, 130, 34)
@@ -863,7 +1206,8 @@ class EntityEditor:
                     s_dd.options = self.get_subfolder_options(c_dd.text)
                     s_dd.selected_value = ""
                     s_dd._update_label()
-                    n_box.text = f"new_{c_dd.text.lower()}.xml"
+                    ext = CATEGORY_EXTENSIONS.get(c_dd.text, ".xml")
+                    n_box.text = f"new_{c_dd.text.lower()}{ext}"
                 return True
 
             if s_dd.expanded and s_dd.handle_event(event): return True
@@ -874,7 +1218,8 @@ class EntityEditor:
                     s_dd.options = self.get_subfolder_options(c_dd.text)
                     s_dd.selected_value = ""
                     s_dd._update_label()
-                    n_box.text = f"new_{c_dd.text.lower()}.xml"
+                    ext = CATEGORY_EXTENSIONS.get(c_dd.text, ".xml")
+                    n_box.text = f"new_{c_dd.text.lower()}{ext}"
                 return True
 
             if s_dd.handle_event(event): return True
@@ -886,9 +1231,12 @@ class EntityEditor:
                     chosen_sub = s_dd.text
                     name = n_box.text.strip()
                     if name:
-                        if not name.endswith('.xml'): name += ".xml"
+                        ext = CATEGORY_EXTENSIONS.get(chosen_cat, ".xml")
+                        if not name.endswith(('.xml', '.json')): name += ext
+                        
                         cat_dir = self.categories[chosen_cat]
                         target_dir = os.path.join(cat_dir, chosen_sub) if chosen_sub else cat_dir
+                        
                         os.makedirs(target_dir, exist_ok=True)
                         full_p = os.path.join(target_dir, name)
                         rel_p = f"{chosen_sub}/{name}" if chosen_sub else name
@@ -903,6 +1251,7 @@ class EntityEditor:
                         self.category_dropdown._update_label()
                         self.refresh_file_list()
                         self.open_tab_file(rel_p)
+
                     self.new_entity_dialog = None
                     return True
                 elif cancel_btn.collidepoint(event.pos):
@@ -913,7 +1262,6 @@ class EntityEditor:
                 return True
             return True
 
-        # 2. Close Confirmation Modal
         if self.close_confirm_dialog:
             modal_rect = pygame.Rect(self.width//2 - 280, self.height//2 - 95, 560, 190)
             btn_y = modal_rect.bottom - 46
@@ -937,7 +1285,6 @@ class EntityEditor:
                     return True
             return True
 
-        # Keyboard Shortcut: CTRL+W closes active tab, CTRL+S saves
         if event.type == pygame.KEYDOWN:
             if (event.mod & pygame.KMOD_CTRL) and event.key == pygame.K_w:
                 if 0 <= self.active_tab_idx < len(self.open_tabs):
@@ -952,7 +1299,6 @@ class EntityEditor:
             self.dragging_form = False
             self.dragging_tab_scroll = False
             
-        # Dragging Sidebar / Form / Tabs
         if event.type == pygame.MOUSEMOTION:
             if self.dragging_sidebar and self.sidebar_thumb_rect and self.max_sidebar_scroll > 0:
                 dy = event.pos[1] - self.sidebar_start_y
@@ -983,7 +1329,6 @@ class EntityEditor:
                     self.tab_scroll_x = max(0, min(self.max_tab_scroll, self.tab_scroll_start_offset + (dx / movable) * self.max_tab_scroll))
                 return True
 
-        # Sidebar Category Dropdown
         if self.category_dropdown.expanded:
             if self.category_dropdown.handle_event(event):
                 if self.category_dropdown.text != self.active_category:
@@ -995,14 +1340,12 @@ class EntityEditor:
 
         if self.category_dropdown.handle_event(event): return True
 
-        # Sidebar Search Bar
         if self.search_input.handle_event(event):
             visible_rows = self.get_visible_rows()
             self.max_sidebar_scroll = max(0, len(visible_rows) * 28 + 10 - (self.height - self.y_offset - 145))
             self.sidebar_scroll = max(0, min(self.sidebar_scroll, self.max_sidebar_scroll))
             return True
 
-        # Tab Strip Interactions
         tabs_view_rect = pygame.Rect(self.sidebar_w, self.y_offset, self.width - self.sidebar_w, self.tab_bar_h)
         if event.type == pygame.MOUSEBUTTONDOWN:
             if tabs_view_rect.collidepoint(event.pos):
@@ -1029,7 +1372,6 @@ class EntityEditor:
                             self.ensure_tab_visible(self.active_tab_idx)
                             return True
 
-        # Current Form Fields Interactions
         tab = self.get_current_tab()
         if tab:
             dropdowns = [row["input"] for row in tab["fields"] if isinstance(row["input"], UIDropdown)]
@@ -1114,7 +1456,6 @@ class EntityEditor:
                     self.layout_form()
                     return True
 
-        # Sidebar List Interactions (Folders [+] and Files)
         if event.type == pygame.MOUSEBUTTONDOWN:
             mx, my = event.pos
             if mx <= self.sidebar_w:
@@ -1131,13 +1472,13 @@ class EntityEditor:
                     return True
                 if event.button == 1:
                     if self.new_btn.collidepoint(mx, my):
-                        # Open New Entity Modal
                         modal_rect = pygame.Rect(self.width//2 - 270, self.height//2 - 130, 540, 260)
                         cat_opts = [{"label": c, "value": c} for c in self.categories.keys()]
                         cat_dd = UIDropdown(modal_rect.x + 130, modal_rect.y + 55, 370, 30, self.font, cat_opts, self.active_category)
                         sub_opts = self.get_subfolder_options(self.active_category)
                         sub_dd = UIDropdown(modal_rect.x + 130, modal_rect.y + 100, 370, 30, self.font, sub_opts, "", searchable=True)
-                        n_box = UITextBox(modal_rect.x + 130, modal_rect.y + 145, 370, 30, self.font, f"new_{self.active_category.lower()}.xml")
+                        ext = CATEGORY_EXTENSIONS.get(self.active_category, ".xml")
+                        n_box = UITextBox(modal_rect.x + 130, modal_rect.y + 145, 370, 30, self.font, f"new_{self.active_category.lower()}{ext}")
                         n_box.active = True
                         FocusManager.set_focus(n_box)
                         self.new_entity_dialog = {
@@ -1169,7 +1510,6 @@ class EntityEditor:
         pygame.draw.rect(surface, UITheme.BG, bg_rect)
         mouse_pos = pygame.mouse.get_pos()
         
-        # 1. Sidebar Tree List
         list_view_rect = pygame.Rect(0, self.y_offset + 145, self.sidebar_w, self.height - self.y_offset - 145)
         surface.set_clip(list_view_rect)
         
@@ -1195,7 +1535,6 @@ class EntityEditor:
             list_y += 28
         surface.set_clip(None)
         
-        # 2. Sidebar Header
         sidebar_header_rect = pygame.Rect(0, self.y_offset, self.sidebar_w, 145)
         pygame.draw.rect(surface, UITheme.PANEL_BG, sidebar_header_rect)
         pygame.draw.line(surface, UITheme.BORDER, (self.sidebar_w, self.y_offset), (self.sidebar_w, self.height), 2)
@@ -1217,7 +1556,6 @@ class EntityEditor:
             self.sidebar_thumb_rect = pygame.Rect(track_rect.x, thumb_y, 8, thumb_h)
             pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, self.sidebar_thumb_rect, border_radius=4)
 
-        # 3. Tab Bar Strip
         tabs_view_rect = pygame.Rect(self.sidebar_w, self.y_offset, self.width - self.sidebar_w, self.tab_bar_h)
         pygame.draw.rect(surface, UITheme.PANEL_BG, tabs_view_rect)
         pygame.draw.line(surface, UITheme.BORDER, (self.sidebar_w, self.y_offset + self.tab_bar_h - 1), (self.width, self.y_offset + self.tab_bar_h - 1))
@@ -1257,7 +1595,6 @@ class EntityEditor:
             surface.blit(self.font.render("x", True, UITheme.TEXT), (close_rect.x + 4, close_rect.y + 1))
         surface.set_clip(prev_clip)
 
-        # Horizontal Tab Scrollbar
         if self.max_tab_scroll > 0:
             track_rect = pygame.Rect(self.sidebar_w, self.y_offset + self.tab_bar_h - 4, self.width - self.sidebar_w, 4)
             pygame.draw.rect(surface, UITheme.PANEL_BG, track_rect)
@@ -1268,7 +1605,6 @@ class EntityEditor:
         else:
             self.tab_thumb_rect = None
 
-        # 4. Active Tab Form
         tab = self.get_current_tab()
         if tab:
             form_view_rect = pygame.Rect(self.sidebar_w, self.y_offset + self.tab_bar_h, self.width - self.sidebar_w, self.height - self.y_offset - self.tab_bar_h)
@@ -1284,7 +1620,6 @@ class EntityEditor:
             surface.blit(self.font.render("Root Tag:", True, UITheme.TEXT_DIM), (form_x + 350, tab["root_tag_input"].rect.y + 6))
             tab["root_tag_input"].draw(surface)
             
-            # Preview Box
             preview_rect = pygame.Rect(self.width - 180, self.y_offset + self.tab_bar_h + 20, 150, 150)
             pygame.draw.rect(surface, UITheme.PANEL_BG, preview_rect, border_radius=8)
             pygame.draw.rect(surface, UITheme.BORDER_ACTIVE, preview_rect, 2, border_radius=8)
@@ -1298,7 +1633,6 @@ class EntityEditor:
 
             draw_styled_button(surface, self.edit_sprite_btn, "Edit Sprite", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
 
-            # Fields Headers
             col_y = tab["filename_input"].rect.bottom + 15
             surface.blit(self.font.render("Node Path", True, UITheme.WARNING), (form_x + 20, col_y))
             surface.blit(self.font.render("Attribute", True, UITheme.WARNING), (form_x + 240, col_y))
@@ -1342,7 +1676,6 @@ class EntityEditor:
                 elif attr_truncated and a_rect.collidepoint(mouse_pos):
                     register_tooltip(mouse_pos, f"Attribute: {full_attr}")
                 
-            # Loot / Drop UI
             if tab.get("loot_header_y") is not None:
                 header_title = "Drops:" if tab.get("loot_tag") == "drop" else "Loot Drops:"
                 surface.blit(self.font.render(header_title, True, UITheme.WARNING), (form_x + 20, tab["loot_header_y"]))
@@ -1362,7 +1695,7 @@ class EntityEditor:
                     
                 draw_styled_button(surface, self.add_loot_btn, "+ Loot", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
 
-            draw_styled_button(surface, self.save_btn, "Save XML", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
+            draw_styled_button(surface, self.save_btn, "Save File", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
             if tab["filename"] is not False:
                 draw_styled_button(surface, self.duplicate_btn, "Duplicate", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
                 draw_styled_button(surface, self.delete_btn, "Delete", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
@@ -1386,7 +1719,6 @@ class EntityEditor:
         if self.category_dropdown.expanded:
             self.category_dropdown.draw_list(surface)
 
-        # 5. New Entity Dialog Modal
         if self.new_entity_dialog:
             overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 150))
@@ -1416,7 +1748,6 @@ class EntityEditor:
             if self.new_entity_dialog["cat_dd"].expanded:
                 self.new_entity_dialog["cat_dd"].draw_list(surface)
 
-        # 6. Unsaved Changes Modal
         if self.close_confirm_dialog:
             overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 150))

@@ -1,10 +1,15 @@
 {
     "name": "BitRot_Vanilla",
     "version": "0.0.0.1",
-    "description": "BitRot Vanilla",
+    "description": "BitRot Vanilla - Official game mod",
     "repository": "https://github.com/gustavokuklinski/bit-rot/",
     "overide_dir":[
         "./data.rot/lib/*"
         ],
+    "editor_config": [
+        "entity",
+        "code",
+        "art"
+    ],
     "fallack": true 
 }
