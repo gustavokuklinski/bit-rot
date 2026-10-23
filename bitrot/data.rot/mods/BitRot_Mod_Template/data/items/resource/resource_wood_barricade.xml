@@ -1,0 +1,13 @@
+<item name="Wood Barricade" type="resource" allow_belt="false" tip="Place on Doors and Windows">
+    <properties>
+        <health min="30" max="30" />
+        <remove item="[Crowbar, Hammer, Metal Hammer, Primitive Hammer, Picaxe]" />
+        <place>
+            <item item="[Hammer, Metal Hammer, Primitive Hammer]" destroy="false" amount="1" />
+            <item item="[Nails]" destroy="true" amount="4" />
+        </place>
+        
+        <sprite file="resource_wood_barricade.png" />
+    </properties>
+    <spawn chance="1.0" />
+</item>

@@ -434,14 +434,10 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     )
 
     # Use shared cache instead of item.image.copy()
-    if item_name in COLORABLE_ITEMS:
-        if force_color is not None:
-            new_item.color = force_color
-        else:
-            new_item.color = secrets.choice(CLOTHING_COLORS)
-        
-        if hasattr(new_item, 'image') and new_item.image and new_item.color != (255, 255, 255):
-            new_item.image = get_tinted_sprite(new_item.image, template_name, new_item.color)
+    if force_color is not None:
+        new_item.apply_color(force_color)
+    elif item_name in COLORABLE_ITEMS:
+        new_item.apply_color(secrets.choice(CLOTHING_COLORS))
 
     if spawn_loot and 'loot' in template and hasattr(new_item, 'inventory'):
         for loot_info in template['loot']:

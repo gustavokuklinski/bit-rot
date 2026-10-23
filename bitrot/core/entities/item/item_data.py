@@ -1,6 +1,7 @@
 import os
 import xml.etree.ElementTree as ET
 from core.data.config import DATA_PATH
+from core.systems.mod_manager import mod_manager
 
 ITEM_TEMPLATES = {}
 
@@ -15,11 +16,12 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
         return
 
     # --- 1. RECURSIVELY LOAD ITEMS (including subfolders) ---
-    for root_dir, _, files in os.walk(items_dir):
-        for filename in files:
-            if not filename.endswith('.xml'):
+   
+
+    for root_dir, _, full_paths in mod_manager.vfs_walk(items_dir):
+        for filepath in full_paths:
+            if not filepath.endswith('.xml'):
                 continue
-            filepath = os.path.join(root_dir, filename)
             try:
                 tree = ET.parse(filepath)
                 root = tree.getroot()
@@ -269,81 +271,79 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
             ITEM_TEMPLATES[name] = template
 
     # --- 2. RECURSIVELY LOAD CLOTHES (including subfolders) ---
-    clothes_dir = DATA_PATH + 'clothes/'
-    print(f"Loading clothes templates from: {clothes_dir}")
-    if not os.path.isdir(clothes_dir):
-        print(f"Warning: Clothes templates directory not found at '{clothes_dir}'")
-    else:
-        for root_dir, _, files in os.walk(clothes_dir):
-            for filename in files:
-                if not filename.endswith('.xml'):
+    clothes_dir = os.path.join(DATA_PATH, 'clothes')
+    if not os.path.exists(clothes_dir):
+        alt_clothes = os.path.join(BASE_DIR, 'data.rot', 'lib', 'clothes')
+        if os.path.exists(alt_clothes):
+            clothes_dir = alt_clothes
+
+    for root_dir, _, full_paths in mod_manager.vfs_walk(clothes_dir):
+        for filepath in full_paths:
+            if not filepath.endswith('.xml'):
+                continue
+            try:
+                tree = ET.parse(filepath)
+                root = tree.getroot()
+                if root.tag != 'cloth':
                     continue
-                filepath = os.path.join(root_dir, filename)
-                try:
-                    tree = ET.parse(filepath)
-                    root = tree.getroot()
-                    if root.tag != 'cloth':
-                        continue
-                    
-                    name = root.attrib.get('name')
-                    if not name:
-                        continue
-                    
-                    template = {
-                        'type': root.attrib.get('type'),
-                        'properties': {},
-                        'consume_time': float(root.attrib.get('consume_time', '1.0'))
-                    }
-                    
-                    builder_str = root.attrib.get('builder', 'false')
-                    template['builder'] = (builder_str.lower() == 'true')
+                
+                name = root.attrib.get('name')
+                if not name:
+                    continue
+                
+                template = {
+                    'type': root.attrib.get('type'),
+                    'properties': {},
+                    'consume_time': float(root.attrib.get('consume_time', '1.0'))
+                }
+                
+                builder_str = root.attrib.get('builder', 'false')
+                template['builder'] = (builder_str.lower() == 'true')
 
-                    hotbar_str = root.attrib.get('hotbar', 'false')
-                    template['hotbar'] = (hotbar_str.lower() == 'true')
+                hotbar_str = root.attrib.get('hotbar', 'false')
+                template['hotbar'] = (hotbar_str.lower() == 'true')
 
-                    hide_cloth_str = root.attrib.get('hide_cloth')
-                    if hide_cloth_str:
-                        template['properties']['hide_cloth'] = [t.strip() for t in hide_cloth_str.replace('[', '').replace(']', '').split(',')]
+                hide_cloth_str = root.attrib.get('hide_cloth')
+                if hide_cloth_str:
+                    template['properties']['hide_cloth'] = [t.strip() for t in hide_cloth_str.replace('[', '').replace(']', '').split(',')]
 
-                    template['properties']['slot'] = {'value': root.attrib.get('id')}
-                    
-                    props_node = root.find('properties')
-                    if props_node is not None:
-                        dur_node = props_node.find('durability')
-                        if dur_node is not None:
-                            template['properties']['durability'] = {k: v for k, v in dur_node.attrib.items()}
-                                
-                        def_node = props_node.find('defence')
-                        if def_node is not None:
-                            template['properties']['defence'] = {'value': def_node.attrib.get('value', '0')}
-
-                        spd_node = props_node.find('speed')
-                        if spd_node is not None:
-                            template['properties']['speed'] = {'value': spd_node.attrib.get('value', '0')}
-
-                        cap_node = props_node.find('capacity')
-                        if cap_node is not None:
-                            template['properties']['capacity'] = {'value': cap_node.attrib.get('value', '0')}
-
-                        spr_node = props_node.find('sprite')
-                        if spr_node is not None:
-                            template['properties']['sprite'] = {'file': spr_node.attrib.get('file')}
-
-                    loot_node = root.find('loot')
-                    if loot_node is not None:
-                        template['loot'] = []
-                        for loot_item_node in loot_node.findall('item'):
-                            loot_item_name = loot_item_node.attrib.get('name')
-                            if loot_item_name is None:
-                                print(f"Missing 'name' attribute in loot for cloth: {name}")
-                            loot_item_chance = float(loot_item_node.attrib.get('chance', '1.0'))
-                            template['loot'].append({'name': loot_item_name, 'chance': loot_item_chance})
+                template['properties']['slot'] = {'value': root.attrib.get('id')}
+                
+                props_node = root.find('properties')
+                if props_node is not None:
+                    dur_node = props_node.find('durability')
+                    if dur_node is not None:
+                        template['properties']['durability'] = {k: v for k, v in dur_node.attrib.items()}
                             
-                    if name in ITEM_TEMPLATES:
-                        print(f"Warning: Duplicate item/cloth name '{name}'")
-                    ITEM_TEMPLATES[name] = template
+                    def_node = props_node.find('defence')
+                    if def_node is not None:
+                        template['properties']['defence'] = {'value': def_node.attrib.get('value', '0')}
 
-                except Exception as e:
-                    print(f"Error parsing cloth {filepath}: {e}")
+                    spd_node = props_node.find('speed')
+                    if spd_node is not None:
+                        template['properties']['speed'] = {'value': spd_node.attrib.get('value', '0')}
+
+                    cap_node = props_node.find('capacity')
+                    if cap_node is not None:
+                        template['properties']['capacity'] = {'value': cap_node.attrib.get('value', '0')}
+
+                    spr_node = props_node.find('sprite')
+                    if spr_node is not None:
+                        template['properties']['sprite'] = {'file': spr_node.attrib.get('file')}
+
+                loot_node = root.find('loot')
+                if loot_node is not None:
+                    template['loot'] = []
+                    for loot_item_node in loot_node.findall('item'):
+                        loot_item_name = loot_item_node.attrib.get('name')
+                        if loot_item_name is None:
+                            print(f"Missing 'name' attribute in loot for cloth: {name}")
+                        loot_item_chance = float(loot_item_node.attrib.get('chance', '1.0'))
+                        template['loot'].append({'name': loot_item_name, 'chance': loot_item_chance})
+                        
+                ITEM_TEMPLATES[name] = template
+
+            except Exception as e:
+                print(f"Error parsing cloth {filepath}: {e}")
     
     print(f"Loaded {len(ITEM_TEMPLATES)} total item/cloth templates.")

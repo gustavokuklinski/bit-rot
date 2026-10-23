@@ -17,6 +17,8 @@ Dawn of the Dead (2004) - Zack Snyder
 World War Z (2013) - Marc Forster
 Army of the Dead (2021) - Zack Snyder
 We Bury the Dead (2025) - Zak Hilditch
+Train to Busan (2016) - Yeon Sang-Ho
+Train to Busan 2 (2020) - Yeon Sang-Ho
 
 ### Games inspired by:
 Resident Evil (1996) - Capcom

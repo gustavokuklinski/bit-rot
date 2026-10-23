@@ -5,8 +5,9 @@ import json
 from core.data.config import *
 
 def load_trait_definitions():
+    from core.systems.mod_manager import mod_manager
     traits = {}
-    filepath = os.path.join(DATA_PATH, 'player', 'traits.json')
+    filepath = mod_manager.get_override_path(os.path.join(DATA_PATH, 'player', 'traits.json'))
 
     if not os.path.exists(filepath):
         print(f"Warning: Traits JSON definition file not found at {filepath}")
@@ -81,6 +82,9 @@ def load_trait_definitions():
     return traits
 
 def load_config_data(filepath):
+    from core.systems.mod_manager import mod_manager
+    filepath = mod_manager.get_override_path(filepath)
+
     if filepath.endswith('.xml'):
         filepath = os.path.splitext(filepath)[0] + '.json'
     if not os.path.exists(filepath):

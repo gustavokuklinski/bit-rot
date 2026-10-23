@@ -1,0 +1,33 @@
+{
+  "animals": {
+    "cow": {
+      "name": "Cow",
+      "type": "animal",
+      "attack_player": false,
+      "spawn_weight": 100,
+      "spawn_layer": ["L1"],
+      "spawn_zombies_multiplier": 0,
+      "capacity": 3,
+      "stats": {
+        "health": { "min": 30, "max": 80 },
+        "speed": { "min": 0.3, "max": 0.5 },
+        "attack": { "min": 0, "max": 0 },
+        "infection": { "min": 0, "max": 0 }
+      },
+      "visuals": {
+        "center": "cow.png",
+        "left": "cow.png",
+        "right": "cow.png"
+      },
+      "loot": [
+        { "item": "Meat", "chance": 1.0 },
+        { "item": "Kukaroach (Bit Rot publisher)", "chance": 1.0 }
+      ],
+      "sound": {
+        "hit": "animal_cow_hit.ogg",
+        "dead": "animal_dead.ogg",
+        "steps": "animal_cow_steps.ogg"
+      }
+    }
+  }
+}

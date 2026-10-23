@@ -1,0 +1,8 @@
+<item name="Personal Data" type="sd_card" allow_belt="false" tip="Track your bio-stats\nUse with Mobile > Apps">
+    <properties>
+        
+        <map value="personal_data" />
+        <sprite file="sd_card.png" />
+    </properties>
+    <spawn chance="1.0" />
+</item>

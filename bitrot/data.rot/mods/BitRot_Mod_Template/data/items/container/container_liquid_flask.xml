@@ -1,0 +1,16 @@
+<item name="Flask" type="container" allow_belt="false" allow_type="[liquid, car_fuel]" tip="Only liquids allowed">
+    <properties>
+        <capacity value="1" />
+        <sprite file="container_liquid_flask.png" />
+        
+        <max_liquid value="10" />
+    </properties>
+    <loot>
+        <item name="Water Unit" chance="0.1" />
+        <item name="Red Wine Unit" chance="0.1" />
+        <item name="White Wine Unit" chance="0.1" />
+        <item name="Whiskey Unit" chance="0.1" />
+        <item name="Coffee Unit" chance="0.1" />
+    </loot>
+    <spawn chance="1" />
+</item>

@@ -1,0 +1,45 @@
+{
+  "zombies": {
+    "common": {
+      "spawn_weight": 70,
+      "name": "RANDOM",
+      "sex": "RANDOM",
+      "xp": { "min": 1, "max": 10 },
+      "stats": {
+        "health": { "min": 10, "max": 50 },
+        "speed": { "min": 1, "max": 2 },
+        "attack": { "min": 1, "max": 10 },
+        "infection": { "min": 1, "max": 5 }
+      },
+      "clothes": {
+        "head": null,
+        "util": null,
+        "hair": null,
+        "facial": null,
+        "feet": null,
+        "hand": null,
+        "body": null,
+        "arms": null,
+        "legs": null
+      },
+      "visuals": {
+        "center": "zombie.png",
+        "left": "zombie_left.png",
+        "right": "zombie_right.png"
+      },
+      "loot": [
+        { "item": "Money WBRL", "min": 1, "max": 1, "chance": 1.0 },
+        { "item": "Coin WBRL", "chance": 0.5 },
+        { "item": "Rot Meat", "min": 1, "max": 1, "chance": 1.0 },
+        { "item": "Kukaroach (Bit Rot publisher)", "min": 1, "max": 1, "chance": 0.5 }
+      ],
+      "sound": {
+        "hit": "zombie_hit.ogg",
+        "wander": "zombie_wandering.ogg",
+        "dead": "zombie_dead.ogg",
+        "attack": "zombie_attack.ogg",
+        "steps": "zombie_steps.ogg"
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+    "name": "BitRot_Vanilla_pt_br",
+    "version": "0.0.0.1",
+    "description": "Translation to Brazilian Portuguese",
+    "repository": "https://github.com/gustavokuklinski/bit-rot/",
+    "overide_dir":[
+        "./data.rot/lib/lang/*"
+    ],
+    "fallack": true 
+}

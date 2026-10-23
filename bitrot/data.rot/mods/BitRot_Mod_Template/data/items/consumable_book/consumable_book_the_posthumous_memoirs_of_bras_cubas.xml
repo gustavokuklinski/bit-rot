@@ -1,0 +1,10 @@
+<item name="The Posthumous Memoirs of Bras Cubas (Literature)" type="consumable_book" allow_belt="false" tip="Life story from beyond the grave" consume_time="2.5">
+    <properties>
+        <reduce status="[anxiety]" value="30" />
+        
+        <load min="1" max="1" />
+        <capacity value="1" />
+        <sprite file="consumable_book_general_content.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

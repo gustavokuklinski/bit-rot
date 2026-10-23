@@ -1,0 +1,10 @@
+{
+    "name": "BitRot_Mod_Template",
+    "version": "0.0.0.1",
+    "description": "BitRot Mod template",
+    "repository": "https://github.com/gustavokuklinski/bit-rot/",
+    "overide_dir":[
+        "./data.rot/lib/*"
+        ],
+    "fallack": true 
+}

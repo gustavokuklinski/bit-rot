@@ -1,0 +1,5 @@
+<map name="stair_l4" type="maptile" char="stair_l4" is_obstacle="false" is_stair="true" target_layer="3">
+    <visuals>
+        <sprite file="stair_l2.png" />
+    </visuals>
+</map>

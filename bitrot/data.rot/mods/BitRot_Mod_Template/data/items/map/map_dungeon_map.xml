@@ -1,0 +1,7 @@
+<item name="Dungeon Map [LYR_N]" type="map" allow_belt="false">
+    <properties>
+        <sprite file="map_island_map.png" />
+        
+    </properties>
+    <spawn chance="1" />
+</item>

@@ -98,7 +98,18 @@ def save_preferences_json(data, filepath=None):
     if filepath.endswith('.xml'):
         filepath = os.path.splitext(filepath)[0] + '.json'
 
-    out = {"preferences": data}
+    existing_prefs = {}
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                raw = json.load(f)
+            existing_prefs = raw.get('preferences', raw)
+        except Exception:
+            existing_prefs = {}
+
+    merged = dict(existing_prefs)
+    merged.update(data)
+    out = {"preferences": merged}
     try:
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, 'w', encoding='utf-8') as f:
@@ -154,6 +165,9 @@ class PreferencesMenuUI:
         self.scroll_offset_y = int(ratio * (total_h - visible_h))
 
     def _get_total_content_height(self):
+        if self.active_tab == 'mods':
+            from core.systems.mod_manager import mod_manager
+            return len(mod_manager.available_mods) * (self.item_height * 2 + int(5 * UI_SCALE))
         settings = self.settings_data.get(self.active_tab, {})
         return len(settings) * self.item_height
 
@@ -199,7 +213,19 @@ class PreferencesMenuUI:
         tab_h = S(38)
         tab_y = header_rect.bottom
         categories = list(self.settings_data.keys())
+        
+        if 'mods' not in categories:
+            categories.append('mods')
+            
+        cat_order = ['ui', 'audio', 'player', 'mods']
+        ordered_cats = [c for c in cat_order if c in categories]
+        for c in categories:
+            if c not in ordered_cats:
+                ordered_cats.append(c)
+        categories = ordered_cats
+
         total_tabs = max(1, len(categories))
+
         tab_w = bg_rect.width // total_tabs
         tab_rects = {}
         for i, cat in enumerate(categories):
@@ -351,6 +377,30 @@ class PreferencesMenuUI:
                 clicked_input = False
                 if list_rect.collidepoint(mouse_pos):
                     y_off = list_rect.y - self.scroll_offset_y
+                    
+                    if self.active_tab == 'mods':
+                        from core.systems.mod_manager import mod_manager
+                        for mod_name, mod_info in mod_manager.available_mods.items():
+                            row_rect = pygame.Rect(list_rect.x, y_off, list_rect.width, self.item_height * 2)
+                            if row_rect.bottom > list_rect.top and row_rect.top < list_rect.bottom:
+                                cb_size = int(24 * UI_SCALE)
+                                cb_rect = pygame.Rect(row_rect.right - cb_size - int(20 * UI_SCALE), row_rect.centery - cb_size//2, cb_size, cb_size)
+                                if cb_rect.collidepoint(mouse_pos) or row_rect.collidepoint(mouse_pos):
+                                    is_enabled = mod_name in mod_manager.enabled_mods
+                                    if is_enabled:
+                                        mod_manager.enabled_mods.remove(mod_name)
+                                    else:
+                                        mod_manager.enabled_mods.append(mod_name)
+                                    mod_manager.save_enabled_mods(mod_manager.enabled_mods)
+                                    self.settings_data['mods'] = {'enabled': mod_manager.enabled_mods}
+                                    if game and hasattr(game, 'sound_manager'):
+                                        game.sound_manager.play_ui_hover()
+                                    clicked_input = True
+                                    break
+                            y_off += self.item_height * 2 + int(5 * UI_SCALE)
+                        if clicked_input:
+                            continue
+
                     block = self.active_tab
                     settings = self.settings_data.get(block, {})
 
@@ -467,122 +517,163 @@ class PreferencesMenuUI:
 
         # Render Active Tab Settings
         y_off = list_rect.y - self.scroll_offset_y
-        block = self.active_tab
-        settings = self.settings_data.get(block, {})
-
-        for key, val_data in settings.items():
-            row_rect = pygame.Rect(list_rect.x, y_off, list_rect.width, self.item_height)
-            if row_rect.bottom > list_rect.top and row_rect.top < list_rect.bottom:
-                pygame.draw.line(screen, (55, 55, 55), (row_rect.left, row_rect.bottom - 1), (row_rect.right, row_rect.bottom - 1), 1)
-
-                raw_label = val_data.get('name', key)
-                if key in ['ui_resolution', 'resolution']:
-                    raw_label = "Resolution"
-                elif key in ['ui_crt_filter', 'crt_filter']:
-                    raw_label = "CRT Filter"
-                display_label = tr('ui', raw_label)
-                lbl = font_12.render(display_label + ":", False, WHITE)
-                screen.blit(lbl, (row_rect.x + S(10), row_rect.centery - lbl.get_height()//2))
-
-                val = val_data.get('value')
-                input_w = S(250)
-                input_rect = pygame.Rect(row_rect.right - input_w, row_rect.centery - S(15), input_w, S(30))
+        
+        if self.active_tab == 'mods':
+            from core.systems.mod_manager import mod_manager
+            for mod_name, mod_info in mod_manager.available_mods.items():
+                cfg = mod_info['config']
+                version = cfg.get('version', '1.0.0')
+                description = cfg.get('description', 'No description.')
+                repo = cfg.get('repository', '')
                 
-                if input_rect.collidepoint(mouse_pos):
-                    hovered_pref_id = f"{block}_{key}"
+                row_rect = pygame.Rect(list_rect.x, y_off, list_rect.width, self.item_height * 2)
+                if row_rect.bottom > list_rect.top and row_rect.top < list_rect.bottom:
+                    is_hovered = row_rect.collidepoint(mouse_pos)
+                    pygame.draw.rect(screen, (50, 50, 50) if is_hovered else (35, 35, 35), row_rect, border_radius=4)
+                    pygame.draw.rect(screen, (70, 70, 70), row_rect, 1, border_radius=4)
+                    
+                    is_enabled = mod_name in mod_manager.enabled_mods
+                    cb_size = int(24 * UI_SCALE)
+                    cb_rect = pygame.Rect(row_rect.right - cb_size - int(20 * UI_SCALE), row_rect.centery - cb_size//2, cb_size, cb_size)
+                    
+                    pygame.draw.rect(screen, (40, 40, 40), cb_rect, border_radius=4)
+                    pygame.draw.rect(screen, WHITE if cb_rect.collidepoint(mouse_pos) else GRAY, cb_rect, 1, border_radius=4)
+                    
+                    if is_enabled:
+                        pygame.draw.rect(screen, GREEN, cb_rect.inflate(-8, -8), border_radius=2)
+                    
+                    name_surf = font_16.render(mod_name, False, GREEN if is_enabled else WHITE)
+                    screen.blit(name_surf, (row_rect.x + int(15 * UI_SCALE), row_rect.y + int(10 * UI_SCALE)))
+                    
+                    ver_surf = font_12.render(f"v{version}", False, GRAY)
+                    screen.blit(ver_surf, (row_rect.x + int(15 * UI_SCALE) + name_surf.get_width() + 10, row_rect.y + int(13 * UI_SCALE)))
+                    
+                    if is_hovered:
+                        desc_text = description
+                        if repo:
+                            desc_text += f"\nRepo: {repo}"
+                        status = "ENABLED" if is_enabled else "DISABLED"
+                        color = GREEN if is_enabled else RED
+                        self._mod_tooltip = (mod_name, desc_text, status, color)
+                        
+                y_off += self.item_height * 2 + int(5 * UI_SCALE)
+        else:
+            block = self.active_tab
+            settings = self.settings_data.get(block, {})
 
-                str_val = str(val).lower()
-                is_bool = str_val in ('true', 'false')
-                is_volume = 'volume' in key
-                is_cycle = (key in ['language', 'resolution', 'ui_resolution', 'window_mode'])
+            for key, val_data in settings.items():
+                row_rect = pygame.Rect(list_rect.x, y_off, list_rect.width, self.item_height)
+                if row_rect.bottom > list_rect.top and row_rect.top < list_rect.bottom:
+                    pygame.draw.line(screen, (55, 55, 55), (row_rect.left, row_rect.bottom - 1), (row_rect.right, row_rect.bottom - 1), 1)
 
-                friendly_text = _get_friendly_value_display(key, val)
-                if friendly_text and not is_bool and not is_cycle and not is_volume:
-                    info_surf = font_12.render(friendly_text, False, GRAY)
-                    screen.blit(info_surf, (input_rect.x - info_surf.get_width() - S(15), row_rect.centery - info_surf.get_height()//2))
+                    raw_label = val_data.get('name', key)
+                    if key in ['ui_resolution', 'resolution']:
+                        raw_label = "Resolution"
+                    elif key in ['ui_crt_filter', 'crt_filter']:
+                        raw_label = "CRT Filter"
+                    display_label = tr('ui', raw_label)
+                    lbl = font_12.render(display_label + ":", False, WHITE)
+                    screen.blit(lbl, (row_rect.x + S(10), row_rect.centery - lbl.get_height()//2))
 
-                hovered = input_rect.collidepoint(mouse_pos)
+                    val = val_data.get('value')
+                    input_w = S(250)
+                    input_rect = pygame.Rect(row_rect.right - input_w, row_rect.centery - S(15), input_w, S(30))
+                    
+                    if input_rect.collidepoint(mouse_pos):
+                        hovered_pref_id = f"{block}_{key}"
 
-                # 1. Volume Sliders
-                if is_volume:
-                    try:
-                        val_float = max(0.0, min(1.0, float(val)))
-                    except Exception:
-                        val_float = 0.50
+                    str_val = str(val).lower()
+                    is_bool = str_val in ('true', 'false')
+                    is_volume = 'volume' in key
+                    is_cycle = (key in ['language', 'resolution', 'ui_resolution', 'window_mode'])
 
-                    is_active_slider = (self.dragging_slider == (block, key)) or hovered
+                    friendly_text = _get_friendly_value_display(key, val)
+                    if friendly_text and not is_bool and not is_cycle and not is_volume:
+                        info_surf = font_12.render(friendly_text, False, GRAY)
+                        screen.blit(info_surf, (input_rect.x - info_surf.get_width() - S(15), row_rect.centery - info_surf.get_height()//2))
 
-                    slider_track_x = input_rect.x + S(8)
-                    slider_track_w = input_w - S(68)
-                    slider_track_h = S(8)
-                    slider_track_y = input_rect.centery - slider_track_h // 2
-                    track_rect = pygame.Rect(slider_track_x, slider_track_y, slider_track_w, slider_track_h)
+                    hovered = input_rect.collidepoint(mouse_pos)
 
-                    pygame.draw.rect(screen, GRAY_40, track_rect, border_radius=S(4))
-                    pygame.draw.rect(screen, GRAY_60, track_rect, 1, border_radius=S(4))
+                    # 1. Volume Sliders
+                    if is_volume:
+                        try:
+                            val_float = max(0.0, min(1.0, float(val)))
+                        except Exception:
+                            val_float = 0.50
 
-                    fill_w = max(0, min(slider_track_w, int(val_float * slider_track_w)))
-                    if fill_w > 0:
-                        fill_rect = pygame.Rect(slider_track_x, slider_track_y, fill_w, slider_track_h)
-                        pygame.draw.rect(screen, (23, 162, 184), fill_rect, border_radius=S(4))
+                        is_active_slider = (self.dragging_slider == (block, key)) or hovered
 
-                    handle_w = S(12)
-                    handle_h = S(20)
-                    handle_x = slider_track_x + fill_w
-                    handle_rect = pygame.Rect(handle_x - handle_w // 2, input_rect.centery - handle_h // 2, handle_w, handle_h)
-                    handle_col = YELLOW if is_active_slider else WHITE
-                    pygame.draw.rect(screen, handle_col, handle_rect, border_radius=S(3))
-                    pygame.draw.rect(screen, GRAY, handle_rect, 1, border_radius=S(3))
+                        slider_track_x = input_rect.x + S(8)
+                        slider_track_w = input_w - S(68)
+                        slider_track_h = S(8)
+                        slider_track_y = input_rect.centery - slider_track_h // 2
+                        track_rect = pygame.Rect(slider_track_x, slider_track_y, slider_track_w, slider_track_h)
 
-                    pct_text = f"{int(round(val_float * 100))}%"
-                    txt_surf = font_12.render(pct_text, False, YELLOW if is_active_slider else WHITE)
-                    txt_rect = txt_surf.get_rect(midleft=(track_rect.right + S(12), input_rect.centery))
-                    screen.blit(txt_surf, txt_rect)
+                        pygame.draw.rect(screen, GRAY_40, track_rect, border_radius=S(4))
+                        pygame.draw.rect(screen, GRAY_60, track_rect, 1, border_radius=S(4))
 
-                # 2. Carousels & Selectors (Resolution, Language, Window Mode, Booleans)
-                # Rendered with exact standard polygon arrows matching world.py and player_setup.py
-                elif is_bool or is_cycle:
-                    bg_color = (70, 70, 70) if hovered else (50, 50, 50)
-                    pygame.draw.rect(screen, bg_color, input_rect, border_radius=3)
-                    pygame.draw.rect(screen, WHITE, input_rect, 1, border_radius=3)
+                        fill_w = max(0, min(slider_track_w, int(val_float * slider_track_w)))
+                        if fill_w > 0:
+                            fill_rect = pygame.Rect(slider_track_x, slider_track_y, fill_w, slider_track_h)
+                            pygame.draw.rect(screen, (23, 162, 184), fill_rect, border_radius=S(4))
 
-                    if is_bool:
-                        label_str = tr('ui', "True") if str_val == "true" else tr('ui', "False")
-                    elif key in ['resolution', 'ui_resolution']:
-                        label_str = str(val)
-                    elif key == 'language':
-                        label_str = str(val)
-                    elif key == 'window_mode':
-                        label_str = tr('ui', str(val).capitalize())
+                        handle_w = S(12)
+                        handle_h = S(20)
+                        handle_x = slider_track_x + fill_w
+                        handle_rect = pygame.Rect(handle_x - handle_w // 2, input_rect.centery - handle_h // 2, handle_w, handle_h)
+                        handle_col = YELLOW if is_active_slider else WHITE
+                        pygame.draw.rect(screen, handle_col, handle_rect, border_radius=S(3))
+                        pygame.draw.rect(screen, GRAY, handle_rect, 1, border_radius=S(3))
+
+                        pct_text = f"{int(round(val_float * 100))}%"
+                        txt_surf = font_12.render(pct_text, False, YELLOW if is_active_slider else WHITE)
+                        txt_rect = txt_surf.get_rect(midleft=(track_rect.right + S(12), input_rect.centery))
+                        screen.blit(txt_surf, txt_rect)
+
+                    # 2. Carousels & Selectors (Resolution, Language, Window Mode, Booleans)
+                    # Rendered with exact standard polygon arrows matching world.py and player_setup.py
+                    elif is_bool or is_cycle:
+                        bg_color = (70, 70, 70) if hovered else (50, 50, 50)
+                        pygame.draw.rect(screen, bg_color, input_rect, border_radius=3)
+                        pygame.draw.rect(screen, WHITE, input_rect, 1, border_radius=3)
+
+                        if is_bool:
+                            label_str = tr('ui', "True") if str_val == "true" else tr('ui', "False")
+                        elif key in ['resolution', 'ui_resolution']:
+                            label_str = str(val)
+                        elif key == 'language':
+                            label_str = str(val)
+                        elif key == 'window_mode':
+                            label_str = tr('ui', str(val).capitalize())
+                        else:
+                            label_str = str(val)
+
+                        txt_surf = font_12.render(label_str, False, WHITE)
+                        screen.blit(txt_surf, (input_rect.centerx - txt_surf.get_width()//2, input_rect.centery - txt_surf.get_height()//2))
+
+                        # Standard right arrow polygon
+                        pygame.draw.polygon(screen, WHITE, [
+                            (input_rect.right - S(8), input_rect.centery),
+                            (input_rect.right - S(14), input_rect.centery - S(4)),
+                            (input_rect.right - S(14), input_rect.centery + S(4))
+                        ])
+                        # Standard left arrow polygon
+                        pygame.draw.polygon(screen, WHITE, [
+                            (input_rect.x + S(8), input_rect.centery),
+                            (input_rect.x + S(14), input_rect.centery - S(4)),
+                            (input_rect.x + S(14), input_rect.centery + S(4))
+                        ])
+
+                    # 3. Numeric / Text Inputs
                     else:
-                        label_str = str(val)
+                        is_active = (self.active_setting == (block, key))
+                        col = WHITE if is_active else GRAY
+                        pygame.draw.rect(screen, (50, 50, 50), input_rect)
+                        pygame.draw.rect(screen, col, input_rect, 1)
+                        txt_surf = font_12.render(str(val), False, WHITE)
+                        screen.blit(txt_surf, (input_rect.x + S(5), input_rect.centery - txt_surf.get_height()//2))
 
-                    txt_surf = font_12.render(label_str, False, WHITE)
-                    screen.blit(txt_surf, (input_rect.centerx - txt_surf.get_width()//2, input_rect.centery - txt_surf.get_height()//2))
-
-                    # Standard right arrow polygon
-                    pygame.draw.polygon(screen, WHITE, [
-                        (input_rect.right - S(8), input_rect.centery),
-                        (input_rect.right - S(14), input_rect.centery - S(4)),
-                        (input_rect.right - S(14), input_rect.centery + S(4))
-                    ])
-                    # Standard left arrow polygon
-                    pygame.draw.polygon(screen, WHITE, [
-                        (input_rect.x + S(8), input_rect.centery),
-                        (input_rect.x + S(14), input_rect.centery - S(4)),
-                        (input_rect.x + S(14), input_rect.centery + S(4))
-                    ])
-
-                # 3. Numeric / Text Inputs
-                else:
-                    is_active = (self.active_setting == (block, key))
-                    col = WHITE if is_active else GRAY
-                    pygame.draw.rect(screen, (50, 50, 50), input_rect)
-                    pygame.draw.rect(screen, col, input_rect, 1)
-                    txt_surf = font_12.render(str(val), False, WHITE)
-                    screen.blit(txt_surf, (input_rect.x + S(5), input_rect.centery - txt_surf.get_height()//2))
-
-            y_off += self.item_height
+                y_off += self.item_height
 
         screen.set_clip(old_clip)
         draw_scrollbar(screen, {}, bar_rect, list_rect.height, self._get_total_content_height(), self.scroll_offset_y)
@@ -610,5 +701,26 @@ class PreferencesMenuUI:
         _draw_btn(apply_btn, "Apply & Restart", (80, 80, 80))
         _draw_btn(reset_btn, "Reset Default", (80, 80, 80))
         _draw_btn(back_btn, "Back", (80, 80, 80))
+
+        if self.active_tab == 'mods' and hasattr(self, '_mod_tooltip') and self._mod_tooltip:
+            name, desc, status, col = self._mod_tooltip
+            lines = desc.split('\n')
+            w = max(font_12.size(name)[0], font_12.size(status)[0], max([font_12.size(l)[0] for l in lines] + [0])) + 20
+            h = 20 + 20 + len(lines)*15 + 10
+            
+            tt_x = min(mouse_pos[0] + 15, GAME_WIDTH - w - 5)
+            tt_y = min(mouse_pos[1] + 15, GAME_HEIGHT - h - 5)
+            
+            tt_rect = pygame.Rect(tt_x, tt_y, w, h)
+            pygame.draw.rect(screen, BLACK, tt_rect)
+            pygame.draw.rect(screen, WHITE, tt_rect, 1)
+            
+            screen.blit(font_12.render(name, False, WHITE), (tt_rect.x+10, tt_rect.y+10))
+            screen.blit(font_12.render(status, False, col), (tt_rect.x+10, tt_rect.y+30))
+            cy = tt_rect.y+50
+            for l in lines:
+                screen.blit(font_12.render(l, False, GRAY), (tt_rect.x+10, cy))
+                cy+=15
+            self._mod_tooltip = None
 
 preferences_ui = PreferencesMenuUI()

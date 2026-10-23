@@ -1,0 +1,51 @@
+{
+  "zombies": {
+    "special_force": {
+      "spawn_weight": 5,
+      "name": "RANDOM",
+      "sex": "RANDOM",
+      "xp": { "min": 1, "max": 15 },
+      "stats": {
+        "health": { "min": 40, "max": 70 },
+        "speed": { "min": 1, "max": 2 },
+        "attack": { "min": 15, "max": 25 },
+        "infection": { "min": 15, "max": 25 }
+      },
+      "clothes": {
+        "head": "Special Force Helmet",
+        "util": "Military Vest",
+        "hair": null,
+        "facial": null,
+        "feet": "Military Boots",
+        "hand": "Leather Black Gloves",
+        "body": "Military Tshirt",
+        "arms": "Special Force Jacket",
+        "legs": "Special Force Pants"
+      },
+      "visuals": {
+        "center": "zombie.png",
+        "left": "zombie_left.png",
+        "right": "zombie_right.png"
+      },
+      "loot": [
+        { "item": "Money WBRL", "chance": 1.0 },
+        { "item": "Coin WBRL", "chance": 0.5 },
+        { "item": "Rot Meat", "chance": 1.0 },
+        { "item": "Lighter off", "chance": 0.2 },
+        { "item": "MPK5", "chance": 0.1 },
+        { "item": "MAC10", "chance": 0.1 },
+        { "item": "Large Backpack", "chance": 0.1 },
+        { "item": "Knife", "chance": 0.6 },
+        { "item": "Pistol 9mm", "chance": 0.5 },
+        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.5 }
+      ],
+      "sound": {
+        "hit": "zombie_hit.ogg",
+        "wander": "zombie_wandering.ogg",
+        "dead": "zombie_dead.ogg",
+        "attack": "zombie_attack.ogg",
+        "steps": "zombie_steps.ogg"
+      }
+    }
+  }
+}

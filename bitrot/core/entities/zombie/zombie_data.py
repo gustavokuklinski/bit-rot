@@ -1,9 +1,10 @@
+# core/entities/zombie/zombie_data.py
+
 import os
-import xml.etree.ElementTree as ET
+import json
 from core.data.config import DATA_PATH, ZOMBIE_SPEED, ZOMBIE_INFECTION_CHANCE
 import core.data.config
-
-# In core/entities/zombie/zombie_data.py
+from core.systems.mod_manager import mod_manager
 
 class ZombieData:
     ZOMBIE_TEMPLATES = []
@@ -12,175 +13,156 @@ class ZombieData:
 
     @staticmethod
     def load_templates(folder=None):
-        """Loads all zombie templates, clothes pool, and items from XML files recursively."""
+        """Loads all zombie templates from JSON files recursively."""
         if folder is None:
-            folder = os.path.join(DATA_PATH, 'zombie/')
+            folder = os.path.join(DATA_PATH, 'zombie')
 
         ZombieData.ZOMBIE_TEMPLATES = []
         ZombieData.ZOMBIE_CLOTHES_POOL.clear()
         ZombieData.ALL_ITEM_TEMPLATES.clear()
 
+        # 1. Populate item templates and clothes pool for random loot and NPC generation
         try:
-            # 1. Load clothes pool recursively (including subfolders)
-            clothes_folder = os.path.join(DATA_PATH, 'clothes/')
-            if os.path.exists(clothes_folder):
-                for root_dir, _, files in os.walk(clothes_folder):
-                    for filename in files:
-                        if filename.endswith('.xml'):
-                            filepath = os.path.join(root_dir, filename)
-                            try:
-                                tree = ET.parse(filepath)
-                                root = tree.getroot()
-                                if root.tag == 'cloth':
-                                    clothe_type = root.get('id')  # e.g., "head", "body", "legs", "feet"
-                                    if not clothe_type:
-                                        continue
+            from core.entities.item.item_data import ITEM_TEMPLATES, load_item_templates_data
+            if not ITEM_TEMPLATES:
+                load_item_templates_data()
 
-                                    if clothe_type not in ZombieData.ZOMBIE_CLOTHES_POOL:
-                                        ZombieData.ZOMBIE_CLOTHES_POOL[clothe_type] = []
+            for name, tmpl in ITEM_TEMPLATES.items():
+                if not tmpl.get('liquid', False):
+                    ZombieData.ALL_ITEM_TEMPLATES.append(name)
 
-                                    properties = root.find('properties')
-                                    if properties is None:
-                                        continue
+                if tmpl.get('type') == 'cloth':
+                    props = tmpl.get('properties', {})
+                    slot = props.get('slot', {}).get('value')
+                    if slot:
+                        if slot not in ZombieData.ZOMBIE_CLOTHES_POOL:
+                            ZombieData.ZOMBIE_CLOTHES_POOL[slot] = []
+                        ZombieData.ZOMBIE_CLOTHES_POOL[slot].append(name)
+        except Exception as e:
+            print(f"[ZombieData] Error initializing clothes/items pool: {e}")
 
-                                    clothe_props = {
-                                        'name': root.get('name'),
-                                        'type': clothe_type,
-                                        'defence': 0.0,
-                                        'speed': 0.0,
-                                        'sprite': None
-                                    }
+        # 2. Parse Zombie Templates from JSON
+        if not os.path.exists(folder):
+            print(f"[ZombieData] Warning: Zombie folder not found at '{folder}'")
+            return
+        
+        
 
-                                    def_node = properties.find('defence')
-                                    if def_node is not None:
-                                        clothe_props['defence'] = float(def_node.get('value', 0))
+        loaded_count = 0
+        for root_dir, _, full_paths in mod_manager.vfs_walk(folder):
+            for filepath in full_paths:
+                if filepath.endswith('.json'):
+                    filename = os.path.basename(filepath)
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            raw_data = json.load(f)
 
-                                    spd_node = properties.find('speed')
-                                    if spd_node is not None:
-                                        clothe_props['speed'] = float(spd_node.get('value', 0))
+                        # Support "zombies": { ... } or "zombie": { ... } or direct object
+                        raw_zombies = raw_data.get('zombies', {})
+                        if not raw_zombies:
+                            if 'zombie' in raw_data:
+                                raw_zombies = {os.path.splitext(filename)[0]: raw_data['zombie']}
+                            elif 'stats' in raw_data or 'name' in raw_data:
+                                raw_zombies = {os.path.splitext(filename)[0]: raw_data}
 
-                                    spr_node = properties.find('sprite')
-                                    if spr_node is not None:
-                                        clothe_props['sprite'] = spr_node.get('file')
+                        for z_type, z_info in raw_zombies.items():
+                            spawn_weight = int(z_info.get('spawn_weight', 10))
+                            name = z_info.get('name', 'Zombie')
+                            sex = z_info.get('sex', 'Random')
 
-                                    ZombieData.ZOMBIE_CLOTHES_POOL[clothe_type].append(clothe_props)
-                            except Exception as e:
-                                print(f"Error loading clothe from {filepath}: {e}")
+                            # Parse Stats
+                            stats = z_info.get('stats', {})
+                            health_node = stats.get('health', {})
+                            min_health = int(health_node.get('min', 20))
+                            max_health = int(health_node.get('max', 40))
 
-            # 2. Load item templates list recursively
-            items_folder = os.path.join(DATA_PATH, 'items/')
-            if os.path.exists(items_folder):
-                for root_dir, _, files in os.walk(items_folder):
-                    for filename in files:
-                        if filename.endswith('.xml'):
-                            try:
-                                item_path = os.path.join(root_dir, filename)
-                                tree = ET.parse(item_path)
-                                root = tree.getroot()
-                                if root.tag == 'item':
-                                    item_name = root.get('name')
-                                    is_liquid = root.get('liquid', 'false').lower() == 'true'
-                                    if item_name and not is_liquid:
-                                        ZombieData.ALL_ITEM_TEMPLATES.append(item_name)
-                            except Exception as e:
-                                print(f"Error parsing item XML {filename}: {e}")
+                            speed_node = stats.get('speed', {})
+                            min_speed = float(speed_node.get('min', 1.0)) * ZOMBIE_SPEED
+                            max_speed = float(speed_node.get('max', 1.0)) * ZOMBIE_SPEED
 
-            # 3. Load zombie templates recursively
-            if os.path.exists(folder):
-                for root_dir, _, files in os.walk(folder):
-                    for filename in files:
-                        if filename.endswith('.xml'):
-                            filepath = os.path.join(root_dir, filename)
-                            try:
-                                tree = ET.parse(filepath)
-                                root = tree.getroot()
-                                if root.tag == 'zombie':
-                                    template = {}
-                                    template['type'] = root.get('type', 'common').lower()
-                                    template['spawn_weight'] = int(root.get('spawn_weight', 10))
-                                    name_node = root.find('name')
-                                    stats_node = root.find('stats')
-                                    visuals_node = root.find('visuals')
-                                    xp_node = root.find('xp')
-                                    loot_node = root.find('loot')
-                                    clothes_node = root.find('clothes')
-                                    sound_node = root.find('sound')
-                                    template['name'] = name_node.get('value') if name_node is not None else 'Unknown Zombie'
+                            attack_node = stats.get('attack', {})
+                            min_attack = int(attack_node.get('min', 1))
+                            max_attack = int(attack_node.get('max', 5))
 
-                                    health_node = stats_node.find('health')
-                                    template['min_health'] = int(health_node.get('min'))
-                                    template['max_health'] = int(health_node.get('max'))
+                            infection_node = stats.get('infection', {})
+                            min_infection = float(infection_node.get('min', 0)) * ZOMBIE_INFECTION_CHANCE
+                            max_infection = float(infection_node.get('max', 1)) * ZOMBIE_INFECTION_CHANCE
 
-                                    speed_node = stats_node.find('speed')
-                                    template['min_speed'] = int(speed_node.get('min')) * ZOMBIE_SPEED
-                                    template['max_speed'] = int(speed_node.get('max')) * ZOMBIE_SPEED
+                            # Parse XP
+                            xp_node = z_info.get('xp', {})
+                            min_xp = float(xp_node.get('min', 1.0))
+                            max_xp = float(xp_node.get('max', 5.0))
 
-                                    attack_node = stats_node.find('attack')
-                                    template['min_attack'] = int(attack_node.get('min'))
-                                    template['max_attack'] = int(attack_node.get('max'))
+                            # Parse Visuals / Sprites
+                            sprites = {}
+                            visuals = z_info.get('visuals', {})
+                            if isinstance(visuals, dict):
+                                sprites = dict(visuals)
+                            if 'center' not in sprites and 'sprite' in z_info:
+                                sprite_file = z_info['sprite']
+                                sprites = {'center': sprite_file, 'left': sprite_file, 'right': sprite_file}
 
-                                    infection_node = stats_node.find('infection')
-                                    template['min_infection'] = int(infection_node.get('min')) * ZOMBIE_INFECTION_CHANCE
-                                    template['max_infection'] = int(infection_node.get('max')) * ZOMBIE_INFECTION_CHANCE
+                            # Parse Clothes
+                            predefined_clothes = {}
+                            clothes_slots = []
+                            clothes_raw = z_info.get('clothes', {})
+                            if isinstance(clothes_raw, dict):
+                                for slot_name, cloth_name in clothes_raw.items():
+                                    if cloth_name:
+                                        predefined_clothes[slot_name] = cloth_name
+                                        clothes_slots.append(slot_name)
+                            elif isinstance(clothes_raw, list):
+                                for c_item in clothes_raw:
+                                    if isinstance(c_item, dict):
+                                        slot = c_item.get('slot')
+                                        c_name = c_item.get('name')
+                                        if slot and c_name:
+                                            predefined_clothes[slot] = c_name
+                                            clothes_slots.append(slot)
 
-                                    template['sprites'] = {}
-                                    if visuals_node is not None:
-                                        for sprite_node in visuals_node.findall('sprite'):
-                                            sprite_id = sprite_node.get('id')
-                                            sprite_file = sprite_node.get('file')
-                                            if sprite_id and sprite_file:
-                                                template['sprites'][sprite_id] = sprite_file
+                            # Parse Loot Table
+                            loot = []
+                            for item_entry in z_info.get('loot', []):
+                                iname = item_entry.get('item') or item_entry.get('name')
+                                chance = float(item_entry.get('chance', 1.0))
+                                if iname:
+                                    loot.append({
+                                        'item': iname,
+                                        'chance': chance
+                                    })
 
-                                    if not template['sprites'] and visuals_node is None:
-                                        old_sprite = root.find('sprite')
-                                        if old_sprite is not None:
-                                            template['sprite'] = old_sprite.text
+                            # Parse Sounds
+                            sound_data = z_info.get('sound') or z_info.get('sounds') or {}
+                            sounds = dict(sound_data)
 
-                                    template['min_xp'] = float(xp_node.get('min'))
-                                    template['max_xp'] = float(xp_node.get('max'))
+                            template = {
+                                'type': z_type.lower(),
+                                'spawn_weight': spawn_weight,
+                                'name': name,
+                                'sex': sex,
+                                'min_health': min_health,
+                                'max_health': max_health,
+                                'health': max_health,
+                                'min_speed': min_speed,
+                                'max_speed': max_speed,
+                                'speed': max_speed,
+                                'min_attack': min_attack,
+                                'max_attack': max_attack,
+                                'min_infection': min_infection,
+                                'max_infection': max_infection,
+                                'min_xp': min_xp,
+                                'max_xp': max_xp,
+                                'sprites': sprites,
+                                'clothes_slots': clothes_slots,
+                                'predefined_clothes': predefined_clothes,
+                                'loot': loot,
+                                'sounds': sounds
+                            }
 
-                                    template['loot'] = []
-                                    if loot_node is not None:
-                                        for item_node in loot_node.findall('item'):
-                                            item_name = item_node.get('item') or item_node.get('name')
-                                            template['loot'].append({
-                                                'item': item_name,
-                                                'chance': float(item_node.get('chance', 1.0))
-                                            })
+                            ZombieData.ZOMBIE_TEMPLATES.append(template)
+                            loaded_count += 1
 
-                                    template['clothes_slots'] = []
-                                    template['predefined_clothes'] = {}
-                                    if clothes_node is not None:
-                                        for slot_node in clothes_node:
-                                            template['clothes_slots'].append(slot_node.tag)
-                                            cloth_node = slot_node.find('cloth')
-                                            if cloth_node is not None:
-                                                cloth_name = cloth_node.get('name')
-                                                if cloth_name:
-                                                    template['predefined_clothes'][slot_node.tag] = cloth_name
+                    except Exception as e:
+                        print(f"[ZombieData] Error loading zombie JSON '{filepath}': {e}")
 
-                                    template['sounds'] = {}
-                                    if sound_node is not None:
-                                        hit_node = sound_node.find('hit')
-                                        if hit_node is not None:
-                                            template['sounds']['hit'] = hit_node.get('src')
-                                        wander_node = sound_node.find('wander')
-                                        if wander_node is not None:
-                                            template['sounds']['wander'] = wander_node.get('src')
-                                        dead_node = sound_node.find('dead')
-                                        if dead_node is not None:
-                                            template['sounds']['dead'] = dead_node.get('src')
-                                        attack_node = sound_node.find('attack')
-                                        if attack_node is not None:
-                                            template['sounds']['attack'] = attack_node.get('src')
-                                        steps_node = sound_node.find('steps')
-                                        if steps_node is not None:
-                                            template['sounds']['steps'] = steps_node.get('src')
-
-                                    template['sex'] = root.find('sex').get('value') if root.find('sex') is not None else 'Random'
-
-                                    ZombieData.ZOMBIE_TEMPLATES.append(template)
-                            except Exception as e:
-                                print(f"Error loading zombie template from {filepath}: {e}")
-        except FileNotFoundError:
-            print(f"Error: Zombie template folder not found: {folder}")
+        print(f"[ZombieData] Successfully loaded {loaded_count} zombie templates from '{folder}'.")

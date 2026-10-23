@@ -9,7 +9,7 @@ from core.entities.zombie.zombie import Zombie
 from core.entities.zombie.corpse import Corpse
 from core.map.map_loader import load_map_from_file, parse_layered_map_layout
 from core.map.tile_manager import TileManager
-from core.map.spawn_manager import spawn_initial_items, spawn_initial_zombies
+from core.map.spawn_manager import spawn_initial_items, spawn_initial_zombies, spawn_initial_animals
 from core.entities.npc.npc import NPC
 from core.placement import find_free_tile
 from core.data.localization import tr
@@ -117,7 +117,7 @@ def load_giant_map(game):
              game.containers,
              game.roof_tiles,
              map_lights_list,
-             game.npc_spawn_points) = parse_layered_map_layout(
+             game.animal_spawns) = parse_layered_map_layout(
                  base_layout, ground_layout, spawn_layout, roof_layout, light_layout, game.tile_manager
              )
             
@@ -139,6 +139,7 @@ def load_giant_map(game):
             game.roof_data = roof_layout
             game.light_data = light_layout
             game.current_zombie_spawns = game.zombie_spawns
+            game.current_animal_spawns = game.animal_spawns
             game.map_lights = map_lights_list
 
             game.world_min_x = 0
@@ -166,6 +167,15 @@ def load_giant_map(game):
                     game.spawn_point_grid[cell] = [sp_pos] 
                 else:
                     game.spawn_point_grid[cell].append(sp_pos)
+            
+            for sp_pos in game.current_animal_spawns:
+                grid_x = int(sp_pos[0] // GRID_SIZE_SPAWNS)
+                grid_y = int(sp_pos[1] // GRID_SIZE_SPAWNS)
+                cell = (grid_x, grid_y)
+                if cell not in game.animal_spawn_point_grid:
+                    game.animal_spawn_point_grid[cell] = [sp_pos]
+                else:
+                    game.animal_spawn_point_grid[cell].append(sp_pos)
 
     print(f"Giant map load complete. Successfully loaded {len(game.all_map_layers)} layers.")
 
@@ -311,7 +321,7 @@ def _rebuild_world_from_data(game):
     game.obstacles.clear()
     game.containers.clear()
 
-    obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roof_tiles, map_lights, npc_spawns = \
+    obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roof_tiles, map_lights, npc_spawns, animal_spawns = \
         parse_layered_map_layout(game.map_data, game.ground_data, game.spawn_data, game.roof_data, game.light_data, game.tile_manager)
 
     game.obstacles = obstacles
@@ -338,7 +348,7 @@ def _rebuild_world_from_data(game):
          game.renderable_tiles = []
          game.roof_tiles = []
 
-    return item_spawns, zombie_spawns
+    return item_spawns, zombie_spawns, animal_spawns
 
 def set_active_layer(game, layer_index, skip_cache_save=False):
     if layer_index not in game.all_map_layers:
@@ -406,12 +416,28 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
             game.map_height_pixels = 0
             game.map_width_pixels = 0
 
-    item_spawns, zombie_spawns = _rebuild_world_from_data(game)
+    item_spawns, zombie_spawns, animal_spawns = _rebuild_world_from_data(game)
 
     game.cached_obstacle_grid = {}
     game.cached_obstacle_count = -1
     game.current_zombie_spawns = zombie_spawns
+    game.current_animal_spawns = animal_spawns
+    
+    # Rebuild spatial grids for chunk boundaries when changing layers
+    game.spawn_point_grid = {}
+    game.animal_spawn_point_grid = {}
+    grid_scale = getattr(game, 'SPAWN_GRID_SIZE', 512)
+    for sp_pos in game.current_zombie_spawns:
+        grid_cell = (int(sp_pos[0] // grid_scale), int(sp_pos[1] // grid_scale))
+        game.spawn_point_grid.setdefault(grid_cell, []).append(sp_pos)
+        
+    for sp_pos in game.current_animal_spawns:
+        grid_cell = (int(sp_pos[0] // grid_scale), int(sp_pos[1] // grid_scale))
+        game.animal_spawn_point_grid.setdefault(grid_cell, []).append(sp_pos)
+
     game.layer_spawn_triggers.setdefault(layer_index, set())
+    if not hasattr(game, 'layer_animal_spawn_triggers'): game.layer_animal_spawn_triggers = {}
+    game.layer_animal_spawn_triggers.setdefault(layer_index, set())
 
     if not getattr(game, 'is_giant_map', False):
         if game.map_data:
@@ -477,22 +503,24 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
             z.map_filename = new_filename
             
         if hasattr(game, 'active_animals'):
-            from core.entities.animal.animal import Animal
-            from core.entities.animal.animal_loader import AnimalLoader
-            AnimalLoader.load_animals()
-            
-            for y, row in enumerate(game.spawn_data):
-                if len(game.active_animals) >= max_anim_chunk:
-                    break
-                for x, char in enumerate(row):
-                    if len(game.active_animals) >= max_anim_chunk:
-                        break
-                    if char == 'ANM':
-                        a_type = AnimalLoader.get_random_animal_type(layer=layer_index)
-                        if a_type:
-                            animal = Animal(x * TILE_SIZE, y * TILE_SIZE, a_type, game=game, layer=layer_index)
-                            game.active_animals.append(animal)
-                            game.items_on_ground.append(animal)
+            if hasattr(game, 'layer_animals') and layer_index in game.layer_animals and game.layer_animals[layer_index]:
+                game.active_animals = list(game.layer_animals[layer_index])
+                for a in game.active_animals:
+                    if a not in game.items_on_ground:
+                        game.items_on_ground.append(a)
+            else:
+                new_animals = spawn_initial_animals(
+                    game.obstacles, 
+                    animal_spawns, 
+                    game.items_on_ground, 
+                    limit=max_anim_chunk,
+                    spawns_per_marker=getattr(core.data.config, 'ANIMALS_PER_SPAWN', 1),
+                    game=game,
+                    layer=layer_index
+                )
+                for a in new_animals:
+                    game.active_animals.append(a)
+                    game.items_on_ground.append(a)
 
         if hasattr(game, 'npcs'):
             game.npcs.empty()

@@ -3,6 +3,7 @@
 import xml.etree.ElementTree as ET
 import os
 from core.data.config import DATA_PATH
+from core.systems.mod_manager import mod_manager
 
 class Recipe:
     def __init__(self, output_name, magazine, time_required, ingredients, output_amount=1, craft_type="create", req_level=None, gain_xp=None, results=None):
@@ -147,11 +148,10 @@ class RecipeManager:
 
         RecipeManager.RECIPES.clear()
 
-        for root_dir, _, files in os.walk(craft_path):
-            for file_name in files:
-                if not file_name.endswith('.xml'):
+        for root_dir, _, full_paths in mod_manager.vfs_walk(craft_path):
+            for file_path in full_paths:
+                if not file_path.endswith('.xml'):
                     continue
-                file_path = os.path.join(root_dir, file_name)
                 try:
                     tree = ET.parse(file_path)
                     root = tree.getroot()

@@ -343,6 +343,40 @@ def _find_spawn_spot_near(
   return None
 
 
+def spawn_initial_animals(obstacles, animal_spawns, items_on_ground, limit=1000, spawns_per_marker=None, map_width_px=None, map_height_px=None, player=None, game=None, layer=1):
+    if limit <= 0: return []
+    animals = []
+    if not animal_spawns: return []
+
+    occupied_tiles = set((ob.x // TILE_SIZE, ob.y // TILE_SIZE) for ob in obstacles)
+    for entity in items_on_ground:
+        occupied_tiles.add((entity.rect.x // TILE_SIZE, entity.rect.y // TILE_SIZE))
+    if player:
+        occupied_tiles.add((player.rect.x // TILE_SIZE, player.rect.y // TILE_SIZE))
+
+    spawns_count = spawns_per_marker if spawns_per_marker is not None else 1
+
+    AnimalLoader.load_animals()
+
+    for pos in animal_spawns:
+        if len(animals) >= limit:
+            break
+        for _ in range(spawns_count):
+            if len(animals) >= limit:
+                break
+            spot = _find_spawn_spot_near(
+                pos, occupied_tiles, obstacles, map_width_px, map_height_px
+            )
+            if spot:
+                a_type = AnimalLoader.get_random_animal_type(layer=layer)
+                if a_type:
+                    animal = Animal(spot[0], spot[1], a_type, game=game, layer=layer)
+                    animals.append(animal)
+            else:
+                break
+    return animals
+
+
 def manage_dynamic_npcs(game):
     if not game.player:
         return

@@ -131,13 +131,6 @@ class PlayerGraphics:
                     continue
                     
                 img_to_draw = item.image
-                
-                if hasattr(item, 'color') and item.color and item.color != (255, 255, 255):
-                    if not hasattr(item, 'tinted_image') or getattr(item, 'last_color', None) != item.color:
-                        item.tinted_image = item.image.copy()
-                        item.tinted_image.fill((*item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
-                        item.last_color = item.color
-                    img_to_draw = item.tinted_image
 
                 if draw_angle != 0:
                     rotated_cloth = pygame.transform.rotate(img_to_draw, draw_angle)

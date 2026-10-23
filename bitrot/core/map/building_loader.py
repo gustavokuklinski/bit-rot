@@ -4,25 +4,24 @@ import csv
 
 def load_building_templates(buildings_dir):
     """
-    Loads building templates from the specified directory.
+    Loads building templates from the specified directory utilizing the ModManager virtual file system.
     Returns a dictionary where keys are building names and values are dicts containing layers.
     """
+    from core.systems.mod_manager import mod_manager
     templates = {}
     
     if not os.path.exists(buildings_dir):
         print(f"Warning: Building directory not found: {buildings_dir}")
         return templates
 
-    # Get all unique prefixes (e.g., 'house_1' from 'house_1_map.csv')
-    files = os.listdir(buildings_dir)
+    # Collect prefixes via VFS walking
     prefixes = set()
-    for f in files:
-        if f.endswith('.csv'):
-            # Remove the layer suffix to get the base name
-            # Assumes format: name_layer.csv (e.g., house1_map.csv)
-            # If your buildings are just 'house1.csv', adjust splitting
-            base = f.replace('_map.csv', '').replace('_ground.csv', '').replace('_spawn.csv', '').replace('_roof.csv', '').replace('_light.csv', '')
-            prefixes.add(base)
+    for root_dir, _, full_paths in mod_manager.vfs_walk(buildings_dir):
+        for full_path in full_paths:
+            f = os.path.basename(full_path)
+            if f.endswith('.csv'):
+                base = f.replace('_map.csv', '').replace('_ground.csv', '').replace('_spawn.csv', '').replace('_roof.csv', '').replace('_light.csv', '')
+                prefixes.add(base)
 
     for name in prefixes:
         template = {
@@ -33,9 +32,8 @@ def load_building_templates(buildings_dir):
             'light': []
         }
         
-        # Helper to load a specific layer
         def load_layer(suffix):
-            path = os.path.join(buildings_dir, f"{name}{suffix}")
+            path = mod_manager.get_override_path(os.path.join(buildings_dir, f"{name}{suffix}"))
             if os.path.exists(path):
                 with open(path, 'r') as f:
                     return list(csv.reader(f))

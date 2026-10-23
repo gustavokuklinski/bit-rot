@@ -5,6 +5,7 @@ import random
 import math 
 from core.data.config import *
 import core.data.config
+from core.systems.mod_manager import mod_manager
 
 CATEGORY_TO_CONFIG_ATTR = {
     'ambient': 'VOLUME_ATMOSPHERIC',
@@ -119,11 +120,13 @@ class SoundManager:
     def load_sound(self, name, sound_path):
         if name in self.sounds:
             return True
-        full_path = os.path.join(SOUND_PATH, sound_path)
+        
+        full_path = mod_manager.get_override_path(os.path.join(SOUND_PATH, sound_path))
         if not os.path.exists(full_path):
             filename = os.path.basename(sound_path)
-            for candidate_subdir in ['map', 'ui', 'items', 'craft','']:
+            for candidate_subdir in ['map', 'ui', 'items', 'craft', '']:
                 alt_path = os.path.join(SOUND_PATH, candidate_subdir, filename) if candidate_subdir else os.path.join(SOUND_PATH, filename)
+                alt_path = mod_manager.get_override_path(alt_path)
                 if os.path.exists(alt_path):
                     full_path = alt_path
                     break

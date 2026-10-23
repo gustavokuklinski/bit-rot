@@ -21,11 +21,13 @@ class TileManager:
             print(f"Warning: Tile folder not found at '{self.tile_folder}'")
             return
 
-        for root_dir, _, files in os.walk(self.tile_folder):
-            for filename in files:
-                if not filename.endswith('.xml'):
+        from core.systems.mod_manager import mod_manager
+
+        for root_dir, _, full_paths in mod_manager.vfs_walk(self.tile_folder):
+            for filepath in full_paths:
+                if not filepath.endswith('.xml'):
                     continue
-                filepath = os.path.join(root_dir, filename)
+                filename = os.path.basename(filepath)
                 try:
                     tree = ET.parse(filepath)
                     root = tree.getroot()
@@ -52,13 +54,10 @@ class TileManager:
                         sprite_file = sprite_node.get('file') if sprite_node is not None else None
                         
                         if char and sprite_file:
-                            # Primary path: directly under self.asset_folder
-                            image_path = os.path.join(self.asset_folder, sprite_file)
-                            
-                            # If not found directly, check relative to the current XML subfolder
+                            image_path = mod_manager.get_override_path(os.path.join(self.asset_folder, sprite_file))
                             if not os.path.exists(image_path):
                                 rel_sub = os.path.relpath(root_dir, self.tile_folder)
-                                alt_path = os.path.join(self.asset_folder, rel_sub, sprite_file)
+                                alt_path = mod_manager.get_override_path(os.path.join(self.asset_folder, rel_sub, sprite_file))
                                 if os.path.exists(alt_path):
                                     image_path = alt_path
 

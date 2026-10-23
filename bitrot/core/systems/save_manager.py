@@ -164,6 +164,7 @@ def save_game(game):
                 "inventory": [serialize_item(i) for i in game.player.inventory if i],
                 "belt": [serialize_item(i) for i in game.player.belt],
                 "clothes": {slot: serialize_item(item) for slot, item in game.player.clothes.items()},
+                "clothes_colors": {slot: list(getattr(item, 'color', (255, 255, 255))) for slot, item in game.player.clothes.items() if item},
                 "quests": getattr(game.player, 'quests', []),
                 "completed_quests": getattr(game.player, 'completed_quests', []),
                 "dialog_history": list(getattr(game.player, 'dialog_history', [])),
@@ -509,6 +510,7 @@ def save_game(game):
                 "day_count": game.world_time.day_count
             },
             "layer_spawn_triggers": {str(k): list(v) for k, v in game.layer_spawn_triggers.items()},
+            "layer_animal_spawn_triggers": {str(k): list(v) for k, v in getattr(game, 'layer_animal_spawn_triggers', {}).items()},
             "items": safe_ground_items,
             "containers": container_data,
             "open_modals": saved_open_modals,

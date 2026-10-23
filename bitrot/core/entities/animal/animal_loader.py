@@ -1,7 +1,8 @@
 # core/entities/animal/animal_loader.py
+
 import os
+import json
 import random
-import xml.etree.ElementTree as ET
 from core.data.config import DATA_PATH, BASE_DIR
 
 class AnimalLoader:
@@ -29,164 +30,159 @@ class AnimalLoader:
         target_folder = cls.get_animal_folder()
 
         if not os.path.exists(target_folder):
-            print(f"[AnimalLoader] Warning: Animal folder not found at {target_folder}")
+            print(f"[AnimalLoader] Warning: Animal folder not found at '{target_folder}'")
             return
 
+        from core.systems.mod_manager import mod_manager
+
         loaded_files = 0
-        for filename in os.listdir(target_folder):
-            if filename.endswith(".xml"):
-                full_path = os.path.join(target_folder, filename)
-                try:
-                    tree = ET.parse(full_path)
-                    root = tree.getroot()
-                    cls._parse_root(root, filename)
-                    loaded_files += 1
-                except Exception as e:
-                    print(f"[AnimalLoader] Error loading {filename}: {e}")
+        for root_dir, _, full_paths in mod_manager.vfs_walk(target_folder):
+            for full_path in full_paths:
+                if full_path.endswith(".json"):
+                    filename = os.path.basename(full_path)
+                    try:
+                        with open(full_path, "r", encoding="utf-8") as f:
+                            raw_data = json.load(f)
 
-        print(f"[AnimalLoader] Successfully loaded {len(cls.definitions)} species from {loaded_files} XML files: {list(cls.definitions.keys())}")
+                        # Support "animals": { ... } or "animal": { ... } or direct object
+                        raw_animals = raw_data.get('animals', {})
+                        if not raw_animals:
+                            if 'animal' in raw_data:
+                                raw_animals = {os.path.splitext(filename)[0]: raw_data['animal']}
+                            elif 'stats' in raw_data or 'name' in raw_data:
+                                raw_animals = {os.path.splitext(filename)[0]: raw_data}
 
-    @classmethod
-    def _parse_root(cls, root, filename):
-        nodes = []
-        if root.tag == 'animal':
-            nodes.append(root)
-        else:
-            nodes.extend(root.findall('.//animal'))
+                        fallback_name = os.path.splitext(filename)[0].capitalize()
 
-        fallback_name = os.path.splitext(filename)[0].capitalize()
+                        for animal_id, a_info in raw_animals.items():
+                            name = a_info.get('name') or fallback_name
+                            animal_type = a_info.get('type', 'animal')
+                            attack_player = bool(a_info.get('attack_player', False))
 
-        for animal_node in nodes:
-            try:
-                name = animal_node.get('name') or animal_node.get('id') or fallback_name
-                animal_type = animal_node.get('type', 'animal')
-                attack_player = str(animal_node.get('attack_player', 'false')).strip().lower() == 'true'
-                
-                try:
-                    mult_val = animal_node.get('spawn_zombies_multiplier')
-                    if mult_val is not None:
-                        spawn_zombies_multiplier = float(mult_val)
-                    else:
-                        spawn_zombies_multiplier = float(animal_node.get('spawn_zombies', '0'))
-                except (ValueError, TypeError):
-                    spawn_zombies_multiplier = 0.0
+                            try:
+                                mult_val = a_info.get('spawn_zombies_multiplier')
+                                if mult_val is not None:
+                                    spawn_zombies_multiplier = float(mult_val)
+                                else:
+                                    spawn_zombies_multiplier = float(a_info.get('spawn_zombies', 0.0))
+                            except (ValueError, TypeError):
+                                spawn_zombies_multiplier = 0.0
 
-                try:
-                    spawn_weight = max(1, int(float(animal_node.get('spawn_weight', '10'))))
-                except (ValueError, TypeError):
-                    spawn_weight = 10
+                            try:
+                                spawn_weight = max(1, int(float(a_info.get('spawn_weight', 10))))
+                            except (ValueError, TypeError):
+                                spawn_weight = 10
 
-                # Robust layer parser: accepts [1, 2], [L1, L2], [L1], 1, L2, etc.
-                spawn_layer_raw = animal_node.get('spawn_layer') or animal_node.get('spawn_layers') or animal_node.get('layer') or '[1, 2]'
-                spawn_layers = []
-                try:
-                    clean_str = str(spawn_layer_raw).replace('[', '').replace(']', '').replace('"', '').replace("'", '').strip()
-                    if clean_str:
-                        for part in clean_str.split(','):
-                            cleaned_num = part.strip().upper().replace('L', '')
-                            if cleaned_num.isdigit():
-                                spawn_layers.append(int(cleaned_num))
-                except Exception:
-                    spawn_layers = [1, 2]
+                            # Parse spawn_layer (supports ["L1", "L2", "L3"], [1, 2, 3], or comma-separated string)
+                            raw_layers = a_info.get('spawn_layer') or a_info.get('spawn_layers') or a_info.get('layer', [1, 2, 3])
+                            spawn_layers = []
 
-                if not spawn_layers:
-                    spawn_layers = [1, 2]
+                            if isinstance(raw_layers, (list, tuple)):
+                                for l_item in raw_layers:
+                                    clean_num = str(l_item).upper().replace('L', '').strip()
+                                    if clean_num.isdigit():
+                                        spawn_layers.append(int(clean_num))
+                            elif isinstance(raw_layers, str):
+                                clean_str = raw_layers.replace('[', '').replace(']', '').replace('"', '').replace("'", '').strip()
+                                for part in clean_str.split(','):
+                                    clean_num = part.upper().replace('L', '').strip()
+                                    if clean_num.isdigit():
+                                        spawn_layers.append(int(clean_num))
+                            elif isinstance(raw_layers, int):
+                                spawn_layers.append(raw_layers)
 
-                stats_node = animal_node.find('stats')
-                stats = {
-                    'health': cls._parse_stat_range(stats_node, 'health', default_min=10, default_max=20),
-                    'speed': cls._parse_stat_range(stats_node, 'speed', default_min=0.5, default_max=0.8, is_float=True),
-                    'attack': cls._parse_stat_range(stats_node, 'attack', default_min=1, default_max=5),
-                    'infection': cls._parse_stat_range(stats_node, 'infection', default_min=0, default_max=0)
-                }
+                            if not spawn_layers:
+                                spawn_layers = [1, 2, 3]
 
-                sprite_file = None
-                visuals_node = animal_node.find('visuals')
-                if visuals_node is not None:
-                    spr = visuals_node.find('sprite')
-                    if spr is not None:
-                        sprite_file = spr.get('file') or spr.get('src')
+                            # Parse Stats
+                            stats_node = a_info.get('stats', {})
+                            stats = {
+                                'health': cls._parse_stat_range(stats_node.get('health'), default_min=10, default_max=20),
+                                'speed': cls._parse_stat_range(stats_node.get('speed'), default_min=0.5, default_max=0.8, is_float=True),
+                                'attack': cls._parse_stat_range(stats_node.get('attack'), default_min=1, default_max=5),
+                                'infection': cls._parse_stat_range(stats_node.get('infection'), default_min=0, default_max=0)
+                            }
 
-                if not sprite_file:
-                    spr = animal_node.find('sprite')
-                    if spr is not None:
-                        sprite_file = spr.get('file') or spr.get('src') or spr.text
+                            # Parse Visuals / Sprites
+                            visuals = a_info.get('visuals', {})
+                            sprites = {}
+                            if isinstance(visuals, dict):
+                                sprites = dict(visuals)
 
-                if not sprite_file:
-                    sprite_file = f"{name.lower()}.png"
+                            sprite_file = sprites.get('center') or a_info.get('sprite') or f"{name.lower()}.png"
+                            sprite_file = os.path.basename(sprite_file)
+                            if 'center' not in sprites:
+                                sprites = {'center': sprite_file, 'left': sprite_file, 'right': sprite_file}
 
-                sprite_file = os.path.basename(sprite_file)
+                            # Parse Loot
+                            loot = []
+                            for item_entry in a_info.get('loot', []):
+                                item_name = item_entry.get('item') or item_entry.get('name')
+                                if not item_name:
+                                    continue
+                                try:
+                                    chance_val = float(item_entry.get('chance', 1.0))
+                                    if chance_val <= 1.0:
+                                        chance_val *= 100.0
+                                except (ValueError, TypeError):
+                                    chance_val = 50.0
+                                loot.append({'item': item_name, 'chance': chance_val})
 
-                loot = []
-                loot_node = animal_node.find('loot')
-                if loot_node is not None:
-                    for item in loot_node.findall('item'):
-                        item_name = item.get('item') or item.get('name')
-                        if not item_name:
-                            continue
-                        try:
-                            chance_val = float(item.get('chance', 1.0))
-                            if chance_val <= 1.0: chance_val *= 100
-                        except (ValueError, TypeError):
-                            chance_val = 50.0
-                        loot.append({'item': item_name, 'chance': chance_val})
+                            capacity = int(float(a_info.get('capacity', 0)))
 
-                cap_node = animal_node.find('capacity')
-                capacity = int(float(cap_node.get('value', 0))) if cap_node is not None else 0
+                            # Parse Sounds
+                            sound_data = a_info.get('sound') or a_info.get('sounds') or {}
+                            sounds = dict(sound_data)
 
-                sounds = {}
-                sound_node = animal_node.find('sound') or animal_node.find('sounds')
-                if sound_node is not None:
-                    for sound_type in ['hit', 'wander', 'dead', 'attack', 'steps']:
-                        node = sound_node.find(sound_type)
-                        if node is not None:
-                            sounds[sound_type] = node.get('src') or node.get('file')
+                            cls.definitions[name] = {
+                                'name': name,
+                                'type': animal_type,
+                                'attack_player': attack_player,
+                                'spawn_weight': spawn_weight,
+                                'spawn_layers': spawn_layers,
+                                'spawn_zombies_multiplier': spawn_zombies_multiplier,
+                                'stats': stats,
+                                'sprite': sprite_file,
+                                'sprites': sprites,
+                                'loot': loot,
+                                'capacity': capacity,
+                                'sounds': sounds
+                            }
 
-                cls.definitions[name] = {
-                    'name': name,
-                    'type': animal_type,
-                    'attack_player': attack_player,
-                    'spawn_weight': spawn_weight,
-                    'spawn_layers': spawn_layers,
-                    'spawn_zombies_multiplier': spawn_zombies_multiplier,
-                    'stats': stats,
-                    'sprite': sprite_file,
-                    'loot': loot,
-                    'capacity': capacity,
-                    'sounds': sounds
-                }
+                        loaded_files += 1
+                    except Exception as e:
+                        print(f"[AnimalLoader] Error loading {filename}: {e}")
 
-            except Exception as e:
-                print(f"[AnimalLoader] Error parsing animal node '{animal_node.get('name', fallback_name)}' in {filename}: {e}")
+        print(f"[AnimalLoader] Successfully loaded {len(cls.definitions)} species from {loaded_files} JSON files: {list(cls.definitions.keys())}")
 
     @staticmethod
-    def _parse_stat_range(stats_node, tag, default_min=0, default_max=0, is_float=False):
+    def _parse_stat_range(stat_node, default_min=0, default_max=0, is_float=False):
         converter = float if is_float else lambda v: int(float(v))
-        if stats_node is None:
+        if stat_node is None:
             return {'min': default_min, 'max': default_max}
 
-        node = stats_node.find(tag)
-        if node is None:
-            return {'min': default_min, 'max': default_max}
+        if isinstance(stat_node, (int, float)):
+            v = converter(stat_node)
+            return {'min': v, 'max': v}
 
-        val_min = node.get('min')
-        val_max = node.get('max')
-        val_single = node.get('value')
-
-        try:
-            if val_min is not None and val_max is not None:
-                return {'min': converter(val_min), 'max': converter(val_max)}
-            elif val_single is not None:
-                parsed = converter(val_single)
-                return {'min': parsed, 'max': parsed}
-            elif val_max is not None:
-                parsed = converter(val_max)
-                return {'min': parsed, 'max': parsed}
-            elif val_min is not None:
-                parsed = converter(val_min)
-                return {'min': parsed, 'max': parsed}
-        except (ValueError, TypeError):
-            pass
+        if isinstance(stat_node, dict):
+            val_min = stat_node.get('min')
+            val_max = stat_node.get('max')
+            val_single = stat_node.get('value')
+            try:
+                if val_min is not None and val_max is not None:
+                    return {'min': converter(val_min), 'max': converter(val_max)}
+                elif val_single is not None:
+                    parsed = converter(val_single)
+                    return {'min': parsed, 'max': parsed}
+                elif val_max is not None:
+                    parsed = converter(val_max)
+                    return {'min': parsed, 'max': parsed}
+                elif val_min is not None:
+                    parsed = converter(val_min)
+                    return {'min': parsed, 'max': parsed}
+            except (ValueError, TypeError):
+                pass
 
         return {'min': default_min, 'max': default_max}
 
@@ -218,7 +214,7 @@ class AnimalLoader:
 
         for name, data in cls.definitions.items():
             if layer is not None:
-                allowed_layers = data.get('spawn_layers', [1, 2])
+                allowed_layers = data.get('spawn_layers', [1, 2, 3])
                 if layer not in allowed_layers:
                     continue
             weight = max(1, int(data.get('spawn_weight', 10)))
@@ -228,7 +224,6 @@ class AnimalLoader:
         if candidates:
             return random.choices(candidates, weights=weights, k=1)[0]
 
-        # Do NOT pick animals from forbidden layers
         if layer is not None:
             return None
 

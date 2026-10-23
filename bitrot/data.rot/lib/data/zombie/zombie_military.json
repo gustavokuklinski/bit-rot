@@ -1,0 +1,49 @@
+{
+  "zombies": {
+    "military": {
+      "spawn_weight": 5,
+      "name": "RANDOM",
+      "sex": "RANDOM",
+      "xp": { "min": 1, "max": 15 },
+      "stats": {
+        "health": { "min": 40, "max": 60 },
+        "speed": { "min": 1, "max": 2 },
+        "attack": { "min": 1, "max": 15 },
+        "infection": { "min": 10, "max": 15 }
+      },
+      "clothes": {
+        "head": "Beret",
+        "util": null,
+        "hair": null,
+        "facial": null,
+        "feet": "Military Boots",
+        "hand": "Leather Black Gloves",
+        "body": "Military Tshirt",
+        "arms": "Military Jacket",
+        "legs": "Military Pants"
+      },
+      "visuals": {
+        "center": "zombie.png",
+        "left": "zombie_left.png",
+        "right": "zombie_right.png"
+      },
+      "loot": [
+        { "item": "Money WBRL", "chance": 1.0 },
+        { "item": "Coin WBRL", "chance": 0.5 },
+        { "item": "Lighter off", "chance": 0.2 },
+        { "item": "Rot Meat", "chance": 1.0 },
+        { "item": "Knife", "chance": 1.0 },
+        { "item": "M4A1", "chance": 0.1 },
+        { "item": "Pistol 9mm", "chance": 0.2 },
+        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.5 }
+      ],
+      "sound": {
+        "hit": "zombie_hit.ogg",
+        "wander": "zombie_wandering.ogg",
+        "dead": "zombie_dead.ogg",
+        "attack": "zombie_attack.ogg",
+        "steps": "zombie_steps.ogg"
+      }
+    }
+  }
+}

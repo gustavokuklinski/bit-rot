@@ -31,12 +31,14 @@ class RadioManager:
             os.makedirs(fallback, exist_ok=True)
             folders = [fallback]
 
+        from core.systems.mod_manager import mod_manager
+
         found_files = 0
         for radio_path in folders:
-            for root_dir, _, filenames in os.walk(radio_path):
-                for filename in filenames:
-                    if filename.endswith('.xml'):
-                        full_path = os.path.join(root_dir, filename)
+            for root_dir, _, full_paths in mod_manager.vfs_walk(radio_path):
+                for full_path in full_paths:
+                    if full_path.endswith('.xml'):
+                        filename = os.path.basename(full_path)
                         try:
                             tree = ET.parse(full_path)
                             root = tree.getroot()

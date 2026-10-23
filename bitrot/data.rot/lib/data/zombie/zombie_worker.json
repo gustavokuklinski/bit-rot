@@ -1,0 +1,49 @@
+{
+  "zombies": {
+    "worker": {
+      "spawn_weight": 10,
+      "name": "RANDOM",
+      "sex": "RANDOM",
+      "xp": { "min": 1, "max": 15 },
+      "stats": {
+        "health": { "min": 20, "max": 70 },
+        "speed": { "min": 1, "max": 2 },
+        "attack": { "min": 5, "max": 15 },
+        "infection": { "min": 2, "max": 5 }
+      },
+      "clothes": {
+        "head": "Worker Helmet",
+        "util": null,
+        "hair": null,
+        "facial": null,
+        "feet": "Shoes",
+        "hand": "Leather Black Gloves",
+        "body": "Next Petrol Tshirt",
+        "arms": null,
+        "legs": null
+      },
+      "visuals": {
+        "center": "zombie.png",
+        "left": "zombie_left.png",
+        "right": "zombie_right.png"
+      },
+      "loot": [
+        { "item": "Money WBRL", "chance": 1.0 },
+        { "item": "Coin WBRL", "chance": 0.5 },
+        { "item": "Rot Meat", "chance": 1.0 },
+        { "item": "Screwdriver", "chance": 0.5 },
+        { "item": "Lighter off", "chance": 0.2 },
+        { "item": "Toolkit", "chance": 1.0 },
+        { "item": "38 Revolver", "chance": 0.5 },
+        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.5 }
+      ],
+      "sound": {
+        "hit": "zombie_hit.ogg",
+        "wander": "zombie_wandering.ogg",
+        "dead": "zombie_dead.ogg",
+        "attack": "zombie_attack.ogg",
+        "steps": "zombie_steps.ogg"
+      }
+    }
+  }
+}

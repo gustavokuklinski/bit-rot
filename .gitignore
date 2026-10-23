@@ -10,7 +10,8 @@ Bitrot-x86_64.AppImage
 /bitrot.dist
 /bitrot.onefile-build
 /game
-/data.rot
+/data.rot/logs
+/data.rot/save
 /bitrot/data.rot/save/player
 /bitrot/data.rot/save/game
 /bitrot/data.rot/save/server

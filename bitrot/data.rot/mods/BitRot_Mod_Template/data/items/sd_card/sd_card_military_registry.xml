@@ -1,0 +1,8 @@
+<item name="Military Registry" type="sd_card" tip="Military personel track\nUse with Mobile > Apps">
+    <properties>
+        <sprite file="sd_card.png" />
+        
+        <map value="show_hostile_npc" />
+    </properties>
+    <spawn chance="1.0" />
+</item>

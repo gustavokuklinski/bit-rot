@@ -213,6 +213,7 @@ class Game:
         self.roof_tiles = []
         self.npc_spawn_points = [] 
         self.spawn_point_grid = {}
+        self.animal_spawn_point_grid = {}
         self.SPAWN_GRID_SIZE = 512
 
         self.player_setup_state = {}

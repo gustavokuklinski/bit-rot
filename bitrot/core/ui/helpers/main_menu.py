@@ -5,6 +5,7 @@ import core.data.config
 from core.data.config import *
 from datetime import datetime
 from core.data.localization import tr
+from core.systems.mod_manager import mod_manager
 
 _logo_img = None
 _language_cache = None
@@ -47,8 +48,9 @@ def get_available_languages():
             
     for lang in _language_cache:
         try:
-            if os.path.exists(lang['sprite_path']):
-                img = pygame.image.load(lang['sprite_path']).convert_alpha()
+            o_path = mod_manager.get_override_path(lang['sprite_path'])
+            if os.path.exists(o_path):
+                img = pygame.image.load(o_path).convert_alpha()
                 lang['img'] = pygame.transform.scale(img, (int(32 * UI_SCALE), int(24 * UI_SCALE)))
         except Exception:
             pass
@@ -81,9 +83,10 @@ def draw_menu(screen, mouse_pos, has_save=False):
     global _logo_img, _help_img_menu, _controls_img_menu
     screen.fill(DARK_GRAY)
 
+    
     try:
         if _logo_img is None:
-            logo_path = os.path.join(BASE_DIR, 'data.rot', 'icons', 'logo.png')
+            logo_path = mod_manager.get_override_path(os.path.join(BASE_DIR, 'data.rot', 'icons', 'logo.png'))
             _logo_img = pygame.image.load(logo_path).convert_alpha()
             target_w = S(500)
             scale_factor = target_w / _logo_img.get_width()
@@ -94,7 +97,7 @@ def draw_menu(screen, mouse_pos, has_save=False):
         
     try:
         if _help_img_menu is None:
-            help_path = os.path.join(BASE_DIR, 'data.rot', 'lib', 'sprites', 'ui', 'help.png')
+            help_path = mod_manager.get_override_path(os.path.join(BASE_DIR, 'data.rot', 'lib', 'sprites', 'ui', 'help.png'))
             _help_img_menu = pygame.image.load(help_path).convert_alpha()
             _help_img_menu = pygame.transform.scale(_help_img_menu, (S(32), S(32)))
     except Exception as e:
@@ -102,7 +105,7 @@ def draw_menu(screen, mouse_pos, has_save=False):
 
     try:
         if _controls_img_menu is None:
-            controls_path = os.path.join(BASE_DIR, 'data.rot', 'lib', 'sprites', 'ui', 'controls.png')
+            controls_path = mod_manager.get_override_path(os.path.join(BASE_DIR, 'data.rot', 'lib', 'sprites', 'ui', 'controls.png'))
             _controls_img_menu = pygame.image.load(controls_path).convert_alpha()
             _controls_img_menu = pygame.transform.scale(_controls_img_menu, (S(32), S(32)))
     except Exception as e:

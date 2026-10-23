@@ -14,7 +14,7 @@ import core.data.player_xml_parser  # Points to the updated parser
 from core.entities.item.item import Item, ITEM_TEMPLATES
 from core.entities.zombie.zombie import Zombie
 from core.ui.tooltip import draw_tooltip
-from core.ui.helpers.trait_config_loader import _load_config_presets, save_config_xml, load_config_data, TRAIT_DEFINITIONS
+from core.ui.helpers.trait_config_loader import _load_config_presets, save_config_json, load_config_data, TRAIT_DEFINITIONS
 from core.ui.helpers.world import _draw_world_screen, handle_world_events
 from core.data.localization import tr
 from core.ui.modals import draw_scrollbar
@@ -22,6 +22,7 @@ from core.data.progression_loader import PROGRESSION_CONFIG
 from core.ui.helpers.select_world import draw_select_world_screen, handle_select_world_events
 from core.ui.helpers.select_character import draw_select_character_screen, handle_select_character_events
 from core.systems.save_manager import delete_pending_world_save
+from core.systems.mod_manager import mod_manager
 
 fake = Faker()
 _stat_icons_cache = {}
@@ -1125,10 +1126,12 @@ def run_player_setup(game):
                     sprite_file = template.get('properties', {}).get('sprite', {}).get('file')
                     if sprite_file:
                         try:
-                            path = SPRITE_PATH + "clothes/" + sprite_file
+                            primary_path = os.path.join(SPRITE_PATH, "clothes", sprite_file)
+                            path = mod_manager.get_override_path(primary_path)
                             img = pygame.image.load(path).convert_alpha()
                             state['clothing_sprites'][item_name] = pygame.transform.scale(img, (S(256), S(256)))
-                        except Exception as e: print(f"Error loading cloth: {e}")
+                        except Exception as e: 
+                            print(f"Error loading cloth {item_name}: {e}")
         for slot in state['available_clothes']: state['available_clothes'][slot].insert(0, "None")
 
         try:
@@ -1376,7 +1379,7 @@ def _save_preset(state):
     if not os.path.exists(preset_dir):
         os.makedirs(preset_dir)
         
-    filepath = os.path.join(preset_dir, f"{player_name}.xml")
+    filepath = os.path.join(preset_dir, f"{player_name}.json")
     
     root = ET.Element("preset")
     

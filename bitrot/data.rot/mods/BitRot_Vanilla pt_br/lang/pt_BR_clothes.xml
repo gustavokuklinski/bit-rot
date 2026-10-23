@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language name="pt_BR">
+    <cloth_id>
+        <cloth_id name="arms" translation_type="braços" />
+        <cloth_id name="util" translation_type="utilitário" />
+        <cloth_id name="legs" translation_type="pernas" />
+        <cloth_id name="head" translation_type="cabeça" />
+        <cloth_id name="hair" translation_type="cabelo" />
+        <cloth_id name="foot" translation_type="pés" />
+        <cloth_id name="feet" translation_type="pés" />
+        <cloth_id name="facial" translation_type="rosto" />
+        <cloth_id name="body" translation_type="torso" />
+        <cloth_id name="hands" translation_type="mãos" />
+    </cloth_id>
+
+    <cloth>
+        <!-- Arms / Jackets / Vests -->
+        <cloth name="Jacket" translation_cloth="Jaqueta" />
+        <cloth name="Leather Black Jacket" translation_cloth="Jaqueta de Couro Preta" />
+        <cloth name="Medical Vest" translation_cloth="Colete Médico" />
+        <cloth name="Military Jacket" translation_cloth="Jaqueta Militar" />
+        <cloth name="Special Force Jacket" translation_cloth="Jaqueta de Forças Especiais" />
+
+        <!-- Body / Torso / T-Shirts -->
+        <cloth name="Tshirt" translation_cloth="Camiseta" />
+        <cloth name="TShirt" translation_cloth="Camiseta" />
+        <cloth name="Exxoil Tshirt" translation_cloth="Camiseta Exxoil" />
+        <cloth name="Gethulius Tshirt" translation_cloth="Camiseta Gethulius" />
+        <cloth name="Medical Tshirt" translation_cloth="Camiseta Médica" />
+        <cloth name="Military Tshirt" translation_cloth="Camiseta Militar" />
+        <cloth name="Next Petrol Tshirt" translation_cloth="Camiseta Next Petrol" />
+
+        <!-- Legs / Pants / Shorts -->
+        <cloth name="Pants" translation_cloth="Calça" />
+        <cloth name="Jeans Pants" translation_cloth="Calça Jeans" />
+        <cloth name="Jeans Short" translation_cloth="Bermuda Jeans" />
+        <cloth name="Leather Black Pants" translation_cloth="Calça de Couro Preta" />
+        <cloth name="Military Pants" translation_cloth="Calça Militar" />
+        <cloth name="Special Force Pants" translation_cloth="Calça de Forças Especiais" />
+
+        <!-- Feet / Shoes / Boots -->
+        <cloth name="Sneakers" translation_cloth="Tênis" />
+        <cloth name="Shoes" translation_cloth="Sapatos" />
+        <cloth name="Military Boots" translation_cloth="Botas Militares" />
+
+        <!-- Head / Hats / Helmets / Masks -->
+        <cloth name="Balaclava" translation_cloth="Balaclava" />
+        <cloth name="Beret" translation_cloth="Boina" />
+        <cloth name="Black Hat" translation_cloth="Chapéu Preto" />
+        <cloth name="Cowboy Hat" translation_cloth="Chapéu de Cowboy" />
+        <cloth name="Cowbow Hat" translation_cloth="Chapéu de Cowboy" />
+        <cloth name="Cowboy Leather Hat" translation_cloth="Chapéu de Cowboy de Couro" />
+        <cloth name="Medical Mask" translation_cloth="Máscara Cirúrgica" />
+        <cloth name="Military Helmet" translation_cloth="Capacete Militar" />
+        <cloth name="Special Force Helmet" translation_cloth="Capacete de Forças Especiais" />
+        <cloth name="Worker Helmet" translation_cloth="Capacete de Operário" />
+
+        <!-- Hair -->
+        <cloth name="Bald" translation_cloth="Careca" />
+        <cloth name="Crew" translation_cloth="Militar" />
+        <cloth name="Cut" translation_cloth="Curto" />
+        <cloth name="Long" translation_cloth="Longo" />
+        <cloth name="Mowalk" translation_cloth="Moicano" />
+
+        <!-- Facial -->
+        <cloth name="Chop" translation_cloth="Costeletas" />
+        <cloth name="Full Beard" translation_cloth="Barba Cheia" />
+
+        <!-- Hands / Gloves -->
+        <cloth name="Leather Black Gloves" translation_cloth="Luvas de Couro Pretas" />
+
+        <!-- Utilities / Belts / Holsters / Slings -->
+        <cloth name="Belt" translation_cloth="Cinto" />
+        <cloth name="Belt Holster" translation_cloth="Coldre de Cinto" />
+        <cloth name="Body Holster" translation_cloth="Coldre Peitoral" />
+        <cloth name="Leg Holster" translation_cloth="Coldre de Perna" />
+        <cloth name="Sling Bullets" translation_cloth="Bandoleira de Balas" />
+        <cloth name="Sling Shells" translation_cloth="Bandoleira de Cartuchos" />
+        <cloth name="Military Vest" translation_cloth="Colete Tático Militar" />
+
+        <!-- Empty Slot Defaults -->
+        <cloth name="None" translation_cloth="Nenhum" />
+        <cloth name="Empty Arms" translation_cloth="Braços Vazios" />
+        <cloth name="Empty Body" translation_cloth="Torso Vazio" />
+        <cloth name="Empty Facial" translation_cloth="Sem Barba" />
+        <cloth name="Empty Feet" translation_cloth="Pés Descalços" />
+        <cloth name="Empty Hair" translation_cloth="Sem Cabelo" />
+        <cloth name="Empty Hands" translation_cloth="Mãos Vazias" />
+        <cloth name="Empty Head" translation_cloth="Sem Chapéu" />
+        <cloth name="Empty Legs" translation_cloth="Sem Calça" />
+    </cloth>
+</language>

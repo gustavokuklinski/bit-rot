@@ -256,23 +256,25 @@ def perform_chunk_transition(game, dir_x, dir_y, new_map, layer):
 
         max_anim = getattr(core.data.config, 'ANIMAL_MAX_CHUNK', 6)
         anim_per_spawn = getattr(core.data.config, 'ANIMALS_PER_SPAWN', 3)
-        if hasattr(game, 'active_animals') and max_anim > 0 and anim_per_spawn > 0:
-            AnimalLoader.load_animals()
-            curr_layer = getattr(game, 'current_layer_index', 1)
-            valid_types = [a_name for a_name, a_def in AnimalLoader.definitions.items() if curr_layer in a_def.get('spawn_layers', [1, 2])]
-            valid_weights = [max(1, int(AnimalLoader.definitions[a].get('spawn_weight', 10))) for a in valid_types]
-            if valid_types:
-                for _ in range(min(anim_per_spawn, max_anim)):
-                    ax = random.randint(100, max(101, new_width - 100))
-                    ay = random.randint(100, max(101, new_height - 100))
-                    a_type = random.choices(valid_types, weights=valid_weights, k=1)[0]
-                    animal_obj = Animal(ax, ay, a_type, game=game, layer=curr_layer)
-                    free_spot = find_free_tile(animal_obj.rect, game.obstacles, max_radius=15, initial_pos=(ax, ay))
-                    if free_spot:
-                        animal_obj.rect.topleft = free_spot
-                        animal_obj.x, animal_obj.y = free_spot
-                        game.active_animals.append(animal_obj)
-                        game.items_on_ground.append(animal_obj)
+        if hasattr(game, 'current_animal_spawns') and game.current_animal_spawns and max_anim > 0 and anim_per_spawn > 0:
+            from core.map.spawn_manager import spawn_initial_animals
+            new_animals = spawn_initial_animals(
+                game.obstacles,
+                game.current_animal_spawns,
+                game.items_on_ground + [game.player],
+                limit=max_anim,
+                spawns_per_marker=anim_per_spawn,
+                map_width_px=new_width,
+                map_height_px=new_height,
+                player=game.player,
+                game=game,
+                layer=layer
+            )
+            if not hasattr(game, 'active_animals'):
+                game.active_animals = []
+            for a in new_animals:
+                game.active_animals.append(a)
+                game.items_on_ground.append(a)
 
         if layer == 1:
             spawn_random_vehicles(game, count=getattr(core.data.config, 'MAX_VEH_CHUNK', 6))

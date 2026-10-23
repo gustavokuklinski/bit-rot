@@ -1,0 +1,12 @@
+<item 
+    name="Cartography Sector [MAP_POS]" 
+    type="map" 
+    allow_belt="false"
+    tip="Use to navigate the boat"
+    >
+    <properties>
+        <sprite file="map_cartography.png" />
+        
+    </properties>
+    <spawn chance="1" />
+</item>

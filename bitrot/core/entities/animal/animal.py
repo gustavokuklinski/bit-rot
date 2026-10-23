@@ -30,21 +30,9 @@ class Animal(Zombie):
         # 2. Get definition matching the resolved layer
         template = AnimalLoader.get_definition(animal_type, layer=target_layer)
 
-        if not template:
-            template = {
-                'name': 'Rat',
-                'stats': {
-                    'health': {'min': 10, 'max': 20},
-                    'speed': {'min': 0.5, 'max': 0.8},
-                    'attack': {'min': 1, 'max': 5},
-                    'infection': {'min': 0, 'max': 0}
-                },
-                'loot': [],
-                'sounds': {},
-                'sprite': 'rat.png',
-                'attack_player': False,
-                'spawn_zombies_multiplier': 0.0
-            }
+        visuals = template.get('sprites') or {}
+        sprite_center = visuals.get('center') or template.get('sprite', 'rat.png')
+        sprites_dict = visuals if visuals else {'center': sprite_center, 'left': sprite_center, 'right': sprite_center}
 
         zombie_template = {
             'name': template['name'],
@@ -60,7 +48,7 @@ class Animal(Zombie):
             'max_xp': 3,
             'sex': 'Animal', 
             'vaccine': 'False',
-            'sprites': {'center': template['sprite']} 
+            'sprites': sprites_dict 
         }
 
         # 3. Call super().__init__ which initializes pygame.sprite.Sprite
@@ -304,9 +292,11 @@ class Animal(Zombie):
         from core.systems.utils import get_safe_non_door_pos
         safe_death_pos = get_safe_non_door_pos(game, self.rect.center)
 
+        corpse_capacity = int(getattr(self, 'capacity', 10) or 10)
+
         corpse = Corpse(
             name=f"Dead {self.name}",
-            capacity=10, 
+            capacity=corpse_capacity, 
             image_path="../animals/dead.png",  
             pos=safe_death_pos,
             decay_ms=60000,

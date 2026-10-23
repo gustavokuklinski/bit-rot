@@ -68,15 +68,8 @@ def draw_health_tab(surface, player, modal, assets, game=None):
             if slot in hidden_slots: continue
             item = player.clothes.get(slot)
             if item and item.image:
-                img_to_draw = item.image
                 if getattr(item, 'item_type', '') == 'container': continue
-                if hasattr(item, 'color') and item.color and item.color != (255, 255, 255):
-                    if not hasattr(item, 'tinted_image') or getattr(item, 'last_color', None) != item.color:
-                        item.tinted_image = item.image.copy()
-                        item.tinted_image.fill((*item.color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
-                        item.last_color = item.color
-                    img_to_draw = item.tinted_image
-                char_surface.blit(img_to_draw, (0, 0))
+                char_surface.blit(item.image, (0, 0))
         
         scale_factor = 6 
         new_w = TILE_SIZE * scale_factor

@@ -4,17 +4,19 @@ import math
 from core.data.config import SPRITE_PATH, TILE_SIZE, RED, DARK_GRAY, GREEN
 from core.entities.item.item import Item
 from core.entities.item.item_data import ITEM_TEMPLATES
+from core.systems.mod_manager import mod_manager
 
 class ZombieGraphics:
     def load_sprite(self, sprite_file):
         """Robustly loads a sprite, checking multiple paths."""
+        
         if not sprite_file: return None
 
         candidates = [
-            os.path.join(SPRITE_PATH, "zombie", sprite_file),
-            os.path.join(SPRITE_PATH, sprite_file),
-            os.path.join(SPRITE_PATH, "player", sprite_file),
-            os.path.join(SPRITE_PATH, "animals", sprite_file)
+            mod_manager.get_override_path(os.path.join(SPRITE_PATH, "zombie", sprite_file)),
+            mod_manager.get_override_path(os.path.join(SPRITE_PATH, sprite_file)),
+            mod_manager.get_override_path(os.path.join(SPRITE_PATH, "player", sprite_file)),
+            mod_manager.get_override_path(os.path.join(SPRITE_PATH, "animals", sprite_file))
         ]
 
         for path in candidates:
@@ -29,9 +31,10 @@ class ZombieGraphics:
         return None
 
     def load_clothe_sprite(self, sprite_file):
+        from core.systems.mod_manager import mod_manager
         if not sprite_file: return None
         try:
-            path = os.path.join(SPRITE_PATH, "clothes", sprite_file)
+            path = mod_manager.get_override_path(os.path.join(SPRITE_PATH, "clothes", sprite_file))
             if os.path.exists(path):
                 img = pygame.image.load(path).convert_alpha()
                 return pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))

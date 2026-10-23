@@ -1,0 +1,15 @@
+<item name="Molotov" type="weapon_throw" allow_belt="true">
+    <properties>
+        <load min="1" max="5" />
+        
+        <capacity value="5" />
+        <damage min="15" max="25" />
+        <explosion value="5" />
+        <skill type="range" />
+        <sprite file="weapon_throw_molotov.png" />
+    </properties>
+    <spawn chance="1" />
+    <sound>
+        <explosion src="grenade.ogg" />
+    </sound>
+</item>

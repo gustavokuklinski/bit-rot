@@ -166,6 +166,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
     npc_spawns = []
     item_spawns = []
     containers = []
+    animal_spawns = []
     roof_renderables = []
     map_lights = []
     
@@ -174,7 +175,7 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
 
     if not map_height or not map_width:
         print("Error: Base map layout is empty.")
-        return [], [], None, [], [], [], []
+        return [], [], None, [], [], [], [], [], [], []
 
     # 1. Process Ground Layer
     if len(ground_layout) != map_height or (map_height > 0 and len(ground_layout[0]) != map_width):
@@ -323,18 +324,29 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                 
                 elif char.strip() in ['HNPC', 'FNPC']: 
                     npc_spawns.append((x * TILE_SIZE, y * TILE_SIZE, char.strip()))
-                elif char.strip() == 'S':
-                    pass
-                elif char == 'VEH':
-                    pass
+
+                #elif char == 'VEH':
+                #    pass
+                
                 elif char == 'ANM':
-                    pass
+                    base_char = ground_layout[y][x]
+                    tile_def = tile_manager.definitions.get(base_char)
+                    is_valid_spawn = True
+                    if not tile_def: is_valid_spawn = False 
+                    elif tile_def['is_obstacle']: is_valid_spawn = False 
+                    elif base_char.startswith('water_') or base_char.startswith('petrol_'):
+                        is_valid_spawn = False 
+                        
+                    if is_valid_spawn:
+                        animal_spawns.append((x * TILE_SIZE, y * TILE_SIZE))
                 elif char.startswith('QI_'): 
                     item_name = char[3:].strip()
+
                     if item_name in ITEM_TEMPLATES:
                         quest_item_spawns.append((x * TILE_SIZE, y * TILE_SIZE, item_name))
                     else:
                         print(f"Warning: Quest item '{item_name}' not found in templates.")
+
                 else:
                     base_name = char.replace(' on', '').replace(' off', '').strip()
                     if base_name in ITEM_TEMPLATES:
@@ -435,4 +447,4 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
         if possible_player_spawns:
             player_spawn = random.choice(possible_player_spawns)
 
-    return obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roof_renderables, map_lights, npc_spawns
+    return obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roof_renderables, map_lights, npc_spawns, animal_spawns

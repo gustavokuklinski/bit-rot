@@ -1,0 +1,8 @@
+<item name="Civilians Registry" type="sd_card" tip="Civilian personel track\nUse with Mobile > Apps">
+    <properties>
+        <sprite file="sd_card.png" />
+        
+        <map value="show_friendly_npc" />
+    </properties>
+    <spawn chance="1.0" />
+</item>

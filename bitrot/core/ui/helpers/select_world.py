@@ -17,16 +17,20 @@ from core.data.config import (
 from core.data.localization import tr
 from core.ui.helpers.trait_config_loader import load_config_data
 from core.ui.tooltip import draw_tooltip
+from core.systems.mod_manager import mod_manager
 
 _world_icons_cache = {}
 
 def _get_mode_icon(filename_or_relpath, size=(48, 48)):
+
     if filename_or_relpath in _world_icons_cache:
         return _world_icons_cache[filename_or_relpath]
 
     full_path = os.path.join(SPRITE_PATH, filename_or_relpath)
     if not os.path.exists(full_path):
         full_path = os.path.join(core.data.config.BASE_DIR, filename_or_relpath.lstrip('/\\'))
+
+    full_path = mod_manager.get_override_path(full_path)
 
     try:
         if os.path.exists(full_path):
@@ -44,13 +48,15 @@ def _get_mode_icon(filename_or_relpath, size=(48, 48)):
 
 def load_world_builds():
     """Dynamically loads world build modes from JSON files in world_builds/."""
+    
     builds = []
     builds_dir = os.path.join(BASE_DIR, "data.rot", "lib", "data", "world_builds")
     
     if os.path.exists(builds_dir):
-        for filename in os.listdir(builds_dir):
-            if filename.endswith(".json"):
-                filepath = os.path.join(builds_dir, filename)
+        for root_dir, _, full_paths in mod_manager.vfs_walk(builds_dir):
+            for filepath in full_paths:
+                if filepath.endswith(".json"):
+                    filename = os.path.basename(filepath)
                 try:
                     with open(filepath, "r", encoding="utf-8") as f:
                         data = json.load(f)

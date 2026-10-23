@@ -1,0 +1,50 @@
+{
+  "npcs": {
+    "special_force": {
+      "spawn_weight": 5,
+      "is_friendly": false,
+      "is_static": false,
+      "spawn_zombies_multiplier": 1,
+      "name": "RANDOM",
+      "sex": "RANDOM",
+      "xp": { "min": 1, "max": 15 },
+      "stats": {
+        "health": { "min": 50, "max": 80 },
+        "speed": { "min": 1, "max": 1 },
+        "attack": { "min": 5, "max": 15 },
+        "infection": { "min": 2, "max": 5 }
+      },
+      "clothes": {
+        "head": "Special Force Helmet",
+        "util": "Military Vest",
+        "hair": null,
+        "facial": null,
+        "feet": "Military Boots",
+        "hand": "Leather Black Gloves",
+        "body": "Military Tshirt",
+        "arms": "Special Force Jacket",
+        "legs": "Special Force Pants"
+      },
+      "visuals": {
+        "center": "npc_zombie.png",
+        "left": "npc_zombie_left.png",
+        "right": "npc_zombie_right.png"
+      },
+      "loot": [
+        { "item": "Rot Meat", "chance": 1.0 },
+        { "item": "MPK5", "chance": 0.1 },
+        { "item": "MAC10", "chance": 0.1 },
+        { "item": "Large Backpack", "chance": 0.1 },
+        { "item": "Knife", "chance": 0.6 },
+        { "item": "Pistol 9mm", "chance": 0.5 },
+        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.1 }
+      ],
+      "sound": {
+        "hit": "npc_hit.ogg",
+        "attack": "npc_attack.ogg",
+        "dead": "npc_dead.ogg",
+        "steps": "npc_steps.ogg"
+      }
+    }
+  }
+}

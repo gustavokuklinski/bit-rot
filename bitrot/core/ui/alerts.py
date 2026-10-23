@@ -3,6 +3,7 @@ import pygame
 from core.data.config import *
 from core.data.localization import tr
 from core.data.progression_loader import PROGRESSION_CONFIG
+from core.systems.mod_manager import mod_manager
 
 _alert_icons = {}
 
@@ -20,7 +21,7 @@ class AlertTooltipProxy:
 def _get_alert_icon(filename):
     if filename not in _alert_icons:
         try:
-            path = SPRITE_PATH + filename
+            path = mod_manager.get_override_path(os.path.join(SPRITE_PATH, filename))
             img = pygame.image.load(path).convert_alpha()
             _alert_icons[filename] = pygame.transform.scale(img, (32, 32))
         except Exception as e:

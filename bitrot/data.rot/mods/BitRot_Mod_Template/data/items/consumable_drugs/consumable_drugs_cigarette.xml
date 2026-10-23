@@ -1,0 +1,14 @@
+<item name="Cigarette" type="consumable_drugs" allow_belt="false"  allow_use="true" consume_time="0.5">
+    <properties>
+        <reduce status="[anxiety]" value="20" />
+        <reduce status="[stamina]" value="5" />
+        <reduce status="[water]" value="5" />
+        <restore status="[drugs]" value="1" />
+        
+        <load min="2" max="20" />
+        <capacity value="20" />
+        <require type="[Matches, Lighter on]" />
+        <sprite file="consumable_cigarette.png" />
+    </properties>
+    <spawn chance="1.0" />
+</item>

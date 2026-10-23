@@ -1,0 +1,43 @@
+{
+  "npcs": {
+    "static": {
+      "spawn_weight": 55,
+      "is_friendly": true,
+      "is_static": true,
+      "spawn_zombies_multiplier": 5,
+      "name": "RANDOM",
+      "sex": "RANDOM",
+      "stats": {
+        "health": { "min": 100, "max": 100 },
+        "speed": { "min": 1, "max": 1 },
+        "attack": { "min": 1, "max": 15 },
+        "infection": { "min": 1, "max": 5 }
+      },
+      "clothes": {
+        "head": null,
+        "util": null,
+        "hair": null,
+        "facial": null,
+        "feet": null,
+        "hand": null,
+        "body": null,
+        "arms": null,
+        "legs": null
+      },
+      "visuals": {
+        "center": "player.png",
+        "left": "player_left.png",
+        "right": "player_right.png"
+      },
+      "loot": [
+        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.1 }
+      ],
+      "sound": {
+        "hit": "npc_hit.ogg",
+        "attack": "npc_attack.ogg",
+        "dead": "npc_dead.ogg",
+        "steps": "npc_steps.ogg"
+      }
+    }
+  }
+}

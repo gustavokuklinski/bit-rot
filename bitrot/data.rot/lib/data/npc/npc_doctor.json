@@ -1,0 +1,62 @@
+{
+  "npcs": {
+    "doctor": {
+      "spawn_weight": 10,
+      "is_friendly": true,
+      "is_static": true,
+      "spawn_zombies": 1,
+      "name": "RANDOM",
+      "sex": "RANDOM",
+      "xp": { "min": 1, "max": 15 },
+      "stats": {
+        "health": { "min": 20, "max": 50 },
+        "speed": { "min": 1, "max": 1 },
+        "attack": { "min": 1, "max": 15 },
+        "infection": { "min": 1, "max": 5 }
+      },
+      "clothes": {
+        "head": "Medical Mask",
+        "util": null,
+        "hair": null,
+        "facial": null,
+        "feet": "Shoes",
+        "hand": null,
+        "body": null,
+        "arms": "Medical Vest",
+        "legs": "Jeans Pants"
+      },
+      "visuals": {
+        "center": "player.png",
+        "left": "player_left.png",
+        "right": "player_right.png"
+      },
+      "loot": [
+        { "item": "Rot Meat", "chance": 1.0 },
+        { "item": "Vaccine", "chance": 1.0 },
+        { "item": "Medicine Vol.1", "chance": 1.0 },
+        { "item": "Sewing Kit", "chance": 1.0 },
+        { "item": "Medical Kit", "chance": 1.0 },
+        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.1 }
+      ],
+      "trade": {
+        "limit": 15,
+        "allowed_types": [
+          "consumable_drugs",
+          "consumable_food",
+          "consumable_ammo",
+          "consumable_medication",
+          "weapon_ranged",
+          "weapon_melee",
+          "weapon_throw",
+          "map"
+        ]
+      },
+      "sound": {
+        "hit": "npc_hit.ogg",
+        "attack": "npc_attack.ogg",
+        "dead": "npc_dead.ogg",
+        "steps": "npc_steps.ogg"
+      }
+    }
+  }
+}

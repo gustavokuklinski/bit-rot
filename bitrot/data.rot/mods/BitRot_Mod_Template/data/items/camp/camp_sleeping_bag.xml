@@ -1,0 +1,6 @@
+<item name="Sleeping Bag" type="camp" allow_belt="false" safe_radius="3" tip="Place item to create a safezone radius">
+    <properties>
+        <sprite file="camp_sleeping_bag.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

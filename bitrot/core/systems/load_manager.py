@@ -72,7 +72,7 @@ def load_map(game, map_filename):
     roof_layout = game.all_roof_layers.get(layer_index)
     light_layout = game.all_light_layers.get(layer_index)
 
-    obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roofs, lights, npc_spawns = parse_layered_map_layout(
+    obstacles, renderable_tiles, player_spawn, zombie_spawns, item_spawns, containers, roofs, lights, npc_spawns, animal_spawns = parse_layered_map_layout(
         base_layout, ground_layout, spawn_layout, roof_layout, light_layout, game.tile_manager
     )
     
@@ -85,13 +85,20 @@ def load_map(game, map_filename):
     game.renderable_tiles = renderable_tiles
     game.npc_spawn_points = npc_spawns
     game.current_zombie_spawns = zombie_spawns
+    game.current_animal_spawns = animal_spawns
     game.player_spawn = player_spawn
 
     game.spawn_point_grid.clear()
+    game.animal_spawn_point_grid = {}
     grid_scale = getattr(game, 'SPAWN_GRID_SIZE', 512)
     for sp_pos in game.current_zombie_spawns:
         grid_cell = (int(sp_pos[0] // grid_scale), int(sp_pos[1] // grid_scale))
         game.spawn_point_grid.setdefault(grid_cell, []).append(sp_pos)
+        
+    for sp_pos in game.current_animal_spawns:
+        grid_cell = (int(sp_pos[0] // grid_scale), int(sp_pos[1] // grid_scale))
+        game.animal_spawn_point_grid.setdefault(grid_cell, []).append(sp_pos)
+
 
     map_vehicles = [obj for obj in containers if isinstance(obj, Vehicle)]
     for v in map_vehicles:
@@ -303,10 +310,12 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     game.all_roof_layers = {}
     game.all_light_layers = {}
     game.layer_spawn_triggers = {}
+    game.layer_animal_spawn_triggers = {}
     game.triggered_spawns = set()
     
     game.map_states = {}  
     game.spawn_point_grid = {}
+    game.animal_spawn_point_grid = {}
     game.items_on_ground = []
     game.zombies = []
     game.obstacles = []
@@ -601,6 +610,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
 
     if spawn_entities and not is_in_lobby:
         nearby_spawns = []
+        animal_nearby_spawns = []
         GRID_SIZE_SPAWNS = getattr(game, 'SPAWN_GRID_SIZE', 512)
         p_grid_x = int(game.player.x // GRID_SIZE_SPAWNS)
         p_grid_y = int(game.player.y // GRID_SIZE_SPAWNS)
@@ -610,6 +620,8 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
                 cell = (p_grid_x + i, p_grid_y + j)
                 if cell in game.spawn_point_grid:
                     nearby_spawns.extend(game.spawn_point_grid[cell])
+                if cell in getattr(game, 'animal_spawn_point_grid', {}):
+                    animal_nearby_spawns.extend(game.animal_spawn_point_grid[cell])
                         
         if nearby_spawns:
             if game.current_layer_index not in game.layer_spawn_triggers:
@@ -633,6 +645,41 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
             game.zombies.extend(initial_zombies)
             game.layer_zombies[game.current_layer_index] = game.zombies[:]
             game.logger.info(f"Initial Start Chunk Population: Spawned {len(initial_zombies)} zombies around player.")
+
+        if animal_nearby_spawns:
+            if not hasattr(game, 'layer_animal_spawn_triggers'):
+                game.layer_animal_spawn_triggers = {}
+            if game.current_layer_index not in game.layer_animal_spawn_triggers:
+                game.layer_animal_spawn_triggers[game.current_layer_index] = set()
+                
+            for pos in animal_nearby_spawns:
+                game.layer_animal_spawn_triggers[game.current_layer_index].add(pos)
+                
+            from core.map.spawn_manager import spawn_initial_animals
+            initial_animals = spawn_initial_animals(
+                game.obstacles,
+                animal_nearby_spawns,
+                game.items_on_ground + [game.player],
+                limit=core.data.config.ANIMAL_MAX_CHUNK,
+                spawns_per_marker=getattr(core.data.config, 'ANIMALS_PER_SPAWN', 1),
+                map_width_px=game.map_width_pixels,
+                map_height_px=game.map_height_pixels,
+                player=game.player,
+                game=game,
+                layer=game.current_layer_index
+            )
+            
+            if not hasattr(game, 'active_animals'):
+                game.active_animals = []
+                
+            for a in initial_animals:
+                game.active_animals.append(a)
+                game.items_on_ground.append(a)
+            
+            if not hasattr(game, 'layer_animals'):
+                game.layer_animals = {}
+            game.layer_animals[game.current_layer_index] = list(game.active_animals)
+            game.logger.info(f"Initial Start Chunk Population: Spawned {len(initial_animals)} animals around player.")
 
         manage_dynamic_npcs(game)
 
@@ -898,6 +945,15 @@ def load_game(game, save_folder_name):
             try:
                 layer_int = int(layer_str)
                 game.layer_spawn_triggers[layer_int] = set(tuple(c) for c in coords_list)
+            except Exception as e:
+                pass
+                
+        raw_animal_triggers = world_data.get('layer_animal_spawn_triggers', {})
+        game.layer_animal_spawn_triggers = {}
+        for layer_str, coords_list in raw_animal_triggers.items():
+            try:
+                layer_int = int(layer_str)
+                game.layer_animal_spawn_triggers[layer_int] = set(tuple(c) for c in coords_list)
             except Exception as e:
                 pass
         

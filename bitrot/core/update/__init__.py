@@ -13,7 +13,7 @@ from core.update.combat import (
 )
 from core.update.entities import update_entities
 from core.update.projectiles import update_projectiles
-from core.update.spawns import check_dynamic_zombie_spawns
+from core.update.spawns import check_dynamic_zombie_spawns, check_dynamic_animal_spawns
 from core.update.utils import build_obstacle_grid, get_nearby_obstacles
 from core.update.vehicles import update_vehicles
 
@@ -52,6 +52,7 @@ def update_game_state(game):
 
   # Check spawns and flush background-threaded spawns
   check_dynamic_zombie_spawns(game, GRID_SIZE)
+  check_dynamic_animal_spawns(game, GRID_SIZE)
   async_spawner.flush_to_game(game)
 
   zombies_to_remove = []

@@ -1,8 +1,8 @@
 # core/entities/npc/npc_dialog.py
 
 import os
+import json
 import random
-import xml.etree.ElementTree as ET
 from core.data.config import DATA_PATH
 
 class NPCDialog:
@@ -10,80 +10,101 @@ class NPCDialog:
     MILESTONES = None # Class variable for Milestones
 
     @staticmethod
-    @staticmethod
     def load_dialogs(game=None):
         if NPCDialog.NPC_DIALOGS is not None and NPCDialog.MILESTONES is not None: 
             return
         
-        if NPCDialog.NPC_DIALOGS is None:
-            NPCDialog.NPC_DIALOGS = {} 
-            
+        from core.systems.mod_manager import mod_manager
+
+        NPCDialog.NPC_DIALOGS = {} 
         NPCDialog.MILESTONES = []
         
+        # 1. Load Milestones JSON
+        milestones_path = mod_manager.get_override_path(os.path.join(DATA_PATH, 'player', 'milestones.json'))
+        if os.path.exists(milestones_path):
+            try:
+                with open(milestones_path, 'r', encoding='utf-8') as f:
+                    ms_data = json.load(f)
+                    for ms in ms_data.get('milestones', []):
+                        NPCDialog.MILESTONES.append({
+                            'is_milestone': True,
+                            'type': ms.get('type'),
+                            'entity': ms.get('entity'),
+                            'name': ms.get('name'),
+                            'number': int(ms.get('number', 1)),
+                            'message': ms.get('message')
+                        })
+            except Exception as e:
+                print(f"NPC Error: Could not load milestones.json: {e}")
+
+        # Helper to process mapped options for dialogues and quests
+        def process_options(node_id, options_list):
+            if node_id not in NPCDialog.NPC_DIALOGS:
+                NPCDialog.NPC_DIALOGS[node_id] = []
+            
+            for opt in options_list:
+                question = opt.get('player_question')
+                answer = opt.get('npc_answer')
+                if question and answer:
+                    try:
+                        priority = int(opt.get('priority', 100))
+                    except (ValueError, TypeError):
+                        priority = 100
+
+                    NPCDialog.NPC_DIALOGS[node_id].append({
+                        'q': question, 
+                        'a': answer,
+                        'priority': priority,
+                        'stage': opt.get('stage'),
+                        'tip': opt.get('tip'),
+                        'unlock_flag': opt.get('unlock_flag'),
+                        'npc_state_friendly': opt.get('npc_state_friendly'),
+                        'npc_state_static': opt.get('npc_state_static'),
+                        'award_item': opt.get('award_item'),
+                        'rqst_item': opt.get('rqst_item'),
+                        'complete_flag': opt.get('complete_flag'),
+                        'req_item': opt.get('req_item'),
+                        'req_level': opt.get('req_level'),
+                        'gain_xp': opt.get('gain_xp'),
+                        'dialog_type': opt.get('dialog_type'),
+                        'node_id': node_id
+                    })
+
+        # 2. Load Quests JSON
+        quests_path = mod_manager.get_override_path(os.path.join(DATA_PATH, 'player', 'quests.json'))
+        if os.path.exists(quests_path):
+            try:
+                with open(quests_path, 'r', encoding='utf-8') as f:
+                    q_data = json.load(f)
+                    for q_root in q_data.get('quests', []):
+                        for quest_node in q_root.get('options', []):
+                            node_id = quest_node.get('id')
+                            options = quest_node.get('options', [])
+                            if node_id and options:
+                                process_options(node_id, options)
+            except Exception as e:
+                print(f"NPC Error: Could not load quests.json: {e}")
+
+        # 3. Load arbitrary dialogs (tips, chats, lore, etc.)
         dialogs_dir = os.path.join(DATA_PATH, 'npc_dialogs')
-        if not os.path.exists(dialogs_dir):
-            print(f"NPC Warning: Dialogs directory not found at {dialogs_dir}")
-            return
-
-        for filename in os.listdir(dialogs_dir):
-            if filename.endswith('.xml'):
-                filepath = os.path.join(dialogs_dir, filename)
-                try:
-                    tree = ET.parse(filepath)
-                    root = tree.getroot()
-                    
-                    for node in root.iter('node'):
-                        node_id = node.get('id')
-                        if not node_id: 
-                            continue
-                        
-                        if node_id == "milestones":
-                            for ms in node.iter('milestone'):
-                                NPCDialog.MILESTONES.append({
-                                    'is_milestone': True,
-                                    'type': ms.get('type'),
-                                    'entity': ms.get('entity'),
-                                    'name': ms.get('name'),
-                                    'number': int(ms.get('number', 1)),
-                                    'message': ms.get('message')
-                                })
-                            continue
-
-                        options_elements = node.findall('options') + node.findall('option')
-                        if options_elements:
-                            if node_id not in NPCDialog.NPC_DIALOGS:
-                                NPCDialog.NPC_DIALOGS[node_id] = []
-                            
-                            for opt in options_elements:
-                                question = opt.get('player_question')
-                                answer = opt.get('npc_answer')
-                                
-                                if question and answer:
-                                    try:
-                                        priority = int(opt.get('priority', '100'))
-                                    except ValueError:
-                                        priority = 100
-
-                                    NPCDialog.NPC_DIALOGS[node_id].append({
-                                        'q': question, 
-                                        'a': answer,
-                                        'priority': priority,
-                                        'stage': opt.get('stage'),
-                                        'tip': opt.get('tip'),
-                                        'unlock_flag': opt.get('unlock_flag'),
-                                        'npc_state_friendly': opt.get('npc_state_friendly'),
-                                        'npc_state_static': opt.get('npc_state_static'),
-                                        'award_item': opt.get('award_item'),
-                                        'rqst_item': opt.get('rqst_item'),
-                                        'complete_flag': opt.get('complete_flag'),
-                                        'req_item': opt.get('req_item'),
-                                        'req_level': opt.get('req_level'),
-                                        'gain_xp': opt.get('gain_xp'),
-                                        'dialog_type': opt.get('dialog_type'),
-                                        'node_id': node_id
-                                    })
-                except Exception as e:
-                    print(f"NPC Error: Could not load dialog file {filename}: {e}")
+        if os.path.exists(dialogs_dir):
+            for root_dir, _, full_paths in mod_manager.vfs_walk(dialogs_dir):
+                for filepath in full_paths:
+                    if filepath.endswith('.json'):
+                        filename = os.path.basename(filepath)
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            dialog_data = json.load(f)
+                            # Iterate through root objects mapping to our config format
+                            for root_key, nodes in dialog_data.items():
+                                if isinstance(nodes, list):
+                                    for node in nodes:
+                                        node_id = node.get('id')
+                                        options = node.get('options', [])
+                                        if node_id and options:
+                                            process_options(node_id, options)
+                    except Exception as e:
+                        print(f"NPC Error: Could not load dialog file {filename}: {e}")
 
     def get_dialog_options(self):
         if NPCDialog.NPC_DIALOGS is None:

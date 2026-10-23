@@ -8,6 +8,8 @@ from core.entities.item.projectile import Projectile
 from core.entities.item.item_data import ITEM_TEMPLATES, load_item_templates_data
 from core.entities.item.item_factory import create_item_from_name, generate_random_item
 from core.data.localization import tr
+from core.systems.mod_manager import mod_manager
+
 SPRITE_CACHE = {}
 
 class Item:
@@ -24,6 +26,7 @@ class Item:
         self.pellets = pellets
         self.spread_angle = spread_angle
         self.image = self.load_sprite(sprite_file)
+        self.base_image = self.image
         self.rect = pygame.Rect(0, 0, TILE_SIZE, TILE_SIZE)
         
         self.x = 0
@@ -114,6 +117,19 @@ class Item:
         self.layer = 1
         self.map_filename = None
 
+    def apply_color(self, color):
+        """Applies a tint color to the base image without destructive compounding."""
+        if not color:
+            return
+        self.color = tuple(color)[:3]
+        base = getattr(self, 'base_image', None) or self.image
+        if base:
+            if self.color != (255, 255, 255):
+                from core.entities.item.item_factory import get_tinted_sprite
+                self.image = get_tinted_sprite(base, self.name, self.color)
+            else:
+                self.image = base
+
     def update_dynamic_text(self, player):
         """Replaces placeholders in the item's original text dynamically."""
         if self.original_text and ("[PLAYER" in self.original_text or "[LIST" in self.original_text):
@@ -154,6 +170,9 @@ class Item:
             'map_filename': getattr(self, 'map_filename', None),
             'inventory': [i.to_dict() if hasattr(i, 'to_dict') else i for i in self.inventory] if self.inventory else []
         }
+        if hasattr(self, 'color') and self.color and tuple(self.color)[:3] != (255, 255, 255):
+            data['color'] = list(self.color)[:3]
+            
         if getattr(self, 'allow_use', False):
             data['allow_use'] = self.allow_use
 
@@ -199,7 +218,7 @@ class Item:
         if not data or 'name' not in data: return None
         saved_color = tuple(data['color']) if 'color' in data else None
         
-        # Pass spawn_loot=False so newly reconstructed saved items do not re-spawn default XML loot
+        # create_from_name applies the color once
         item = Item.create_from_name(data['name'], force_color=saved_color, spawn_loot=False)
         if not item: return None
         if 'allow_type' in data: item.allow_type = data['allow_type']
@@ -224,13 +243,10 @@ class Item:
         if 'capacity' in data and data['capacity'] is not None:
             item.capacity = data['capacity']
 
-        if 'color' in data: 
-            item.color = tuple(data['color'])
-            if item.image and item.color != (255, 255, 255):
-                from core.entities.item.item_factory import get_tinted_sprite
-                item.image = get_tinted_sprite(item.image, item.name, item.color)
+        # Ensure color is set without re-tinting over an already-tinted image
+        if saved_color and getattr(item, 'color', None) != saved_color:
+            item.apply_color(saved_color)
 
-        # Correctly clear and restore inventory (even if data['inventory'] is empty [])
         if 'inventory' in data:
             item.inventory = []
             for i_data in data['inventory']:
@@ -372,21 +388,21 @@ class Item:
 
         try:
             if sprite_file.startswith("./data.rot/") or os.path.isabs(sprite_file):
-                path = sprite_file
+                path = mod_manager.get_override_path(sprite_file)
             else:
                 clean_file = sprite_file.replace("../", "")
                 subfolder = "clothes" if self.item_type == 'cloth' else "items"
-                primary_path = os.path.join(SPRITE_PATH, subfolder, clean_file)
+                primary_path = mod_manager.get_override_path(os.path.join(SPRITE_PATH, subfolder, clean_file))
                 
                 if os.path.exists(primary_path):
                     path = primary_path
                 else:
                     candidates = [
-                        os.path.join(SPRITE_PATH, clean_file),
-                        os.path.join(SPRITE_PATH, "player", os.path.basename(clean_file)),
-                        os.path.join(SPRITE_PATH, "zombie", os.path.basename(clean_file)),
-                        os.path.join(SPRITE_PATH, "animals", os.path.basename(clean_file)),
-                        os.path.join(SPRITE_PATH, "items", clean_file)
+                        mod_manager.get_override_path(os.path.join(SPRITE_PATH, clean_file)),
+                        mod_manager.get_override_path(os.path.join(SPRITE_PATH, "player", os.path.basename(clean_file))),
+                        mod_manager.get_override_path(os.path.join(SPRITE_PATH, "zombie", os.path.basename(clean_file))),
+                        mod_manager.get_override_path(os.path.join(SPRITE_PATH, "animals", os.path.basename(clean_file))),
+                        mod_manager.get_override_path(os.path.join(SPRITE_PATH, "items", clean_file))
                     ]
                     path = next((c for c in candidates if os.path.exists(c)), primary_path)
             

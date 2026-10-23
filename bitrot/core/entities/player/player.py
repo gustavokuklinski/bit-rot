@@ -91,34 +91,26 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
 
         self.last_decay_time = time.time()
         
-        self.clothes_slots = ['hair', 'head','legs', 'feet', 'body','util','arms', 'hands', 'facial', 'util2', 'util3']
-        self.clothes = {slot: None for slot in self.clothes_slots}
-        
-        chosen_clothes_dict = data.get('clothes', {})
+        self.clothes_slots = ['hair', 'head', 'legs', 'feet', 'body', 'util', 'arms', 'hands', 'facial', 'util2', 'util3']
         self.clothes = {slot: None for slot in self.clothes_slots}
         
         chosen_clothes_dict = data.get('clothes', {})
         clothes_colors_dict = data.get('clothes_colors', {}) 
-        
+        self.clothes_colors = dict(clothes_colors_dict)
+
         for slot, item_data in chosen_clothes_dict.items():
             if item_data and item_data != "None" and slot in self.clothes_slots:
+                setup_color = clothes_colors_dict.get(slot, (255, 255, 255))
                 if isinstance(item_data, dict):
-                    self.clothes[slot] = Item.from_dict(item_data)
+                    c_item = Item.from_dict(item_data)
+                    if c_item and setup_color != (255, 255, 255):
+                        c_item.apply_color(setup_color)
+                    self.clothes[slot] = c_item
                 else:
-                    setup_color = clothes_colors_dict.get(slot, (255, 255, 255))
                     self.clothes[slot] = Item.create_from_name(item_data, force_color=setup_color)
-                    
-                if self.clothes[slot]:
-                    assigned_color = getattr(self.clothes[slot], 'color', None)
-                    if not assigned_color or assigned_color == (255,255,255):
-                         assigned_color = clothes_colors_dict.get(slot, (255, 255, 255))
-                         
-                    self.clothes[slot].color = assigned_color
-                    
-                    if self.clothes[slot].image and assigned_color != (255, 255, 255):
-                        tinted = self.clothes[slot].image.copy()
-                        tinted.fill((*assigned_color, 255)[:4], special_flags=pygame.BLEND_RGBA_MULT)
-                        self.clothes[slot].image = tinted
+
+                if self.clothes[slot] and setup_color != (255, 255, 255):
+                    self.clothes[slot].apply_color(setup_color)
 
         self.sync_belt_slots()
 

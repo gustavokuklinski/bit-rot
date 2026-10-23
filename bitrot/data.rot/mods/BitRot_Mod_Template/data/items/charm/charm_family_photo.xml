@@ -1,0 +1,10 @@
+<item name="Family Photo" type="charm">
+    <properties>
+        <sprite file="charm_family_photo_1.png" />
+        
+    </properties>
+    <attributes>
+        <lucky value="1" />
+    </attributes>
+    <spawn chance="10" />
+</item>

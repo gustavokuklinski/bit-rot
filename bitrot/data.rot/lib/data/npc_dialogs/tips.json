@@ -1,0 +1,48 @@
+{
+    "npc_tips": [
+      {
+        "id": "tips",
+        "options": [
+          {
+            "player_question": "How do I stay alive out here?",
+            "npc_answer": "Here's a map. This may save you.",
+            "priority": 10,
+            "gain_xp": "[lucky:25]",
+            "dialog_type": "once",
+            "award_item": "[Island Map]"
+          },
+          {
+            "player_question": "Any way to get around faster?",
+            "npc_answer": "Exxoil left keys in all their jeeps. Same ignition. Corporate cost-cutting. Try these—they might work.",
+            "priority": 10,
+            "req_level": "[lucky:3]",
+            "gain_xp": "[lucky:25]",
+            "dialog_type": "once",
+            "award_item": "[Car Key Jeep]"
+          },
+          {
+            "player_question": "The tool here looks like garbage!",
+            "npc_answer": "The main engineer of the island built everything from blueprints. You can scavenge for them or use old books and zines. I have one, take it...",
+            "priority": 10,
+            "gain_xp": "[lucky:5]",
+            "dialog_type": "once",
+            "award_item": "[Blueprint]"
+          },
+          {
+            "player_question": "How can I craft something around here?",
+            "npc_answer": "You can find some magazines around and make some works.",
+            "priority": 10,
+            "gain_xp": "[lucky:5]",
+            "dialog_type": "once"
+          },
+          {
+            "player_question": "Is there any way to communicate around?",
+            "npc_answer": "Use your mobile and check the radio! I think some people are still alive.",
+            "priority": 10,
+            "gain_xp": "[lucky:5]",
+            "dialog_type": "once"
+          }
+        ]
+      }
+    ]
+}

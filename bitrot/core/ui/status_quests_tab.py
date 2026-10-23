@@ -2,7 +2,7 @@
 
 import pygame
 import os
-import xml.etree.ElementTree as ET
+import json
 from core.data.config import *
 from core.ui.tooltip import draw_tooltip
 from core.entities.item.item import Item
@@ -22,46 +22,45 @@ def load_quests():
         
     _QUESTS_CACHE = []
 
-    # Load Standard Handcrafted Quests from XML
-    dialogs_dir = os.path.join(DATA_PATH, 'npc_dialogs')
-    if os.path.exists(dialogs_dir):
-        for filename in os.listdir(dialogs_dir):
-            if filename.endswith('.xml'):
-                filepath = os.path.join(dialogs_dir, filename)
-                try:
-                    tree = ET.parse(filepath)
-                    root = tree.getroot()
-                    for node in root.iter('node'):
-                        node_id = node.get('id', '')
-                        if node_id.lower().startswith('quest:'):
-                            quest_name = node_id[6:].strip() 
-                            raw_item_str = None
-                            tip = "No tip provided"
-                            complete_flag = quest_name
+    # Load Standard Handcrafted Quests from JSON
+    quests_path = os.path.join(DATA_PATH, 'player', 'quests.json')
+    if os.path.exists(quests_path):
+        try:
+            with open(quests_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                
+            for q_root in data.get('quests', []):
+                for node in q_root.get('options', []):
+                    node_id = node.get('id', '')
+                    if node_id.lower().startswith('quest:'):
+                        quest_name = node_id[6:].strip() 
+                        raw_item_str = None
+                        tip = "No tip provided"
+                        complete_flag = quest_name
+                        
+                        for option in node.get('options', []):
+                            if option.get('rqst_item'): raw_item_str = option.get('rqst_item')
+                            elif not raw_item_str and option.get('award_item'): raw_item_str = option.get('award_item')
+                            if option.get('tip'): tip = option.get('tip')
+                            if option.get('complete_flag'): complete_flag = str(option.get('complete_flag')).strip()
                             
-                            for options in node.findall('options') + node.findall('option'):
-                                if options.get('rqst_item'): raw_item_str = options.get('rqst_item')
-                                elif not raw_item_str and options.get('award_item'): raw_item_str = options.get('award_item')
-                                if options.get('tip'): tip = options.get('tip')
-                                if options.get('complete_flag'): complete_flag = options.get('complete_flag').strip()
-                                
-                            rqst_item = None
-                            if raw_item_str:
-                                cleaned_str = raw_item_str.replace('[', '').replace(']', '')
-                                rqst_item = cleaned_str.split(',')[0].strip()
-                                
-                            item = Item.create_from_name(rqst_item) if rqst_item else None
-                                
-                            _QUESTS_CACHE.append({
-                                'node_id': node_id,  
-                                'name': quest_name,
-                                'rqst_item_name': rqst_item,
-                                'item_obj': item,
-                                'tip': tip,
-                                'complete_flag': complete_flag
-                            })
-                except Exception as e:
-                    print(f"Error loading quests from {filename}: {e}")
+                        rqst_item = None
+                        if raw_item_str:
+                            cleaned_str = raw_item_str.replace('[', '').replace(']', '')
+                            rqst_item = cleaned_str.split(',')[0].strip()
+                            
+                        item = Item.create_from_name(rqst_item) if rqst_item else None
+                            
+                        _QUESTS_CACHE.append({
+                            'node_id': node_id,  
+                            'name': quest_name,
+                            'rqst_item_name': rqst_item,
+                            'item_obj': item,
+                            'tip': tip,
+                            'complete_flag': complete_flag
+                        })
+        except Exception as e:
+            print(f"Error loading quests from {quests_path}: {e}")
 
     return _QUESTS_CACHE
 

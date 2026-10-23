@@ -266,26 +266,7 @@ class ProceduralGeneratorSpawning:
                 t_name = t_def.get('name', '').lower() if t_def else g_char.lower()
                 if 'floor' in t_name or g_char == 'house_floor_01': continue
 
-                if is_l2:
-                    valid_tiles.append((x, y))
-                    continue
-
-                is_path = 'asphalt' in g_char or 'dirty' in g_char or 'path' in g_char
-                is_border = False
-                
-                if not is_path:
-                    for dy in [-1, 0, 1]:
-                        for dx in [-1, 0, 1]:
-                            if dy == 0 and dx == 0: continue
-                            ny, nx = y + dy, x + dx
-                            if 0 <= ny < h and 0 <= nx < w:
-                                adj_g = layers['ground'][ny][nx]
-                                if 'asphalt' in adj_g or 'dirty' in adj_g or 'path' in adj_g:
-                                    is_border = True
-                                    break
-                        if is_border: break
-                
-                if is_border:
+                if g_char in ['dirty_01', 'bg_grass']:
                     valid_tiles.append((x, y))
 
         if not valid_tiles: return

@@ -1,0 +1,8 @@
+<item name="Expanded Bright" type="sd_card" tip="Open containers instantly\nUse with Mobile > Apps">
+    <properties>
+        <sprite file="sd_card.png" />
+        
+        <map value="open_container_instant" />
+    </properties>
+    <spawn chance="1.0" />
+</item>

@@ -1,0 +1,6 @@
+<cloth name="Empty Facial" type="cloth" id="facial">
+    <properties>
+        <sprite file="empty.png" />
+    </properties>
+    <spawn chance="0" />
+</cloth>
