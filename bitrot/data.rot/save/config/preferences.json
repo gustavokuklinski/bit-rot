@@ -3,7 +3,7 @@
     "mods": {
       "enabled": [
         "BitRot_Vanilla",
-        "BitRot_Vanilla_pt_br"
+        "language_pt_br"
       ]
     },
     "ui": {

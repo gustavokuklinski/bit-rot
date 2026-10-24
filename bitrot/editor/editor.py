@@ -27,6 +27,8 @@ from editor.code_editor import CodeEditor
 from editor.entity_editor import EntityEditor
 from editor.sprite_editor import SpriteEditor
 import editor.config as editor_config
+from editor.player_editor import PlayerEditor
+from editor.world_editor import WorldEditor
 
 pygame.init()
 pygame.font.init()
@@ -42,8 +44,8 @@ def get_installed_mods():
     return mods
 
 def resolve_allowed_modes(mod_name):
-    """Maps editor_config list to MenuBar tab titles. Vanilla enables all."""
-    all_modes = ["Building", "NPC Dialog", "Crafts", "Entities", "Code", "Art"]
+    """Maps editor_config list to MenuBar tab titles. Vanilla enables all 8 tabs."""
+    all_modes = ["Map", "NPC", "Player", "World", "Craft", "Entity", "Code", "Art"]
     if not mod_name or mod_name == "Vanilla":
         return all_modes
 
@@ -53,10 +55,12 @@ def resolve_allowed_modes(mod_name):
 
     raw_config = [str(c).lower().strip() for c in desc.get("editor_config", [])]
     mode_map = {
-        "building": "Building", "map": "Building", "buildings": "Building",
-        "dialog": "NPC Dialog", "dialogs": "NPC Dialog", "npc dialog": "NPC Dialog", "npc_dialog": "NPC Dialog",
-        "craft": "Crafts", "crafts": "Crafts",
-        "entity": "Entities", "entities": "Entities",
+        "map": "Map", "building": "Map", "buildings": "Map",
+        "npc": "NPC", "dialog": "NPC", "npc dialog": "NPC", "dialogs": "NPC",
+        "player": "Player",
+        "world": "World", "builds": "World",
+        "craft": "Craft", "crafts": "Craft",
+        "entity": "Entity", "entities": "Entity",
         "code": "Code",
         "art": "Art", "sprite": "Art", "sprites": "Art"
     }
@@ -212,6 +216,8 @@ def editor():
     sidebar = Sidebar(current_screen_width - SIDEBAR_WIDTH, TAB_BAR_HEIGHT, map_tiles, item_tiles, FONT)
 
     dialog_editor = DialogEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT, item_tiles)
+    player_editor = PlayerEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT, item_tiles)
+    world_editor = WorldEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT)
     craft_editor = CraftEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT, item_tiles)
     entity_editor = EntityEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT, all_sprites_dict)
     code_editor = CodeEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT)
@@ -231,7 +237,6 @@ def editor():
         nonlocal map_tiles, item_tiles, all_sprites_dict, all_render_tiles, editor_mode
         editor_config.ACTIVE_MOD = selected_mod
 
-        # 1. Update MenuBar modes according to mod editor_config
         allowed_modes = resolve_allowed_modes(selected_mod)
         menu_bar.set_modes(allowed_modes)
         if editor_mode not in allowed_modes:
@@ -240,7 +245,6 @@ def editor():
         active_root = get_active_content_root(selected_mod)
         b_dir = os.path.join(active_root, 'map', 'buildings')
 
-        # 2. Reload sprites: Vanilla baseline + Mod overrides
         vanilla_sprites = os.path.join(LIB_ROOT, 'sprites')
         mod_sprites = os.path.join(active_root, 'sprites')
 
@@ -267,11 +271,12 @@ def editor():
         item_tiles = load_items_from_xml(x_item, s_item if os.path.exists(s_item) else os.path.join(vanilla_sprites, 'items')) if os.path.exists(x_item) else {}
         all_render_tiles = {**map_tiles, **item_tiles}
 
-        # 3. Dynamic sync across all sub-editors
         building_file_tree.root_dir = b_dir
         building_file_tree.refresh()
 
         dialog_editor.refresh_files()
+        player_editor.refresh_files()
+        world_editor.refresh_files()
         craft_editor.craft_dir = os.path.join(active_root, 'data', 'craft')
         craft_editor.load_xmls()
 
@@ -405,21 +410,35 @@ def editor():
                 editor_mode = menu_action
                 continue
 
-            if editor_mode == "NPC Dialog":
+            if editor_mode == "NPC":
                 res = dialog_editor.handle_event(event)
                 if isinstance(res, dict) and res.get("action") == "open_in_code":
                     code_editor.open_file(res["path"])
                     editor_mode = "Code"
                     menu_bar.active_mode = "Code"
                 continue
-            elif editor_mode == "Crafts":
+            elif editor_mode == "Player":
+                res = player_editor.handle_event(event)
+                if isinstance(res, dict) and res.get("action") == "open_in_code":
+                    code_editor.open_file(res["path"])
+                    editor_mode = "Code"
+                    menu_bar.active_mode = "Code"
+                continue
+            elif editor_mode == "World":
+                res = world_editor.handle_event(event)
+                if isinstance(res, dict) and res.get("action") == "open_in_code":
+                    code_editor.open_file(res["path"])
+                    editor_mode = "Code"
+                    menu_bar.active_mode = "Code"
+                continue
+            elif editor_mode == "Craft":
                 res = craft_editor.handle_event(event)
                 if isinstance(res, dict) and res.get("action") == "open_in_code":
                     code_editor.open_file(res["path"])
                     editor_mode = "Code"
                     menu_bar.active_mode = "Code"
                 continue
-            elif editor_mode == "Entities":
+            elif editor_mode == "Entity":
                 res = entity_editor.handle_event(event)
                 if isinstance(res, dict):
                     if res.get("action") == "open_in_code":
@@ -708,9 +727,11 @@ def editor():
 
         screen.fill(UITheme.BG)
         
-        if editor_mode == "NPC Dialog": dialog_editor.draw(screen)
-        elif editor_mode == "Crafts": craft_editor.draw(screen)
-        elif editor_mode == "Entities": entity_editor.draw(screen)
+        if editor_mode == "NPC": dialog_editor.draw(screen)
+        elif editor_mode == "Player": player_editor.draw(screen)
+        elif editor_mode == "World": world_editor.draw(screen)
+        elif editor_mode == "Craft": craft_editor.draw(screen)
+        elif editor_mode == "Entity": entity_editor.draw(screen)
         elif editor_mode == "Code": code_editor.draw(screen)
         elif editor_mode == "Art": sprite_editor.draw(screen)
         else:

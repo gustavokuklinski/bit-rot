@@ -23,11 +23,26 @@
       "intelligence": 0.0
     },
     "initial_loot": [
-      { "name": "ID", "chance": 1.0 },
-      { "name": "Wallet", "chance": 1.0 },
-      { "name": "Cartography Sector [MAP_POS]", "chance": 1.0 },
-      { "name": "38 Revolver", "chance": 1.0 },
-      { "name": "Ammo Box 38", "chance": 1.0 }
+      {
+        "name": "ID",
+        "chance": 1.0
+      },
+      {
+        "name": "Wallet",
+        "chance": 1.0
+      },
+      {
+        "name": "Cartography Sector [MAP_POS]",
+        "chance": 1.0
+      },
+      {
+        "name": "38 Revolver",
+        "chance": 1.0
+      },
+      {
+        "name": "Ammo Box 38",
+        "chance": 1.0
+      }
     ],
     "visuals": {
       "center": "player.png",

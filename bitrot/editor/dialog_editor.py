@@ -46,13 +46,8 @@ FILE_ATTRIBUTES = {
         "_tag", "stage", "player_question", "npc_answer", "unlock_flag", "complete_flag",
         "req_item", "rqst_item", "award_item", "tip", "dialog_type", "priority",
         "npc_state_friendly", "npc_state_static", "gain_xp"
-    ],
-    "milestones.xml": ["_tag", "name", "type", "entity", "number", "message"],
-    "milestones.json": ["_tag", "name", "type", "entity", "number", "message"]
+    ]
 }
-
-MILESTONE_TYPES = ["kill", "hit", "craft_craft", "craft_repair", "craft_dismantle", "days"]
-MILESTONE_ENTITIES = ["zombie", "hostile_npc", "animal", "static_npc", "item", "world_day"]
 
 class NewNodeModal:
     def __init__(self, font):
@@ -63,7 +58,7 @@ class NewNodeModal:
         self.create_btn = pygame.Rect(0, 0, 120, 32)
         self.cancel_btn = pygame.Rect(0, 0, 110, 32)
 
-    def open(self, center_x, center_y, default_prefix="Quest: New Node"):
+    def open(self, center_x, center_y, default_prefix="greeting"):
         self.rect.center = (center_x, center_y)
         self.box = UITextBox(self.rect.x + 20, self.rect.y + 60, self.rect.width - 40, 30, self.font, default_prefix)
         self.box.active = True
@@ -100,7 +95,7 @@ class NewNodeModal:
         surface.blit(self.font.render("Create New Node", True, UITheme.WARNING), (self.rect.x + 20, self.rect.y + 15))
         pygame.draw.line(surface, UITheme.BORDER, (self.rect.x, self.rect.y + 40), (self.rect.right, self.rect.y + 40))
 
-        surface.blit(self.font.render("Node ID (e.g., Quest: Title, greeting):", True, UITheme.TEXT_DIM), (self.rect.x + 20, self.rect.y + 43))
+        surface.blit(self.font.render("Node ID (e.g., greeting, lore_branch):", True, UITheme.TEXT_DIM), (self.rect.x + 20, self.rect.y + 43))
         self.box.draw(surface)
 
         mouse_pos = pygame.mouse.get_pos()
@@ -138,14 +133,8 @@ class DialogEditor:
 
         self.new_node_modal = NewNodeModal(font)
 
-        # Tabs: Dialog vs Player
-        self.tabs = ["Dialog", "Player"]
-        self.active_tab = "Dialog"
-        self.tab_rect_dialog = pygame.Rect(10, self.y_offset + 32, 135, 28)
-        self.tab_rect_player = pygame.Rect(155, self.y_offset + 32, 135, 28)
-
-        self.file_dropdown = UIDropdown(10, self.y_offset + 66, self.sidebar_w - 20, 28, self.font, [])
-        self.new_node_btn = pygame.Rect(10, self.y_offset + 98, self.sidebar_w - 20, 30)
+        self.file_dropdown = UIDropdown(10, self.y_offset + 38, self.sidebar_w - 20, 30, self.font, [])
+        self.new_node_btn = pygame.Rect(10, self.y_offset + 74, self.sidebar_w - 20, 30)
 
         # Action Buttons
         self.save_file_btn = pygame.Rect(self.width - 370, y_offset + 12, 130, 35)
@@ -180,36 +169,21 @@ class DialogEditor:
             self._layout_option_editor()
 
     def refresh_files(self):
+        """Scans strictly NPC dialogs, chat.json, and tips.json."""
         self.file_paths.clear()
-
-        if self.active_tab == "Player":
-            # Show ONLY JSON files in player directory
-            search_dirs = [get_data_dir("player"), os.path.join(LIB_ROOT, 'data', 'player')]
-            allowed_stems = ["player", "milestones", "quests", "progression", "traits", "civilian", "military", "worker"]
-            for d in search_dirs:
-                if os.path.exists(d) and os.path.isdir(d):
-                    for f in sorted(os.listdir(d)):
-                        if f.endswith('.json'):
-                            stem = os.path.splitext(f)[0].lower()
-                            if stem in allowed_stems or f not in self.file_paths:
-                                self.file_paths[f] = os.path.join(d, f)
-        else:
-            # Show Dialog files: chat.json, tips.json, and NPC dialogs
-            search_dirs = [
-                get_data_dir("npc_dialogs"),
-                get_data_dir("npc"),
-                get_data_dir(),
-                os.path.join(LIB_ROOT, 'data', 'npc_dialogs'),
-                os.path.join(LIB_ROOT, 'data', 'npc'),
-                os.path.join(LIB_ROOT, 'data')
-            ]
-            for d in search_dirs:
-                if os.path.exists(d) and os.path.isdir(d):
-                    for f in sorted(os.listdir(d)):
-                        f_low = f.lower()
-                        if f_low.endswith(('.json', '.xml')) and ("chat" in f_low or "tip" in f_low or "dialog" in f_low):
-                            if f not in self.file_paths:
-                                self.file_paths[f] = os.path.join(d, f)
+        search_dirs = [
+            get_data_dir("npc_dialogs"),
+            get_data_dir(),
+            os.path.join(LIB_ROOT, 'data', 'npc_dialogs'),
+            os.path.join(LIB_ROOT, 'data')
+        ]
+        for d in search_dirs:
+            if os.path.exists(d) and os.path.isdir(d):
+                for f in sorted(os.listdir(d)):
+                    f_low = f.lower()
+                    if f_low.endswith(('.json', '.xml')) and ("chat" in f_low or "tip" in f_low or "dialog" in f_low or "npc" in f_low):
+                        if f not in self.file_paths:
+                            self.file_paths[f] = os.path.join(d, f)
 
         opts = [{"label": k, "value": k} for k in self.file_paths.keys()]
         self.file_dropdown.options = opts if opts else [{"label": "No files found", "value": ""}]
@@ -226,7 +200,7 @@ class DialogEditor:
         self.load_file()
 
     def get_all_dialog_nodes(self):
-        """Scans all dialog XML and JSON files across loaded paths."""
+        """Scans dialog files across loaded paths."""
         node_ids = set()
         for path in self.file_paths.values():
             if not os.path.exists(path): continue
@@ -234,16 +208,10 @@ class DialogEditor:
                 try:
                     with open(path, 'r', encoding='utf-8') as f:
                         jd = json.load(f)
-                    if "quests" in jd:
-                        for q in jd["quests"]:
-                            for sq in q.get("options", []):
-                                if "id" in sq: node_ids.add(sq["id"])
                     for key in ["npc_chat", "npc_tips"]:
                         if key in jd:
                             for b in jd[key]:
                                 if "id" in b: node_ids.add(b["id"])
-                    if "milestones" in jd:
-                        node_ids.add("milestones")
                 except Exception: pass
             elif path.endswith('.xml'):
                 try:
@@ -272,26 +240,7 @@ class DialogEditor:
                 with open(path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
 
-                if "quests" in data:
-                    for item in data["quests"]:
-                        for sub_q in item.get("options", []):
-                            q_id = sub_q.get("id", "Quest")
-                            opts = []
-                            for opt in sub_q.get("options", []):
-                                opt_copy = {k: str(v) for k, v in opt.items()}
-                                opt_copy["_tag"] = "options"
-                                opts.append(opt_copy)
-                            self.nodes[q_id] = {"options": opts}
-
-                elif "milestones" in data:
-                    opts = []
-                    for m in data["milestones"]:
-                        m_copy = {k: str(v) for k, v in m.items()}
-                        m_copy["_tag"] = "milestone"
-                        opts.append(m_copy)
-                    self.nodes["milestones"] = {"options": opts}
-
-                elif "npc_chat" in data:
+                if "npc_chat" in data:
                     for branch in data["npc_chat"]:
                         b_id = branch.get("id", "chat")
                         opts = []
@@ -310,39 +259,6 @@ class DialogEditor:
                             o_copy["_tag"] = "options"
                             opts.append(o_copy)
                         self.nodes[b_id] = {"options": opts}
-
-                elif "player_traits" in data:
-                    for sec_name, sec_dict in data["player_traits"].items():
-                        opts = []
-                        if isinstance(sec_dict, dict):
-                            for tid, tval in sec_dict.items():
-                                opt_entry = {"_tag": sec_name, "id": tid}
-                                if isinstance(tval, dict):
-                                    for k, v in tval.items(): opt_entry[k] = str(v)
-                                opts.append(opt_entry)
-                        self.nodes[sec_name] = {"options": opts}
-
-                elif "progression" in data:
-                    for sec_name, sec_dict in data["progression"].items():
-                        opts = []
-                        if isinstance(sec_dict, dict):
-                            for aid, aval in sec_dict.items():
-                                opt_entry = {"_tag": sec_name, "id": aid}
-                                if isinstance(aval, dict):
-                                    for k, v in aval.items(): opt_entry[k] = str(v)
-                                opts.append(opt_entry)
-                        self.nodes[sec_name] = {"options": opts}
-
-                elif "player" in data:
-                    p_data = data["player"]
-                    opts = [{"_tag": "property", "name": k, "value": str(v)} for k, v in p_data.items()] if isinstance(p_data, dict) else []
-                    self.nodes["player"] = {"options": opts}
-
-                elif "player_builds" in data:
-                    for bid, bdata in data["player_builds"].items():
-                        opts = [{"_tag": "build", **{k: str(v) for k, v in bdata.items()}}] if isinstance(bdata, dict) else []
-                        self.nodes[bid] = {"options": opts}
-
             except Exception as e:
                 print(f"Error loading JSON {path}: {e}")
 
@@ -361,6 +277,9 @@ class DialogEditor:
             except Exception as e:
                 print(f"Error loading XML {path}: {e}")
 
+        if self.nodes and not self.selected_node:
+            self.selected_node = list(self.nodes.keys())[0]
+
     def save_file(self):
         if not self.current_file or self.current_file not in self.file_paths:
             return
@@ -371,31 +290,7 @@ class DialogEditor:
             fname = os.path.basename(path).lower()
             data_to_save = {}
 
-            if "quest" in fname:
-                quest_list = []
-                for q_id, q_data in self.nodes.items():
-                    sub_opts = []
-                    for o in q_data["options"]:
-                        clean_opt = {}
-                        for k, v in o.items():
-                            if k == "_tag" or not str(v).strip(): continue
-                            clean_opt[k] = int(v) if (k == "priority" and str(v).isdigit()) else v
-                        sub_opts.append(clean_opt)
-                    quest_list.append({"id": q_id, "options": sub_opts})
-                data_to_save = {"quests": [{"id": "quests", "options": quest_list}]}
-
-            elif "milestone" in fname:
-                m_list = []
-                for _, q_data in self.nodes.items():
-                    for o in q_data["options"]:
-                        clean_m = {}
-                        for k, v in o.items():
-                            if k == "_tag" or not str(v).strip(): continue
-                            clean_m[k] = int(v) if (k == "number" and str(v).isdigit()) else v
-                        m_list.append(clean_m)
-                data_to_save = {"milestones": m_list}
-
-            elif "chat" in fname:
+            if "chat" in fname:
                 chat_list = []
                 for c_id, c_data in self.nodes.items():
                     opts = []
@@ -443,37 +338,22 @@ class DialogEditor:
         self.option_fields_order = []
         self.option_form_scroll = 0
 
-        is_milestone = "milestone" in str(self.current_file).lower()
-        default_tag = "milestone" if is_milestone else "options"
-
+        default_tag = "options"
         if context_type == "edit" and idx is not None:
             values = self.nodes[self.selected_node]["options"][idx].copy()
             tag = values.get("_tag", default_tag)
         else:
             tag = default_tag
-            values = {"_tag": tag}
-            if tag == "options":
-                values["priority"] = "10"
-                if "tip" in str(self.current_file).lower() or "quest" in str(self.current_file).lower():
-                    values["dialog_type"] = "once"
-            elif tag == "milestone":
-                values["type"] = "kill"
-                values["entity"] = "zombie"
-                values["number"] = "1"
+            values = {"_tag": tag, "priority": "10"}
+            if "tip" in str(self.current_file).lower():
+                values["dialog_type"] = "once"
 
-        if tag == "milestone":
-            base_fields = ["_tag", "name", "type", "entity", "number", "message"]
-        elif self.current_file and os.path.basename(self.current_file) in FILE_ATTRIBUTES:
-            base_fields = list(FILE_ATTRIBUTES[os.path.basename(self.current_file)])
-        else:
-            base_fields = ["_tag", "stage", "player_question", "npc_answer", "unlock_flag", "complete_flag", "req_item", "rqst_item", "award_item", "tip", "dialog_type", "priority", "gain_xp"]
-
+        base_fields = ["_tag", "player_question", "npc_answer", "priority", "dialog_type", "award_item", "req_level", "gain_xp"]
         for k, v in values.items():
             if k not in base_fields and k != "id" and str(v).strip():
                 base_fields.append(k)
 
         self.option_fields_order = base_fields
-
         content_w = max(400, self.width - self.sidebar_w - 60)
         node_flag_opts = self.get_all_dialog_nodes()
 
@@ -489,7 +369,7 @@ class DialogEditor:
 
     def _create_field_input(self, f, val, content_w, node_flag_opts, item_options):
         if f == "_tag":
-            opts = [{"label": "options", "value": "options"}, {"label": "milestone", "value": "milestone"}]
+            opts = [{"label": "options", "value": "options"}]
             self.option_inputs[f] = UIDropdown(0, 0, content_w, 30, self.font, opts, val)
         elif f == "stage":
             opts = [{"label": "None", "value": ""}, {"label": "offer", "value": "offer"}, {"label": "turn_in", "value": "turn_in"}]
@@ -511,12 +391,6 @@ class DialogEditor:
             self.option_inputs[f] = UIAttributeList(0, 0, content_w, 145, self.font, val)
         elif f in ["player_question", "npc_answer", "tip"]:
             self.option_inputs[f] = UITextArea(0, 0, content_w, 95, self.font, val)
-        elif f == "type" and self.option_inputs.get("_tag") and self.option_inputs["_tag"].text == "milestone":
-            opts = [{"label": t, "value": t} for t in MILESTONE_TYPES]
-            self.option_inputs[f] = UIDropdown(0, 0, content_w, 30, self.font, opts, val)
-        elif f == "entity" and self.option_inputs.get("_tag") and self.option_inputs["_tag"].text == "milestone":
-            opts = [{"label": e, "value": e} for e in MILESTONE_ENTITIES]
-            self.option_inputs[f] = UIDropdown(0, 0, content_w, 30, self.font, opts, val)
         else:
             self.option_inputs[f] = UITextBox(0, 0, content_w, 30, self.font, val)
 
@@ -605,17 +479,6 @@ class DialogEditor:
                     self.cancel_editing_option()
                     return True
 
-        # Tab Selection: Dialog vs Player
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.tab_rect_dialog.collidepoint(event.pos) and self.active_tab != "Dialog":
-                self.active_tab = "Dialog"
-                self.refresh_files()
-                return True
-            elif self.tab_rect_player.collidepoint(event.pos) and self.active_tab != "Player":
-                self.active_tab = "Player"
-                self.refresh_files()
-                return True
-
         old_file = self.current_file
         if self.file_dropdown.handle_event(event):
             if self.file_dropdown.text != old_file:
@@ -632,7 +495,7 @@ class DialogEditor:
         if event.type == pygame.MOUSEMOTION:
             if self.dragging_sidebar and self.sidebar_thumb_rect and self.max_sidebar_scroll > 0:
                 dy = event.pos[1] - self.sidebar_start_y
-                track_h = self.height - self.y_offset - 135
+                track_h = self.height - self.y_offset - 115
                 thumb_h = self.sidebar_thumb_rect.height
                 track_space = track_h - thumb_h
                 if track_space > 0:
@@ -678,13 +541,7 @@ class DialogEditor:
 
             dropdowns = [box for box in self.option_inputs.values() if isinstance(box, UIDropdown)]
             for d in dropdowns:
-                if d.expanded and d.handle_event(event):
-                    if d == self.option_inputs.get("_tag"):
-                        new_tag = d.text
-                        if (new_tag == "milestone" and "name" not in self.option_fields_order) or \
-                           (new_tag == "options" and "player_question" not in self.option_fields_order):
-                            self.open_option_editor(self.editing_context["type"], self.editing_context["idx"])
-                    return True
+                if d.expanded and d.handle_event(event): return True
 
             if self.add_field_dd and self.add_field_dd.handle_event(event):
                 if self.add_field_dd.text:
@@ -753,13 +610,13 @@ class DialogEditor:
                             self.sidebar_start_offset = self.sidebar_scroll
                             return True
                         if self.new_node_btn.collidepoint(mx, my):
-                            default_pfx = "greeting" if "chat" in str(self.current_file).lower() else ("milestones" if "milestone" in str(self.current_file).lower() else "Quest: New Node")
+                            default_pfx = "greeting" if "chat" in str(self.current_file).lower() else "tips"
                             self.new_node_modal.open(self.width//2, self.height//2, default_pfx)
                             return True
-                        list_y = self.y_offset + 140 - self.sidebar_scroll
+                        list_y = self.y_offset + 120 - self.sidebar_scroll
                         for n_id in self.nodes.keys():
                             if pygame.Rect(10, list_y, self.sidebar_w - 30, 25).collidepoint(mx, my):
-                                if list_y > self.y_offset + 135:
+                                if list_y > self.y_offset + 115:
                                     self.selected_node = n_id
                                     self.form_scroll = 0
                                 return True
@@ -790,7 +647,7 @@ class DialogEditor:
                             rects, add_btn, total_h = self._get_cards_layout()
                             if self.del_node_btn.collidepoint(mx, my):
                                 del self.nodes[self.selected_node]
-                                self.selected_node = None
+                                self.selected_node = list(self.nodes.keys())[0] if self.nodes else None
                                 self.save_file()
                                 return True
                             if add_btn and add_btn.collidepoint(mx, my):
@@ -825,25 +682,19 @@ class DialogEditor:
         mouse_pos = pygame.mouse.get_pos()
         
         # 1. Sidebar Header (Drawn first so child elements are visible)
-        sidebar_header_rect = pygame.Rect(0, self.y_offset, self.sidebar_w, 135)
+        sidebar_header_rect = pygame.Rect(0, self.y_offset, self.sidebar_w, 115)
         pygame.draw.rect(surface, UITheme.PANEL_BG, sidebar_header_rect)
         pygame.draw.line(surface, UITheme.BORDER, (self.sidebar_w, self.y_offset), (self.sidebar_w, self.height), 2)
-        surface.blit(self.font.render("Dialog & Player", True, UITheme.WARNING), (15, self.y_offset + 10))
+        surface.blit(self.font.render("NPC Dialogs", True, UITheme.WARNING), (20, self.y_offset + 10))
 
-        # 2. Draw Dialog vs Player tabs
-        for t_label, t_rect in [("Dialog", self.tab_rect_dialog), ("Player", self.tab_rect_player)]:
-            is_active = (self.active_tab == t_label)
-            bg = UITheme.ACCENT if is_active else UITheme.BG
-            draw_styled_button(surface, t_rect, t_label, self.font, mouse_pos, bg, UITheme.ACCENT_HOVER)
-
-        # 3. Dropdown and New Node button
+        # 2. Dropdown and New Node button
         self.file_dropdown.draw(surface)
         draw_styled_button(surface, self.new_node_btn, "+ New Node", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
 
-        # 4. Sidebar List
-        list_view_rect = pygame.Rect(0, self.y_offset + 135, self.sidebar_w, self.height - self.y_offset - 135)
+        # 3. Sidebar List
+        list_view_rect = pygame.Rect(0, self.y_offset + 115, self.sidebar_w, self.height - self.y_offset - 115)
         surface.set_clip(list_view_rect)
-        list_y = self.y_offset + 140 - self.sidebar_scroll
+        list_y = self.y_offset + 120 - self.sidebar_scroll
         for n_id in self.nodes.keys():
             r = pygame.Rect(10, list_y, self.sidebar_w - 30, 25)
             if n_id == self.selected_node:
@@ -895,8 +746,6 @@ class DialogEditor:
                 elif q: snippet = f"{stage}Q: {q}"
                 elif a: snippet = f"{stage}A: {a}"
                 else: snippet = f"{stage}Priority: {opt.get('priority', '10')}"
-            elif tag == "milestone":
-                snippet = f"Milestone: {opt.get('name', '')} ({opt.get('type', '')} {opt.get('entity', '')}) - \"{opt.get('message', '')}\""
             else:
                 snippet = f"[{tag}] " + ", ".join(f"{k}={v}" for k, v in opt.items() if k != "_tag")
                 
@@ -908,7 +757,7 @@ class DialogEditor:
             draw_styled_button(surface, r["edit"], "Edit", self.font, mouse_pos, UITheme.ACCENT, UITheme.ACCENT_HOVER)
             draw_styled_button(surface, r["delete"], "Del", self.font, mouse_pos, UITheme.DANGER, UITheme.DANGER_HOVER)
             
-        draw_styled_button(surface, add_btn, "+ Add Option" if "milestone" not in str(self.current_file).lower() else "+ Add Milestone", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
+        draw_styled_button(surface, add_btn, "+ Add Option", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
         surface.set_clip(None)
 
         right_header_rect = pygame.Rect(self.sidebar_w, self.y_offset, self.width - self.sidebar_w, 60)

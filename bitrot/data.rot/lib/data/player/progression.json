@@ -6,8 +6,16 @@
         "image": "ui/strength.png",
         "base_xp": 750,
         "effects": [
-          { "target": "unarmed_damage", "value": 0.05, "type": "multiplier_add" },
-          { "target": "carry_weight", "value": 1.5, "type": "flat" }
+          {
+            "target": "unarmed_damage",
+            "value": 0.05,
+            "type": "multiplier_add"
+          },
+          {
+            "target": "carry_weight",
+            "value": 1.5,
+            "type": "flat"
+          }
         ]
       },
       "fitness": {
@@ -15,7 +23,11 @@
         "image": "ui/fitness.png",
         "base_xp": 750,
         "effects": [
-          { "target": "stamina_regen", "value": 0.01, "type": "flat" }
+          {
+            "target": "stamina_regen",
+            "value": 0.01,
+            "type": "flat"
+          }
         ]
       },
       "melee": {
@@ -23,8 +35,16 @@
         "image": "ui/melee.png",
         "base_xp": 200,
         "effects": [
-          { "target": "melee_damage", "value": 0.05, "type": "multiplier_add" },
-          { "target": "durability_save_chance_minor", "value": 2.0, "type": "flat" }
+          {
+            "target": "melee_damage",
+            "value": 0.05,
+            "type": "multiplier_add"
+          },
+          {
+            "target": "durability_save_chance_minor",
+            "value": 2.0,
+            "type": "flat"
+          }
         ]
       },
       "ranged": {
@@ -32,8 +52,16 @@
         "image": "ui/range.png",
         "base_xp": 200,
         "effects": [
-          { "target": "ranged_damage", "value": 0.05, "type": "multiplier_add" },
-          { "target": "headshot_chance", "value": 0.015, "type": "flat" }
+          {
+            "target": "ranged_damage",
+            "value": 0.05,
+            "type": "multiplier_add"
+          },
+          {
+            "target": "headshot_chance",
+            "value": 0.015,
+            "type": "flat"
+          }
         ]
       },
       "maintenance": {
@@ -41,7 +69,11 @@
         "image": "ui/maintenance.png",
         "base_xp": 150,
         "effects": [
-          { "target": "durability_save_chance", "value": 2.5, "type": "flat" }
+          {
+            "target": "durability_save_chance",
+            "value": 2.5,
+            "type": "flat"
+          }
         ]
       },
       "agility": {
@@ -49,7 +81,11 @@
         "image": "ui/agility.png",
         "base_xp": 200,
         "effects": [
-          { "target": "stamina_consumption_reduction", "value": 0.01, "type": "flat" }
+          {
+            "target": "stamina_consumption_reduction",
+            "value": 0.01,
+            "type": "flat"
+          }
         ]
       },
       "lucky": {
@@ -57,7 +93,11 @@
         "image": "ui/lucky.png",
         "base_xp": 300,
         "effects": [
-          { "target": "xp_gain", "value": 0.02, "type": "multiplier_add" }
+          {
+            "target": "xp_gain",
+            "value": 0.02,
+            "type": "multiplier_add"
+          }
         ]
       },
       "intelligence": {
@@ -65,10 +105,26 @@
         "image": "ui/intelligence.png",
         "base_xp": 300,
         "effects": [
-          { "target": "reading_speed", "value": 0.4, "type": "flat" },
-          { "target": "crafting_speed", "value": 0.2, "type": "flat" },
-          { "target": "xp_gain", "value": 0.02, "type": "multiplier_add" },
-          { "target": "durability_save_chance", "value": 1.0, "type": "flat" }
+          {
+            "target": "reading_speed",
+            "value": 0.4,
+            "type": "flat"
+          },
+          {
+            "target": "crafting_speed",
+            "value": 0.2,
+            "type": "flat"
+          },
+          {
+            "target": "xp_gain",
+            "value": 0.02,
+            "type": "multiplier_add"
+          },
+          {
+            "target": "durability_save_chance",
+            "value": 1.0,
+            "type": "flat"
+          }
         ]
       }
     },

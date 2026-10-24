@@ -25,9 +25,19 @@ Setup where your mod will work.
 - `/data.rot/lib/*` 
 ```json
 {
-    "overide_dir":[  # Select folders to overide
-        "./data.rot/lib/*" 
-        ], 
-    "fallack": true  # Complete dir with: data.rot/lib - If set to false the mod will be the only source
+    "name": "BitRot_Vanilla", # Mod name
+    "version": "0.0.0.1", # Mod version
+    "logo": "./sprites/mod_logo.png", # Mod logo
+    "description": "BitRot Vanilla - Official game mod", # Mod summary
+    "repository": "https://github.com/gustavokuklinski/bit-rot/", # Mod repository
+    "overide_dir":[
+        "./data.rot/lib/*" # Mod work directory
+        ],
+    "editor_config": [
+        "entity", # Entity tab on editor
+        "code", # Code tab on editor
+        "art" # Art tab on editor
+    ],
+    "fallack": true # If false mode will override config instead add to default  
 }
 ```

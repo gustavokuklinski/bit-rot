@@ -1,0 +1,5 @@
+<recipe type="cloth" craft="repair" output="Hoodie" gain_xp="[intelligence:0.5, maintenance:0.2]" amount="1" time="2.0">
+    <ingredient name="Twine" destroy="true" amount="15" />
+    <ingredient name="Needle" destroy="false" amount="1" />
+    <ingredient name="Hoodie" destroy="false" amount="1" />
+</recipe>

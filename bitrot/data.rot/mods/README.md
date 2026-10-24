@@ -23,5 +23,5 @@ Design: [NAME_AI_AG_LLM_ETC]
 Create and share your mods (Update this file):
 | Project | Art |  Code |  Design |
 | :--- | :--- | :--- | :--- |
-|(BitRot_Vanilla)[https://github.com/gustavokukliski/bit-rot] | Human | Gemini, Gemma, Deepeek | Human |
-|(BitRot_Vanilla_pt_br)[https://github.com/gustavokukliski/bit-rot] | - | Human | - |
+|[BitRot_Vanilla](https://github.com/gustavokukliski/bit-rot) | Human | Gemini, Gemma, Deepeek | Human |
+|[language_pt_br](https://github.com/gustavokukliski/bit-rot) | - | Human | - |

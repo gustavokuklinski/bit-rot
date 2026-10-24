@@ -879,7 +879,7 @@ class MenuBar:
         self.rect = pygame.Rect(0, 0, width, height)
         self.font = font
         self.modes = modes
-        self.active_mode = modes[0] if modes else "Building"
+        self.active_mode = modes[0] if modes else "Map"
         self.tabs = []
         self._update_tabs()
 
@@ -896,7 +896,8 @@ class MenuBar:
 
     def _update_tabs(self):
         self.tabs = []
-        tab_w = 150
+        n = max(1, len(self.modes))
+        tab_w = max(75, min(130, self.rect.width // n))
         for i, mode in enumerate(self.modes):
             self.tabs.append({
                 "mode": mode,

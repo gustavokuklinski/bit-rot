@@ -1,0 +1,8 @@
+<recipe type="cloth" craft="dismantle" time="5.0" gain_xp="[intelligence:0.5, maintenance:0.2]">
+    <ingredient name="Hoodie" destroy="true" amount="1" />
+    <ingredient name="Scissor" destroy="false" amount="1" />
+
+    <result name="Line Twine" amount="5" />
+    <result name="Ragged Cloth" amount="10" />
+    <result name="Denim Stripes" amount="5" />
+</recipe>

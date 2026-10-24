@@ -1,15 +1,18 @@
 {
     "name": "BitRot_Vanilla",
     "version": "0.0.0.1",
+    "logo": "./sprites/mod_logo.png",
     "description": "BitRot Vanilla - Official game mod",
     "repository": "https://github.com/gustavokuklinski/bit-rot/",
     "overide_dir":[
-        "./data.rot/lib/*"
+        "./data.rot/lib/*",
+        "./data.rot/lib/lang/*"
         ],
     "editor_config": [
         "entity",
         "code",
-        "art"
+        "art",
+        "world"
     ],
     "fallack": true 
 }

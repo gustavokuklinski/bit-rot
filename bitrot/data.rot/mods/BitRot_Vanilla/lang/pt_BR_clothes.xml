@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language name="pt_BR">
+   
+
+    <cloth>
+        <!-- Arms / Jackets / Vests -->
+
+        <cloth name="Hoodie" translation_cloth="Casaco com capuz" />
+        <cloth name="Overcoat" translation_cloth="Sobretudo" />
+
+        <!-- Body / Torso / T-Shirts -->
+        <!-- Legs / Pants / Shorts -->
+        <!-- Feet / Shoes / Boots -->
+        <!-- Head / Hats / Helmets / Masks -->
+        <!-- Hair -->
+        <!-- Facial -->
+        <!-- Hands / Gloves -->
+        <!-- Utilities / Belts / Holsters / Slings -->
+        <!-- Empty Slot Defaults -->
+
+    </cloth>
+</language>

@@ -5,80 +5,210 @@
         "name": "Unemployed",
         "cost": 0,
         "tooltip": "A blank slate. No bonuses, but no deficits.",
-        "disable": ["Profession_Maintenance", "Profession_CEO_assistant", "Profession_Mechanic", "Profession_Spy", "Profession_Scientist", "Profession_Nurse", "Profession_Police_Officer"],
+        "disable": [
+          "Profession_Maintenance",
+          "Profession_CEO_assistant",
+          "Profession_Mechanic",
+          "Profession_Spy",
+          "Profession_Scientist",
+          "Profession_Nurse",
+          "Profession_Police_Officer"
+        ],
         "attributes": {
-          "level": { "strength": 5, "fitness": 5 }
+          "level": {
+            "strength": 5,
+            "fitness": 5
+          }
         }
       },
       "Profession_Nurse": {
         "name": "Nurse",
         "cost": 2,
         "tooltip": "Knows basic medicine and is light on their feet.",
-        "disable": ["Profession_Maintenance", "Profession_CEO_assistant", "Profession_Mechanic", "Profession_Spy", "Profession_Scientist", "Profession_Unemployed", "Profession_Police_Officer"],
+        "disable": [
+          "Profession_Maintenance",
+          "Profession_CEO_assistant",
+          "Profession_Mechanic",
+          "Profession_Spy",
+          "Profession_Scientist",
+          "Profession_Unemployed",
+          "Profession_Police_Officer"
+        ],
         "attributes": {
-          "level": { "strength": 5, "fitness": 5, "agility": 3, "maintenance": 1, "intelligence": 3, "lucky": 1 }
+          "level": {
+            "strength": 5,
+            "fitness": 5,
+            "agility": 3,
+            "maintenance": 1,
+            "intelligence": 3,
+            "lucky": 1
+          }
         },
-        "recipe":["Survivor Guide Basic"]
+        "recipe": [
+          "Survivor Guide Basic"
+        ]
       },
       "Profession_Police_Officer": {
         "name": "Police Officer",
         "cost": 4,
         "tooltip": "Proficient with firearms and moderately fit.",
-        "disable": ["Profession_Maintenance", "Profession_CEO_assistant", "Profession_Mechanic", "Profession_Spy", "Profession_Scientist", "Profession_Unemployed", "Profession_Nurse"],
+        "disable": [
+          "Profession_Maintenance",
+          "Profession_CEO_assistant",
+          "Profession_Mechanic",
+          "Profession_Spy",
+          "Profession_Scientist",
+          "Profession_Unemployed",
+          "Profession_Nurse"
+        ],
         "attributes": {
-          "level": { "strength": 5, "fitness": 5, "agility": 2, "maintenance": 1, "intelligence": 1, "ranged": 3, "lucky": 1 }
+          "level": {
+            "strength": 5,
+            "fitness": 5,
+            "agility": 2,
+            "maintenance": 1,
+            "intelligence": 1,
+            "ranged": 3,
+            "lucky": 1
+          }
         },
-        "recipe":["Survivor Guide Basic"]
+        "recipe": [
+          "Survivor Guide Basic"
+        ]
       },
       "Profession_Scientist": {
         "name": "Scientist",
         "cost": 3,
         "tooltip": "High intelligence, but severely lacking in physical prowess.",
-        "disable": ["Profession_Maintenance", "Profession_CEO_assistant", "Profession_Mechanic", "Profession_Spy", "Profession_Unemployed", "Profession_Nurse", "Profession_Police_Officer"],
+        "disable": [
+          "Profession_Maintenance",
+          "Profession_CEO_assistant",
+          "Profession_Mechanic",
+          "Profession_Spy",
+          "Profession_Unemployed",
+          "Profession_Nurse",
+          "Profession_Police_Officer"
+        ],
         "attributes": {
-          "level": { "strength": 5, "fitness": 5, "agility": 1, "lucky": 2, "maintenance": 2, "intelligence": 5 }
+          "level": {
+            "strength": 5,
+            "fitness": 5,
+            "agility": 1,
+            "lucky": 2,
+            "maintenance": 2,
+            "intelligence": 5
+          }
         },
-        "recipe":["Survivor Guide Basic"]
+        "recipe": [
+          "Survivor Guide Basic"
+        ]
       },
       "Profession_Mechanic": {
         "name": "Mechanic",
         "cost": 3,
         "tooltip": "Knows how vehicles work and maintains tools well.",
-        "disable": ["Profession_Maintenance", "Profession_Scientist", "Profession_CEO_assistant", "Profession_Unemployed", "Profession_Spy", "Profession_Nurse", "Profession_Police_Officer"],
+        "disable": [
+          "Profession_Maintenance",
+          "Profession_Scientist",
+          "Profession_CEO_assistant",
+          "Profession_Unemployed",
+          "Profession_Spy",
+          "Profession_Nurse",
+          "Profession_Police_Officer"
+        ],
         "attributes": {
-          "level": { "strength": 5, "fitness": 5, "agility": 2, "maintenance": 4, "intelligence": 2 }
+          "level": {
+            "strength": 5,
+            "fitness": 5,
+            "agility": 2,
+            "maintenance": 4,
+            "intelligence": 2
+          }
         },
-        "recipe":["Survivor Guide Basic"]
+        "recipe": [
+          "Survivor Guide Basic"
+        ]
       },
       "Profession_Spy": {
         "name": "Spy",
         "cost": 4,
         "tooltip": "Highly agile and incredibly lucky.",
-        "disable": ["Profession_Maintenance", "Profession_Scientist", "Profession_CEO_assistant", "Profession_Mechanic", "Profession_Unemployed", "Profession_Nurse", "Profession_Police_Officer"],
+        "disable": [
+          "Profession_Maintenance",
+          "Profession_Scientist",
+          "Profession_CEO_assistant",
+          "Profession_Mechanic",
+          "Profession_Unemployed",
+          "Profession_Nurse",
+          "Profession_Police_Officer"
+        ],
         "attributes": {
-          "level": { "strength": 5, "fitness": 5, "agility": 4, "lucky": 4, "maintenance": 1, "intelligence": 2 }
+          "level": {
+            "strength": 5,
+            "fitness": 5,
+            "agility": 4,
+            "lucky": 4,
+            "maintenance": 1,
+            "intelligence": 2
+          }
         },
-        "recipe":["Survivor Guide Basic"]
+        "recipe": [
+          "Survivor Guide Basic"
+        ]
       },
       "Profession_CEO_assistant": {
         "name": "CEO Assistant",
         "cost": 1,
         "tooltip": "Organized but inexperienced in combat.",
-        "disable": ["Profession_Maintenance", "Profession_Spy", "Profession_Scientist", "Profession_Mechanic", "Profession_Unemployed", "Profession_Nurse", "Profession_Police_Officer"],
+        "disable": [
+          "Profession_Maintenance",
+          "Profession_Spy",
+          "Profession_Scientist",
+          "Profession_Mechanic",
+          "Profession_Unemployed",
+          "Profession_Nurse",
+          "Profession_Police_Officer"
+        ],
         "attributes": {
-          "level": { "strength": 5, "fitness": 5, "agility": 2, "lucky": 2, "maintenance": 1, "intelligence": 3 }
+          "level": {
+            "strength": 5,
+            "fitness": 5,
+            "agility": 2,
+            "lucky": 2,
+            "maintenance": 1,
+            "intelligence": 3
+          }
         },
-        "recipe":["Survivor Guide Basic"]
+        "recipe": [
+          "Survivor Guide Basic"
+        ]
       },
       "Profession_Maintenance": {
         "name": "Maintenance",
         "cost": 2,
         "tooltip": "Handy with tools and physical labor.",
-        "disable": ["Profession_Spy", "Profession_Scientist", "Profession_Mechanic", "Profession_Unemployed", "Profession_Nurse", "Profession_Police_Officer", "Profession_CEO_assistant"],
+        "disable": [
+          "Profession_Spy",
+          "Profession_Scientist",
+          "Profession_Mechanic",
+          "Profession_Unemployed",
+          "Profession_Nurse",
+          "Profession_Police_Officer",
+          "Profession_CEO_assistant"
+        ],
         "attributes": {
-          "level": { "strength": 5, "fitness": 5, "agility": 2, "lucky": 1, "maintenance": 3, "intelligence": 2 }
+          "level": {
+            "strength": 5,
+            "fitness": 5,
+            "agility": 2,
+            "lucky": 1,
+            "maintenance": 3,
+            "intelligence": 2
+          }
         },
-        "recipe":["Survivor Guide Basic"]
+        "recipe": [
+          "Survivor Guide Basic"
+        ]
       }
     },
     "traits": {
@@ -86,34 +216,56 @@
         "name": "Vaccine",
         "cost": 2,
         "tooltip": "-20% infection rate",
-        "stats": { "infection": -20 },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "stats": {
+          "infection": -20
+        },
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "athletic": {
         "name": "Athletic",
         "cost": 4,
         "tooltip": "+20% stamina recovery, +10% Speed",
-        "stats": { "stamina": 20 },
-        "config": { "PLAYER_SPEED": 1.1, "ZOMBIE_MAX_CHUNK": 2 }
+        "stats": {
+          "stamina": 20
+        },
+        "config": {
+          "PLAYER_SPEED": 1.1,
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "runner": {
         "name": "Runner",
         "cost": 3,
         "tooltip": "+10% stamina recovery, +15% Speed",
-        "stats": { "stamina": 10 },
-        "config": { "PLAYER_SPEED": 1.15, "ZOMBIE_MAX_CHUNK": 2 }
+        "stats": {
+          "stamina": 10
+        },
+        "config": {
+          "PLAYER_SPEED": 1.15,
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "strong": {
         "name": "Strong",
         "cost": 4,
         "tooltip": "+1 Level and +25% XP on Strength | +1 Level and +10% XP on Fitness",
-        "disable": ["fit", "weak"],
+        "disable": [
+          "fit",
+          "weak"
+        ],
         "attributes": {
           "strength": 25,
           "fitness": 10,
-          "level": { "strength": 1, "fitness": 1 }
+          "level": {
+            "strength": 1,
+            "fitness": 1
+          }
         },
-        "config": { "ZOMBIE_MAX_CHUNK": 4 }
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 4
+        }
       },
       "luck": {
         "name": "Luck",
@@ -121,9 +273,13 @@
         "tooltip": "+1 Level and +25% XP on Luck",
         "attributes": {
           "lucky": 25,
-          "level": { "lucky": 1 }
+          "level": {
+            "lucky": 1
+          }
         },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "light_hands": {
         "name": "Light Hands",
@@ -131,44 +287,69 @@
         "tooltip": "+25% XP and +2 level Agility",
         "attributes": {
           "agility": 25,
-          "level": { "agility": 2 }
+          "level": {
+            "agility": 2
+          }
         },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "eagle_eyed": {
         "name": "Eagle Eyed",
         "cost": 2,
         "tooltip": "+25% Vision Radius",
-        "disable": ["myopia"],
-        "config": { "BASE_PLAYER_VIEW_RADIUS": 1.25, "ZOMBIE_MAX_CHUNK": 4 }
+        "disable": [
+          "myopia"
+        ],
+        "config": {
+          "BASE_PLAYER_VIEW_RADIUS": 1.25,
+          "ZOMBIE_MAX_CHUNK": 4
+        }
       },
       "healthy": {
         "name": "Healthy",
         "cost": 3,
         "tooltip": "-15% Damage taken",
-        "stats": { "health": 15 },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "stats": {
+          "health": 15
+        },
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "rested": {
         "name": "Rested",
         "cost": 2,
         "tooltip": "+15% stamina recovery",
-        "stats": { "stamina": 15 },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "stats": {
+          "stamina": 15
+        },
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "camel": {
         "name": "Camel",
         "cost": 2,
         "tooltip": "20% slower water decay",
-        "stats": { "water": 20 },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "stats": {
+          "water": 20
+        },
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "iron_stomach": {
         "name": "Iron Stomach",
         "cost": 2,
         "tooltip": "15% slower food decay",
-        "stats": { "food": 15 },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "stats": {
+          "food": 15
+        },
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "fit": {
         "name": "Fit",
@@ -176,9 +357,13 @@
         "tooltip": "+1 Level and +25% XP Fitness",
         "attributes": {
           "fitness": 25,
-          "level": { "fitness": 1 }
+          "level": {
+            "fitness": 1
+          }
         },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "brawler": {
         "name": "Brawler",
@@ -186,9 +371,13 @@
         "tooltip": "+1 Level and +25% XP Melee",
         "attributes": {
           "melee": 25,
-          "level": { "melee": 1 }
+          "level": {
+            "melee": 1
+          }
         },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "shooter": {
         "name": "Shooter",
@@ -196,100 +385,165 @@
         "tooltip": "+1 Level and +25% XP on Ranged Weapons",
         "attributes": {
           "ranged": 25,
-          "level": { "ranged": 1 }
+          "level": {
+            "ranged": 1
+          }
         },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "weak": {
         "name": "Weak",
         "cost": -3,
         "tooltip": "-25% XP Strength gain, -4 Level Strength",
-        "disable": ["strong"],
+        "disable": [
+          "strong"
+        ],
         "attributes": {
           "strength": -25,
-          "level": { "strength": -4 }
+          "level": {
+            "strength": -4
+          }
         },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "smoker": {
         "name": "Smoker",
         "cost": -2,
         "tooltip": "-15% slower recovery stamina and +15% faster increase anxiety",
-        "stats": { "stamina": -15, "anxiety": 15 },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "stats": {
+          "stamina": -15,
+          "anxiety": 15
+        },
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "drunk": {
         "name": "Drunk",
         "cost": -2,
         "tooltip": "-15% XP Agility penalty and +15% faster increase anxiety",
-        "attributes": { "agility": -15 },
-        "stats": { "anxiety": 15 },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "attributes": {
+          "agility": -15
+        },
+        "stats": {
+          "anxiety": 15
+        },
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "illness": {
         "name": "Illness",
         "cost": -3,
         "tooltip": "+20% infection rate",
-        "stats": { "infection": 20 },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "stats": {
+          "infection": 20
+        },
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "sedentary": {
         "name": "Sedentary",
         "cost": -4,
         "tooltip": "-30% stamina, -10% Speed",
-        "stats": { "stamina": -30 },
-        "config": { "PLAYER_SPEED": 0.9, "ZOMBIE_MAX_CHUNK": 2 }
+        "stats": {
+          "stamina": -30
+        },
+        "config": {
+          "PLAYER_SPEED": 0.9,
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "myopia": {
         "name": "Myopia",
         "cost": -2,
         "tooltip": "-20% Aiming XP, -35% View Radius",
-        "disable": ["eagle_eyed"],
-        "attributes": { "ranged": -20 },
-        "config": { "BASE_PLAYER_VIEW_RADIUS": 0.65, "ZOMBIE_MAX_CHUNK": 2 }
+        "disable": [
+          "eagle_eyed"
+        ],
+        "attributes": {
+          "ranged": -20
+        },
+        "config": {
+          "BASE_PLAYER_VIEW_RADIUS": 0.65,
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "frail": {
         "name": "Frail",
         "cost": -3,
         "tooltip": "+15% Damage taken",
-        "stats": { "health": -15 },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "stats": {
+          "health": -15
+        },
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "sleepy": {
         "name": "Sleepy",
         "cost": -2,
         "tooltip": "-20% stamina recovery",
-        "stats": { "stamina": -20 },
-        "config": { "ZOMBIE_MAX_CHUNK": 4 }
+        "stats": {
+          "stamina": -20
+        },
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 4
+        }
       },
       "high_thirst": {
         "name": "High Thirst",
         "cost": -2,
         "tooltip": "-25% water recovery",
-        "stats": { "water": -25 },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "stats": {
+          "water": -25
+        },
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "sweet_tooth": {
         "name": "Sweet Tooth",
         "cost": -2,
         "tooltip": "-20% food recovery",
-        "stats": { "food": -20 },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "stats": {
+          "food": -20
+        },
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "unfit": {
         "name": "Unfit",
         "cost": -3,
         "tooltip": "-25% XP Fitness level",
-        "disable": ["fit", "athletic"],
-        "attributes": { "fitness": -25 },
-        "config": { "ZOMBIE_MAX_CHUNK": 2 }
+        "disable": [
+          "fit",
+          "athletic"
+        ],
+        "attributes": {
+          "fitness": -25
+        },
+        "config": {
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       },
       "clumsy": {
         "name": "Clumsy",
         "cost": -3,
         "tooltip": "-25% XP Melee level, -5% Speed",
-        "attributes": { "melee": -25 },
-        "config": { "PLAYER_SPEED": 0.95, "ZOMBIE_MAX_CHUNK": 2 }
+        "attributes": {
+          "melee": -25
+        },
+        "config": {
+          "PLAYER_SPEED": 0.95,
+          "ZOMBIE_MAX_CHUNK": 2
+        }
       }
     }
   }

@@ -7,12 +7,27 @@
       "spawn_zombies_multiplier": 1,
       "name": "RANDOM",
       "sex": "RANDOM",
-      "xp": { "min": 1, "max": 15 },
+      "xp": {
+        "min": 1,
+        "max": 15
+      },
       "stats": {
-        "health": { "min": 50, "max": 80 },
-        "speed": { "min": 1, "max": 1 },
-        "attack": { "min": 1, "max": 15 },
-        "infection": { "min": 1, "max": 5 }
+        "health": {
+          "min": 50,
+          "max": 80
+        },
+        "speed": {
+          "min": 1,
+          "max": 1
+        },
+        "attack": {
+          "min": 1,
+          "max": 15
+        },
+        "infection": {
+          "min": 1,
+          "max": 5
+        }
       },
       "clothes": {
         "head": "Beret",
@@ -31,11 +46,26 @@
         "right": "npc_zombie_right.png"
       },
       "loot": [
-        { "item": "Rot Meat", "chance": 1.0 },
-        { "item": "Knife", "chance": 1.0 },
-        { "item": "M4A1", "chance": 0.1 },
-        { "item": "Pistol 9mm", "chance": 0.2 },
-        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.1 }
+        {
+          "item": "Rot Meat",
+          "chance": 1.0
+        },
+        {
+          "item": "Knife",
+          "chance": 1.0
+        },
+        {
+          "item": "M4A1",
+          "chance": 0.1
+        },
+        {
+          "item": "Pistol 9mm",
+          "chance": 0.2
+        },
+        {
+          "item": "Kukaroach (Bit Rot publisher)",
+          "chance": 0.1
+        }
       ],
       "sound": {
         "hit": "npc_hit.ogg",
