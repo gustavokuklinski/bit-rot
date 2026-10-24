@@ -130,23 +130,28 @@ class SpriteEditor:
             self.open_tab_sprite(os.path.join(self.categories[self.active_category], self.files[0]))
 
     def _resolve_categories(self):
-        """Discovers existing sprite categories in the active Mod without creating folders."""
+        """Discovers existing sprite categories. In a Mod, ONLY scans mod sprite folders."""
+        import editor.config as editor_config
         resolved = {}
 
-        # 1. Dynamically discover folders inside the mod's sprite root
-        if os.path.exists(self.sprite_root) and os.path.isdir(self.sprite_root):
-            try:
-                for entry in sorted(os.listdir(self.sprite_root)):
-                    p = os.path.join(self.sprite_root, entry)
-                    if os.path.isdir(p):
-                        resolved[entry.capitalize()] = p
-                # If loose png files exist in the root of mod sprites
-                if any(f.lower().endswith('.png') for f in os.listdir(self.sprite_root) if os.path.isfile(os.path.join(self.sprite_root, f))):
-                    resolved["Root"] = self.sprite_root
-            except OSError: pass
+        # 1. In a Mod: ONLY look through the directories that actually exist in the mod
+        if editor_config.ACTIVE_MOD != "Vanilla":
+            if os.path.exists(self.sprite_root) and os.path.isdir(self.sprite_root):
+                try:
+                    for entry in sorted(os.listdir(self.sprite_root)):
+                        p = os.path.join(self.sprite_root, entry)
+                        if os.path.isdir(p):
+                            resolved[entry.capitalize()] = p
+                    if any(f.lower().endswith('.png') for f in os.listdir(self.sprite_root) if os.path.isfile(os.path.join(self.sprite_root, f))):
+                        resolved["/ (Root)"] = self.sprite_root
+                except OSError: pass
 
-        # 2. Fall back to Vanilla if mod has no sprite folders
-        if not resolved and os.path.exists(self.vanilla_sprite_root):
+            if not resolved:
+                resolved["/ (Root)"] = self.sprite_root
+            return resolved
+
+        # 2. In Vanilla: scan vanilla lib/sprites
+        if os.path.exists(self.vanilla_sprite_root):
             try:
                 for entry in sorted(os.listdir(self.vanilla_sprite_root)):
                     p = os.path.join(self.vanilla_sprite_root, entry)
@@ -155,7 +160,7 @@ class SpriteEditor:
             except OSError: pass
 
         if not resolved:
-            resolved["Items"] = os.path.join(self.sprite_root, "items")
+            resolved["Items"] = os.path.join(self.vanilla_sprite_root, "items")
         return resolved
 
     def reload_for_mod(self, mod_sprites_dir=None):
@@ -167,8 +172,7 @@ class SpriteEditor:
             
         self.categories = self._resolve_categories()
         if self.categories:
-            if self.active_category not in self.categories:
-                self.active_category = list(self.categories.keys())[0]
+            self.active_category = list(self.categories.keys())[0]
             cat_opts = [{"label": c, "value": c} for c in self.categories.keys()]
         else:
             self.active_category = ""
@@ -177,9 +181,10 @@ class SpriteEditor:
         self.category_dropdown.options = cat_opts
         self.category_dropdown.selected_value = self.active_category
         self.category_dropdown._update_label()
+        self.search_input.text = ""
         self.sidebar_scroll = 0
         self.refresh_file_list()
-        
+
     def resize(self, width, height):
         self.width = width
         self.height = height

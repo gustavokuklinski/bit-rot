@@ -499,44 +499,66 @@ class EntityEditor:
             self.open_tab_file(first_row["rel_path"])
 
     def _resolve_categories(self):
-        """Dynamically scans existing data directories without creating any folders."""
+        """Dynamically scans existing data directories. In a Mod, ONLY scans mod folders."""
+        import editor.config as editor_config
         base_data = get_data_dir()
         vanilla_data = os.path.join(LIB_ROOT, 'data')
-
-        known = {
-            "Zombie": "zombie", "NPC": "npc", "Animal": "animals",
-            "Player": "player", "Vehicle": "vehicle", "Clothes": "clothes",
-            "Radio": "radio", "Items": "items", "Map": "map"
-        }
         cats = {}
 
-        # 1. Discover whatever actually exists in active mod
-        if os.path.exists(base_data):
-            try:
-                for entry in sorted(os.listdir(base_data)):
-                    full_p = os.path.join(base_data, entry)
-                    if os.path.isdir(full_p):
-                        matched = next((k for k, v in known.items() if v == entry.lower() or k.lower() == entry.lower()), entry.capitalize())
-                        cats[matched] = full_p
-            except OSError: pass
+        # 1. In a Mod: ONLY look through the directories that actually exist in the mod
+        if editor_config.ACTIVE_MOD != "Vanilla":
+            if os.path.exists(base_data) and os.path.isdir(base_data):
+                try:
+                    for entry in sorted(os.listdir(base_data)):
+                        full_p = os.path.join(base_data, entry)
+                        if os.path.isdir(full_p):
+                            cats[entry.capitalize()] = full_p
+                    
+                    # If loose entity files exist at the root of data/
+                    root_files = [f for f in os.listdir(base_data) 
+                                  if os.path.isfile(os.path.join(base_data, f)) and f.endswith(('.xml', '.json'))]
+                    if root_files:
+                        cats["/ (Root)"] = base_data
+                except OSError:
+                    pass
 
-        # 2. Add remaining known categories pointing to mod or vanilla
-        for label, folder in known.items():
-            if label not in cats:
-                mod_sub = os.path.join(base_data, folder)
-                vanilla_sub = os.path.join(vanilla_data, folder)
-                cats[label] = mod_sub if os.path.exists(mod_sub) else (vanilla_sub if os.path.exists(vanilla_sub) else mod_sub)
+            # If mod data folder has no subfolders yet, provide Root pointing to mod data
+            if not cats:
+                cats["/ (Root)"] = base_data
+            return cats
+
+        # 2. In Vanilla: scan vanilla lib/data
+        if os.path.exists(vanilla_data) and os.path.isdir(vanilla_data):
+            try:
+                for entry in sorted(os.listdir(vanilla_data)):
+                    full_p = os.path.join(vanilla_data, entry)
+                    if os.path.isdir(full_p):
+                        cats[entry.capitalize()] = full_p
+            except OSError:
+                pass
+
+        if not cats:
+            cats["Zombie"] = os.path.join(vanilla_data, "zombie")
         return cats
 
     def reload_for_mod(self, all_sprites):
-        """Called when active mod changes to refresh sprites, options, and file paths."""
+        """Called when active mod changes to refresh sprites, options, and folder dropdown."""
         self.all_sprites = all_sprites
         self.categories = self._resolve_categories()
-        if self.active_category not in self.categories:
-            self.active_category = list(self.categories.keys())[0] if self.categories else "Zombie"
-        self.category_dropdown.options = [{"label": c, "value": c} for c in self.categories.keys()]
+        
+        # Pick first available category in mod
+        if self.categories:
+            self.active_category = list(self.categories.keys())[0]
+            cat_opts = [{"label": c, "value": c} for c in self.categories.keys()]
+        else:
+            self.active_category = ""
+            cat_opts = [{"label": "None", "value": ""}]
+
+        self.category_dropdown.options = cat_opts
         self.category_dropdown.selected_value = self.active_category
         self.category_dropdown._update_label()
+        self.search_input.text = ""
+        self.folder_expanded.clear()
         self._build_options()
         self.refresh_file_list()
 
@@ -598,8 +620,10 @@ class EntityEditor:
         self.tree_structure = []
         if not cat_dir or not os.path.exists(cat_dir): return
 
-        try: entries = sorted(os.listdir(cat_dir), key=str.lower)
-        except OSError: return
+        try:
+            entries = sorted(os.listdir(cat_dir), key=str.lower)
+        except OSError:
+            return
 
         for f in entries:
             fp = os.path.join(cat_dir, f)
@@ -610,8 +634,10 @@ class EntityEditor:
         for s in subfolders:
             sub_path = os.path.join(cat_dir, s)
             sub_files = []
-            try: sub_entries = sorted(os.listdir(sub_path), key=str.lower)
-            except OSError: sub_entries = []
+            try:
+                sub_entries = sorted(os.listdir(sub_path), key=str.lower)
+            except OSError:
+                sub_entries = []
             for f in sub_entries:
                 if f.endswith('.xml') or f.endswith('.json'):
                     sub_files.append({"type": "file", "name": f, "subfolder": s, "rel_path": f"{s}/{f}"})
