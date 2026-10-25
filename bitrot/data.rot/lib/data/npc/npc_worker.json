@@ -1,6 +1,6 @@
 {
   "npcs": {
-    "static": {
+    "worker": {
       "spawn_weight": 55,
       "is_friendly": true,
       "is_static": true,

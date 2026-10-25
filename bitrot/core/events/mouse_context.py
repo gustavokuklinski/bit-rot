@@ -257,7 +257,8 @@ def handle_right_click(game, mouse_pos):
 
         if not clicked_item:
             for npc in game.npcs:
-                if npc.rect.collidepoint(world_pos) and npc.is_friendly and npc.aggro_timer <= 0:
+                # Context menu strictly on static friendly NPCs
+                if npc.rect.collidepoint(world_pos) and getattr(npc, 'is_static', False) and npc.is_friendly and npc.aggro_timer <= 0:
                     clicked_item = npc
                     click_source = 'npc'
                     click_index = 0
@@ -357,14 +358,17 @@ def handle_right_click(game, mouse_pos):
             dx = game.player.rect.centerx - clicked_item.rect.centerx
             dy = game.player.rect.centery - clicked_item.rect.centery
             dist_sq = dx*dx + dy*dy
-            max_dist_px = TILE_SIZE * 3
+            # FIX: Use 2.5 tiles (40px) so standing adjacent properly allows interaction
+            max_dist_px = TILE_SIZE * 2.5
             if dist_sq <= max_dist_px ** 2:
-                if clicked_item.is_friendly and clicked_item.aggro_timer <= 0:
+                if getattr(clicked_item, 'is_static', False) and clicked_item.is_friendly and clicked_item.aggro_timer <= 0:
                     options.append('Talk')
+                    options.append('Save')
+                    game.context_menu['tooltips']['Save'] = tr('ui', "Rescue survivor: requires Fuel, Charm, or both.")
                     if hasattr(clicked_item, 'stop_moving'):
                         clicked_item.stop_moving()
             else:
-                display_message(tr('msg', "Too far to talk to them."))
+                display_message(tr('msg', "Too far to interact with them."))
 
         elif click_source == 'map_tile':
             options = []
@@ -431,8 +435,8 @@ def handle_right_click(game, mouse_pos):
 
                 for (cgx, cgy) in sorted(list(active_chunks)):
                     sub_key = f"{cgx}_{cgy}"
-                    if (cgx, cgy) == military_chunk: continue
-                    if (cgx, cgy) == lobby_chunk: continue
+                    if military_chunk and (cgx, cgy) == military_chunk: continue
+                    if lobby_chunk and (cgx, cgy) == lobby_chunk: continue
                     if (cgx, cgy) == (cur_gx, cur_gy): continue
                     if sub_key not in owned_maps: continue
 
@@ -449,7 +453,33 @@ def handle_right_click(game, mouse_pos):
                         f"{tr('ui', 'Available fuel:')} {player_fuel}"
                     )
 
-                if not sub_opts:
+                options = []
+                if sub_opts:
+                    options.append({
+                        'label': 'Travel to', 
+                        'sub': sub_opts, 
+                        'display_names': display_map,
+                        'icons': icon_map,
+                        'extra_texts': extra_text_map,
+                        'extra_colors': extra_color_map,
+                        'tooltips': tooltip_map,
+                        'extra_text_map': extra_text_map,
+                        'extra_color_map': extra_color_map,
+                        'tooltip_map': tooltip_map
+                    })
+
+                # Option: Discovery island (Requires Lobby enabled, fixed 100 fuel price)
+                lobby_enabled = getattr(core.data.config, 'SPAWN_LOBBY_CHUNK', True)
+                if lobby_enabled:
+                    options.append('Discovery island')
+                    game.context_menu['tooltips']['Discovery island'] = (
+                        f"{tr('ui', 'Discover a new island.')}\n"
+                        f"{tr('ui', 'Fixed cost:')} 100 {tr('item', 'Fuel Unit')}\n"
+                        f"{tr('ui', 'Available fuel:')} {player_fuel}"
+                    )
+
+                # Only return if neither destinations nor Discovery island are available
+                if not options:
                     display_message(tr('msg', "You need Cartography maps to navigate further."))
                     game.context_menu['active'] = False
                     return
@@ -582,7 +612,7 @@ def handle_right_click(game, mouse_pos):
         )
         is_player_item = is_in_inv_or_gear_modal or is_nested_in_player
 
-        if click_source in ('map_tile', 'light_source', 'player_self', 'vehicle_equipment', 'vehicle_slot'):
+        if click_source in ('map_tile', 'light_source', 'player_self', 'vehicle_equipment', 'vehicle_slot', 'npc'):
             pass
 
         elif getattr(clicked_item, 'item_type', '') == 'vehicle':

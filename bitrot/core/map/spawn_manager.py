@@ -387,12 +387,7 @@ def manage_dynamic_npcs(game):
         layer_num = int(match.group(1))
         curr_coord = (int(match.group(2)), int(match.group(3)))
         if curr_coord == getattr(game.generator, 'lobby_chunk', None) and layer_num == 1:
-            # Watchdog: prune any unexpected excess NPCs back to strictly 3 on Layer 1 ONLY
-            if len(game.npcs) > 3:
-                keep = list(game.npcs)[:3]
-                game.npcs.empty()
-                for n in keep:
-                    game.npcs.add(n)
+            # FIX: Do NOT delete rescued NPCs in the Lobby!
             return
     
     max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)

@@ -1202,7 +1202,7 @@ def load_game(game, save_folder_name):
                     unique_lobby_npcs = []
                     for n in list(game.npcs):
                         pos = (n.rect.x, n.rect.y)
-                        if pos not in seen_positions and len(unique_lobby_npcs) < 3:
+                        if pos not in seen_positions:
                             seen_positions.add(pos)
                             unique_lobby_npcs.append(n)
                     game.npcs.empty()

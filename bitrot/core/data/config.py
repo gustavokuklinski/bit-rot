@@ -129,9 +129,13 @@ VEH_HAS_KEY = 0.25
 VEH_HAS_MOTOR = 1.0
 VEH_HAS_BATTERY = 0.75
 VEH_HAS_TIRES = 1.0
+
 MAP_CHUNKS = 2
 CHUNK_SIZE = 128
 WORLD_SEED = ""
+SPAWN_LOBBY_CHUNK = True
+SPAWN_MILITARY_CHUNK = True
+
 ANIMAL_MAX_CHUNK = 6
 ANIMAL_SPAWN_COUNT = 6
 ANIMALS_PER_SPAWN = 3
@@ -283,7 +287,7 @@ def load_settings(world_preset="world"):
     global NPC_DAMAGE_MULTIPLIER, NPC_SPEED_MULTIPLIER, NPC_DETECTION_RADIUS, NPC_STATIC_PERCENT, NPC_HOSTILE_PERCENT
     global MAX_VEH_CHUNK, VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY, VEH_HAS_TIRES
     global NPC_MAX_CHUNK, NPCS_PER_SPAWN, NPC_RESPAWN, ZOMBIE_MAX_CHUNK, BASE_ZOMBIE_MAX_CHUNK
-    global MAP_CHUNKS, CHUNK_SIZE, WORLD_SEED
+    global MAP_CHUNKS, CHUNK_SIZE, WORLD_SEED, SPAWN_LOBBY_CHUNK, SPAWN_MILITARY_CHUNK
     global UI_BACKGROUND_MUSIC, UI_SHOW_TUTORIAL_DEFAULT, RESOLUTION, WINDOW_MODE
     global UI_CRT_FILTER, CRT_FILTER
     global ANIMAL_MAX_CHUNK, ANIMALS_PER_SPAWN, ANIMAL_RESPAWN, ANIMAL_SPAWN_COUNT
@@ -389,6 +393,15 @@ def load_settings(world_preset="world"):
                 MAP_CHUNKS = int(_get_val(map_config, ['map_chunks', 'chunks'], 3))
                 CHUNK_SIZE = int(_get_val(map_config, ['chunk_size', 'size'], 128))
                 WORLD_SEED = str(_get_val(map_config, ['seed', 'world_seed'], ''))
+
+                # Check both map and game sections for chunk generation flags
+                lobby_gen_val = _get_val(map_config, ['lobby_chunk', 'spawn_lobby_chunk'],
+                                _get_val(game_config, ['lobby_chunk', 'spawn_lobby_chunk'], True))
+                SPAWN_LOBBY_CHUNK = str(lobby_gen_val).lower() == 'true'
+
+                mil_gen_val = _get_val(map_config, ['military_chunk', 'spawn_military_chunk'],
+                            _get_val(game_config, ['military_chunk', 'spawn_military_chunk'], True))
+                SPAWN_MILITARY_CHUNK = str(mil_gen_val).lower() == 'true'
 
             player_config = root.get('player', {})
             if player_config:

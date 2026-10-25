@@ -312,6 +312,9 @@ class ModManager:
                             if not os.path.isfile(full_m_path):
                                 continue
 
+                            if m_file.lower() == 'config.json':
+                                continue
+
                             belongs = False
                             if m_file.endswith('.xml'):
                                 try:

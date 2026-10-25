@@ -179,6 +179,10 @@ class TileManager:
                                                 entry['type'] = item_node.get('type')
                                                 entry['min'] = int(item_node.get('min', '1'))
                                                 entry['max'] = int(item_node.get('max', '1'))
+                                                # Capture the target slot/id if defined
+                                                id_val = item_node.get('id') or item_node.get('slot')
+                                                if id_val:
+                                                    entry['id'] = id_val
                                             elif item_node.get('item'):
                                                 entry['item'] = item_node.get('item')
                                             definition['loot'].append(entry)
@@ -196,6 +200,10 @@ class TileManager:
                                                 entry['type'] = item_node.get('type')
                                                 entry['min'] = int(item_node.get('min', '1'))
                                                 entry['max'] = int(item_node.get('max', '1'))
+                                                # Capture the target slot/id if defined
+                                                id_val = item_node.get('id') or item_node.get('slot')
+                                                if id_val:
+                                                    entry['id'] = id_val
                                             elif item_node.get('item'):
                                                 entry['item'] = item_node.get('item')
                                             definition['loot'].append(entry)

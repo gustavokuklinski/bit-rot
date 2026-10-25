@@ -161,15 +161,13 @@ def run_playing(game):
         radius_mult *= health_ratio
 
         # --- ALCOHOL VIEW RADIUS REDUCTION ---
-        # More alcohol = smaller view radius (tunnel vision).
-        # Gradually restores as alcohol_level decays over time.
         alcohol = getattr(game.player, 'drugs', 0.0)
         if alcohol >= 30.0:
             alcohol_factor = max(0.20, 1.0 - ((alcohol - 30.0) * 0.01))
             radius_mult *= alcohol_factor
 
         game.player_view_radius = max(TILE_SIZE * 2, base_radius * radius_mult)
-    
+
     game.npc_spawn_timer += 1
     if game.npc_spawn_timer >= 30:
         manage_dynamic_npcs(game)

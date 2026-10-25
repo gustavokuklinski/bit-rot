@@ -69,10 +69,18 @@ class VehicleData:
                     loot_node = root.find('loot')
                     if loot_node is not None:
                         for item in loot_node.findall('item'):
-                            loot_table.append({
-                                'item': item.get('item'),
+                            loot_entry = {
                                 'chance': float(item.get('chance', 0.0))
-                            })
+                            }
+                            if item.get('type'):
+                                loot_entry['type'] = item.get('type')
+                                loot_entry['min'] = int(item.get('min', 1))
+                                loot_entry['max'] = int(item.get('max', 1))
+                            if item.get('id') or item.get('slot'):
+                                loot_entry['id'] = item.get('id') or item.get('slot')
+                            if item.get('item'):
+                                loot_entry['item'] = item.get('item')
+                            loot_table.append(loot_entry)
 
                     sounds = {}
                     sound_node = root.find('sound')

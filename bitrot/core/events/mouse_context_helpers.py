@@ -131,15 +131,21 @@ def calculate_boat_fuel_cost(game, dest_gx, dest_gy):
     gen = getattr(game, 'generator', None)
     lobby_chunk = getattr(gen, 'lobby_chunk', None) if gen else None
 
+    base_cost = 5
     if lobby_chunk and (dest_gx, dest_gy) == lobby_chunk:
         cur_map = getattr(game.map_manager, 'current_map_filename', '')
         match = re.match(r'map_L\d+_(\d+)_(\d+)_map\.csv', cur_map)
         if match:
             cur_gx, cur_gy = int(match.group(1)), int(match.group(2))
-            return max(5, (abs(cur_gx) + abs(cur_gy)) * 5)
-        return 5
+            base_cost = max(5, (abs(cur_gx) + abs(cur_gy)) * 5)
+    else:
+        base_cost = max(5, (abs(dest_gx) + abs(dest_gy)) * 5)
 
-    return max(5, (abs(dest_gx) + abs(dest_gy)) * 5)
+    # Apply 50% rescue discount if unlocked
+    discount = getattr(game, 'boat_fuel_discount', 1.0)
+    return max(1, int(base_cost * discount))
+
+
 
 def is_barricade_item(it):
     if not it:

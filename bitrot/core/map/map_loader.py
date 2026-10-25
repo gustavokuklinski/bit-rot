@@ -102,11 +102,39 @@ def _generate_container_items(tile_def, game=None):
             if 'type' in loot_entry:
                 matching_items = []
                 matching_weights = []
-                
+                target_type = str(loot_entry.get('type', '')).lower().strip()
+                target_id = str(loot_entry.get('id', loot_entry.get('slot', ''))).lower().strip()
+
+                def _normalize_slot(s):
+                    if not s:
+                        return ''
+                    s_low = str(s).lower().strip()
+                    if s_low in ('hand', 'hands'): return 'hands'
+                    if s_low in ('foot', 'feet', 'shoe', 'shoes', 'sneakers', 'boots'): return 'feet'
+                    if s_low in ('leg', 'legs', 'pant', 'pants', 'jeans'): return 'legs'
+                    if s_low in ('arm', 'arms', 'jacket'): return 'arms'
+                    if s_low in ('face', 'facial', 'mask'): return 'facial'
+                    if s_low in ('head', 'hat', 'cap', 'helmet', 'beanie'): return 'head'
+                    if s_low in ('body', 'torso', 'tshirt', 'shirt'): return 'body'
+                    if s_low in ('util', 'util1', 'util2', 'util3'): return 'util'
+                    return s_low
+
                 # Fetch all items matching the category type and enforce spawn_chance > 0 OR liquid bypass
                 for n, d in ITEM_TEMPLATES.items():
-                    if d.get('type') == loot_entry['type'] and not n.endswith(' on'):
-                        spawn_chance = d.get('spawn_chance', 1.0)
+                    itype = str(d.get('type', '')).lower().strip()
+                    if itype == target_type and not n.endswith(' on') and not n.startswith('Empty '):
+                        # If a slot/id filter is specified (e.g. id="hands"), enforce matching
+                        if target_id:
+                            props = d.get('properties', {})
+                            slot = props.get('slot', {}).get('value') if isinstance(props.get('slot'), dict) else props.get('slot')
+                            if not slot:
+                                slot = d.get('slot') or d.get('id')
+                            slot_str = str(slot).lower().strip() if slot else ''
+
+                            if slot_str != target_id and _normalize_slot(slot_str) != _normalize_slot(target_id):
+                                continue
+
+                        spawn_chance = float(d.get('spawn_chance', 1.0))
                         if spawn_chance > 0 or is_liquid_source:
                             matching_items.append(n)
                             # If it's a forced spawn (0%) via liquid source, assign it a generic weight of 1.0

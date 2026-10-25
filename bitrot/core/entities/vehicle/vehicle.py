@@ -244,7 +244,33 @@ class Vehicle:
                     min_qty = entry.get('min', 1)
                     max_qty = entry.get('max', 1)
                     qty = random.randint(min_qty, max_qty)
-                    matching_items = [n for n, d in ITEM_TEMPLATES.items() if d.get('type') == entry['type']]
+                    target_type = str(entry['type']).lower().strip()
+                    target_id = str(entry.get('id', entry.get('slot', ''))).lower().strip()
+
+                    def _norm(s):
+                        if s in ('hand', 'hands'): return 'hands'
+                        if s in ('foot', 'feet'): return 'feet'
+                        if s in ('leg', 'legs'): return 'legs'
+                        if s in ('arm', 'arms'): return 'arms'
+                        if s in ('face', 'facial'): return 'facial'
+                        if s in ('head', 'hat', 'cap', 'helmet'): return 'head'
+                        if s in ('body', 'torso', 'tshirt'): return 'body'
+                        if s in ('util', 'util1', 'util2', 'util3'): return 'util'
+                        return s
+
+                    matching_items = []
+                    for n, d in ITEM_TEMPLATES.items():
+                        if str(d.get('type', '')).lower().strip() == target_type and not n.endswith(' on') and not n.startswith('Empty '):
+                            if target_id:
+                                props = d.get('properties', {})
+                                slot = props.get('slot', {}).get('value') if isinstance(props.get('slot'), dict) else props.get('slot')
+                                if not slot:
+                                    slot = d.get('slot') or d.get('id')
+                                slot_str = str(slot).lower().strip() if slot else ''
+                                if slot_str != target_id and _norm(slot_str) != _norm(target_id):
+                                    continue
+                            matching_items.append(n)
+
                     if matching_items:
                         for _ in range(qty):
                             if len(self.inventory) >= self.capacity: break

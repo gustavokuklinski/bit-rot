@@ -333,7 +333,84 @@ def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
         if (dx * dx + dy * dy) <= view_radius_sq:
             pygame.draw.rect(surface, YELLOW, game.hovered_container.rect.move(offset_x, offset_y), 1)
 
-    # (Hover borders for NPC, Zombie, and Animal have been removed)
+    # --- FOCUS BORDER & HIT TIMER FOR ZOMBIES AND STATIC NPCS ---
+    is_over_ui = game.context_menu.get('active', False) or any(
+        m.get('rect') and m['rect'].collidepoint(game._get_scaled_mouse_pos()) for m in getattr(game, 'modals', [])
+    )
+
+    focused_entity = None
+    if not is_over_ui and getattr(game, 'player', None):
+        curr_layer = getattr(game, 'current_layer_index', 1)
+
+        # 1. Check Zombies
+        for z in getattr(game, 'active_zombies', game.zombies):
+            if getattr(z, 'is_dead', False) or getattr(z, 'health', 0) <= 0 or getattr(z, 'type', '') == 'animal':
+                continue
+            if getattr(z, 'layer', 1) != curr_layer:
+                continue
+            if z.rect.collidepoint(world_mouse_pos):
+                dx = z.rect.centerx - game.player.rect.centerx
+                dy = z.rect.centery - game.player.rect.centery
+                if (dx * dx + dy * dy) <= view_radius_sq:
+                    focused_entity = z
+                    break
+
+        # 2. Check Static NPCs
+        if not focused_entity:
+            for n in getattr(game, 'npcs', []):
+                if getattr(n, 'is_dead', False) or getattr(n, 'health', 0) <= 0 or not getattr(n, 'is_static', False):
+                    continue
+                if getattr(n, 'layer', 1) != curr_layer:
+                    continue
+                if n.rect.collidepoint(world_mouse_pos):
+                    dx = n.rect.centerx - game.player.rect.centerx
+                    dy = n.rect.centery - game.player.rect.centery
+                    if (dx * dx + dy * dy) <= view_radius_sq:
+                        focused_entity = n
+                        break
+
+    if focused_entity:
+        p_cx = game.player.rect.centerx
+        p_cy = game.player.rect.centery
+        e_cx = focused_entity.rect.centerx
+        e_cy = focused_entity.rect.centery
+        dist = math.hypot(e_cx - p_cx, e_cy - p_cy)
+
+        # Determine thresholds based on weapon type
+        weapon = getattr(game.player, 'active_weapon', None)
+        is_ranged = (weapon and getattr(weapon, 'item_type', '') == 'weapon_ranged')
+        if is_ranged:
+            close_dist = TILE_SIZE * 4.0
+            mid_dist = TILE_SIZE * 8.0
+        else:
+            close_dist = TILE_SIZE * 1.8
+            mid_dist = TILE_SIZE * 3.2
+
+        if dist <= close_dist:
+            border_color = (50, 255, 50)    # Green: Close / nice hit
+        elif dist <= mid_dist:
+            border_color = (255, 165, 0)   # Orange: Middle hit
+        else:
+            border_color = (255, 50, 50)   # Red: Out of aim
+
+        draw_rect = focused_entity.rect.inflate(-2, -2).move(offset_x, offset_y)
+        bracket_len = 4
+
+        # Tactical corner brackets (Instant, no loading/timer)
+        # Top-Left
+        pygame.draw.line(surface, border_color, (draw_rect.left, draw_rect.top), (draw_rect.left + bracket_len, draw_rect.top), 1)
+        pygame.draw.line(surface, border_color, (draw_rect.left, draw_rect.top), (draw_rect.left, draw_rect.top + bracket_len), 1)
+        # Top-Right
+        pygame.draw.line(surface, border_color, (draw_rect.right, draw_rect.top), (draw_rect.right - bracket_len, draw_rect.top), 1)
+        pygame.draw.line(surface, border_color, (draw_rect.right, draw_rect.top), (draw_rect.right, draw_rect.top + bracket_len), 1)
+        # Bottom-Left
+        pygame.draw.line(surface, border_color, (draw_rect.left, draw_rect.bottom), (draw_rect.left + bracket_len, draw_rect.bottom), 1)
+        pygame.draw.line(surface, border_color, (draw_rect.left, draw_rect.bottom), (draw_rect.left, draw_rect.bottom - bracket_len), 1)
+        # Bottom-Right
+        pygame.draw.line(surface, border_color, (draw_rect.right, draw_rect.bottom), (draw_rect.right - bracket_len, draw_rect.bottom), 1)
+        pygame.draw.line(surface, border_color, (draw_rect.right, draw_rect.bottom), (draw_rect.right, draw_rect.bottom - bracket_len), 1)
+
+    
 
     # Placed safe-radius items (e.g. active campfires / lamps)
     for item in game.visible_items:

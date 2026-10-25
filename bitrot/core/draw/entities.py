@@ -116,9 +116,13 @@ def draw_entities(game, surface, offset_x, offset_y, view_w, view_h, screen_rect
             dist_sq = dx*dx + dy*dy
             dist = math.sqrt(dist_sq)
 
+            # Prevent friendly static NPCs from flickering behind player's back
+            is_static_ally = isinstance(entity, NPC) and getattr(entity, 'is_friendly', False) and getattr(entity, 'is_static', False)
+
             in_vision = True
-            if dist_sq > view_radius_sq: in_vision = False
-            else:
+            if dist_sq > view_radius_sq:
+                in_vision = False
+            elif not is_static_ally:
                 peripheral_radius_world = min(game.player_view_radius * 0.35, 100)
                 if dist > peripheral_radius_world:
                     aim_angle = getattr(game.player, 'aim_angle', 0)
@@ -127,13 +131,17 @@ def draw_entities(game, surface, offset_x, offset_y, view_w, view_h, screen_rect
                     fov = math.radians(min(160, 50 + (game.player_view_radius * 0.1)) + 10)
                     if abs(angle_diff) > fov / 2: in_vision = False
 
-            if not hasattr(entity, 'last_los_draw_check'):
-                entity.last_los_draw_check = random.randint(0, 500) 
+            if is_static_ally and in_vision:
+                target_opacity = 255
                 entity.cached_los_draw_result = True
-            
-            if in_vision and (current_time - entity.last_los_draw_check > 500):
-                entity.last_los_draw_check = current_time
-                entity.cached_los_draw_result = game.player.has_line_of_sight(entity.rect, game.screen_obstacles, game)
+            else:
+                if not hasattr(entity, 'last_los_draw_check'):
+                    entity.last_los_draw_check = random.randint(0, 500) 
+                    entity.cached_los_draw_result = True
+                
+                if in_vision and (current_time - entity.last_los_draw_check > 500):
+                    entity.last_los_draw_check = current_time
+                    entity.cached_los_draw_result = game.player.has_line_of_sight(entity.rect, game.screen_obstacles, game)
 
             target_opacity = 255 if (in_vision and entity.cached_los_draw_result) else (80 if in_vision else 0)
             current_opacity = getattr(entity, 'render_opacity', 0.0)

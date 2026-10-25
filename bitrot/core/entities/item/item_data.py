@@ -291,8 +291,12 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                 if not name:
                     continue
                 
+                cloth_id = root.attrib.get('id')
+
                 template = {
                     'type': root.attrib.get('type'),
+                    'id': cloth_id,
+                    'slot': cloth_id,
                     'properties': {},
                     'consume_time': float(root.attrib.get('consume_time', '1.0'))
                 }
@@ -307,7 +311,7 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                 if hide_cloth_str:
                     template['properties']['hide_cloth'] = [t.strip() for t in hide_cloth_str.replace('[', '').replace(']', '').split(',')]
 
-                template['properties']['slot'] = {'value': root.attrib.get('id')}
+                template['properties']['slot'] = {'value': cloth_id}
                 
                 props_node = root.find('properties')
                 if props_node is not None:

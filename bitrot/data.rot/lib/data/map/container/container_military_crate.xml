@@ -14,24 +14,14 @@
         <item type="sd_card" min="1" max="1" chance="0.15" />
         <item type="car_key" min="1" max="1" chance="0.10"  />
         <item type="map" min="1" max="3" chance="0.50" />
-        <item item="Ammo Canister 556" chance="0.05" />
-        <item item="Ammo Canister 9mm" chance="0.05" />
-        <item item="Ammo Canister 762" chance="0.05" />
-        <item item="Ammo Canister ACP45" chance="0.05" />
-        
-        <item item="MRE" chance="0.50" />
-        <item item="Survivor Kit" chance="0.10" />
-        <item item="Medical Kit" chance="0.25" />
-        <item item="Sewing Kit" chance="0.20" />
-        <item item="Flask" chance="0.30" />
-        <item item="Whiskey Bottle" chance="0.20" />
+        <item type="utility" min="1" max="2" chance="0.10" />
 
         <!-- Clothes -->
-        <item item="Tshirt" chance="0.60" />
-        <item item="Military Pants" chance="0.15" />
-        <item item="Military Tshirt" chance="0.15" />
-        <item item="Military Jacket" chance="0.12" />
-        <item item="Military Boots" chance="0.12" />
-        <item item="Leather Black Gloves" chance="0.20" />
+        <item type="cloth" min="1" max="2" id="head" chance="0.30" />
+        <item type="cloth" min="1" max="2" id="arms" chance="0.30" />
+        <item type="cloth" min="1" max="2" id="util" chance="0.30" />
+        <item type="cloth" min="1" max="2" id="body" chance="0.30" />
+        <item type="cloth" min="1" max="2" id="legs" chance="0.30" />
+        <item type="cloth" min="1" max="2" id="feet" chance="0.30" />
     </loot>
 </map>

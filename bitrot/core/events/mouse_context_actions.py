@@ -70,6 +70,406 @@ def remove_from_source(game, target_item, source, index, container_item=None):
 
     return None
 
+def _get_player_charm(player):
+    """Finds a charm in player inventory, belt, or clothes. Returns (item, container, index, ctype)."""
+    for idx, it in enumerate(player.inventory):
+        if it and getattr(it, 'item_type', '') == 'charm':
+            return it, player.inventory, idx, 'list'
+    for idx, it in enumerate(player.belt):
+        if it and getattr(it, 'item_type', '') == 'charm':
+            return it, player.belt, idx, 'belt'
+    for slot, it in player.clothes.items():
+        if it and getattr(it, 'item_type', '') == 'charm':
+            return it, player.clothes, slot, 'dict'
+    return None, None, None, None
+
+def _consume_player_charm(player):
+    it, cont, idx, ctype = _get_player_charm(player)
+    if not it:
+        return False
+    if ctype == 'list':
+        cont.pop(idx)
+    elif ctype == 'belt':
+        cont[idx] = None
+        it.in_belt = False
+    elif ctype == 'dict':
+        cont[idx] = None
+    return True
+
+def _set_npc_layer(game, npc, new_layer):
+    """Safely updates NPC layer avoiding pygame.sprite.LayeredUpdates setter restriction."""
+    if hasattr(npc, 'groups') and npc.groups():
+        for g in list(npc.groups()):
+            if hasattr(g, 'change_layer'):
+                try:
+                    g.change_layer(npc, new_layer)
+                except Exception:
+                    pass
+    try:
+        npc.layer = new_layer
+    except AttributeError:
+        npc._layer = new_layer
+
+def _teleport_npc_to_lobby(game, npc):
+    gen = getattr(game, 'generator', None)
+    lobby_gx, lobby_gy = getattr(gen, 'lobby_chunk', (0, 0)) if gen else (0, 0)
+    lobby_map = f"map_L1_{lobby_gx}_{lobby_gy}_map.csv"
+    cur_map = getattr(game.map_manager, 'current_map_filename', '')
+
+    if cur_map == lobby_map:
+        _set_npc_layer(game, npc, 1)
+        npc.map_filename = lobby_map
+        npc.is_static = True
+        npc.is_friendly = True
+        npc.is_at_port = False
+        npc.is_at_lobby = True
+        npc.render_opacity = 255.0
+        npc.cached_los_draw_result = True
+        npc.last_los_draw_check = pygame.time.get_ticks()
+
+        spawn_pos = _find_lobby_safe_pos(game, lobby_gx, lobby_gy, lobby_map, npc_to_exclude=npc)
+        npc.rect.topleft = spawn_pos
+        npc.x, npc.y = float(spawn_pos[0]), float(spawn_pos[1])
+        if npc not in game.npcs:
+            game.npcs.add(npc)
+    else:
+        if npc in game.npcs:
+            game.npcs.remove(npc)
+        if hasattr(game, 'active_npcs') and npc in game.active_npcs:
+            try:
+                game.active_npcs.remove(npc)
+            except ValueError:
+                pass
+        npc.kill()
+
+        _set_npc_layer(game, npc, 1)
+        npc.map_filename = lobby_map
+        npc.is_static = True
+        npc.is_friendly = True
+        npc.is_at_port = False
+        npc.is_at_lobby = True
+        npc.render_opacity = 255.0
+        npc.cached_los_draw_result = True
+        npc.last_los_draw_check = pygame.time.get_ticks()
+
+        lobby_npcs = _get_or_create_lobby_npcs(game, lobby_gx, lobby_gy, lobby_map)
+        spawn_pos = _find_lobby_safe_pos(game, lobby_gx, lobby_gy, lobby_map, npc_to_exclude=npc, existing_lobby_npcs=lobby_npcs)
+        npc.rect.topleft = spawn_pos
+        npc.x, npc.y = float(spawn_pos[0]), float(spawn_pos[1])
+        lobby_npcs.append(npc)
+        game.map_states[lobby_map]['npcs'] = lobby_npcs
+
+    if hasattr(game, 'sound_manager'):
+        game.sound_manager.play_sound("notification.ogg", subdir="ui", game=game, base_volume=0.8, is_critical=True)
+
+def _teleport_npc_to_port(game, npc):
+    h = len(game.map_data) if game.map_data else 0
+    w = len(game.map_data[0]) if h > 0 else 0
+
+    boat_pos = None
+    for y in range(h):
+        for x in range(w):
+            b_char = game.map_data[y][x] if y < len(game.map_data) and x < len(game.map_data[y]) else ''
+            g_char = game.ground_data[y][x] if (getattr(game, 'ground_data', None) and y < len(game.ground_data) and x < len(game.ground_data[y])) else ''
+            s_char = game.spawn_data[y][x] if (getattr(game, 'spawn_data', None) and y < len(game.spawn_data) and x < len(game.spawn_data[y])) else ''
+            t_def = game.map_manager.get_tile_at(x, y)
+
+            if (
+                b_char in ('tp_boat', 'teleport_boat') or
+                g_char in ('tp_boat', 'teleport_boat') or
+                s_char in ('tp_boat', 'teleport_boat') or
+                (t_def and (t_def.get('type') == 'maptile_teleport' or 'boat' in str(t_def.get('name', '')).lower()))
+            ):
+                boat_pos = (x * TILE_SIZE, y * TILE_SIZE)
+                break
+        if boat_pos:
+            break
+
+    target_pos = boat_pos if boat_pos else (game.player.rect.centerx, game.player.rect.centery)
+    blocked = list(game.obstacles) + [n.rect for n in game.npcs if n != npc]
+
+    # Find walkable non-water non-obstacle tile near the boat
+    start_gx = target_pos[0] // TILE_SIZE
+    start_gy = target_pos[1] // TILE_SIZE
+    found_spot = None
+    g_data = getattr(game, 'ground_data', None)
+    b_data = getattr(game, 'map_data', None)
+    defs = getattr(game.tile_manager, 'definitions', {}) if hasattr(game, 'tile_manager') else {}
+
+    for r in range(1, 15):
+        for dy in range(-r, r + 1):
+            for dx in range(-r, r + 1):
+                if abs(dx) < r and abs(dy) < r: continue
+                gx = start_gx + dx
+                gy = start_gy + dy
+                if b_data and (0 <= gy < len(b_data) and 0 <= gx < len(b_data[0])):
+                    if g_data and 0 <= gy < len(g_data) and 0 <= gx < len(g_data[0]):
+                        gt = str(g_data[gy][gx]).lower().strip()
+                        if not gt or 'water' in gt or 'petrol' in gt or gt == ' ':
+                            continue
+                    bt = str(b_data[gy][gx]).strip()
+                    if bt in ('@', '#') or 'door' in bt.lower() or 'window' in bt.lower():
+                        continue
+                    if bt in defs and defs[bt].get('is_obstacle', False):
+                        continue
+                    test_rect = pygame.Rect(gx * TILE_SIZE, gy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                    if any(test_rect.colliderect(b) for b in blocked):
+                        continue
+                    found_spot = (gx * TILE_SIZE, gy * TILE_SIZE)
+                    break
+            if found_spot: break
+        if found_spot: break
+
+    if found_spot:
+        npc.rect.topleft = found_spot
+        npc.x, npc.y = float(found_spot[0]), float(found_spot[1])
+
+    npc.is_static = True
+    npc.is_friendly = True
+    npc.is_at_port = True
+    npc.render_opacity = 255.0
+    npc.cached_los_draw_result = True
+    npc.last_los_draw_check = pygame.time.get_ticks()
+
+    if hasattr(game, 'sound_manager'):
+        game.sound_manager.play_sound("notification.ogg", subdir="ui", game=game, base_volume=0.8, is_critical=True)
+
+def _get_or_create_lobby_npcs(game, lobby_gx, lobby_gy, lobby_map):
+    """Ensures existing Lobby NPCs are registered so rescued survivors can anchor to them."""
+    from core.map.map_loader import load_map_from_file
+    from core.entities.npc.npc import NPC
+
+    game.map_states.setdefault(lobby_map, {})
+    if 'npcs' in game.map_states[lobby_map] and game.map_states[lobby_map]['npcs']:
+        return game.map_states[lobby_map]['npcs']
+
+    initial_npcs = []
+    map_folder = game.map_manager.map_folder
+    s_file = os.path.join(map_folder, f"map_L1_{lobby_gx}_{lobby_gy}_spawn.csv")
+
+    if os.path.exists(s_file):
+        s_data = load_map_from_file(s_file)
+        occupied = set()
+        for y, row in enumerate(s_data):
+            for x, char in enumerate(row):
+                if char.strip() == 'FNPC' and len(initial_npcs) < 3:
+                    px, py = x * TILE_SIZE, y * TILE_SIZE
+                    if (px, py) not in occupied:
+                        occupied.add((px, py))
+                        npc = NPC(px, py, game, is_static=True, layer=1)
+                        npc.is_friendly = True
+                        npc.map_filename = lobby_map
+                        initial_npcs.append(npc)
+
+    game.map_states[lobby_map]['npcs'] = initial_npcs
+    return initial_npcs
+
+def _find_lobby_safe_pos(game, lobby_gx, lobby_gy, lobby_map, npc_to_exclude=None, existing_lobby_npcs=None):
+    """Finds an open, walkable floor tile directly next to the current Lobby NPCs, avoiding water and obstacles."""
+    from core.map.map_loader import load_map_from_file
+
+    cur_map = getattr(game.map_manager, 'current_map_filename', '')
+    is_in_lobby = (cur_map == lobby_map)
+
+    if is_in_lobby:
+        b_data = getattr(game, 'map_data', [])
+        g_data = getattr(game, 'ground_data', [])
+        existing_npcs = [n for n in getattr(game, 'npcs', []) if n != npc_to_exclude]
+        obstacles = list(getattr(game, 'obstacles', []))
+    else:
+        map_folder = game.map_manager.map_folder
+        prefix = f"map_L1_{lobby_gx}_{lobby_gy}"
+        b_file = os.path.join(map_folder, f"{prefix}_map.csv")
+        g_file = os.path.join(map_folder, f"{prefix}_ground.csv")
+        b_data = load_map_from_file(b_file) if os.path.exists(b_file) else []
+        g_data = load_map_from_file(g_file) if os.path.exists(g_file) else []
+        existing_npcs = [n for n in (existing_lobby_npcs or []) if n != npc_to_exclude]
+        obstacles = []
+        if b_data and hasattr(game, 'tile_manager'):
+            defs = game.tile_manager.definitions
+            for y, row in enumerate(b_data):
+                for x, char in enumerate(row):
+                    if char in ('@', '#') or (char in defs and defs[char].get('is_obstacle', False)):
+                        obstacles.append(pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+
+    blocked = list(obstacles) + [n.rect for n in existing_npcs]
+
+    # Find the anchor NPC position in the Lobby
+    anchor_gx, anchor_gy = None, None
+    if existing_npcs:
+        anchor_gx = existing_npcs[0].rect.centerx // TILE_SIZE
+        anchor_gy = existing_npcs[0].rect.centery // TILE_SIZE
+    elif not is_in_lobby:
+        map_folder = game.map_manager.map_folder
+        s_file = os.path.join(map_folder, f"map_L1_{lobby_gx}_{lobby_gy}_spawn.csv")
+        if os.path.exists(s_file):
+            s_data = load_map_from_file(s_file)
+            for y, row in enumerate(s_data):
+                for x, char in enumerate(row):
+                    if char.strip() == 'FNPC':
+                        anchor_gx, anchor_gy = x, y
+                        break
+                if anchor_gx is not None:
+                    break
+
+    if anchor_gx is None or anchor_gy is None:
+        anchor_gx, anchor_gy = 60, 60
+
+    # Search expanding rings around the anchor NPC
+    h = len(b_data)
+    w = len(b_data[0]) if h > 0 else 0
+    defs = getattr(game.tile_manager, 'definitions', {}) if hasattr(game, 'tile_manager') else {}
+
+    for r in range(1, 20):
+        for dy in range(-r, r + 1):
+            for dx in range(-r, r + 1):
+                if abs(dx) < r and abs(dy) < r:
+                    continue
+                gx = anchor_gx + dx
+                gy = anchor_gy + dy
+
+                if not (0 <= gy < h and 0 <= gx < w):
+                    continue
+
+                # 1. Strictly avoid water and petrol tiles
+                if g_data and gy < len(g_data) and gx < len(g_data[gy]):
+                    gt = str(g_data[gy][gx]).lower().strip()
+                    if not gt or gt == ' ' or 'water' in gt or 'petrol' in gt:
+                        continue
+
+                # 2. Strictly avoid walls, doors, windows, and obstacles
+                bt = str(b_data[gy][gx]).strip()
+                if bt in ('@', '#') or 'door' in bt.lower() or 'window' in bt.lower():
+                    continue
+                if bt in defs:
+                    t_def = defs[bt]
+                    if t_def.get('is_obstacle', False) or t_def.get('is_statable', False) or t_def.get('is_window', False):
+                        continue
+
+                # 3. Strictly avoid colliding with obstacles or existing NPCs
+                test_rect = pygame.Rect(gx * TILE_SIZE, gy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                if any(test_rect.colliderect(b) for b in blocked):
+                    continue
+
+                return (gx * TILE_SIZE, gy * TILE_SIZE)
+
+    return (anchor_gx * TILE_SIZE, anchor_gy * TILE_SIZE)
+
+
+def _teleport_npc_to_port(game, npc):
+    from core.placement import find_free_tile
+    h = len(game.map_data) if game.map_data else 0
+    w = len(game.map_data[0]) if h > 0 else 0
+
+    boat_pos = None
+    for y in range(h):
+        for x in range(w):
+            b_char = game.map_data[y][x] if y < len(game.map_data) and x < len(game.map_data[y]) else ''
+            g_char = game.ground_data[y][x] if (getattr(game, 'ground_data', None) and y < len(game.ground_data) and x < len(game.ground_data[y])) else ''
+            s_char = game.spawn_data[y][x] if (getattr(game, 'spawn_data', None) and y < len(game.spawn_data) and x < len(game.spawn_data[y])) else ''
+            t_def = game.map_manager.get_tile_at(x, y)
+
+            if (
+                b_char in ('tp_boat', 'teleport_boat') or
+                g_char in ('tp_boat', 'teleport_boat') or
+                s_char in ('tp_boat', 'teleport_boat') or
+                (t_def and (t_def.get('type') == 'maptile_teleport' or 'boat' in str(t_def.get('name', '')).lower()))
+            ):
+                boat_pos = (x * TILE_SIZE, y * TILE_SIZE)
+                break
+        if boat_pos:
+            break
+
+    target_pos = boat_pos if boat_pos else (game.player.rect.centerx, game.player.rect.centery)
+    blocked = list(game.obstacles) + [n.rect for n in game.npcs if n != npc]
+    free_spot = find_free_tile(npc.rect, blocked, initial_pos=target_pos, max_radius=8)
+    if free_spot:
+        npc.rect.topleft = free_spot
+        npc.x, npc.y = float(free_spot[0]), float(free_spot[1])
+
+    npc.is_static = True
+    npc.is_friendly = True
+    npc.is_at_port = True
+    npc.render_opacity = 255.0
+    npc.cached_los_draw_result = True
+    npc.last_los_draw_check = pygame.time.get_ticks()
+
+    if hasattr(game, 'sound_manager'):
+        game.sound_manager.play_sound("notification.ogg", subdir="ui", game=game, base_volume=0.8, is_critical=True)
+
+def handle_npc_save(game, npc):
+    if not getattr(npc, 'is_static', False):
+        display_message(tr('msg', "Only static survivors can be rescued!"))
+        return
+
+    player = game.player
+    from core.events.mouse_context_helpers import (
+        get_player_fuel_units, consume_player_fuel_units, calculate_boat_fuel_cost
+    )
+
+    player_fuel = get_player_fuel_units(player)
+    has_charm = (_get_player_charm(player)[0] is not None)
+
+    gen = getattr(game, 'generator', None)
+    lobby_chunk = getattr(gen, 'lobby_chunk', (0, 0)) if gen else (0, 0)
+    lobby_map = f"map_L1_{lobby_chunk[0]}_{lobby_chunk[1]}_map.csv"
+    cur_map = getattr(game.map_manager, 'current_map_filename', '')
+
+    is_already_at_lobby = getattr(npc, 'is_at_lobby', False) or (cur_map == lobby_map)
+    if is_already_at_lobby:
+        display_message(tr('msg', f"{npc.name} is already safe in the Lobby!"))
+        return
+
+    is_at_port = getattr(npc, 'is_at_port', False)
+
+    # If NPC is already at the Port, both Charm and Fuel are required to send them to the Lobby
+    if is_at_port:
+        if has_charm and player_fuel > 0:
+            _consume_player_charm(player)
+            fuel_cost = calculate_boat_fuel_cost(game, lobby_chunk[0], lobby_chunk[1])
+            fuel_taken = min(player_fuel, fuel_cost)
+            consume_player_fuel_units(player, fuel_taken)
+            _teleport_npc_to_lobby(game, npc)
+            display_message(f"{tr('msg', 'Rescued')} {npc.name} {tr('msg', 'to Lobby! (1 Charm &')} {fuel_taken} {tr('msg', 'Fuel used)')}")
+        elif player_fuel > 0 and not has_charm:
+            display_message(tr('msg', f"{npc.name} is at the Port! Need a Charm and Fuel to rescue to the Lobby."))
+        else:
+            display_message(tr('msg', "Need a Charm and Fuel to rescue survivor from Port to Lobby!"))
+        return
+
+    # In the field:
+    # 1. Charm + Fuel -> Direct rescue to Lobby
+    # 2. Only Charm -> Teleport to Port
+    elif has_charm and player_fuel <= 0:
+        _consume_player_charm(player)
+        _teleport_npc_to_port(game, npc)
+        display_message(f"{tr('msg', 'Evacuated')} {npc.name} {tr('msg', 'to the Port with a Charm!')}")
+
+    # 2. Only Fuel -> Teleport to Port, take all fuel, halve boat price
+    elif player_fuel > 0 and not has_charm:
+        fuel_taken = player_fuel
+        consume_player_fuel_units(player, fuel_taken)
+        game.boat_fuel_discount = 0.5
+        _teleport_npc_to_port(game, npc)
+        display_message(f"{tr('msg', 'Evacuated')} {npc.name} {tr('msg', 'to the Port! (Used all')} {fuel_taken} {tr('msg', 'Fuel. Boat travel is now 50% cheaper!)')}")
+
+    # 3. Only Fuel -> Take ALL fuel, Teleport to Lobby, Make boat travel half price
+    elif player_fuel > 0 and not has_charm:
+        fuel_taken = player_fuel
+        consume_player_fuel_units(player, fuel_taken)
+        game.boat_fuel_discount = 0.5
+        _teleport_npc_to_lobby(game, npc)
+        display_message(f"{tr('msg', 'Rescued')} {npc.name} {tr('msg', 'to Lobby! Used all')} {fuel_taken} {tr('msg', 'Fuel. Boat travel is now 50% cheaper!')}")
+
+
+    # 4. Neither
+    else:
+        display_message(tr('msg', "Rescue requires Fuel (to Port) or Fuel + Charm (to Lobby)!"))
+
+    
+
+
+
 def handle_context_menu_click(game, mouse_pos):
     clicked_on_menu = False
 
@@ -157,6 +557,10 @@ def handle_context_menu_click(game, mouse_pos):
                         'active_dialog_index': -1 
                     }
                     game.modals.append(new_modal)
+                    clicked_on_menu = True
+
+                elif option == 'Save':
+                    handle_npc_save(game, item)
                     clicked_on_menu = True
 
             elif option == 'Equip':

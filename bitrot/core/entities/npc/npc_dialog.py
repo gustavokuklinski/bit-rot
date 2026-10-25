@@ -99,6 +99,8 @@ class NPCDialog:
                             for root_key, nodes in dialog_data.items():
                                 if isinstance(nodes, list):
                                     for node in nodes:
+                                        if not isinstance(node, dict):
+                                            continue
                                         node_id = node.get('id')
                                         options = node.get('options', [])
                                         if node_id and options:
