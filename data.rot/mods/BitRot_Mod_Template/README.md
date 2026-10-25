@@ -22,12 +22,19 @@ Design: [NAME_AI_AG_LLM_ETC]
 
 ## Config your mod:
 Setup where your mod will work.
-- `/data.rot/lib/*` 
+
 ```json
 {
-    "overide_dir":[  # Select folders to overide
-        "/data.rot/lib/*" 
-        ], 
-    "fallack": true  # Complete dir with: data.rot/lib
+    "name": "BitRot_Vanilla", # Mod name
+    "version": "0.0.0.1", # Mod version
+    "author": "Kukaroack", # Mod Author
+    "logo": "./sprites/mod_logo.png", # Mod logo
+    "description": "BitRot Vanilla - Official game mod", # Mod summary
+    "repository": "https://github.com/gustavokuklinski/bit-rot/", # Mod repository
+    "overide_dir":[
+        "./data.rot/lib/*" # Mod work directory
+        ],
+    "editor_config": [], # Empty is all
+    "fallack": true # If false mode will override config instead add to default  
 }
 ```

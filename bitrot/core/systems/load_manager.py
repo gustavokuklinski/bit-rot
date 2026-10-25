@@ -706,7 +706,7 @@ def load_game(game, save_folder_name):
         core.data.config.load_settings(os.path.join(DATA_PATH, "world.json"))
         
     try:
-        host_file = os.path.join(save_path, "host.rot")
+        host_file = os.path.join(save_path, "host.json")
         with open(host_file, "r") as f:
             host_raw = json.load(f)
 
@@ -733,7 +733,7 @@ def load_game(game, save_folder_name):
 
             target_id = alive_id or next(iter(host_players_map.keys()), None)
             if target_id:
-                p_file_name = host_players_map[target_id].get("playerID", f"{target_id}.rot")
+                p_file_name = host_players_map[target_id].get("playerID", f"{target_id}.json")
                 p_path = os.path.join(player_dir, p_file_name)
                 if os.path.exists(p_path):
                     with open(p_path, "r") as pf:
@@ -813,7 +813,7 @@ def load_game(game, save_folder_name):
         game.player.dialog_history = player_data.get('dialog_history', [])
         game.player.special_dialogs = player_data.get('special_dialogs', [])
         
-        with open(os.path.join(save_path, "world.rot"), "r") as f:
+        with open(os.path.join(save_path, "world.json"), "r") as f:
             world_data = json.load(f)
 
         # Restore modal positions
@@ -1075,7 +1075,7 @@ def load_game(game, save_folder_name):
         
         # Load Zombies
         game.zombies = [] 
-        zombies_path = os.path.join(save_path, "zombies.rot")
+        zombies_path = os.path.join(save_path, "zombies.json")
         if os.path.exists(zombies_path):
             with open(zombies_path, "r") as f:
                 zombie_list = json.load(f)
@@ -1147,8 +1147,8 @@ def load_game(game, save_folder_name):
                     game.layer_zombies.setdefault(layer, []).append(a)
         
         # Load NPCs
-        if os.path.exists(os.path.join(save_path, "npc.rot")):
-            with open(os.path.join(save_path, "npc.rot"), "r") as f:
+        if os.path.exists(os.path.join(save_path, "npc.json")):
+            with open(os.path.join(save_path, "npc.json"), "r") as f:
                 npc_list = json.load(f)
             game.npcs.empty()
             for n_data in npc_list:
@@ -1210,8 +1210,8 @@ def load_game(game, save_folder_name):
                         game.npcs.add(n)
 
         # Load Vehicles
-        if os.path.exists(os.path.join(save_path, "vehicles.rot")):
-            with open(os.path.join(save_path, "vehicles.rot"), "r") as f:
+        if os.path.exists(os.path.join(save_path, "vehicles.json")):
+            with open(os.path.join(save_path, "vehicles.json"), "r") as f:
                 v_list = json.load(f)
                 
             if not hasattr(game.map_manager, 'vehicles'):

@@ -27,6 +27,7 @@ Setup where your mod will work.
 {
     "name": "BitRot_Vanilla", # Mod name
     "version": "0.0.0.1", # Mod version
+    "author": "Kukaroack", # Mod Author
     "logo": "./sprites/mod_logo.png", # Mod logo
     "description": "BitRot Vanilla - Official game mod", # Mod summary
     "repository": "https://github.com/gustavokuklinski/bit-rot/", # Mod repository

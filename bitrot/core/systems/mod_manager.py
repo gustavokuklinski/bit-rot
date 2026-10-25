@@ -20,6 +20,7 @@ class ModManager:
         
         self.base_dir = config.BASE_DIR
         self.available_mods = {}
+        self.mods_order = []
         self.enabled_mods = []
         
         # Ensure the active runtime mod directory exists
@@ -32,13 +33,6 @@ class ModManager:
         self.load_configs()
 
     def get_mod_search_dirs(self):
-        """
-        Returns all candidate mod directories in priority order:
-        1. ./data.rot/mods (current working directory / writable dir)
-        2. ../data.rot/mods (parent directory when running python bitrot/bitrot.py)
-        3. BASE_DIR/data.rot/mods (executable / package base directory)
-        4. BASE_DIR/../data.rot/mods
-        """
         candidates = [
             os.path.abspath(os.path.join(config.get_writable_dir(), "data.rot", "mods")),
             os.path.abspath(os.path.join(".", "data.rot", "mods")),
@@ -58,7 +52,7 @@ class ModManager:
         return unique_dirs
 
     def load_configs(self):
-        """Discovers mods across all candidate search directories without duplicates."""
+        """Discovers mods across all search directories and restores user load order."""
         self.available_mods = {}
 
         for search_dir in self.get_mod_search_dirs():
@@ -75,7 +69,6 @@ class ModManager:
                             cfg = json.load(f)
                             mod_name = cfg.get("name", folder)
 
-                            # First search location takes priority; avoid duplicate registrations
                             if mod_name not in self.available_mods:
                                 self.available_mods[mod_name] = {
                                     "folder": folder,
@@ -85,24 +78,69 @@ class ModManager:
                     except Exception as e:
                         print(f"[ModManager] Error loading mod {folder} from {search_dir}: {e}")
 
+        # Restore load order and enabled status from preferences
         pref_path = config.get_preferences_path(for_save=False)
+        saved_order = []
+        saved_enabled = None
         try:
             if os.path.exists(pref_path):
                 with open(pref_path, "r", encoding="utf-8") as f:
                     pref_data = json.load(f)
-                mods_pref = pref_data.get("preferences", {}).get("mods")
-                # Honor user preference if explicitly set; otherwise default to enabling all discovered mods
-                if mods_pref is not None and "enabled" in mods_pref:
-                    self.enabled_mods = [m for m in mods_pref["enabled"] if m in self.available_mods]
-                else:
-                    self.enabled_mods = list(self.available_mods.keys())
-            else:
-                self.enabled_mods = list(self.available_mods.keys())
+                mods_pref = pref_data.get("preferences", {}).get("mods", {})
+                saved_order = mods_pref.get("order", mods_pref.get("load_order", []))
+                saved_enabled = mods_pref.get("enabled", None)
         except Exception:
-            self.enabled_mods = list(self.available_mods.keys())
+            pass
 
-    def save_enabled_mods(self, enabled_list):
-        self.enabled_mods = enabled_list
+        # Build load order: saved order first, followed by any newly discovered mods
+        self.mods_order = [m for m in saved_order if m in self.available_mods]
+        for m in self.available_mods.keys():
+            if m not in self.mods_order:
+                self.mods_order.append(m)
+
+        if saved_enabled is not None:
+            self.enabled_mods = [m for m in self.mods_order if m in saved_enabled]
+        else:
+            self.enabled_mods = list(self.mods_order)
+
+    def move_mod_up(self, mod_name):
+        """Moves a mod higher in priority (towards index 0)."""
+        if mod_name not in self.mods_order:
+            return False
+        idx = self.mods_order.index(mod_name)
+        if idx > 0:
+            self.mods_order[idx], self.mods_order[idx - 1] = self.mods_order[idx - 1], self.mods_order[idx]
+            self._sync_enabled_order()
+            self.save_mods_config()
+            return True
+        return False
+
+    def move_mod_down(self, mod_name):
+        """Moves a mod lower in priority (towards the bottom)."""
+        if mod_name not in self.mods_order:
+            return False
+        idx = self.mods_order.index(mod_name)
+        if idx < len(self.mods_order) - 1:
+            self.mods_order[idx], self.mods_order[idx + 1] = self.mods_order[idx + 1], self.mods_order[idx]
+            self._sync_enabled_order()
+            self.save_mods_config()
+            return True
+        return False
+
+    def _sync_enabled_order(self):
+        """Ensures enabled_mods strictly mirrors the priority set in mods_order."""
+        self.enabled_mods = [m for m in self.mods_order if m in self.enabled_mods]
+
+    def toggle_mod_enabled(self, mod_name):
+        if mod_name in self.enabled_mods:
+            self.enabled_mods.remove(mod_name)
+        else:
+            self.enabled_mods.append(mod_name)
+            self._sync_enabled_order()
+        self.save_mods_config()
+
+    def save_mods_config(self):
+        """Persists load order and enabled status into preferences.json."""
         pref_path = config.get_preferences_path(for_save=True)
         try:
             if os.path.exists(pref_path):
@@ -110,21 +148,62 @@ class ModManager:
                     pref_data = json.load(f)
             else:
                 pref_data = {"preferences": {}}
-                
+
             if "preferences" not in pref_data:
                 pref_data["preferences"] = {}
             if "mods" not in pref_data["preferences"]:
                 pref_data["preferences"]["mods"] = {}
+
             pref_data["preferences"]["mods"]["enabled"] = self.enabled_mods
-            
+            pref_data["preferences"]["mods"]["order"] = self.mods_order
+
             os.makedirs(os.path.dirname(pref_path), exist_ok=True)
             with open(pref_path, "w", encoding="utf-8") as f:
                 json.dump(pref_data, f, indent=2)
         except Exception as e:
             print(f"[ModManager] Error saving mod preferences: {e}")
 
+    def get_mod_translation_files(self, mod_name, lang_code):
+        """Discovers all XML translation files provided by a specific mod for lang_code."""
+        if mod_name not in self.available_mods:
+            return []
+
+        mod_info = self.available_mods[mod_name]
+        mod_path = mod_info["path"]
+        found_files = []
+        seen = set()
+
+        candidate_dirs = [
+            os.path.join(mod_path, "data.rot", "lib", "lang"),
+            os.path.join(mod_path, "lib", "lang"),
+            os.path.join(mod_path, "lang"),
+            mod_path
+        ]
+
+        for c_dir in candidate_dirs:
+            if os.path.exists(c_dir) and os.path.isdir(c_dir):
+                for f in sorted(os.listdir(c_dir)):
+                    full_p = os.path.join(c_dir, f)
+                    if os.path.isfile(full_p) and f.endswith(".xml"):
+                        if lang_code in f or f.startswith(lang_code):
+                            norm = os.path.normpath(full_p)
+                            if norm not in seen:
+                                seen.add(norm)
+                                found_files.append(norm)
+
+        if not found_files and os.path.exists(mod_path):
+            for root, _, files in os.walk(mod_path):
+                for f in sorted(files):
+                    if f.endswith(".xml") and (lang_code in f or f.startswith(lang_code)):
+                        norm = os.path.normpath(os.path.join(root, f))
+                        if norm not in seen:
+                            seen.add(norm)
+                            found_files.append(norm)
+
+        return found_files
+
     def get_override_path(self, original_path):
-        """Returns the overridden path if a mod overrides it, otherwise the original."""
+        """Returns the overridden path from the highest priority enabled mod (index 0 first)."""
         if not self.enabled_mods or not original_path:
             return original_path
 
@@ -135,7 +214,8 @@ class ModManager:
 
         filename = os.path.basename(original_path)
 
-        for mod_name in reversed(self.enabled_mods):
+        # Iterate from top priority (index 0) to lowest priority
+        for mod_name in self.enabled_mods:
             if mod_name in self.available_mods:
                 mod_info = self.available_mods[mod_name]
                 mod_path = mod_info["path"]
@@ -154,24 +234,19 @@ class ModManager:
 
                 if is_overridden:
                     candidates = []
-                    # 1. Path relative to override directory (e.g., pt_BR.xml or sprites/clothes/arms_hoodie.png)
                     if rel_under_override:
                         candidates.append(os.path.join(mod_path, rel_under_override))
                         parts = rel_under_override.split('/')
                         for idx in range(1, len(parts)):
                             candidates.append(os.path.join(mod_path, *parts[idx:]))
 
-                    # 2. Directly in the mod root (e.g., arms_hoodie.png)
                     candidates.append(os.path.join(mod_path, filename))
-
-                    # 3. Full relative path from base_dir
                     candidates.append(os.path.join(mod_path, rel_path))
 
                     for cand in candidates:
                         if os.path.exists(cand):
                             return cand
 
-                    # 4. Recursive search inside the mod for the filename
                     for root, _, files in os.walk(mod_path):
                         if filename in files:
                             return os.path.join(root, filename)
@@ -179,6 +254,7 @@ class ModManager:
         return original_path
 
     def vfs_walk(self, top):
+        """Walks directory, merging files from base game and all enabled mods (top priority wins on duplicate names)."""
         try:
             top_rel_base = os.path.relpath(top, self.base_dir).replace('\\', '/')
         except ValueError:
@@ -187,7 +263,7 @@ class ModManager:
 
         file_map = {}
 
-        # 1. Map Original Base Game Files
+        # 1. Map base game files
         if os.path.exists(top):
             for root, _, files in os.walk(top):
                 for file in files:
@@ -195,8 +271,8 @@ class ModManager:
 
         folder_name = os.path.basename(top.rstrip('/\\'))
 
-        # 2. Inject / Override with Mod Files
-        for mod_name in self.enabled_mods:
+        # 2. Inject mods from lowest priority to highest priority
+        for mod_name in reversed(self.enabled_mods):
             if mod_name in self.available_mods:
                 mod_info = self.available_mods[mod_name]
                 mod_path = mod_info["path"]
@@ -230,7 +306,6 @@ class ModManager:
                                 for m_file in m_files:
                                     file_map[m_file] = os.path.join(m_root, m_file)
 
-                    # Inspect files sitting directly in the mod's root folder matching this category
                     if os.path.exists(mod_path):
                         for m_file in os.listdir(mod_path):
                             full_m_path = os.path.join(mod_path, m_file)

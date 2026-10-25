@@ -29,20 +29,15 @@ def load_language(lang_code="pt_BR"):
             except Exception as e:
                 print(f"[Localization] Error loading base language file {filename}: {e}")
 
-    # 2. Parse modded translation files (supports overrides & additions)
-    for _, _, full_paths in mod_manager.vfs_walk(lang_dir):
-        for filepath in full_paths:
-            if not filepath.endswith('.xml'):
-                continue
-            fname = os.path.basename(filepath)
-            if fname.startswith(lang_code) or f"_{lang_code}" in fname or lang_code in fname:
-                # Avoid re-parsing the base file if it's the exact same file
-                if os.path.abspath(filepath) in [os.path.abspath(os.path.join(lang_dir, sf)) for sf in standard_files]:
-                    continue
-                try:
-                    _parse_xml_to_dict(filepath)
-                except Exception as e:
-                    print(f"[Localization] Error loading mod translation file {filepath}: {e}")
+    # 2. Parse mod translation files from lowest priority to highest priority
+    # Reversed iteration guarantees the first (topmost) enabled mod gets final override on conflicts
+    for mod_name in reversed(mod_manager.enabled_mods):
+        mod_files = mod_manager.get_mod_translation_files(mod_name, lang_code)
+        for filepath in mod_files:
+            try:
+                _parse_xml_to_dict(filepath)
+            except Exception as e:
+                print(f"[Localization] Error loading mod translation file '{filepath}' from mod '{mod_name}': {e}")
 
 def _parse_xml_to_dict(filepath):
     global translations
@@ -77,7 +72,6 @@ def _parse_xml_to_dict(filepath):
                 if cat == 'cloth':
                     translations.setdefault('item', {})[key] = attr_val
 
-        # In case the translation is given inside the tag text: <cloth name="Hoodie">Moletom</cloth>
         if text_val:
             cat = category_hint or element.tag or 'ui'
             if cat == 'type': cat = 'item_type'

@@ -7,6 +7,46 @@ import core.data.config
 from core.data.config import *
 from core.data.localization import tr
 from core.ui.modals import draw_scrollbar
+from core.systems.mod_manager import mod_manager
+
+_mod_logo_cache = {}
+
+def _get_mod_logo(mod_info, size):
+    """Loads, scales, and caches the mod logo as a square surface."""
+    path_key = (mod_info["path"], size)
+    if path_key in _mod_logo_cache:
+        return _mod_logo_cache[path_key]
+
+    cfg = mod_info.get("config", {})
+    logo_file = cfg.get("logo")
+    logo_surf = None
+
+    if logo_file:
+        clean_logo = logo_file.replace("./", "").replace("\\", "/")
+        candidates = [
+            os.path.join(mod_info["path"], clean_logo),
+            os.path.join(mod_info["path"], logo_file),
+            os.path.join(mod_info["path"], os.path.basename(clean_logo))
+        ]
+        for c in candidates:
+            if os.path.exists(c):
+                try:
+                    raw_img = pygame.image.load(c).convert_alpha()
+                    logo_surf = pygame.transform.smoothscale(raw_img, (size, size))
+                    break
+                except Exception as e:
+                    print(f"[Preferences] Error loading mod logo {c}: {e}")
+
+    if not logo_surf:
+        # Fallback square placeholder
+        logo_surf = pygame.Surface((size, size), pygame.SRCALPHA)
+        logo_surf.fill((25, 25, 25))
+        pygame.draw.rect(logo_surf, (80, 80, 80), (0, 0, size, size), 1, border_radius=4)
+        txt = font_12.render("MOD", False, (140, 140, 140))
+        logo_surf.blit(txt, txt.get_rect(center=(size // 2, size // 2)))
+
+    _mod_logo_cache[path_key] = logo_surf
+    return logo_surf
 
 def get_available_resolutions():
     """Returns sorted unique resolutions from 1280x720 up to the hardware max."""
@@ -165,9 +205,13 @@ class PreferencesMenuUI:
         self.scroll_offset_y = int(ratio * (total_h - visible_h))
 
     def _get_total_content_height(self):
+        scale = UI_SCALE
+        def S(val): return int(val * scale)
         if self.active_tab == 'mods':
             from core.systems.mod_manager import mod_manager
-            return len(mod_manager.available_mods) * (self.item_height * 2 + int(5 * UI_SCALE))
+            mod_card_h = S(96)
+            card_gap = S(8)
+            return len(mod_manager.mods_order) * (mod_card_h + card_gap)
         settings = self.settings_data.get(self.active_tab, {})
         return len(settings) * self.item_height
 
@@ -380,24 +424,60 @@ class PreferencesMenuUI:
                     
                     if self.active_tab == 'mods':
                         from core.systems.mod_manager import mod_manager
-                        for mod_name, mod_info in mod_manager.available_mods.items():
-                            row_rect = pygame.Rect(list_rect.x, y_off, list_rect.width, self.item_height * 2)
+                        mod_card_h = S(96)
+                        card_gap = S(8)
+                        cb_size = S(24)
+                        btn_w = S(26)
+                        btn_h = S(22)
+
+                        for idx, mod_name in enumerate(mod_manager.mods_order):
+                            if mod_name not in mod_manager.available_mods:
+                                continue
+
+                            row_rect = pygame.Rect(list_rect.x, y_off, list_rect.width, mod_card_h)
                             if row_rect.bottom > list_rect.top and row_rect.top < list_rect.bottom:
-                                cb_size = int(24 * UI_SCALE)
-                                cb_rect = pygame.Rect(row_rect.right - cb_size - int(20 * UI_SCALE), row_rect.centery - cb_size//2, cb_size, cb_size)
-                                if cb_rect.collidepoint(mouse_pos) or row_rect.collidepoint(mouse_pos):
-                                    is_enabled = mod_name in mod_manager.enabled_mods
-                                    if is_enabled:
-                                        mod_manager.enabled_mods.remove(mod_name)
-                                    else:
-                                        mod_manager.enabled_mods.append(mod_name)
-                                    mod_manager.save_enabled_mods(mod_manager.enabled_mods)
-                                    self.settings_data['mods'] = {'enabled': mod_manager.enabled_mods}
+                                cb_rect = pygame.Rect(row_rect.right - cb_size - S(14), row_rect.centery - cb_size // 2, cb_size, cb_size)
+                                btn_x = cb_rect.left - btn_w - S(12)
+                                btn_up_rect = pygame.Rect(btn_x, row_rect.centery - btn_h - S(2), btn_w, btn_h)
+                                btn_down_rect = pygame.Rect(btn_x, row_rect.centery + S(2), btn_w, btn_h)
+
+                                # 1. Checkbox Toggle
+                                if cb_rect.collidepoint(mouse_pos):
+                                    mod_manager.toggle_mod_enabled(mod_name)
+                                    self.settings_data['mods'] = {
+                                        'enabled': mod_manager.enabled_mods,
+                                        'order': mod_manager.mods_order
+                                    }
                                     if game and hasattr(game, 'sound_manager'):
                                         game.sound_manager.play_ui_hover()
                                     clicked_input = True
                                     break
-                            y_off += self.item_height * 2 + int(5 * UI_SCALE)
+
+                                # 2. Move Up (Toward #1 top priority)
+                                if idx > 0 and btn_up_rect.collidepoint(mouse_pos):
+                                    mod_manager.move_mod_up(mod_name)
+                                    self.settings_data['mods'] = {
+                                        'enabled': mod_manager.enabled_mods,
+                                        'order': mod_manager.mods_order
+                                    }
+                                    if game and hasattr(game, 'sound_manager'):
+                                        game.sound_manager.play_ui_hover()
+                                    clicked_input = True
+                                    break
+
+                                # 3. Move Down (Toward bottom)
+                                if idx < len(mod_manager.mods_order) - 1 and btn_down_rect.collidepoint(mouse_pos):
+                                    mod_manager.move_mod_down(mod_name)
+                                    self.settings_data['mods'] = {
+                                        'enabled': mod_manager.enabled_mods,
+                                        'order': mod_manager.mods_order
+                                    }
+                                    if game and hasattr(game, 'sound_manager'):
+                                        game.sound_manager.play_ui_hover()
+                                    clicked_input = True
+                                    break
+
+                            y_off += mod_card_h + card_gap
                         if clicked_input:
                             continue
 
@@ -519,44 +599,119 @@ class PreferencesMenuUI:
         y_off = list_rect.y - self.scroll_offset_y
         
         if self.active_tab == 'mods':
-            from core.systems.mod_manager import mod_manager
-            for mod_name, mod_info in mod_manager.available_mods.items():
-                cfg = mod_info['config']
+            
+            mod_card_h = S(96)
+            card_gap = S(8)
+            logo_size = S(76)
+            cb_size = S(24)
+            btn_w = S(26)
+            btn_h = S(22)
+            total_mods = len(mod_manager.mods_order)
+
+            for idx, mod_name in enumerate(mod_manager.mods_order):
+                if mod_name not in mod_manager.available_mods:
+                    continue
+
+                mod_info = mod_manager.available_mods[mod_name]
+                cfg = mod_info.get('config', {})
                 version = cfg.get('version', '1.0.0')
-                description = cfg.get('description', 'No description.')
+                author = cfg.get('author', 'Unknown')
+                description = cfg.get('description', 'No description provided.')
                 repo = cfg.get('repository', '')
-                
-                row_rect = pygame.Rect(list_rect.x, y_off, list_rect.width, self.item_height * 2)
+
+                row_rect = pygame.Rect(list_rect.x, y_off, list_rect.width, mod_card_h)
                 if row_rect.bottom > list_rect.top and row_rect.top < list_rect.bottom:
                     is_hovered = row_rect.collidepoint(mouse_pos)
-                    pygame.draw.rect(screen, (50, 50, 50) if is_hovered else (35, 35, 35), row_rect, border_radius=4)
-                    pygame.draw.rect(screen, (70, 70, 70), row_rect, 1, border_radius=4)
-                    
+                    pygame.draw.rect(screen, (45, 45, 45) if is_hovered else (30, 30, 30), row_rect, border_radius=6)
+                    pygame.draw.rect(screen, (80, 80, 80) if is_hovered else (50, 50, 50), row_rect, 1, border_radius=6)
+
+                    # 1. Square Logo
+                    logo_surf = _get_mod_logo(mod_info, logo_size)
+                    logo_rect = pygame.Rect(row_rect.x + S(10), row_rect.y + (mod_card_h - logo_size) // 2, logo_size, logo_size)
+                    screen.blit(logo_surf, logo_rect)
+                    pygame.draw.rect(screen, (70, 70, 70), logo_rect, 1, border_radius=4)
+
+                    # 2. Checkbox (Enable / Disable)
                     is_enabled = mod_name in mod_manager.enabled_mods
-                    cb_size = int(24 * UI_SCALE)
-                    cb_rect = pygame.Rect(row_rect.right - cb_size - int(20 * UI_SCALE), row_rect.centery - cb_size//2, cb_size, cb_size)
-                    
-                    pygame.draw.rect(screen, (40, 40, 40), cb_rect, border_radius=4)
+                    cb_rect = pygame.Rect(row_rect.right - cb_size - S(14), row_rect.centery - cb_size // 2, cb_size, cb_size)
+
+                    pygame.draw.rect(screen, (25, 25, 25), cb_rect, border_radius=4)
                     pygame.draw.rect(screen, WHITE if cb_rect.collidepoint(mouse_pos) else GRAY, cb_rect, 1, border_radius=4)
-                    
                     if is_enabled:
-                        pygame.draw.rect(screen, GREEN, cb_rect.inflate(-8, -8), border_radius=2)
-                    
+                        pygame.draw.rect(screen, GREEN, cb_rect.inflate(-S(8), -S(8)), border_radius=2)
+
+                    # 3. Up and Down Arrow Reorder Buttons
+                    btn_x = cb_rect.left - btn_w - S(12)
+                    btn_up_rect = pygame.Rect(btn_x, row_rect.centery - btn_h - S(2), btn_w, btn_h)
+                    btn_down_rect = pygame.Rect(btn_x, row_rect.centery + S(2), btn_w, btn_h)
+
+                    can_up = (idx > 0)
+                    can_down = (idx < total_mods - 1)
+
+                    up_hover = btn_up_rect.collidepoint(mouse_pos) and can_up
+                    down_hover = btn_down_rect.collidepoint(mouse_pos) and can_down
+
+                    # Draw UP button
+                    up_bg = (60, 60, 60) if up_hover else (35, 35, 35)
+                    up_border = YELLOW if up_hover else (WHITE if can_up else (50, 50, 50))
+                    pygame.draw.rect(screen, up_bg, btn_up_rect, border_radius=3)
+                    pygame.draw.rect(screen, up_border, btn_up_rect, 1, border_radius=3)
+                    up_arrow_col = YELLOW if up_hover else (WHITE if can_up else (80, 80, 80))
+                    pygame.draw.polygon(screen, up_arrow_col, [
+                        (btn_up_rect.centerx, btn_up_rect.centery - S(4)),
+                        (btn_up_rect.centerx - S(5), btn_up_rect.centery + S(4)),
+                        (btn_up_rect.centerx + S(5), btn_up_rect.centery + S(4))
+                    ])
+
+                    # Draw DOWN button
+                    down_bg = (60, 60, 60) if down_hover else (35, 35, 35)
+                    down_border = YELLOW if down_hover else (WHITE if can_down else (50, 50, 50))
+                    pygame.draw.rect(screen, down_bg, btn_down_rect, border_radius=3)
+                    pygame.draw.rect(screen, down_border, btn_down_rect, 1, border_radius=3)
+                    down_arrow_col = YELLOW if down_hover else (WHITE if can_down else (80, 80, 80))
+                    pygame.draw.polygon(screen, down_arrow_col, [
+                        (btn_down_rect.centerx, btn_down_rect.centery + S(4)),
+                        (btn_down_rect.centerx - S(5), btn_down_rect.centery - S(4)),
+                        (btn_down_rect.centerx + S(5), btn_down_rect.centery - S(4))
+                    ])
+
+                    # 4. Text Information Area
+                    text_x = logo_rect.right + S(12)
+                    max_text_w = btn_x - text_x - S(10)
+
+                    # Title, Version & Priority Badge (#1 Top, #2, etc.)
                     name_surf = font_16.render(mod_name, False, GREEN if is_enabled else WHITE)
-                    screen.blit(name_surf, (row_rect.x + int(15 * UI_SCALE), row_rect.y + int(10 * UI_SCALE)))
-                    
-                    ver_surf = font_12.render(f"v{version}", False, GRAY)
-                    screen.blit(ver_surf, (row_rect.x + int(15 * UI_SCALE) + name_surf.get_width() + 10, row_rect.y + int(13 * UI_SCALE)))
-                    
-                    if is_hovered:
-                        desc_text = description
-                        if repo:
-                            desc_text += f"\nRepo: {repo}"
-                        status = "ENABLED" if is_enabled else "DISABLED"
-                        color = GREEN if is_enabled else RED
-                        self._mod_tooltip = (mod_name, desc_text, status, color)
-                        
-                y_off += self.item_height * 2 + int(5 * UI_SCALE)
+                    screen.blit(name_surf, (text_x, row_rect.y + S(8)))
+
+                    ver_surf = font_12.render(f"v{version}", False, (140, 140, 140))
+                    screen.blit(ver_surf, (text_x + name_surf.get_width() + S(8), row_rect.y + S(11)))
+
+                    badge_str = f"#{idx + 1} ({tr('ui', 'Top')})" if idx == 0 else f"#{idx + 1}"
+                    badge_color = (255, 215, 0) if idx == 0 else (170, 170, 170)
+                    badge_surf = font_12.render(badge_str, False, badge_color)
+                    screen.blit(badge_surf, (text_x + name_surf.get_width() + ver_surf.get_width() + S(16), row_rect.y + S(11)))
+
+                    # Author
+                    author_str = f"{tr('ui', 'Author')}: {author}"
+                    author_surf = font_12.render(author_str, False, (220, 200, 120))
+                    screen.blit(author_surf, (text_x, row_rect.y + S(30)))
+
+                    # Description
+                    desc_str = description
+                    while font_12.size(desc_str)[0] > max_text_w and len(desc_str) > 5:
+                        desc_str = desc_str[:-4] + "..."
+                    desc_surf = font_12.render(desc_str, False, (200, 200, 200))
+                    screen.blit(desc_surf, (text_x, row_rect.y + S(50)))
+
+                    # Repository
+                    if repo:
+                        repo_str = repo
+                        while font_12.size(repo_str)[0] > max_text_w and len(repo_str) > 8:
+                            repo_str = repo_str[:-4] + "..."
+                        repo_surf = font_12.render(repo_str, False, (80, 180, 240))
+                        screen.blit(repo_surf, (text_x, row_rect.y + S(70)))
+
+                y_off += mod_card_h + card_gap
         else:
             block = self.active_tab
             settings = self.settings_data.get(block, {})

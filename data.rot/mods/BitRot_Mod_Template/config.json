@@ -1,6 +1,8 @@
 {
     "name": "BitRot_Mod_Template",
     "version": "0.0.0.1",
+    "author": "Kukaroach",
+    "logo": "./sprites/mod_logo.png",
     "description": "BitRot Mod template",
     "repository": "https://github.com/gustavokuklinski/bit-rot/",
     "overide_dir":[
