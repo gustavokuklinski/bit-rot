@@ -70,6 +70,7 @@ class ProceduralGenerator(
 
     self._init_templates()
 
+
   def _link_conns(self, grid, x1, y1, x2, y2, road_type='asphalt', link_l1=True, link_l2=True, link_l3=True):
     if x2 == x1 + 1 and y2 == y1:
       if link_l1:
@@ -704,6 +705,135 @@ class ProceduralGenerator(
 
     start_gx, start_gy = self.start_chunk
     return f'map_L1_{start_gx}_{start_gy}_map.csv'
+
+  def discover_new_isolated_island(self):
+    all_x = [c[0] for c in self.active_chunks]
+    all_y = [c[1] for c in self.active_chunks]
+    min_x = min(all_x) if all_x else 0
+    max_x = max(all_x) if all_x else 1
+    min_y = min(all_y) if all_y else 0
+    max_y = max(all_y) if all_y else 1
+
+    found_coord = None
+    for radius in range(1, 10):
+        candidates = []
+        for dx in range(-radius, radius + 1):
+            for dy in range(-radius, radius + 1):
+                gx = max(0, min_x + dx + random.randint(0, 2))
+                gy = max(0, min_y + dy + random.randint(0, 2))
+                coord = (gx, gy)
+                if coord not in self.active_chunks:
+                    has_cardinal_neighbor = any(
+                        (gx + ox, gy + oy) in self.active_chunks
+                        for ox, oy in [(-1, 0), (1, 0), (0, -1), (0, 1)]
+                    )
+                    candidates.append((has_cardinal_neighbor, coord))
+        if candidates:
+            candidates.sort(key=lambda c: c[0])
+            found_coord = candidates[0][1]
+            break
+
+    if not found_coord:
+        found_coord = (max_x + 2, max_y + 2)
+
+    new_gx, new_gy = found_coord
+
+    needed_w = max(self.grid_w, new_gx + 1)
+    needed_h = max(self.grid_h, new_gy + 1)
+
+    def _empty_conn():
+        return {
+            'top': False, 'bottom': False, 'left': False, 'right': False,
+            'top_type': 'asphalt', 'bottom_type': 'asphalt',
+            'left_type': 'asphalt', 'right_type': 'asphalt',
+            'l2_top': False, 'l2_bottom': False, 'l2_left': False, 'l2_right': False,
+            'l3_top': False, 'l3_bottom': False, 'l3_left': False, 'l3_right': False
+        }
+
+    for y in range(len(self.connections_grid)):
+        while len(self.connections_grid[y]) < needed_w:
+            self.connections_grid[y].append(_empty_conn())
+
+    while len(self.connections_grid) < needed_h:
+        self.connections_grid.append([_empty_conn() for _ in range(needed_w)])
+
+    self.grid_w = needed_w
+    self.grid_h = needed_h
+
+    self.active_chunks.add(found_coord)
+    self.isolated_island_chunks.add(found_coord)
+
+    is_forest = random.random() < 0.5
+    if is_forest:
+        self.forest_chunks.add(found_coord)
+    else:
+        self.urban_chunks.add(found_coord)
+
+    self.chunk_priority_map[found_coord] = []
+    self.chunk_l2_priority_map[found_coord] = []
+    self.chunk_l3_priority_map[found_coord] = []
+
+    caves = [t for t in self.categorized_templates.get('Cave', []) if 'l2' not in t.lower() and 'l3' not in t.lower()]
+    if caves:
+        self.chunk_priority_map[found_coord].append(random.choice(caves))
+
+    if is_forest:
+        petrols = [t for t in self.categorized_templates.get('Petrol', []) if 'military' not in t.lower() and 'lobby' not in t.lower()]
+        if petrols:
+            self.chunk_priority_map[found_coord].append(random.choice(petrols))
+    else:
+        buildings = [t for t in self.categorized_templates.get('Building', []) if 'military' not in t.lower() and 'lobby' not in t.lower() and 'port' not in t.lower()]
+        if buildings:
+            for _ in range(random.randint(4, 8)):
+                self.chunk_priority_map[found_coord].append(random.choice(buildings))
+
+    l2_cands = self.categorized_l2_templates.get('Bunker', []) + self.categorized_l2_templates.get('Dungeon', [])
+    if l2_cands:
+        self.chunk_l2_priority_map[found_coord].append(random.choice(l2_cands))
+
+    l3_cands = self.categorized_l3_templates.get('Bunker', []) + self.categorized_l3_templates.get('Dungeon', [])
+    if l3_cands:
+        self.chunk_l3_priority_map[found_coord].append(random.choice(l3_cands))
+
+    self.generate_chunk_on_demand(new_gx, new_gy)
+
+    macro_meta_path = os.path.join(self.output_folder, 'macro_world.json')
+    try:
+        with open(macro_meta_path, 'w') as f:
+            json.dump(
+                {
+                    'grid_w': self.grid_w,
+                    'grid_h': self.grid_h,
+                    'active_chunks': [list(c) for c in self.active_chunks],
+                    'isolated_island_chunks': [list(c) for c in self.isolated_island_chunks],
+                    'chunk_path': self.chunk_path,
+                    'start_chunk': list(self.start_chunk),
+                    'lobby_chunk': list(self.lobby_chunk),
+                    'military_chunk': list(self.military_chunk),
+                    'connections_grid': self.connections_grid,
+                    'chunk_priority_map': {
+                        f'{k[0]}_{k[1]}': v
+                        for k, v in self.chunk_priority_map.items()
+                    },
+                    'chunk_l2_priority_map': {
+                        f'{k[0]}_{k[1]}': v
+                        for k, v in self.chunk_l2_priority_map.items()
+                    },
+                    'chunk_l3_priority_map': {
+                        f'{k[0]}_{k[1]}': v
+                        for k, v in self.chunk_l3_priority_map.items()
+                    },
+                    'forest_chunks': [list(c) for c in self.forest_chunks],
+                    'urban_chunks': [list(c) for c in self.urban_chunks],
+                    'generated_chunks': [list(c) for c in self.generated_chunks],
+                },
+                f,
+                indent=4,
+            )
+    except Exception as e:
+        print(f'Error updating macro_world.json: {e}')
+
+    return new_gx, new_gy
 
   def generate_chunk_on_demand(self, gx, gy):
     if (gx, gy) in self.generated_chunks or (gx, gy) not in self.active_chunks:

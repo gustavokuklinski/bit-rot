@@ -469,14 +469,12 @@ def handle_right_click(game, mouse_pos):
                     })
 
                 # Option: Discovery island (Requires Lobby enabled, fixed 100 fuel price)
-                lobby_enabled = getattr(core.data.config, 'SPAWN_LOBBY_CHUNK', True)
-                if lobby_enabled:
-                    options.append('Discovery island')
-                    game.context_menu['tooltips']['Discovery island'] = (
-                        f"{tr('ui', 'Discover a new island.')}\n"
-                        f"{tr('ui', 'Fixed cost:')} 100 {tr('item', 'Fuel Unit')}\n"
-                        f"{tr('ui', 'Available fuel:')} {player_fuel}"
-                    )
+                options.append('Discover Island')
+                game.context_menu['tooltips']['Discover Island'] = (
+                    f"{tr('ui', 'Discover a new island.')}\n"
+                    f"{tr('ui', 'Cost:')} 25x {tr('item', 'Fuel Unit')}\n"
+                    f"{tr('ui', 'Available fuel:')} {player_fuel}"
+                )
 
                 # Only return if neither destinations nor Discovery island are available
                 if not options:
@@ -484,18 +482,6 @@ def handle_right_click(game, mouse_pos):
                     game.context_menu['active'] = False
                     return
 
-                options = [{
-                    'label': 'Travel to', 
-                    'sub': sub_opts, 
-                    'display_names': display_map,
-                    'icons': icon_map,
-                    'extra_texts': extra_text_map,
-                    'extra_colors': extra_color_map,
-                    'tooltips': tooltip_map,
-                    'extra_text_map': extra_text_map,
-                    'extra_color_map': extra_color_map,
-                    'tooltip_map': tooltip_map
-                }]
 
             barricade = game.map_manager.get_barricade(gx, gy)
 

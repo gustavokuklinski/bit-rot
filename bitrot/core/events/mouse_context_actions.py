@@ -1435,6 +1435,46 @@ def handle_context_menu_click(game, mouse_pos):
                         print(f"Error traveling: {e}")
                 clicked_on_menu = True
 
+            elif option == 'Discover Island':
+                fuel_cost = 25
+                player_fuel = get_player_fuel_units(game.player)
+                fuel_name = tr('item', "Fuel Unit")
+
+                if player_fuel < fuel_cost:
+                    display_message(f"{tr('msg', 'Not enough fuel! Need')} {fuel_cost}x {fuel_name} {tr('msg', 'to discover an island.')}")
+                elif not getattr(game, 'generator', None):
+                    display_message(tr('msg', "Generator is not available in this world."))
+                else:
+                    consume_player_fuel_units(game.player, fuel_cost)
+                    new_gx, new_gy = game.generator.discover_new_isolated_island()
+                    game.map_manager.refresh_maps()
+
+                    # Create and give the cartography map to the player
+                    map_item_name = f"Cartography Sector {new_gx}_{new_gy}"
+                    map_item = Item.create_from_name(map_item_name)
+                    if not map_item:
+                        # Fallback to generic map item with custom text and name
+                        map_item = Item.create_from_name("Cartography Sector [MAP_POS]")
+                        if map_item:
+                            map_item.name = map_item_name
+
+                    if map_item:
+                        if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                            game.player.inventory.append(map_item)
+                            if hasattr(game.player, 'stack_item_in_inventory'):
+                                game.player.stack_item_in_inventory(map_item)
+                        else:
+                            map_item.rect.center = game.player.rect.center
+                            map_item.x, map_item.y = map_item.rect.topleft
+                            game.items_on_ground.append(map_item)
+                            display_message(tr('msg', "Inventory full. Map dropped on ground."))
+
+                    display_message(f"{tr('msg', 'Used')} {fuel_cost}x {fuel_name}. {tr('msg', 'Discovered Island')} ({new_gx}, {new_gy})!")
+                    if hasattr(game, 'sound_manager'):
+                        game.sound_manager.play_sound("notification.ogg", subdir="ui", game=game, base_volume=0.8, is_critical=True)
+
+                clicked_on_menu = True
+
             elif option == 'Vehicle options' and getattr(item, 'item_type', '') == 'vehicle':
                 grid_x = int(item.x // TILE_SIZE)
                 grid_y = int(item.y // TILE_SIZE)
