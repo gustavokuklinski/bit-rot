@@ -156,12 +156,6 @@ def _apply_build_and_proceed(game, state, mode_id, filename):
         'default': 'false'
     }
 
-    world_data['game']['start_at_the_lobby'] = {
-        'value': 'true' if state.get('start_at_the_lobby', True) else 'false',
-        'name': 'Start game at the Lobby',
-        'default': 'true'
-    }
-
     state['world_data'] = world_data
     state['chosen_mode'] = mode_id
     
@@ -294,26 +288,22 @@ def draw_select_world_screen(game, state, mouse_pos):
 
     # --- CHECKBOXES: ALL VISIBLE, PERMADEATH & INFINITE LIQUID ---
     if 'all_visible' not in state:
-        state['all_visible'] = False
+        state['all_visible'] = True
     if 'infinite_liquid' not in state:
-        state['infinite_liquid'] = False
+        state['infinite_liquid'] = True
     if 'permadeath' not in state:
         state['permadeath'] = False
-    if 'start_at_the_lobby' not in state:
-        state['start_at_the_lobby'] = True
 
     cb_y = card_y + card_h + S(16)
 
     txt_all_vis = tr('ui', "All visible")
     txt_inf_liq = tr('ui', "Infinite liquid")
     txt_perma = tr('ui', "Permadeath")
-    txt_lobby = tr('ui', "Start at Lobby")
 
     w1 = box_size + S(8) + font_12.size(txt_all_vis)[0]
     w2 = box_size + S(8) + font_12.size(txt_inf_liq)[0]
     w3 = box_size + S(8) + font_12.size(txt_perma)[0]
-    w4 = box_size + S(8) + font_12.size(txt_lobby)[0]
-    total_cb_w = w1 + cb_gap + w2 + cb_gap + w3 + cb_gap + w4
+    total_cb_w = w1 + cb_gap + w2 + cb_gap + w3 + cb_gap
     cb_start_x = center_x - (total_cb_w // 2)
 
     hovered_cb_tooltip = None
@@ -371,23 +361,7 @@ def draw_select_world_screen(game, state, mouse_pos):
     if is_hover_cb3:
         hovered_cb_tooltip = (txt_perma, tr('ui', "Delete save when die"))
 
-    # Checkbox 4: Start at Lobby
-    cb4_x = cb3_x + w3 + cb_gap
-    cb4_click_rect = pygame.Rect(cb4_x, cb_y, w4, box_size)
-    cb4_box_rect = pygame.Rect(cb4_x, cb_y, box_size, box_size)
-    is_hover_cb4 = cb4_click_rect.collidepoint(mouse_pos)
 
-    pygame.draw.rect(game.game_screen, (45, 45, 45), cb4_box_rect, border_radius=S(3))
-    pygame.draw.rect(game.game_screen, WHITE if is_hover_cb4 else GRAY, cb4_box_rect, 1, border_radius=S(3))
-    if state.get('start_at_the_lobby', True):
-        inner_rect4 = cb4_box_rect.inflate(-S(6), -S(6))
-        pygame.draw.rect(game.game_screen, GREEN, inner_rect4, border_radius=S(2))
-
-    lbl4 = font_12.render(txt_lobby, False, YELLOW if is_hover_cb4 else WHITE)
-    game.game_screen.blit(lbl4, (cb4_box_rect.right + S(8), cb4_box_rect.centery - lbl4.get_height() // 2))
-    clickable_rects['checkbox_start_at_the_lobby'] = cb4_click_rect
-    if is_hover_cb4:
-        hovered_cb_tooltip = (txt_lobby, tr('ui', "Start at Lobby (or random Port if disabled)"))
 
     # --- 4. BOTTOM BAR: BACK & SANDBOX ---
     btn_w = S(200)
@@ -462,9 +436,6 @@ def handle_select_world_events(game, state, event, mouse_pos, clickable_rects):
             state['permadeath'] = not state.get('permadeath', False)
             return
         
-        if clickable_rects.get('checkbox_start_at_the_lobby') and clickable_rects['checkbox_start_at_the_lobby'].collidepoint(mouse_pos):
-            state['start_at_the_lobby'] = not state.get('start_at_the_lobby', True)
-            return
 
         if clickable_rects.get('back_button') and clickable_rects['back_button'].collidepoint(mouse_pos):
             delete_pending_world_save(game, state)

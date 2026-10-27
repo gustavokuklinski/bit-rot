@@ -411,18 +411,35 @@ def handle_npc_save(game, npc):
     has_charm = (_get_player_charm(player)[0] is not None)
 
     gen = getattr(game, 'generator', None)
-    lobby_chunk = getattr(gen, 'lobby_chunk', (0, 0)) if gen else (0, 0)
-    lobby_map = f"map_L1_{lobby_chunk[0]}_{lobby_chunk[1]}_map.csv"
+    has_lobby = getattr(core.data.config, 'SPAWN_LOBBY_CHUNK', True) and gen and getattr(gen, 'lobby_chunk', None) is not None
+    lobby_chunk = getattr(gen, 'lobby_chunk', (0, 0)) if gen and gen.lobby_chunk else None
+    lobby_map = f"map_L1_{lobby_chunk[0]}_{lobby_chunk[1]}_map.csv" if lobby_chunk else ""
     cur_map = getattr(game.map_manager, 'current_map_filename', '')
 
-    is_already_at_lobby = getattr(npc, 'is_at_lobby', False) or (cur_map == lobby_map)
+    is_already_at_lobby = has_lobby and (getattr(npc, 'is_at_lobby', False) or (cur_map == lobby_map))
     if is_already_at_lobby:
         display_message(tr('msg', f"{npc.name} is already safe in the Lobby!"))
         return
 
     is_at_port = getattr(npc, 'is_at_port', False)
 
-    # If NPC is already at the Port, both Charm and Fuel are required to send them to the Lobby
+    # If there is no Lobby in the world, survivors can only be evacuated to Port
+    if not has_lobby:
+        if is_at_port:
+            display_message(tr('msg', f"{npc.name} is already safe at the Port!"))
+        elif has_charm or player_fuel > 0:
+            if has_charm:
+                _consume_player_charm(player)
+            elif player_fuel > 0:
+                consume_player_fuel_units(player, player_fuel)
+                game.boat_fuel_discount = 0.5
+            _teleport_npc_to_port(game, npc)
+            display_message(f"{tr('msg', 'Evacuated')} {npc.name} {tr('msg', 'to the Port!')}")
+        else:
+            display_message(tr('msg', "Rescue requires Fuel or Charm!"))
+        return
+
+    # Normal Lobby rescue logic when Lobby exists
     if is_at_port:
         if has_charm and player_fuel > 0:
             _consume_player_charm(player)
@@ -437,15 +454,11 @@ def handle_npc_save(game, npc):
             display_message(tr('msg', "Need a Charm and Fuel to rescue survivor from Port to Lobby!"))
         return
 
-    # In the field:
-    # 1. Charm + Fuel -> Direct rescue to Lobby
-    # 2. Only Charm -> Teleport to Port
     elif has_charm and player_fuel <= 0:
         _consume_player_charm(player)
         _teleport_npc_to_port(game, npc)
         display_message(f"{tr('msg', 'Evacuated')} {npc.name} {tr('msg', 'to the Port with a Charm!')}")
 
-    # 2. Only Fuel -> Teleport to Port, take all fuel, halve boat price
     elif player_fuel > 0 and not has_charm:
         fuel_taken = player_fuel
         consume_player_fuel_units(player, fuel_taken)
@@ -453,16 +466,13 @@ def handle_npc_save(game, npc):
         _teleport_npc_to_port(game, npc)
         display_message(f"{tr('msg', 'Evacuated')} {npc.name} {tr('msg', 'to the Port! (Used all')} {fuel_taken} {tr('msg', 'Fuel. Boat travel is now 50% cheaper!)')}")
 
-    # 3. Only Fuel -> Take ALL fuel, Teleport to Lobby, Make boat travel half price
-    elif player_fuel > 0 and not has_charm:
-        fuel_taken = player_fuel
+    elif player_fuel > 0 and has_charm:
+        fuel_taken = min(player_fuel, calculate_boat_fuel_cost(game, lobby_chunk[0], lobby_chunk[1]))
         consume_player_fuel_units(player, fuel_taken)
-        game.boat_fuel_discount = 0.5
+        _consume_player_charm(player)
         _teleport_npc_to_lobby(game, npc)
-        display_message(f"{tr('msg', 'Rescued')} {npc.name} {tr('msg', 'to Lobby! Used all')} {fuel_taken} {tr('msg', 'Fuel. Boat travel is now 50% cheaper!')}")
+        display_message(f"{tr('msg', 'Rescued')} {npc.name} {tr('msg', 'to Lobby! (1 Charm &')} {fuel_taken} {tr('msg', 'Fuel used)')}")
 
-
-    # 4. Neither
     else:
         display_message(tr('msg', "Rescue requires Fuel (to Port) or Fuel + Charm (to Lobby)!"))
 

@@ -419,7 +419,9 @@ def handle_right_click(game, mouse_pos):
                 player_fuel = get_player_fuel_units(game.player)
                 fuel_icon = get_fuel_icon()
 
-                if lobby_chunk and (cur_gx, cur_gy) != lobby_chunk:
+                # ONLY show Lobby if generate_lobby_chunk is true and lobby_chunk exists
+                has_lobby = getattr(core.data.config, 'SPAWN_LOBBY_CHUNK', True) and lobby_chunk is not None
+                if has_lobby and (cur_gx, cur_gy) != lobby_chunk:
                     sub_key = f"{lobby_chunk[0]}_{lobby_chunk[1]}"
                     sub_opts.append(sub_key)
                     fuel_cost = calculate_boat_fuel_cost(game, lobby_chunk[0], lobby_chunk[1])

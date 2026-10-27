@@ -122,6 +122,16 @@ class ProceduralGenerator(
         grid[y2][x2]['l3_bottom'] = True
 
   def _generate_evolving_island_path(self, target_count):
+    if target_count <= 1:
+      empty_grid = [[{
+          'top': False, 'bottom': False, 'left': False, 'right': False,
+          'top_type': 'asphalt', 'bottom_type': 'asphalt',
+          'left_type': 'asphalt', 'right_type': 'asphalt',
+          'l2_top': False, 'l2_bottom': False, 'l2_left': False, 'l2_right': False,
+          'l3_top': False, 'l3_bottom': False, 'l3_left': False, 'l3_right': False,
+      }]]
+      return [(0, 0)], [(0, 0)], {(0, 0)}, empty_grid, 1, 1, (0, 0), None, {(0, 0)}
+
     DIRS = [(1, 0), (0, 1), (-1, 0), (0, -1)]
     best_result = None
 
@@ -130,7 +140,7 @@ class ProceduralGenerator(
       spine = [current]
       visited = {current}
       current_dir = (1, 0)
-      spine_target = max(2, int(target_count * 0.70))
+      spine_target = max(1, int(target_count * 0.70))
 
       while len(spine) < spine_target:
         valid_dirs = []
@@ -378,7 +388,7 @@ class ProceduralGenerator(
       req_n = current_chunks
       actual_seed = seed_pattern or 'DEFAULT'
 
-    target_chunks = max(2, req_n)
+    target_chunks = max(1, req_n)
     print(f'[ProceduralGenerator] Seed: {actual_seed} | Target Chunks: {target_chunks} (Fixed 128x128)')
     random.seed(actual_seed)
 
@@ -390,123 +400,130 @@ class ProceduralGenerator(
      island_start_chunk, self.military_chunk,
      self.isolated_island_chunks) = self._generate_evolving_island_path(target_chunks)
 
-    # Find a cardinal neighbor directly adjacent to island_start_chunk to place the Lobby chunk
-    sx, sy = island_start_chunk
-    candidate_dirs = [(-1, 0), (0, -1), (1, 0), (0, 1)]
-    chosen_dir = None
-    for dx, dy in candidate_dirs:
-      if (sx + dx, sy + dy) not in self.active_chunks:
-        chosen_dir = (dx, dy)
-        break
+    spawn_lobby = getattr(core.data.config, 'SPAWN_LOBBY_CHUNK', True)
+    spawn_military = getattr(core.data.config, 'SPAWN_MILITARY_CHUNK', True)
 
-    if not chosen_dir:
-      for c in all_cells:
-        if c != self.military_chunk:
-          for dx, dy in candidate_dirs:
-            if (c[0] + dx, c[1] + dy) not in self.active_chunks:
-              sx, sy = c
-              chosen_dir = (dx, dy)
-              break
-          if chosen_dir:
+    if not spawn_military:
+        self.military_chunk = None
+
+    if spawn_lobby:
+        # Find a cardinal neighbor directly adjacent to island_start_chunk to place the Lobby chunk
+        sx, sy = island_start_chunk
+        candidate_dirs = [(-1, 0), (0, -1), (1, 0), (0, 1)]
+        chosen_dir = None
+        for dx, dy in candidate_dirs:
+          if (sx + dx, sy + dy) not in self.active_chunks:
+            chosen_dir = (dx, dy)
             break
 
-    if not chosen_dir:
-      chosen_dir = (1, 0)
-      sx, sy = self.grid_w - 1, 0
+        if not chosen_dir:
+          for c in all_cells:
+            if c != self.military_chunk:
+              for dx, dy in candidate_dirs:
+                if (c[0] + dx, c[1] + dy) not in self.active_chunks:
+                  sx, sy = c
+                  chosen_dir = (dx, dy)
+                  break
+              if chosen_dir:
+                break
 
-    cand_lx = sx + chosen_dir[0]
-    cand_ly = sy + chosen_dir[1]
+        if not chosen_dir:
+          chosen_dir = (1, 0)
+          sx, sy = self.grid_w - 1, 0
 
-    # If coordinates are negative, shift all chunk coordinates so all values stay >= 0
-    shift_x = 1 if cand_lx < 0 else 0
-    shift_y = 1 if cand_ly < 0 else 0
+        cand_lx = sx + chosen_dir[0]
+        cand_ly = sy + chosen_dir[1]
 
-    if shift_x > 0 or shift_y > 0:
-      self.chunk_path = [(c[0] + shift_x, c[1] + shift_y) for c in self.chunk_path]
-      all_cells = [(c[0] + shift_x, c[1] + shift_y) for c in all_cells]
-      self.active_chunks = {(c[0] + shift_x, c[1] + shift_y) for c in self.active_chunks}
-      self.isolated_island_chunks = {(c[0] + shift_x, c[1] + shift_y) for c in self.isolated_island_chunks}
-      island_start_chunk = (island_start_chunk[0] + shift_x, island_start_chunk[1] + shift_y)
-      self.military_chunk = (self.military_chunk[0] + shift_x, self.military_chunk[1] + shift_y)
+        shift_x = 1 if cand_lx < 0 else 0
+        shift_y = 1 if cand_ly < 0 else 0
 
-      old_grid = self.connections_grid
-      old_h = len(old_grid)
-      old_w = len(old_grid[0]) if old_h > 0 else 0
-      new_grid_w = old_w + shift_x
-      new_grid_h = old_h + shift_y
+        if shift_x > 0 or shift_y > 0:
+          self.chunk_path = [(c[0] + shift_x, c[1] + shift_y) for c in self.chunk_path]
+          all_cells = [(c[0] + shift_x, c[1] + shift_y) for c in all_cells]
+          self.active_chunks = {(c[0] + shift_x, c[1] + shift_y) for c in self.active_chunks}
+          self.isolated_island_chunks = {(c[0] + shift_x, c[1] + shift_y) for c in self.isolated_island_chunks}
+          island_start_chunk = (island_start_chunk[0] + shift_x, island_start_chunk[1] + shift_y)
+          if self.military_chunk:
+              self.military_chunk = (self.military_chunk[0] + shift_x, self.military_chunk[1] + shift_y)
 
-      def _empty_conn():
-        return {
-            'top': False, 'bottom': False, 'left': False, 'right': False,
-            'top_type': 'asphalt', 'bottom_type': 'asphalt',
-            'left_type': 'asphalt', 'right_type': 'asphalt',
-            'l2_top': False, 'l2_bottom': False, 'l2_left': False, 'l2_right': False,
-            'l3_top': False, 'l3_bottom': False, 'l3_left': False, 'l3_right': False
-        }
+          old_grid = self.connections_grid
+          old_h = len(old_grid)
+          old_w = len(old_grid[0]) if old_h > 0 else 0
+          new_grid_w = old_w + shift_x
+          new_grid_h = old_h + shift_y
 
-      new_conns = [[_empty_conn() for _ in range(new_grid_w)] for _ in range(new_grid_h)]
-      for y in range(old_h):
-        for x in range(old_w):
-          new_conns[y + shift_y][x + shift_x] = old_grid[y][x]
+          def _empty_conn():
+            return {
+                'top': False, 'bottom': False, 'left': False, 'right': False,
+                'top_type': 'asphalt', 'bottom_type': 'asphalt',
+                'left_type': 'asphalt', 'right_type': 'asphalt',
+                'l2_top': False, 'l2_bottom': False, 'l2_left': False, 'l2_right': False,
+                'l3_top': False, 'l3_bottom': False, 'l3_left': False, 'l3_right': False
+            }
 
-      self.connections_grid = new_conns
-      self.grid_w = new_grid_w
-      self.grid_h = new_grid_h
+          new_conns = [[_empty_conn() for _ in range(new_grid_w)] for _ in range(new_grid_h)]
+          for y in range(old_h):
+            for x in range(old_w):
+              new_conns[y + shift_y][x + shift_x] = old_grid[y][x]
 
-    lobby_gx = cand_lx + shift_x
-    lobby_gy = cand_ly + shift_y
-    self.lobby_chunk = (lobby_gx, lobby_gy)
-    self.active_chunks.add(self.lobby_chunk)
-    
-    start_at_lobby = getattr(core.data.config, 'START_AT_THE_LOBBY', True)
-    if start_at_lobby:
+          self.connections_grid = new_conns
+          self.grid_w = new_grid_w
+          self.grid_h = new_grid_h
+
+        lobby_gx = cand_lx + shift_x
+        lobby_gy = cand_ly + shift_y
+        self.lobby_chunk = (lobby_gx, lobby_gy)
+        self.active_chunks.add(self.lobby_chunk)
+
+        needed_w = max(self.grid_w, lobby_gx + 1)
+        needed_h = max(self.grid_h, lobby_gy + 1)
+        for y in range(len(self.connections_grid)):
+          while len(self.connections_grid[y]) < needed_w:
+            self.connections_grid[y].append({
+                'top': False, 'bottom': False, 'left': False, 'right': False,
+                'top_type': 'asphalt', 'bottom_type': 'asphalt',
+                'left_type': 'asphalt', 'right_type': 'asphalt',
+                'l2_top': False, 'l2_bottom': False, 'l2_left': False, 'l2_right': False,
+                'l3_top': False, 'l3_bottom': False, 'l3_left': False, 'l3_right': False
+            })
+        while len(self.connections_grid) < needed_h:
+          self.connections_grid.append([{
+              'top': False, 'bottom': False, 'left': False, 'right': False,
+              'top_type': 'asphalt', 'bottom_type': 'asphalt',
+              'left_type': 'asphalt', 'right_type': 'asphalt',
+              'l2_top': False, 'l2_bottom': False, 'l2_left': False, 'l2_right': False,
+              'l3_top': False, 'l3_bottom': False, 'l3_left': False, 'l3_right': False
+          } for _ in range(needed_w)])
+
+        self.grid_w = needed_w
+        self.grid_h = needed_h
+
+        connect_target = (sx + shift_x, sy + shift_y)
+        self._link_conns(
+            self.connections_grid,
+            lobby_gx,
+            lobby_gy,
+            connect_target[0],
+            connect_target[1],
+            link_l1=False,
+            link_l2=False,
+            link_l3=True
+        )
+    else:
+        self.lobby_chunk = None
+
+    start_at_lobby = spawn_lobby and getattr(core.data.config, 'START_AT_THE_LOBBY', True)
+    if start_at_lobby and self.lobby_chunk:
         self.start_chunk = self.lobby_chunk
     else:
-        # Choose a random island chunk that contains a Port building
         port_candidates = [
             c for c in all_cells 
-            if c != self.military_chunk and c != self.lobby_chunk
+            if c != getattr(self, 'military_chunk', None) and c != getattr(self, 'lobby_chunk', None)
         ]
         if port_candidates:
             self.start_chunk = random.choice(port_candidates)
         else:
             self.start_chunk = island_start_chunk
-
-    needed_w = max(self.grid_w, lobby_gx + 1)
-    needed_h = max(self.grid_h, lobby_gy + 1)
-    for y in range(len(self.connections_grid)):
-      while len(self.connections_grid[y]) < needed_w:
-        self.connections_grid[y].append({
-            'top': False, 'bottom': False, 'left': False, 'right': False,
-            'top_type': 'asphalt', 'bottom_type': 'asphalt',
-            'left_type': 'asphalt', 'right_type': 'asphalt',
-            'l2_top': False, 'l2_bottom': False, 'l2_left': False, 'l2_right': False,
-            'l3_top': False, 'l3_bottom': False, 'l3_left': False, 'l3_right': False
-        })
-    while len(self.connections_grid) < needed_h:
-      self.connections_grid.append([{
-          'top': False, 'bottom': False, 'left': False, 'right': False,
-          'top_type': 'asphalt', 'bottom_type': 'asphalt',
-          'left_type': 'asphalt', 'right_type': 'asphalt',
-          'l2_top': False, 'l2_bottom': False, 'l2_left': False, 'l2_right': False,
-          'l3_top': False, 'l3_bottom': False, 'l3_left': False, 'l3_right': False
-      } for _ in range(needed_w)])
-
-    self.grid_w = needed_w
-    self.grid_h = needed_h
-
-    # Connect Lobby chunk to the adjacent Island chunk ON LAYER 3 ONLY
-    connect_target = (sx + shift_x, sy + shift_y)
-    self._link_conns(
-        self.connections_grid,
-        lobby_gx,
-        lobby_gy,
-        connect_target[0],
-        connect_target[1],
-        link_l1=False,
-        link_l2=False,
-        link_l3=True
-    )
 
     mil_coord = self.military_chunk
 
@@ -611,12 +628,21 @@ class ProceduralGenerator(
     self.chunk_priority_map = {coord: [] for coord in all_cells}
     self.chunk_l2_priority_map = {coord: [] for coord in all_cells}
     self.chunk_l3_priority_map = {coord: [] for coord in all_cells}
-    self.chunk_priority_map[self.lobby_chunk] = []
-    self.chunk_l2_priority_map[self.lobby_chunk] = []
-    self.chunk_l3_priority_map[self.lobby_chunk] = []
 
-    if military_l3_deck:
-      self.chunk_l3_priority_map[mil_coord].extend(military_l3_deck)
+    if self.lobby_chunk:
+      self.chunk_priority_map[self.lobby_chunk] = []
+      self.chunk_l2_priority_map[self.lobby_chunk] = []
+      self.chunk_l3_priority_map[self.lobby_chunk] = []
+
+    if spawn_military and self.military_chunk:
+      if military_l3_deck:
+        self.chunk_l3_priority_map[self.military_chunk].extend(military_l3_deck)
+      if self.military_deck:
+        self.chunk_priority_map[self.military_chunk].extend(self.military_deck)
+      if self.heli_template:
+        self.chunk_priority_map[self.military_chunk].append(self.heli_template)
+      if self.mil_petrol_template:
+        self.chunk_priority_map[self.military_chunk].append(self.mil_petrol_template)
 
     cave_temps = [t for t in self.categorized_templates.get('Cave', []) if 'l2' not in t.lower() and 'l3' not in t.lower()]
     if not cave_temps:
@@ -625,22 +651,15 @@ class ProceduralGenerator(
       for coord in all_cells:
         self.chunk_priority_map[coord].append(random.choice(cave_temps))
 
-    # Spawn Petrol far from Urban areas: 1 per Forest chunk (never in Lobby or Urban)
+    # Spawn Petrol far from Urban areas: 1 per Forest chunk (never in Lobby or Military)
     petrol_temps = [
         t for t in self.categorized_templates.get('Petrol', [])
         if 'military' not in t.lower() and 'lobby' not in t.lower()
     ]
     if petrol_temps:
       for f_coord in self.forest_chunks:
-        if f_coord != self.lobby_chunk and f_coord != mil_coord:
+        if (not self.lobby_chunk or f_coord != self.lobby_chunk) and (not self.military_chunk or f_coord != self.military_chunk):
           self.chunk_priority_map[f_coord].append(random.choice(petrol_temps))
-
-    if self.military_deck:
-      self.chunk_priority_map[mil_coord].extend(self.military_deck)
-    if self.heli_template:
-      self.chunk_priority_map[mil_coord].append(self.heli_template)
-    if self.mil_petrol_template:
-      self.chunk_priority_map[mil_coord].append(self.mil_petrol_template)
 
     # Pure Urban buildings assigned densely to urban chunks
     urban_list = [c for c in self.urban_chunks if c != mil_coord]
@@ -678,8 +697,8 @@ class ProceduralGenerator(
                 'isolated_island_chunks': [list(c) for c in self.isolated_island_chunks],
                 'chunk_path': self.chunk_path,
                 'start_chunk': list(self.start_chunk),
-                'lobby_chunk': list(self.lobby_chunk),
-                'military_chunk': list(self.military_chunk),
+                'lobby_chunk': list(self.lobby_chunk) if self.lobby_chunk else None,
+                'military_chunk': list(self.military_chunk) if self.military_chunk else None,
                 'connections_grid': self.connections_grid,
                 'chunk_priority_map': {
                     f'{k[0]}_{k[1]}': v
@@ -808,8 +827,8 @@ class ProceduralGenerator(
                     'isolated_island_chunks': [list(c) for c in self.isolated_island_chunks],
                     'chunk_path': self.chunk_path,
                     'start_chunk': list(self.start_chunk),
-                    'lobby_chunk': list(self.lobby_chunk),
-                    'military_chunk': list(self.military_chunk),
+                    'lobby_chunk': list(self.lobby_chunk) if self.lobby_chunk else None,
+                    'military_chunk': list(self.military_chunk) if self.military_chunk else None,
                     'connections_grid': self.connections_grid,
                     'chunk_priority_map': {
                         f'{k[0]}_{k[1]}': v

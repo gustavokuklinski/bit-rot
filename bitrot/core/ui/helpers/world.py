@@ -223,19 +223,38 @@ def _draw_world_screen(game, state, mouse_pos):
                     sub.blit(info_surf, (info_pos_x, y_off + S(12)))
 
                 if is_bool:
-                    hovered = abs_rect.collidepoint(mouse_pos)
-                    bg_color = (70, 70, 70) if hovered else (50, 50, 50)
-                    pygame.draw.rect(sub, bg_color, input_rect, border_radius=3)
-                    pygame.draw.rect(sub, WHITE, input_rect, 1, border_radius=3)
+                    # Check if this setting is locked/disabled by another setting
+                    is_disabled = False
+                    if key in ('start_at_the_lobby', 'start_lobby'):
+                        lobby_gen_val = config_data.get('game', {}).get('generate_lobby_chunk', {}).get('value', 'true')
+                        if str(lobby_gen_val).lower() != 'true':
+                            str_val = "false"
+                            is_disabled = True
+
+                    hovered = abs_rect.collidepoint(mouse_pos) and not is_disabled
                     
+                    if is_disabled:
+                        bg_color = (35, 35, 35)
+                        border_color = (55, 55, 55)
+                        arrow_color = (70, 70, 70)
+                        text_color = (90, 90, 90)
+                    else:
+                        bg_color = (70, 70, 70) if hovered else (50, 50, 50)
+                        border_color = WHITE
+                        arrow_color = WHITE
+                        text_color = WHITE
+
+                    pygame.draw.rect(sub, bg_color, input_rect, border_radius=3)
+                    pygame.draw.rect(sub, border_color, input_rect, 1, border_radius=3)
+
                     val_text = tr('ui', "True") if str_val == "true" else tr('ui', "False")
-                    txt_surf = font_12.render(val_text, False, WHITE)
+                    txt_surf = font_12.render(val_text, False, text_color)
                     text_x = input_rect.x + (input_rect.width - txt_surf.get_width()) // 2
                     text_y = input_rect.y + (input_rect.height - txt_surf.get_height()) // 2
                     sub.blit(txt_surf, (text_x, text_y))
                     
-                    pygame.draw.polygon(sub, WHITE, [(input_rect.right - S(8), input_rect.centery), (input_rect.right - S(14), input_rect.centery - S(4)), (input_rect.right - S(14), input_rect.centery + S(4))])
-                    pygame.draw.polygon(sub, WHITE, [(input_rect.x + S(8), input_rect.centery), (input_rect.x + S(14), input_rect.centery - S(4)), (input_rect.x + S(14), input_rect.centery + S(4))])
+                    pygame.draw.polygon(sub, arrow_color, [(input_rect.right - S(8), input_rect.centery), (input_rect.right - S(14), input_rect.centery - S(4)), (input_rect.right - S(14), input_rect.centery + S(4))])
+                    pygame.draw.polygon(sub, arrow_color, [(input_rect.x + S(8), input_rect.centery), (input_rect.x + S(14), input_rect.centery - S(4)), (input_rect.x + S(14), input_rect.centery + S(4))])
                     
                     if abs_rect.bottom > content_rect.top and abs_rect.top < content_rect.bottom:
                         clickable_rects['world_bools'].append((block, key, abs_rect))
@@ -543,7 +562,25 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
                          state['world_data'][block][key] = setting_obj
 
                     current_val = setting_obj['value']
+
+                    # Rule: If trying to toggle start_at_the_lobby when generate_lobby_chunk is false, disallow interaction completely
+                    if key in ('start_at_the_lobby', 'start_lobby'):
+                        lobby_gen_val = state['world_data'].get('game', {}).get('generate_lobby_chunk', {}).get('value', 'true')
+                        if str(lobby_gen_val).lower() != 'true':
+                            # Do nothing, maintain dark gray disabled state
+                            clicked_input = True
+                            break
+
                     new_val = "false" if str(current_val).lower() == "true" else "true"
+
+                    # Rule: If disabling generate_lobby_chunk, force start_at_the_lobby to false as well
+                    if key in ('generate_lobby_chunk', 'spawn_lobby_chunk') and new_val == "false":
+                        if 'game' in state['world_data'] and 'start_at_the_lobby' in state['world_data']['game']:
+                            if isinstance(state['world_data']['game']['start_at_the_lobby'], dict):
+                                state['world_data']['game']['start_at_the_lobby']['value'] = "false"
+                            else:
+                                state['world_data']['game']['start_at_the_lobby'] = {'value': 'false', 'name': 'Start game at the Lobby'}
+
                     state['world_data'][block][key]['value'] = new_val
                     _clone_to_custom(state)
                     state['world_unsaved'] = True

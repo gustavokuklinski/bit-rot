@@ -12,6 +12,7 @@
         ],
         "tooltips": [
           "Large map",
+          "Start at Island",
           "Lot of Rotters",
           "Low loot"
         ]
@@ -51,6 +52,21 @@
           "infinite_liquid": {
             "value": false,
             "name": "Liquids are infinite",
+            "default": true
+          },
+          "generate_military_chunk": {
+            "value": true,
+            "name": "Generate Military Chunk",
+            "default": true
+          },
+          "generate_lobby_chunk": {
+            "value": true,
+            "name": "Generate Lobby Chunk",
+            "default": true
+          },
+          "start_at_the_lobby": {
+            "value": false,
+            "name": "Start game at the Lobby",
             "default": true
           }
         },

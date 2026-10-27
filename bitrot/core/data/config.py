@@ -386,22 +386,25 @@ def load_settings(world_preset="world"):
                 PERMADEATH = str(_get_val(game_config, ['permadeath'], False)).lower() == 'true'
                 ALL_VISIBLE = str(_get_val(game_config, ['all_visible'], False)).lower() == 'true'
                 INFINITE_LIQUID = str(_get_val(game_config, ['infinite_liquid'], True)).lower() == 'true'
-                START_AT_THE_LOBBY = str(_get_val(game_config, ['start_at_the_lobby', 'start_lobby'], True)).lower() == 'true'
+                
+                # Parse generate_lobby_chunk and generate_military_chunk
+                lobby_gen_val = _get_val(game_config, ['generate_lobby_chunk', 'lobby_chunk', 'spawn_lobby_chunk'], True)
+                SPAWN_LOBBY_CHUNK = str(lobby_gen_val).lower() == 'true'
+
+                mil_gen_val = _get_val(game_config, ['generate_military_chunk', 'military_chunk', 'spawn_military_chunk'], True)
+                SPAWN_MILITARY_CHUNK = str(mil_gen_val).lower() == 'true'
+
+                # If generate_lobby_chunk is false, start_at_the_lobby is disabled
+                if not SPAWN_LOBBY_CHUNK:
+                    START_AT_THE_LOBBY = False
+                else:
+                    START_AT_THE_LOBBY = str(_get_val(game_config, ['start_at_the_lobby', 'start_lobby'], True)).lower() == 'true'
 
             map_config = root.get('map', {})
             if map_config:
                 MAP_CHUNKS = int(_get_val(map_config, ['map_chunks', 'chunks'], 3))
                 CHUNK_SIZE = int(_get_val(map_config, ['chunk_size', 'size'], 128))
                 WORLD_SEED = str(_get_val(map_config, ['seed', 'world_seed'], ''))
-
-                # Check both map and game sections for chunk generation flags
-                lobby_gen_val = _get_val(map_config, ['lobby_chunk', 'spawn_lobby_chunk'],
-                                _get_val(game_config, ['lobby_chunk', 'spawn_lobby_chunk'], True))
-                SPAWN_LOBBY_CHUNK = str(lobby_gen_val).lower() == 'true'
-
-                mil_gen_val = _get_val(map_config, ['military_chunk', 'spawn_military_chunk'],
-                            _get_val(game_config, ['military_chunk', 'spawn_military_chunk'], True))
-                SPAWN_MILITARY_CHUNK = str(mil_gen_val).lower() == 'true'
 
             player_config = root.get('player', {})
             if player_config:
