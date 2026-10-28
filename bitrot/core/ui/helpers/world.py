@@ -225,7 +225,7 @@ def _draw_world_screen(game, state, mouse_pos):
                 if is_bool:
                     # Check if this setting is locked/disabled by another setting
                     is_disabled = False
-                    if key in ('start_at_the_lobby', 'start_lobby'):
+                    if key in ('start_at_the_lobby', 'start_lobby', 'no_boat_to_lobby'):
                         lobby_gen_val = config_data.get('game', {}).get('generate_lobby_chunk', {}).get('value', 'true')
                         if str(lobby_gen_val).lower() != 'true':
                             str_val = "false"
@@ -563,8 +563,8 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
 
                     current_val = setting_obj['value']
 
-                    # Rule: If trying to toggle start_at_the_lobby when generate_lobby_chunk is false, disallow interaction completely
-                    if key in ('start_at_the_lobby', 'start_lobby'):
+                    # Rule: If trying to toggle start_at_the_lobby or no_boat_to_lobby when generate_lobby_chunk is false, disallow interaction completely
+                    if key in ('start_at_the_lobby', 'start_lobby', 'no_boat_to_lobby'):
                         lobby_gen_val = state['world_data'].get('game', {}).get('generate_lobby_chunk', {}).get('value', 'true')
                         if str(lobby_gen_val).lower() != 'true':
                             # Do nothing, maintain dark gray disabled state
@@ -573,13 +573,19 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
 
                     new_val = "false" if str(current_val).lower() == "true" else "true"
 
-                    # Rule: If disabling generate_lobby_chunk, force start_at_the_lobby to false as well
+                    # Rule: If disabling generate_lobby_chunk, force start_at_the_lobby and no_boat_to_lobby to false as well
                     if key in ('generate_lobby_chunk', 'spawn_lobby_chunk') and new_val == "false":
-                        if 'game' in state['world_data'] and 'start_at_the_lobby' in state['world_data']['game']:
-                            if isinstance(state['world_data']['game']['start_at_the_lobby'], dict):
-                                state['world_data']['game']['start_at_the_lobby']['value'] = "false"
-                            else:
-                                state['world_data']['game']['start_at_the_lobby'] = {'value': 'false', 'name': 'Start game at the Lobby'}
+                        if 'game' in state['world_data']:
+                            if 'start_at_the_lobby' in state['world_data']['game']:
+                                if isinstance(state['world_data']['game']['start_at_the_lobby'], dict):
+                                    state['world_data']['game']['start_at_the_lobby']['value'] = "false"
+                                else:
+                                    state['world_data']['game']['start_at_the_lobby'] = {'value': 'false', 'name': 'Start game at the Lobby'}
+                            if 'no_boat_to_lobby' in state['world_data']['game']:
+                                if isinstance(state['world_data']['game']['no_boat_to_lobby'], dict):
+                                    state['world_data']['game']['no_boat_to_lobby']['value'] = "false"
+                                else:
+                                    state['world_data']['game']['no_boat_to_lobby'] = {'value': 'false', 'name': "Can't navigate back Lobby"}
 
                     state['world_data'][block][key]['value'] = new_val
                     _clone_to_custom(state)

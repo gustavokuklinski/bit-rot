@@ -10,15 +10,18 @@ Apocalypse Z - The Wrath of the Just - Manel Loureiro (2011) - Manel Loureiro
 Night of the Living Dead (1968) - George A. Romero
 Dawn of the Dead (1978) - George A. Romero
 Day of the Dead (1985) - George A. Romero
+Dawn of the Dead (2004) - Zack Snyder
 Land of the Dead (2005) - George A. Romero
 Diary of the Dead (2007) - George A. Romero
 Survival of the Dead (2009) - George A. Romero
-Dawn of the Dead (2004) - Zack Snyder
 World War Z (2013) - Marc Forster
+Train to Busan (2016) - Yeon Sang-Ho
+Day of the Dead (2018) - Hèctor Hernández Vicens
+Deadsight (2018) - Jesse Thomas Cook
+Peninsula (2020) - Yeon Sang-Ho
 Army of the Dead (2021) - Zack Snyder
 We Bury the Dead (2025) - Zak Hilditch
-Train to Busan (2016) - Yeon Sang-Ho
-Train to Busan 2 (2020) - Yeon Sang-Ho
+
 
 ### Games inspired by:
 Resident Evil (1996) - Capcom

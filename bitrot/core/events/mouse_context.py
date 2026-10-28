@@ -419,9 +419,13 @@ def handle_right_click(game, mouse_pos):
                 player_fuel = get_player_fuel_units(game.player)
                 fuel_icon = get_fuel_icon()
 
-                # ONLY show Lobby if generate_lobby_chunk is true and lobby_chunk exists
-                has_lobby = getattr(core.data.config, 'SPAWN_LOBBY_CHUNK', True) and lobby_chunk is not None
-                if has_lobby and (cur_gx, cur_gy) != lobby_chunk:
+                # ONLY show Lobby if generate_lobby_chunk is true, no_boat_to_lobby is false, and lobby_chunk exists
+                can_travel_to_lobby = (
+                    getattr(core.data.config, 'SPAWN_LOBBY_CHUNK', True)
+                    and not getattr(core.data.config, 'NO_BOAT_TO_LOBBY', False)
+                    and lobby_chunk is not None
+                )
+                if can_travel_to_lobby and (cur_gx, cur_gy) != lobby_chunk:
                     sub_key = f"{lobby_chunk[0]}_{lobby_chunk[1]}"
                     sub_opts.append(sub_key)
                     fuel_cost = calculate_boat_fuel_cost(game, lobby_chunk[0], lobby_chunk[1])
@@ -470,13 +474,14 @@ def handle_right_click(game, mouse_pos):
                         'tooltip_map': tooltip_map
                     })
 
-                # Option: Discovery island (Requires Lobby enabled, fixed 100 fuel price)
-                options.append('Discover Island')
-                game.context_menu['tooltips']['Discover Island'] = (
-                    f"{tr('ui', 'Discover a new island.')}\n"
-                    f"{tr('ui', 'Cost:')} 25x {tr('item', 'Fuel Unit')}\n"
-                    f"{tr('ui', 'Available fuel:')} {player_fuel}"
-                )
+                # Add Discover Island ONLY if disable_discover_island is false
+                if not getattr(core.data.config, 'DISABLE_DISCOVER_ISLAND', False):
+                    options.append('Discover Island')
+                    game.context_menu['tooltips']['Discover Island'] = (
+                        f"{tr('ui', 'Discover a new isolated island.')}\n"
+                        f"{tr('ui', 'Cost:')} 25x {tr('item', 'Fuel Unit')}\n"
+                        f"{tr('ui', 'Available fuel:')} {player_fuel}"
+                    )
 
                 # Only return if neither destinations nor Discovery island are available
                 if not options:

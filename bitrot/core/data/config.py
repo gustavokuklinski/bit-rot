@@ -84,6 +84,8 @@ PERMADEATH = False
 ALL_VISIBLE = False
 INFINITE_LIQUID = True
 START_AT_THE_LOBBY = True
+DISABLE_DISCOVER_ISLAND = False
+NO_BOAT_TO_LOBBY = False
 TIME_DAYLENGTH = 900000
 TIME_SUNRISE_HR = 5.5
 TIME_SUNSET_HR = 17.5
@@ -294,6 +296,7 @@ def load_settings(world_preset="world"):
     global VOLUME_MUSIC, VOLUME_BACKGROUND, VOLUME_ATMOSPHERIC, VOLUME_ANIMAL, VOLUME_NPC, VOLUME_ZOMBIE, VOLUME_PLAYER, VOLUME_VEHICLE, VOLUME_ITEMS, VOLUME_MAP
     global GAME_LANGUAGE 
     global PERMADEATH, ALL_VISIBLE, INFINITE_LIQUID, START_AT_THE_LOBBY
+    global DISABLE_DISCOVER_ISLAND, NO_BOAT_TO_LOBBY
 
     # 1. LOAD PREFERENCES JSON
     pref_path = get_preferences_path()
@@ -386,7 +389,7 @@ def load_settings(world_preset="world"):
                 PERMADEATH = str(_get_val(game_config, ['permadeath'], False)).lower() == 'true'
                 ALL_VISIBLE = str(_get_val(game_config, ['all_visible'], False)).lower() == 'true'
                 INFINITE_LIQUID = str(_get_val(game_config, ['infinite_liquid'], True)).lower() == 'true'
-                
+
                 # Parse generate_lobby_chunk and generate_military_chunk
                 lobby_gen_val = _get_val(game_config, ['generate_lobby_chunk', 'lobby_chunk', 'spawn_lobby_chunk'], True)
                 SPAWN_LOBBY_CHUNK = str(lobby_gen_val).lower() == 'true'
@@ -394,11 +397,15 @@ def load_settings(world_preset="world"):
                 mil_gen_val = _get_val(game_config, ['generate_military_chunk', 'military_chunk', 'spawn_military_chunk'], True)
                 SPAWN_MILITARY_CHUNK = str(mil_gen_val).lower() == 'true'
 
-                # If generate_lobby_chunk is false, start_at_the_lobby is disabled
+                # If generate_lobby_chunk is false, start_at_the_lobby is forced false
                 if not SPAWN_LOBBY_CHUNK:
                     START_AT_THE_LOBBY = False
+                    NO_BOAT_TO_LOBBY = True
                 else:
                     START_AT_THE_LOBBY = str(_get_val(game_config, ['start_at_the_lobby', 'start_lobby'], True)).lower() == 'true'
+                    NO_BOAT_TO_LOBBY = str(_get_val(game_config, ['no_boat_to_lobby'], False)).lower() == 'true'
+
+                DISABLE_DISCOVER_ISLAND = str(_get_val(game_config, ['disable_discover_island'], False)).lower() == 'true'
 
             map_config = root.get('map', {})
             if map_config:
