@@ -237,6 +237,7 @@ class Game:
 
         self.message_logs = {
             'All': [],
+            'Radio': [],
             'Chat': [],
             'Player': [],
             'Zombie': []

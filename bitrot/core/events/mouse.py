@@ -30,7 +30,6 @@ def handle_mouse_down(game, event, mouse_pos):
             p_tx = int(game.player.rect.centerx // TILE_SIZE)
             p_ty = int(game.player.rect.centery // TILE_SIZE)
             
-            # [FIX] STRICT SNAP: Force the click position to the top-left of the tile
             snap_x = mouse_tx * TILE_SIZE
             snap_y = mouse_ty * TILE_SIZE
             
@@ -75,8 +74,6 @@ def handle_mouse_down(game, event, mouse_pos):
                             dropped_item.layer = getattr(game, 'current_layer_index', 1)
                             dropped_item.map_filename = getattr(game.map_manager, 'current_map_filename', '')
                             
-                            
-                            
                             if game and hasattr(game, 'sound_manager'):
                                 game.sound_manager.play_sound(
                                     'place.ogg',
@@ -105,44 +102,49 @@ def handle_mouse_down(game, event, mouse_pos):
             clicked_notif = False
             for notif in game.notifications:
                 if notif.get('rect') and notif['rect'].collidepoint(mouse_pos):
-                    # If this is the fixed/persistent TAB prompt notification, toggle the UI
                     if notif.get('persistent'):
                         from core.events.keyboard import toggle_default_ui
                         toggle_default_ui(game)
                         if notif in game.notifications:
                             game.notifications.remove(notif)
                     else:
-                        # Default behavior for other quest/milestone notifications: open status modal
                         status_modal = next((m for m in game.modals if m['type'] == 'status'), None)
                         target_tab = notif.get('target_tab', 'Quests')
                         if status_modal:
                             status_modal['active_tab'] = target_tab
-                            # Bring modal to front
                             game.modals.remove(status_modal)
                             game.modals.append(status_modal)
                         else:
                             toggle_status_modal(game)
-                            # The newly created modal is always placed at the end of the list
                             game.modals[-1]['active_tab'] = target_tab
                             
-                        # Remove the clicked notification
                         if notif in game.notifications:
                             game.notifications.remove(notif)
 
                     clicked_notif = True
                     break
                     
-            # If a notification was clicked, stop processing other UI underneath it
             if clicked_notif:
                 return
 
+        # 1. Detect topmost modal, also checking if mouse collides with an open debug dropdown popup
         topmost_modal = None
         for modal in reversed(game.modals):
-            if modal['rect'].collidepoint(mouse_pos):
+            dd_popup = modal.get('debug_dd_popup_rect')
+            if modal['rect'].collidepoint(mouse_pos) or (dd_popup and dd_popup.collidepoint(mouse_pos)):
                 topmost_modal = modal
                 break
         
         if topmost_modal:
+            # PRIORITY 0: If Messages modal has an active Debug dropdown popup open, check its clicks FIRST!
+            # This ensures that options drawn on top of the title bar, close button, or subtabs can be selected without dragging.
+            if topmost_modal.get('type') == 'messages' and topmost_modal.get('active_tab') == 'Debug':
+                dd_popup = topmost_modal.get('debug_dd_popup_rect')
+                if dd_popup and dd_popup.collidepoint(mouse_pos):
+                    from core.ui.messages_debug_tab import handle_messages_debug_click
+                    if handle_messages_debug_click(game, topmost_modal, mouse_pos):
+                        return
+
             # 1. Direct close button click
             if topmost_modal.get('close_button_rect') and topmost_modal['close_button_rect'].collidepoint(mouse_pos):
                 if topmost_modal.get('type') == 'messages':
@@ -210,7 +212,7 @@ def handle_mouse_down(game, event, mouse_pos):
                     game.modals.remove(topmost_modal)
                     return
 
-            # 4. Dragging and modal controls
+            # 4. Dragging and modal controls (safe against dropdown interference)
             modal_header_rect = pygame.Rect(topmost_modal['position'][0], topmost_modal['position'][1], topmost_modal['rect'].width, 35)
             if modal_header_rect.collidepoint(mouse_pos):
                 topmost_modal['is_dragging'] = True
@@ -244,7 +246,7 @@ def handle_mouse_down(game, event, mouse_pos):
                 if topmost_modal['instance'].handle_event(event): 
                     return
             
-            if topmost_modal.get('type') in ['nearby', 'status', 'inventory', 'mobile', 'messages','vehicle', 'gear'] and 'tab_rects' in topmost_modal:
+            if topmost_modal.get('type') in ['nearby', 'status', 'inventory', 'mobile', 'messages', 'vehicle', 'gear'] and 'tab_rects' in topmost_modal:
                 for i, tab_rect in enumerate(topmost_modal.get('tab_rects', [])):
                     if tab_rect.collidepoint(mouse_pos):
                         tabs_data = topmost_modal.get('tabs_data', [])
@@ -253,11 +255,18 @@ def handle_mouse_down(game, event, mouse_pos):
                              
                         if i < len(tabs_data):
                             topmost_modal['active_tab'] = tabs_data[i]['label']
+                            if hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_ui_hover()
                             return
+
+            # Messages Modal: Debug tab interaction delegation
+            if topmost_modal.get('type') == 'messages' and topmost_modal.get('active_tab') == 'Debug':
+                from core.ui.messages_debug_tab import handle_messages_debug_click
+                if handle_messages_debug_click(game, topmost_modal, mouse_pos):
+                    return
 
             # --- [FIX] NPC DIALOG MODAL TABS & DIALOGUE CLICK HANDLER ---
             if topmost_modal.get('type') == 'npc_dialog':
-                # 1. Tab Clicks (Current Dialog, Special Dialogs, Trade)
                 if 'tab_rects' in topmost_modal:
                     for i, tab_rect in enumerate(topmost_modal['tab_rects']):
                         if tab_rect.collidepoint(mouse_pos):
@@ -267,10 +276,8 @@ def handle_mouse_down(game, event, mouse_pos):
                             npc = topmost_modal.get('npc')
                             if npc and i == 0:
                                 topmost_modal['dialogs'] = npc.get_dialog_options()
-                            
                             return
 
-                # 2. Dialogue Lines & Answers (Tab 0: Current Dialog)
                 if topmost_modal.get('active_tab_index', 0) == 0:
                     active_idx = topmost_modal.get('active_dialog_index', -1)
                     if active_idx == -1:
@@ -283,7 +290,6 @@ def handle_mouse_down(game, event, mouse_pos):
                                 topmost_modal['active_dialog_index'] = clicked_idx
                                 topmost_modal['scroll_offset_y'] = 0
 
-                                # 1. Gain XP reward if specified
                                 gain_xp = opt.get('gain_xp')
                                 if gain_xp:
                                     clean_xp = gain_xp.replace('[', '').replace(']', '').strip()
@@ -298,7 +304,6 @@ def handle_mouse_down(game, event, mouse_pos):
                                             except ValueError:
                                                 pass
 
-                                # 2. Deduct requested items from player (recursive & safe match)
                                 rqst = opt.get('rqst_item')
                                 if rqst:
                                     clean_rqst = rqst.replace('[', '').replace(']', '').strip()
@@ -316,7 +321,6 @@ def handle_mouse_down(game, event, mouse_pos):
                                         return False
 
                                     def deduct_candidate(target):
-                                        # Inventory and Belt
                                         for inv_list in [game.player.inventory, game.player.belt]:
                                             for slot_i, it in enumerate(inv_list):
                                                 if it and is_deduct_match(it.name, target):
@@ -329,7 +333,6 @@ def handle_mouse_down(game, event, mouse_pos):
                                                             inv_list.pop(slot_i)
                                                     display_message(game, f"{tr('msg', 'Gave:')} {tr('item', it.name)}")
                                                     return True
-                                                # Check inside carried bags/containers
                                                 if it and hasattr(it, 'inventory') and it.inventory:
                                                     for c_i, c_it in enumerate(it.inventory):
                                                         if c_it and is_deduct_match(c_it.name, target):
@@ -340,7 +343,6 @@ def handle_mouse_down(game, event, mouse_pos):
                                                             display_message(game, f"{tr('msg', 'Gave:')} {tr('item', c_it.name)}")
                                                             return True
 
-                                        # Equipped Clothes
                                         if hasattr(game.player, 'clothes'):
                                             for slot_k, it in game.player.clothes.items():
                                                 if it and is_deduct_match(it.name, target):
@@ -362,7 +364,6 @@ def handle_mouse_down(game, event, mouse_pos):
                                         if deduct_candidate(cand):
                                             break
 
-                                # 3. Award items to player with fallback aliases & quantity parsing
                                 award = opt.get('award_item')
                                 if award:
                                     clean_award = award.replace('[', '').replace(']', '').strip()
@@ -411,7 +412,6 @@ def handle_mouse_down(game, event, mouse_pos):
                                                 game.items_on_ground.append(new_it)
                                             display_message(game, f"{tr('msg', 'Received:')} {tr('item', new_it.name)}")
 
-                                # 4. Unlock narrative flags or new quests
                                 unlock = opt.get('unlock_flag')
                                 if unlock and npc:
                                     npc.unlock_node(unlock)
@@ -421,7 +421,6 @@ def handle_mouse_down(game, event, mouse_pos):
                                         add_notification(game, tr('ui', 'New Quest!'), display_quest_name, target_tab='Quests')
                                         display_message(game, f"{tr('msg', 'New Quest:')} {display_quest_name}")
 
-                                # 5. Complete quests
                                 complete = opt.get('complete_flag')
                                 if complete:
                                     if complete not in game.player.completed_quests:
@@ -440,7 +439,6 @@ def handle_mouse_down(game, event, mouse_pos):
                                     add_notification(game, tr('ui', 'Quest Completed!'), display_quest_name, target_tab='Quests')
                                     display_message(game, f"{tr('msg', 'Quest Completed:')} {display_quest_name}")
 
-                                # 6. Once dialog history
                                 d_type = opt.get('dialog_type', '')
                                 if d_type == 'once':
                                     dialog_key = f"{opt.get('node_id')}_{opt['q']}"
@@ -457,7 +455,6 @@ def handle_mouse_down(game, event, mouse_pos):
                                         'npc_name': npc.name if npc else 'Survivor'
                                     })
 
-                                # 7. Attitude adjustments
                                 if opt.get('npc_state_friendly') is not None and npc:
                                     npc.is_friendly = str(opt['npc_state_friendly']).lower() == 'true'
                                     if not npc.is_friendly:
@@ -467,10 +464,8 @@ def handle_mouse_down(game, event, mouse_pos):
                                 if opt.get('npc_state_static') is not None and npc:
                                     npc.is_static = str(opt['npc_state_static']).lower() == 'true'
 
-                                
                                 return
                     else:
-                        # In answer view, clicking anywhere inside the modal returns to dialogue or closes if hostile
                         if topmost_modal.get('rect') and topmost_modal['rect'].collidepoint(mouse_pos):
                             npc = topmost_modal.get('npc')
                             if npc and not getattr(npc, 'is_friendly', True):
@@ -482,9 +477,7 @@ def handle_mouse_down(game, event, mouse_pos):
                             topmost_modal['dialog_list_cache_key'] = None
                             if npc:
                                 topmost_modal['dialogs'] = npc.get_dialog_options()
-                            
                             return
-            # -------------------------------------------------------------
 
             if hasattr(topmost_modal, 'handle_event'):
                 if topmost_modal.handle_event(event): return
@@ -527,6 +520,12 @@ def handle_mouse_down(game, event, mouse_pos):
 
         if game.chat_active:
             game.chat_active = False
+
+        # Close open debug dropdowns when clicking outside modals
+        for m in game.modals:
+            if m.get('type') == 'messages':
+                m['debug_open_dropdown'] = None
+                m['debug_active_input'] = None
 
         if getattr(game, 'mini_gps_rect', None) and game.mini_gps_rect.collidepoint(mouse_pos):
             from core.entities.item.item_helpers import player_has_mobile
@@ -596,12 +595,24 @@ def handle_mouse_down(game, event, mouse_pos):
             return
 
     elif event.button in (4, 5):
-        # [Unchanged Logic...]
         topmost_modal = None
         for modal in reversed(game.modals):
-            if modal['rect'].collidepoint(mouse_pos):
+            dd_popup = modal.get('debug_dd_popup_rect')
+            if (modal.get('rect') and modal['rect'].collidepoint(mouse_pos)) or (dd_popup and dd_popup.collidepoint(mouse_pos)):
                 topmost_modal = modal
                 break
+
+        if topmost_modal and topmost_modal.get('type') == 'messages':
+            open_dd = topmost_modal.get('debug_open_dropdown')
+            dd_pop = topmost_modal.get('debug_dd_popup_rect')
+            if open_dd and dd_pop and dd_pop.collidepoint(mouse_pos):
+                cur_s = topmost_modal.get(f'debug_dd_scroll_{open_dd}', 0)
+                pool_len = len(topmost_modal.get('debug_dd_filtered', []))
+                max_s = max(0, pool_len - 6)
+                dy = -1 if event.button == 4 else 1
+                topmost_modal[f'debug_dd_scroll_{open_dd}'] = max(0, min(cur_s + dy, max_s))
+                return
+
         if topmost_modal:
             topmost_modal['scroll_dy'] = 1 if event.button == 4 else -1
         if topmost_modal and topmost_modal['type'] == 'crafting':

@@ -24,4 +24,16 @@ def _resolve_args(arg1, arg2):
 def display_message(arg1, arg2=None):
     game, text = _resolve_args(arg1, arg2)
     if game:
+        if 'All' not in game.message_logs:
+            game.message_logs['All'] = []
         game.message_logs['All'].append(text)
+
+        # Check if text is a radio transmission or broadcast
+        from core.data.radio_manager import RadioManager
+        radio_stations = list(RadioManager.STATIONS.keys()) if hasattr(RadioManager, 'STATIONS') else []
+
+        is_radio = str(text).startswith("[Radio ") or any(str(text).startswith(st + ":") for st in radio_stations)
+        if is_radio:
+            if 'Radio' not in game.message_logs:
+                game.message_logs['Radio'] = []
+            game.message_logs['Radio'].append(text)

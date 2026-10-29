@@ -197,6 +197,21 @@ def process_chat_command(game, text):
 
     net = getattr(game, 'network_manager', None)
 
+    if command == "debug":
+        game.debug_tab_unlocked = not getattr(game, 'debug_tab_unlocked', False)
+        # Find or open messages modal
+        msg_modal = next((m for m in getattr(game, 'modals', []) if m.get('type') == 'messages'), None)
+        if not msg_modal:
+            toggle_messages_modal(game)
+            msg_modal = next((m for m in getattr(game, 'modals', []) if m.get('type') == 'messages'), None)
+        
+        if msg_modal:
+            msg_modal['active_tab'] = 'Debug' if game.debug_tab_unlocked else 'All'
+
+        status_str = "Unlocked" if game.debug_tab_unlocked else "Locked"
+        display_message(game, f"[Debug] Debug tab {status_str} in Messages modal.")
+        return True
+
     # --- LAN VOIP COMMANDS ---
     # 1. %rot server (info report)
     if command == "server":
@@ -760,6 +775,12 @@ def handle_keyboard_events(game, event, action_triggered=None):
                 elif len(modal.get('voip_input_text', '')) < 26 and event.unicode.isprintable():
                     modal['voip_input_text'] = modal.get('voip_input_text', '') + event.unicode
                 return
+
+            # Search typing in Messages -> Debug dropdowns
+            if modal.get('type') == 'messages' and modal.get('active_tab') == 'Debug':
+                from core.ui.messages_debug_tab import handle_messages_debug_key
+                if handle_messages_debug_key(game, modal, event):
+                    return
         
         # When typing in chat, all other shortcuts are completely disabled
         if getattr(game, 'chat_active', False):

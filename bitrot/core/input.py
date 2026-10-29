@@ -205,7 +205,8 @@ def handle_input(game):
             topmost_modal = None
 
             for modal in reversed(game.modals):
-                if modal.get('rect') and modal['rect'].collidepoint(mouse_pos):
+                dd_popup = modal.get('debug_dd_popup_rect')
+                if (modal.get('rect') and modal['rect'].collidepoint(mouse_pos)) or (dd_popup and dd_popup.collidepoint(mouse_pos)):
                     is_over_modal = True
                     topmost_modal = modal
                     break
@@ -220,20 +221,28 @@ def handle_input(game):
             else:
                 modal = topmost_modal
                 if modal.get('type') == 'messages':
-                    content_rect = modal.get('content_rect') 
-                    if content_rect and content_rect.collidepoint(mouse_pos):
-                        active_tab = modal.get('active_tab', 'All')
-                        active_log = game.message_logs.get(active_tab, [])
-                        
-                        line_height = font_12.get_height() + 2
-                        total_text_height = len(game.message_log) * line_height
-                        visible_height = content_rect.height
-                        max_scroll_offset = max(0, total_text_height - visible_height)
-                        current_offset = modal.get('scroll_offset_y', 0)
+                    # Scroll open debug dropdown list
+                    open_dd = modal.get('debug_open_dropdown')
+                    dd_pop = modal.get('debug_dd_popup_rect')
+                    if open_dd and dd_pop and dd_pop.collidepoint(mouse_pos):
+                        cur_s = modal.get(f'debug_dd_scroll_{open_dd}', 0)
+                        pool_len = len(modal.get('debug_dd_filtered', []))
+                        max_s = max(0, pool_len - 6)
+                        modal[f'debug_dd_scroll_{open_dd}'] = max(0, min(cur_s - event.y, max_s))
+                    else:
+                        content_rect = modal.get('content_rect') 
+                        if content_rect and content_rect.collidepoint(mouse_pos):
+                            active_tab = modal.get('active_tab', 'All')
+                            scroll_key = f"scroll_offset_y_{active_tab}"
+                            
+                            line_height = font_12.get_height() + 4
+                            current_offset = modal.get(scroll_key, modal.get('scroll_offset_y', 0))
+                            max_scroll_offset = modal.get('max_scroll_offset', 0)
 
-                        scroll_amount = event.y * line_height * 3 
-                        new_offset = current_offset - scroll_amount 
-                        modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll_offset))
+                            scroll_amount = event.y * line_height * 3 
+                            new_offset = max(0, min(current_offset - scroll_amount, max_scroll_offset))
+                            modal[scroll_key] = new_offset
+                            modal['scroll_offset_y'] = new_offset
 
                 elif modal.get('type') == 'text':
                     content_rect = modal.get('content_rect')
