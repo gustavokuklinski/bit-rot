@@ -18,22 +18,22 @@ DEFAULT_KB_MOUSE_BINDS = {
     'chat': {'val': pygame.K_t, 'name': 'Chat (T)'},
     
     # --- Function Keys F1 - F10 ---
-    'help': {'val': pygame.K_F1, 'name': 'Help and Tutorial (F1)'},
-    'pause': {'val': pygame.K_F2, 'name': 'Pause (F2)'},
-    'toggle_menu': {'val': pygame.K_F3, 'name': 'Toggle UI Menus (F3)'},
-    'reset_modals': {'val': pygame.K_F4, 'name': 'Reset Modals (F4)'},
-    'toggle_status': {'val': pygame.K_F5, 'name': 'Toggle Status (F5)'},
-    'toggle_inventory': {'val': pygame.K_F6, 'name': 'Toggle Inventory (F6)'},
-    'toggle_gear': {'val': pygame.K_F7, 'name': 'Toggle Gear (F7)'},
-    'toggle_nearby': {'val': pygame.K_F8, 'name': 'Toggle Nearby (F8)'},
-    'toggle_slots': {'val': pygame.K_F9, 'name': 'Toggle Slots (F9)'},
-    'toggle_messages': {'val': pygame.K_F10, 'name': 'Toggle Messages (F10)'},
+    'help': {'val': pygame.K_F1, 'name': 'Help and Tutorial'},
+    'pause': {'val': pygame.K_F2, 'name': 'Pause'},
+    'toggle_menu': {'val': pygame.K_F3, 'name': 'Toggle UI Menus'},
+    'reset_modals': {'val': pygame.K_F4, 'name': 'Reset Modals'},
+    'toggle_status': {'val': pygame.K_F5, 'name': 'Toggle Status'},
+    'toggle_inventory': {'val': pygame.K_F6, 'name': 'Toggle Inventory'},
+    'toggle_gear': {'val': pygame.K_F7, 'name': 'Toggle Gear'},
+    'toggle_nearby': {'val': pygame.K_F8, 'name': 'Toggle Nearby'},
+    'toggle_slots': {'val': pygame.K_F9, 'name': 'Toggle Slots'},
+    'toggle_messages': {'val': pygame.K_F10, 'name': 'Toggle Messages'},
 
     'toggle_crafting': {'val': pygame.K_c, 'name': 'Toggle Crafting'},
     'reload': {'val': pygame.K_r, 'name': 'Reload Weapon'},
     'vehicle_engine': {'val': pygame.K_q, 'name': 'Toggle Engine'},
     'action_shove': {'val': pygame.K_SPACE, 'name': 'Shove / Brake'},
-    'toggle_modals': {'val': pygame.K_TAB, 'name': 'Toggle Modals (TAB)'},
+    'toggle_modals': {'val': pygame.K_TAB, 'name': 'Toggle Modals'},
     
     'shoot': {'val': -1, 'name': 'Shoot / Attack'},
     'aim_trigger': {'val': -3, 'name': 'Aim Weapon'}

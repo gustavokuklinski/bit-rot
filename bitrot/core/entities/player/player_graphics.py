@@ -127,7 +127,7 @@ class PlayerGraphics:
                 
             item = self.clothes.get(slot)
             if item and item.image:
-                if getattr(item, 'item_type', '') == 'container':
+                if getattr(item, 'item_type', '') in ('container', 'container_disposable'):
                     continue
                     
                 img_to_draw = item.image

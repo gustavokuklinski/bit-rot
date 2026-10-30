@@ -1,4 +1,4 @@
-<item name="Ammo Box Shotgun Shells" disposable="true" type="container" allow_type="[consumable_ammo]" allow_belt="false" tip="This container will be\ndestroyed when empty">
+<item name="Ammo Box Shotgun Shells" type="container_disposable" allow_type="[consumable_ammo]" allow_belt="false" tip="This container will be\ndestroyed when empty">
     <properties>
         <capacity value="3" />
         <sprite file="container_ammo_box_multi.png" />

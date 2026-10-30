@@ -382,9 +382,8 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     firing_second = float(firing_second_str)
     
     key_id = get_prop_val(props, 'key', 'value', None)
-    disposable = template.get('disposable', False)
-    
-    liquid = template.get('liquid', False)
+    disposable = (template.get('type') == 'container_disposable') or template.get('disposable', False)
+    liquid = (template.get('type') in ('liquid', 'car_fuel')) or (actual_name == 'Fuel Unit') or template.get('liquid', False)
     allow_liquid = template.get('allow_liquid', False)
     allow_belt = template.get('allow_belt', False)
 
@@ -469,7 +468,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
                         max_cap = new_item.capacity or 0
                         fits = (len(new_item.inventory) < max_cap)
                         
-                        if fits and new_item.item_type in ['container', 'cloth']:
+                        if fits and new_item.item_type in ['container', 'container_disposable', 'cloth']:
                             if not can_container_accept_item(new_item, loot_item):
                                 fits = False
 

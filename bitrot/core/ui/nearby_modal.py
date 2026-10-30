@@ -109,7 +109,7 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
                     # Only treat as a container if it has real capacity (>0) and is not a hotbar item
                     if (getattr(obj, 'capacity', 0) or 0) > 0 and not getattr(obj, 'hotbar', False):
                         is_independent_container = True
-                elif getattr(obj, 'item_type', '') in ['container', 'vehicle', 'maptile_container']:
+                elif getattr(obj, 'item_type', '') in ['container', 'container_disposable', 'vehicle', 'maptile_container']:
                     is_independent_container = True
             
             if is_independent_container:
@@ -124,7 +124,7 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
                     should_show_on_ground = False
                 elif isinstance(obj, Container):
                     should_show_on_ground = False
-                elif getattr(obj, 'item_type', '') in ('vehicle', 'cloth'):
+                elif getattr(obj, 'item_type', '') in ('vehicle', 'cloth', 'container', 'container_disposable'):
                     should_show_on_ground = False
             
             if should_show_on_ground:

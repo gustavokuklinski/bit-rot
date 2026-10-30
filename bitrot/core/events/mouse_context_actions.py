@@ -549,6 +549,15 @@ def handle_context_menu_click(game, mouse_pos):
                 game.context_menu['active'] = False
                 return
 
+            # Check that the player hasn't walked away from the map tile before clicking the option
+            if source == 'map_tile' and isinstance(item, dict) and 'grid_x' in item and 'grid_y' in item:
+                p_gx = int(game.player.rect.centerx // TILE_SIZE)
+                p_gy = int(game.player.rect.centery // TILE_SIZE)
+                if abs(item['grid_x'] - p_gx) > 1 or abs(item['grid_y'] - p_gy) > 1:
+                    display_message(tr('msg', "Too far away to interact."))
+                    game.context_menu['active'] = False
+                    return
+
             if source == 'npc':
                 if option == 'Talk':
                     dialogs = item.get_dialog_options()

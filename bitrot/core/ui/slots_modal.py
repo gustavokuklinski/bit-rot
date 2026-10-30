@@ -19,7 +19,7 @@ def draw_slots_modal(surface, game, player, modal, assets, mouse_pos):
         cap = getattr(obj, 'capacity', 0)
         return cap if cap is not None else 0
 
-    valid_types = ['container', 'cloth']
+    valid_types = ['container', 'container_disposable', 'cloth']
 
     if hasattr(player, 'clothes') and player.clothes:
         for slot_name, item in player.clothes.items():

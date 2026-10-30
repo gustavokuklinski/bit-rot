@@ -1,4 +1,4 @@
-<item name="Coffee Unit" allow_belt="false" type="liquid" liquid="true" allow_use="true" consume_time="0.01">
+<item name="Coffee Unit" allow_belt="false" type="liquid" allow_use="true" consume_time="0.01">
     <properties>
         <restore status="[water]" value="1" />
         <reduce status="[anxiety]" value="15" />

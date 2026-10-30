@@ -66,9 +66,9 @@ class Item:
         self.key_id = key_id
         self.allow_sleep = allow_sleep
         self.firing_distance = firing_distance 
-        self.disposable = disposable
-        
-        is_liq = (str(liquid).lower() == 'true' if isinstance(liquid, str) else bool(liquid)) or (self.item_type in ('liquid', 'car_fuel')) or (self.name == 'Fuel Unit')
+        self.disposable = (self.item_type == 'container_disposable') or bool(disposable)
+
+        is_liq = (self.item_type in ('liquid', 'car_fuel')) or (self.name == 'Fuel Unit') or bool(liquid)
         self.liquid = is_liq
 
         # Format allow_type and disallow_type lists

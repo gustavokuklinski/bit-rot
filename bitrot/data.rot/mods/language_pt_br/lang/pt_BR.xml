@@ -76,7 +76,7 @@
         <ui name="YOU DIED" translation_ui="VOCÊ MORREU" />
         <ui name="YOU ROTTED" translation_ui="VOCÊ APODRECEU" />
         <ui name="You Killed:" translation_ui="Você Matou:" />
-        <ui name="Rotters Dead:" translation_ui="Podres Mortos:" />
+        <ui name="Rotters Dead:" translation_ui="Rotters Mortos:" />
         <ui name="Days Survived:" translation_ui="Dias Sobrevividos:" />
         <ui name="New Character" translation_ui="Novo Personagem" />
 
@@ -135,28 +135,17 @@
 
         <!-- HUD, Buttons & Tooltips -->
         <ui name="Pause" translation_ui="Pausar" />
-        <ui name="Pause (F2)" translation_ui="Pausar (F2)" />
         <ui name="Toggle UI Menus" translation_ui="Alternar Menus HUD" />
-        <ui name="Toggle UI Menus (F3)" translation_ui="Alternar Menus HUD (F3)" />
         <ui name="Toggle and Reset UI" translation_ui="Alternar e Redefinir Interface" />
-        <ui name="Toggle &amp; Reset UI (TAB)" translation_ui="Alternar e Redefinir Interface (TAB)" />
-        <ui name="Reset Modals (F4)" translation_ui="Redefinir Janelas (F4)" />
+        <ui name="Reset Modals" translation_ui="Redefinir Janelas" />
         <ui name="Player Status" translation_ui="Status do Jogador" />
-        <ui name="Player Status (F5)" translation_ui="Status do Jogador (F5)" />
         <ui name="Inventory" translation_ui="Inventário" />
-        <ui name="Inventory (F6)" translation_ui="Inventário (F6)" />
         <ui name="Gear" translation_ui="Equipamento" />
-        <ui name="Gear (F7)" translation_ui="Equipamento (F7)" />
         <ui name="Nearby" translation_ui="Proximidades" />
-        <ui name="Nearby (F8)" translation_ui="Proximidades (F8)" />
         <ui name="Slots Overview" translation_ui="Visão Geral dos Espaços" />
-        <ui name="Slots Overview (F9)" translation_ui="Visão Geral dos Espaços (F9)" />
         <ui name="Messages" translation_ui="Mensagens" />
-        <ui name="Messages (F10)" translation_ui="Mensagens (F10)" />
         <ui name="Crafting" translation_ui="Criação" />
-        <ui name="Crafting (C)" translation_ui="Criação (C)" />
         <ui name="Help and Tutorial" translation_ui="Ajuda e Tutorial" />
-        <ui name="Help and Tutorial (F1)" translation_ui="Ajuda e Tutorial (F1)" />
         <ui name="Ground" translation_ui="Chão" />
         <ui name="GPS Minimap" translation_ui="Minimapa GPS" />
         <ui name="Click to open" translation_ui="Clique para abrir" />
@@ -241,7 +230,7 @@
         <ui name="No Signal" translation_ui="Sem Sinal" />
         <ui name="Offline" translation_ui="Desconectado" />
         <ui name="Radio Frequency" translation_ui="Frequência de Rádio" />
-        <ui name="Kills:" translation_ui="Abates:" />
+        <ui name="Kills:" translation_ui="Matou:" />
         <ui name="Survived:" translation_ui="Sobrevivido:" />
         <ui name="Days" translation_ui="Dias" />
         <ui name="day" translation_ui="dia" />
@@ -906,37 +895,4 @@
         <msg name="Press [{controls}] to open UI" translation_msg="Pressione [{controls}] para abrir o menu" />
     </msg>
 
-    <!-- Item Types -->
-    <item_type>
-        <item_type name="weapon_melee" translation_item_type="Corpo a Corpo" />
-        <item_type name="weapon_ranged" translation_item_type="Arma de Fogo" />
-        <item_type name="weapon_throw" translation_item_type="Arremesso" />
-        <item_type name="tool" translation_item_type="Ferramenta" />
-        <item_type name="cloth" translation_item_type="Vestimenta" />
-        <item_type name="container" translation_item_type="Recipiente" />
-        <item_type name="consumable" translation_item_type="Consumível" />
-        <item_type name="consumable_food" translation_item_type="Comida" />
-        <item_type name="consumable_drink" translation_item_type="Bebida" />
-        <item_type name="consumable_medication" translation_item_type="Medicamento" />
-        <item_type name="consumable_drugs" translation_item_type="Substância" />
-        <item_type name="consumable_book" translation_item_type="Livro" />
-        <item_type name="consumable_ammo" translation_item_type="Munição" />
-        <item_type name="consumable_repair" translation_item_type="Kit de Reparo" />
-        <item_type name="resource" translation_item_type="Recurso" />
-        <item_type name="currency" translation_item_type="Moeda" />
-        <item_type name="recipe" translation_item_type="Receita" />
-        <item_type name="map" translation_item_type="Mapa" />
-        <item_type name="text" translation_item_type="Texto" />
-        <item_type name="utility" translation_item_type="Utilitário" />
-        <item_type name="mobile" translation_item_type="Celular" />
-        <item_type name="sd_card" translation_item_type="Cartão SD" />
-        <item_type name="charm" translation_item_type="Amuleto" />
-        <item_type name="vehicle" translation_item_type="Veículo" />
-        <item_type name="liquid" translation_item_type="Líquido" />
-        <item_type name="car_fuel" translation_item_type="Combustível" />
-        <item_type name="car_battery" translation_item_type="Bateria Veicular" />
-        <item_type name="car_motor" translation_item_type="Motor Veicular" />
-        <item_type name="car_tire" translation_item_type="Pneu Veicular" />
-        <item_type name="car_key" translation_item_type="Chave do Veículo" />
-    </item_type>
 </language>

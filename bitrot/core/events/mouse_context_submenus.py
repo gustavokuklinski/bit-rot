@@ -35,7 +35,7 @@ def build_equip_submenu(clicked_item, click_source, game):
             else:
                 display_map[slot_key] = f"{tr('ui', 'Belt')} {b_idx + 1} ({tr('ui', 'Empty')})"
 
-    if item_type in ('cloth', 'container') and not is_liquid:
+    if item_type in ('cloth', 'container', 'container_disposable') and not is_liquid:
         slot = getattr(clicked_item, 'slot', None)
         if slot == 'hand':
             slot = 'hands'
@@ -309,13 +309,13 @@ def build_remove_fuel_submenu(game):
     
     containers_with_loc = []
     for i, b_item in enumerate(game.player.belt):
-        if b_item and getattr(b_item, 'item_type', '') in ['container', 'cloth'] and getattr(b_item, 'inventory', None) is not None:
+        if b_item and getattr(b_item, 'item_type', '') in ['container', 'container_disposable', 'cloth'] and getattr(b_item, 'inventory', None) is not None:
             containers_with_loc.append((b_item, f"Belt > Slot {i+1}"))
     for i_item in game.player.inventory:
-        if i_item and getattr(i_item, 'item_type', '') in ['container', 'cloth'] and getattr(i_item, 'inventory', None) is not None:
+        if i_item and getattr(i_item, 'item_type', '') in ['container', 'container_disposable', 'cloth'] and getattr(i_item, 'inventory', None) is not None:
             containers_with_loc.append((i_item, "Inventory"))
     for slot, c_item in game.player.clothes.items():
-        if c_item and getattr(c_item, 'item_type', '') in ['container', 'cloth'] and getattr(c_item, 'inventory', None) is not None:
+        if c_item and getattr(c_item, 'item_type', '') in ['container', 'container_disposable', 'cloth'] and getattr(c_item, 'inventory', None) is not None:
             containers_with_loc.append((c_item, f"Gear > {str(slot).capitalize()}"))
             
     for c, loc_str in containers_with_loc:

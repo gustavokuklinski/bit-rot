@@ -1,4 +1,4 @@
-<item name="Water Unit" type="liquid" liquid="true" consume_time="0.1" allow_use="true">
+<item name="Water Unit" type="liquid" consume_time="0.1" allow_use="true">
     <properties>
         <restore status="[water]" value="20" />
         <restore status="[stamina]" value="10" />

@@ -31,11 +31,12 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
 
             name = root.attrib.get('name')
             ttype = root.attrib.get('type')
-            disposable_str = root.attrib.get('disposable', 'false')
-            disposable = (disposable_str.lower() == 'true')
-            
-            liquid_str = root.attrib.get('liquid', 'false')
-            liquid = (liquid_str.lower() == 'true')
+
+            # Derive disposable directly from type="container_disposable"
+            disposable = (ttype == 'container_disposable')
+
+            # Derive liquid directly from item type and special resource name
+            liquid = (ttype in ('liquid', 'car_fuel')) or (name == 'Fuel Unit')
 
             allow_liquid_str = root.attrib.get('allow_liquid', 'false')
             allow_liquid = (allow_liquid_str.lower() == 'true')

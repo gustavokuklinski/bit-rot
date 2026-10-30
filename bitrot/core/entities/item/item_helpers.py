@@ -25,15 +25,15 @@ def item_allows_belt(item):
 
 
 def is_item_liquid(item):
-    """Checks if an item is a liquid (including type='car_fuel' and 'Fuel Unit')."""
+    """Checks if an item is a liquid (including type='liquid', 'car_fuel', and 'Fuel Unit')."""
     if not item:
         return False
-    if getattr(item, 'liquid', False):
-        return True
     itype = getattr(item, 'item_type', '') or getattr(item, 'type', '') or ''
     if itype in ('liquid', 'car_fuel'):
         return True
-    return getattr(item, 'name', '') == 'Fuel Unit'
+    if getattr(item, 'name', '') == 'Fuel Unit':
+        return True
+    return bool(getattr(item, 'liquid', False))
 
 def get_transfer_time(player, base_time=0.8, min_time=0.2):
     """
@@ -69,7 +69,7 @@ def get_container_liquid_capacity_units(container, liquid_item, target_item=None
 def is_valid_send_to_container(obj):
     """
     Checks if an object is a valid destination container for 'Send to':
-    - Items with type/item_type == 'container'
+    - Items with type/item_type == 'container' or 'container_disposable'
     - Clothes with id/slot in 'arms', 'legs', 'util' having capacity > 0 (pockets)
     - World containers (maptile_container, Corpse)
     - Vehicles (trunk)
@@ -81,15 +81,15 @@ def is_valid_send_to_container(obj):
     itype = getattr(obj, 'item_type', '') or getattr(obj, 'type', '') or ''
 
     # Weapons and non-container items are strictly prohibited
-    if itype.startswith('weapon') or itype in ('tool', 'resource', 'currency', 'recipe', 'text', 'map', 'liquid'):
+    if itype.startswith('weapon') or itype in ('tool', 'resource', 'currency', 'recipe', 'text', 'map', 'liquid', 'car_fuel'):
         return False
 
     cap = getattr(obj, 'capacity', 0) or 0
     if cap <= 0:
         return False
 
-    # Standard containers, corpses, vehicles, and maptile containers
-    if itype in ('container', 'maptile_container', 'vehicle') or type(obj).__name__ in ('Container', 'Corpse', 'Vehicle'):
+    # Standard containers, disposable containers, corpses, vehicles, and maptile containers
+    if itype in ('container', 'container_disposable', 'maptile_container', 'vehicle') or type(obj).__name__ in ('Container', 'Corpse', 'Vehicle'):
         return True
 
     # Clothes with pockets: id/slot must be 'arms', 'legs', or 'util'
@@ -111,7 +111,9 @@ def get_item_types(item):
     itype = getattr(item, 'item_type', '') or getattr(item, 'type', '') or ''
     if itype:
         types.add(str(itype).lower().strip())
-    if getattr(item, 'liquid', False):
+    if itype == 'container_disposable':
+        types.add('container')
+    if getattr(item, 'liquid', False) or itype in ('liquid', 'car_fuel'):
         types.add('liquid')
     name = getattr(item, 'name', '')
     if name == 'Fuel Unit':
@@ -613,11 +615,11 @@ def is_container_on_player(cont, player):
     return False
 
 def is_container_type(obj):
-    """Checks if an object is a container (item_type='container', maptile container, corpse, or vehicle)."""
+    """Checks if an object is a container (item_type='container', 'container_disposable', maptile container, corpse, or vehicle)."""
     if not obj:
         return False
     itype = getattr(obj, 'item_type', '') or getattr(obj, 'type', '') or ''
-    return itype in ('container', 'maptile_container', 'vehicle') or type(obj).__name__ in ('Container', 'Corpse', 'Vehicle')
+    return itype in ('container', 'container_disposable', 'maptile_container', 'vehicle') or type(obj).__name__ in ('Container', 'Corpse', 'Vehicle')
 
 def is_container_closed_or_locked(container, player=None):
     """Returns True if the container is closed or if it is a vehicle trunk locked without key access."""

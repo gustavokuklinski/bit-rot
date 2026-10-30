@@ -2,9 +2,32 @@
 
 import xml.etree.ElementTree as ET
 import os
+import re
 from core.data.config import BASE_DIR
 
 translations = {}
+
+# Dynamic item template keys matching your translation XML definitions
+DYNAMIC_ITEM_PATTERNS = [
+    # 1. "Dungeon Sector {layer} {gx}_{gy}" -> "Dungeon Sector [LYR_N] [MAP_POS]"
+    (
+        re.compile(r'^Dungeon Sector\s+(\d+)\s+(\d+_\d+)$', re.IGNORECASE),
+        "Dungeon Sector [LYR_N] [MAP_POS]",
+        lambda m, trans: trans.replace("[LYR_N]", m.group(1)).replace("[MAP_POS]", m.group(2))
+    ),
+    # 2. "Dungeon Map {layer}" -> "Dungeon Map [LYR_N]"
+    (
+        re.compile(r'^Dungeon Map\s+(\d+)$', re.IGNORECASE),
+        "Dungeon Map [LYR_N]",
+        lambda m, trans: trans.replace("[LYR_N]", m.group(1))
+    ),
+    # 3. "Cartography Sector {gx}_{gy}" -> "Cartography Sector [MAP_POS]"
+    (
+        re.compile(r'^Cartography Sector\s+(\d+_\d+)$', re.IGNORECASE),
+        "Cartography Sector [MAP_POS]",
+        lambda m, trans: trans.replace("[MAP_POS]", m.group(1))
+    )
+]
 
 def load_language(lang_code="pt_BR"):
     from core.systems.mod_manager import mod_manager
@@ -87,5 +110,24 @@ def _parse_xml_to_dict(filepath):
             parse_element(node, category_hint=root.tag)
 
 def tr(category, key):
-    """Translates a key within a given category."""
-    return translations.get(category, {}).get(key, key)
+    """Translates a key within a given category, handling dynamic parameterized items."""
+    if not key:
+        return key
+
+    cat_dict = translations.get(category, {})
+
+    # 1. Fast direct lookup
+    if key in cat_dict:
+        return cat_dict[key]
+
+    # 2. Dynamic pattern matching for item names and tips
+    if category in ('item', 'tips'):
+        clean_key = str(key).strip()
+        for regex, template_key, formatter in DYNAMIC_ITEM_PATTERNS:
+            match = regex.match(clean_key)
+            if match:
+                translated_template = cat_dict.get(template_key)
+                if translated_template:
+                    return formatter(match, translated_template)
+
+    return key

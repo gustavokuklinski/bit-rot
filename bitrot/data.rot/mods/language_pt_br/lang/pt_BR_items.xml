@@ -16,6 +16,7 @@
         <item_type name="currency" translation_type="dinheiro" />
         <item_type name="charm" translation_type="amuleto" />
         <item_type name="container" translation_type="recipiente" />
+        <item_type name="container_disposable" translation_type="recipiente descartável" />
         <item_type name="consumable_ammo" translation_type="arma_municao" />
         <item_type name="consumable_book" translation_type="livro_literatura" />
         <item_type name="consumable_drink" translation_type="bebida" />
@@ -32,7 +33,7 @@
 
     <item>
         <!-- Melee Weapons -->
-        <item name="Mace" translation_item="Maça" translation_tips="" />
+        <item name="Mace" translation_item="Maça" translation_tips="Maça" />
         <item name="Metal Hammer" translation_item="Martelo de Metal" translation_tips="Use como arma ou recurso de criação" />
         <item name="Metal Axe" translation_item="Machado de Metal" translation_tips="Use como arma ou recurso de criação" />
         <item name="Crowbar" translation_item="Pé de Cabra" translation_tips="" />
@@ -112,14 +113,16 @@
         <item name="Apple" translation_item="Maçã" translation_tips="" />
         <item name="Carrot" translation_item="Cenoura" translation_tips="" />
         <item name="Canned Food" translation_item="Comida Enlatada" translation_tips="" />
-        <item name="Kukaroach (Bit Rot publisher)" translation_item="Barata (Bit Rot publisher)" translation_tips="" />
+        <item name="Kukaroach (Bit Rot publisher)" translation_item="Kukaroach (Bit Rot publisher)" translation_tips="" />
         <item name="Chocolate Black" translation_item="Chocolate Amargo" translation_tips="" />
 
         <!-- Liquids / Drinks -->
         <item name="Red Wine Unit" translation_item="Unidade de Vinho Tinto" translation_tips="" />
         <item name="White Wine Unit" translation_item="Unidade de Vinho Branco" translation_tips="" />
         <item name="Whiskey Unit" translation_item="Unidade de Uísque" translation_tips="" />
+        <item name="Coffee Unit" translation_item="Unidade de Café" translation_tips="" />
         <item name="Water Unit" translation_item="Unidade de Água" translation_tips="" />
+        <item name="Dirty Water Unit" translation_item="Unidade de Água Suja" translation_tips="" />
         <item name="Coffee Cup" translation_item="Xícara de Café" translation_tips="" />
         <item name="Cola Drink" translation_item="Refrigerante de Cola" translation_tips="" />
         <item name="Energy Drink" translation_item="Bebida Energética" translation_tips="" />
@@ -245,6 +248,9 @@
         <item name="Bible" translation_item="Bíblia" translation_tips="" />
         <item name="Almanach" translation_item="Almanaque" translation_tips="" />
         <item name="Island Map" translation_item="Mapa da Ilha" translation_tips="" />
+        <item name="Dungeon Map [LYR_N]" translation_item="Mapa da Caverna [LYR_N]" translation_tips="" />
+        <item name="Dungeon Sector [LYR_N] [MAP_POS]" translation_item="Setor da Caverna [LYR_N] [MAP_POS]" translation_tips="" />
+        <item name="Cartography Sector [MAP_POS]" translation_item="Cartografia do setor [MAP_POS]" translation_tips="Utilize para navegar com bote" />
         <item name="Money WBRL" translation_item="Dinheiro WBRL" translation_tips="" />
         <item name="ID" translation_item="Identidade" translation_tips="Contém: Jogador: Nome, Sexo, Traços e Receitas Conhecidas; Zumbi e NPC: Nome, Sexo" />
 

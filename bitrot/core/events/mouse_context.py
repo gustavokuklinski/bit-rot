@@ -215,12 +215,22 @@ def handle_right_click(game, mouse_pos):
                     display_message(tr('msg', "Item is too far away to interact with."))
 
         if not clicked_item:
+            p_grid_x = int(game.player.rect.centerx // TILE_SIZE)
+            p_grid_y = int(game.player.rect.centery // TILE_SIZE)
+
             for i, container in enumerate(game.containers):
                 if container.rect.collidepoint(world_pos):
-                    dx = game.player.rect.centerx - container.rect.centerx
-                    dy = game.player.rect.centery - container.rect.centery
-                    dist_sq = dx*dx + dy*dy
-                    if dist_sq < max_interact_dist_sq:
+                    is_vehicle = getattr(container, 'item_type', '') == 'vehicle'
+                    if is_vehicle:
+                        dx = game.player.rect.centerx - container.rect.centerx
+                        dy = game.player.rect.centery - container.rect.centery
+                        in_range = (dx * dx + dy * dy) < (TILE_SIZE * 2.5) ** 2
+                    else:
+                        c_gx = int(container.rect.centerx // TILE_SIZE)
+                        c_gy = int(container.rect.centery // TILE_SIZE)
+                        in_range = (abs(c_gx - p_grid_x) <= 1 and abs(c_gy - p_grid_y) <= 1)
+
+                    if in_range:
                         clicked_item = container
                         click_source = 'container_map'
                         click_index = i
@@ -234,12 +244,20 @@ def handle_right_click(game, mouse_pos):
             grid_x = int(world_pos[0] // TILE_SIZE)
             grid_y = int(world_pos[1] // TILE_SIZE)
             tile_rect = pygame.Rect(grid_x * TILE_SIZE, grid_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            p_grid_x = int(game.player.rect.centerx // TILE_SIZE)
+            p_grid_y = int(game.player.rect.centery // TILE_SIZE)
+
             for i, container in enumerate(game.containers):
                 if hasattr(container, 'rect') and container.rect.colliderect(tile_rect):
-                    dx = game.player.rect.centerx - container.rect.centerx
-                    dy = game.player.rect.centery - container.rect.centery
-                    dist_sq = dx*dx + dy*dy
-                    if dist_sq < max_interact_dist_sq:
+                    is_vehicle = getattr(container, 'item_type', '') == 'vehicle'
+                    if is_vehicle:
+                        dx = game.player.rect.centerx - container.rect.centerx
+                        dy = game.player.rect.centery - container.rect.centery
+                        in_range = (dx * dx + dy * dy) < (TILE_SIZE * 2.5) ** 2
+                    else:
+                        in_range = (abs(grid_x - p_grid_x) <= 1 and abs(grid_y - p_grid_y) <= 1)
+
+                    if in_range:
                         clicked_item = container
                         click_source = 'container_map'
                         click_index = i
@@ -297,10 +315,16 @@ def handle_right_click(game, mouse_pos):
                     (tile.get('name') and ('door' in tile['name'].lower() or 'window' in tile['name'].lower()))
                 )
 
-                max_interact_sq = (TILE_SIZE * 2.8) ** 2
+                p_grid_x = int(game.player.rect.centerx // TILE_SIZE)
+                p_grid_y = int(game.player.rect.centery // TILE_SIZE)
+
+                # The tile must be within 1 tile of the player (8 surrounding neighbor tiles or the player's tile)
+                is_tile_in_range = (abs(grid_x - p_grid_x) <= 1 and abs(grid_y - p_grid_y) <= 1)
+                if tile.get('type') == "maptile_car":
+                    is_tile_in_range = is_tile_in_range or (dist_sq <= (TILE_SIZE * 2.0) ** 2)
 
                 if is_boat or is_door_window or tile.get('type') == "maptile_car":
-                    if dist_sq <= max_interact_sq:
+                    if is_tile_in_range:
                         if tile.get('type') == "maptile_car":
                             vehicle = game.map_manager.get_vehicle_at(grid_x, grid_y)
                             if vehicle:
@@ -665,7 +689,7 @@ def handle_right_click(game, mouse_pos):
         elif click_source == 'ground':
             options = []
             is_item_liq = getattr(clicked_item, 'liquid', False) or getattr(clicked_item, 'item_type', '') in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
-            is_container = isinstance(clicked_item, Corpse) or getattr(clicked_item, 'item_type', '') in ('container', 'maptile_container') or hasattr(clicked_item, 'inventory')
+            is_container = isinstance(clicked_item, Corpse) or getattr(clicked_item, 'item_type', '') in ('container', 'container_disposable', 'maptile_container') or hasattr(clicked_item, 'inventory')
 
             if is_container:
                 # Containers on ground only allow Open (never Use)
@@ -718,7 +742,7 @@ def handle_right_click(game, mouse_pos):
         elif click_source == 'ground':
             options = []
             is_item_liq = getattr(clicked_item, 'liquid', False) or getattr(clicked_item, 'item_type', '') in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
-            is_container = isinstance(clicked_item, Corpse) or getattr(clicked_item, 'item_type', '') in ('container', 'maptile_container') or hasattr(clicked_item, 'inventory')
+            is_container = isinstance(clicked_item, Corpse) or getattr(clicked_item, 'item_type', '') in ('container', 'container_disposable', 'maptile_container') or hasattr(clicked_item, 'inventory')
 
             if is_container:
                 # Containers on ground only allow Open

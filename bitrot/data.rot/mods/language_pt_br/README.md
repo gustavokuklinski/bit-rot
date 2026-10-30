@@ -1,7 +1,7 @@
 # BitRot_Vanilla_pt_br
 
 path: `data.rot/mods/BitRot_Vanilla_pt_br`
-version: [VERSION](./VERSION)
+version: [VERSION](./config.json)
 repository: https://github.com/gustavokuklinski/bit-rot/
 
 ## About

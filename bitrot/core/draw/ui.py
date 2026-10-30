@@ -106,7 +106,7 @@ def is_item_allowed_in_slot(item, slot_type, index_or_name, target_obj=None):
         # Cannot trade spilled liquid or containers that have items inside them
         if getattr(item, 'liquid', False):
             return False
-        if getattr(item, 'item_type', '') == 'container' or getattr(item, 'slot', '') in ['head', 'body', 'legs', 'feet', 'arms', 'hands']:
+        if getattr(item, 'item_type', '') in ('container', 'container_disposable') or getattr(item, 'slot', '') in ['head', 'body', 'legs', 'feet', 'arms', 'hands']:
             if hasattr(item, 'inventory') and len(item.inventory) > 0:
                 return False
         return True

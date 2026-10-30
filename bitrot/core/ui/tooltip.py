@@ -76,7 +76,7 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
     if hasattr(item, 'inventory') and item.inventory is not None:
         cap = getattr(item, 'capacity', 0) or 0
         # Only show container contents for true containers or clothes with capacity > 0 (excluding hotbar clothes)
-        if (item.item_type == 'container' or (item.item_type == 'cloth' and cap > 0)) and not getattr(item, 'hotbar', False):
+        if (item.item_type in ('container', 'container_disposable') or (item.item_type == 'cloth' and cap > 0)) and not getattr(item, 'hotbar', False):
             lines.append(f"{tr('tooltip', 'Contents:')} {len(item.inventory)} / {cap}")
         elif getattr(item, 'hotbar', False) and cap > 0:
             lines.append(f"{tr('tooltip', 'Belt slots:')} +{int(cap)}")

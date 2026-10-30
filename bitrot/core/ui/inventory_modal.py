@@ -190,7 +190,7 @@ def draw_inventory_modal(surface, game, player, modal, assets, mouse_pos):
     container_mapping = {}
 
     def register_container(item, default_name):
-        valid_container_types = ['container']
+        valid_container_types = ['container', 'container_disposable']
         if item and hasattr(item, 'inventory') and item.item_type in valid_container_types:
             count = sum(1 for label in container_mapping if label.startswith(default_name))
             label = f"{default_name} #{count + 1}" if count > 0 else default_name

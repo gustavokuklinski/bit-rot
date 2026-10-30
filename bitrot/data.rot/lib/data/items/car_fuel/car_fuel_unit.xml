@@ -1,4 +1,4 @@
-<item name="Fuel Unit" type="car_fuel" liquid="true">
+<item name="Fuel Unit" type="car_fuel">
     <properties>
         <status value="fuel" />
         <load min="1" max="100" />

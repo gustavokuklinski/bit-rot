@@ -68,7 +68,7 @@ def draw_health_tab(surface, player, modal, assets, game=None):
             if slot in hidden_slots: continue
             item = player.clothes.get(slot)
             if item and item.image:
-                if getattr(item, 'item_type', '') == 'container': continue
+                if getattr(item, 'item_type', '') in ('container', 'container_disposable'): continue
                 char_surface.blit(item.image, (0, 0))
         
         scale_factor = 6 

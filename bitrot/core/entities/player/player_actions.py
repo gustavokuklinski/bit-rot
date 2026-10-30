@@ -558,7 +558,7 @@ class PlayerActions:
             options.append('Equip')
             if item_type == 'weapon_ranged': options.append('Reload')
             if item_type == 'weapon_ranged' and getattr(item, 'load', None) is not None and getattr(item, 'load', 0) > 0: options.append('Get bullets')
-        elif item_type == 'container':
+        elif item_type in ['container', 'container_disposable']:
             options.append('Open')
             options.append('Equip')
             

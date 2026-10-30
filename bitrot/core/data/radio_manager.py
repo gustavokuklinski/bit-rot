@@ -22,6 +22,42 @@ class RadioManager:
         ]
         return [f for f in candidates if os.path.exists(f)]
 
+    @classmethod
+    def sync_game_frequencies(cls, game):
+        """Ensures all loaded radio stations have assigned frequencies in the game instance."""
+        if not cls.STATIONS:
+            cls.load_radios()
+
+        if not hasattr(game, 'radio_frequencies') or not isinstance(game.radio_frequencies, dict):
+            game.radio_frequencies = {}
+
+        used_freqs = set(game.radio_frequencies.values())
+
+        for name, data in cls.STATIONS.items():
+            if name in game.radio_frequencies:
+                continue
+
+            freq_raw = data.get('frequency', 'random')
+            if str(freq_raw).lower() == 'random':
+                f = round(random.uniform(110.42, 120.42), 2)
+                attempts = 0
+                while any(abs(f - uf) <= 0.10 for uf in used_freqs) and attempts < 100:
+                    f = round(random.uniform(110.42, 120.42), 2)
+                    attempts += 1
+                game.radio_frequencies[name] = f
+                used_freqs.add(f)
+            else:
+                try:
+                    f = round(float(freq_raw), 2)
+                    game.radio_frequencies[name] = f
+                    used_freqs.add(f)
+                except (ValueError, TypeError):
+                    game.radio_frequencies[name] = 110.42
+
+        if not hasattr(game, 'current_radio_freq') or game.current_radio_freq is None:
+            game.current_radio_freq = 110.42
+            
+
     @staticmethod
     def _parse_schedule(raw_schedule):
         if isinstance(raw_schedule, (list, tuple)):

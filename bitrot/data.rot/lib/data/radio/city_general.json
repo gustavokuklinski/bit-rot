@@ -1,7 +1,7 @@
 {
     "radio": {
         "name": "City General",
-        "frequency": "120.0",
+        "frequency": "random",
         "stream_config": [
             "08:00",
             "20:00",

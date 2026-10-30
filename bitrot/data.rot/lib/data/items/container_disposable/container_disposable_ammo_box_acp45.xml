@@ -1,4 +1,4 @@
-<item name="Ammo Box ACP45" type="container" disposable="true" allow_belt="false" allow_type="[consumable_ammo]" tip="This container will be\ndestroyed when empty">
+<item name="Ammo Box ACP45" type="container_disposable" allow_belt="false" allow_type="[consumable_ammo]" tip="This container will be\ndestroyed when empty">
     <properties>
         <capacity value="3" />
         <sprite file="container_ammo_box_multi.png" />
