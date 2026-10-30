@@ -87,14 +87,13 @@ def draw_btn(surface, rect, text, mouse_pos, enabled=True, base_color=(60, 60, 6
         bg_color = (40, 40, 40)
         text_color = (100, 100, 100)
     else:
-        # Slightly brighten the base color when hovered
         bg_color = (min(255, base_color[0]+30), min(255, base_color[1]+30), min(255, base_color[2]+30)) if is_hovered else base_color
         text_color = config.WHITE
 
-    # Draw the filled rectangle with NO border
     pygame.draw.rect(surface, bg_color, rect, border_radius=4)
 
-    txt_surf = config.font_16.render(text, False, text_color)
+    translated_text = tr('ui', text)
+    txt_surf = config.font_16.render(translated_text, False, text_color)
     txt_rect = txt_surf.get_rect(center=rect.center)
     surface.blit(txt_surf, txt_rect)
 
@@ -389,7 +388,7 @@ class KeybindsMenuUI:
 
         if conflict_action and conflict_action != self.waiting_for_key:
             conflict_name = binds_ref[conflict_action]['name']
-            self.error_message = f"Key in use for: {conflict_name}"
+            self.error_message = f"{tr('ui', 'Key in use for:')} {tr('ui', conflict_name)}"
             self.error_timer = pygame.time.get_ticks()
         else:
             manager_binds[self.waiting_for_key] = new_val
@@ -453,7 +452,7 @@ class KeybindsMenuUI:
         pygame.draw.rect(screen, (45, 45, 45), header_rect, border_top_left_radius=10, border_top_right_radius=10)
         pygame.draw.line(screen, config.GRAY_80, header_rect.bottomleft, header_rect.bottomright, 2)
         
-        title_surf = config.font_16.render("Controls Configuration", False, config.WHITE)
+        title_surf = config.font_16.render(tr('ui', "Controls Configuration"), False, config.WHITE)
         screen.blit(title_surf, (header_rect.x + 20, header_rect.centery - title_surf.get_height() // 2))
 
         kb_is_active = self.active_tab == 'keyboard_mouse'
@@ -471,8 +470,8 @@ class KeybindsMenuUI:
         pygame.draw.rect(screen, config.WHITE, tab_kb_rect, width=1)
         pygame.draw.rect(screen, config.WHITE, tab_joy_rect, width=1)
 
-        kb_surf = config.font_16.render("Keyboard & Mouse", False, config.WHITE)
-        joy_surf = config.font_16.render("Controller Joystick", False, config.WHITE)
+        kb_surf = config.font_16.render(tr('ui', "Keyboard and Mouse"), False, config.WHITE)
+        joy_surf = config.font_16.render(tr('ui', "Controller Joystick"), False, config.WHITE)
         screen.blit(kb_surf, kb_surf.get_rect(center=tab_kb_rect.center))
         screen.blit(joy_surf, joy_surf.get_rect(center=tab_joy_rect.center))
 
@@ -498,21 +497,23 @@ class KeybindsMenuUI:
             if self.active_tab == 'keyboard_mouse':
                 if current_key < 0:
                     btn_num = -current_key
-                    if btn_num == 1: key_name = "LEFT CLICK"
-                    elif btn_num == 2: key_name = "MIDDLE CLICK"
-                    elif btn_num == 3: key_name = "RIGHT CLICK"
-                    else: key_name = f"MOUSE BTN {btn_num}"
+                    if btn_num == 1: key_name = tr('ui', "LEFT CLICK")
+                    elif btn_num == 2: key_name = tr('ui', "MIDDLE CLICK")
+                    elif btn_num == 3: key_name = tr('ui', "RIGHT CLICK")
+                    else: key_name = f"{tr('ui', 'MOUSE BTN')} {btn_num}"
                 else:
-                    key_name = pygame.key.name(current_key).upper()
+                    raw_k = pygame.key.name(current_key).upper()
+                    key_name = tr('ui', raw_k)
             else:
-                key_name = JOYSTICK_BTN_NAMES.get(current_key, f"JOY BUTTON {current_key}")
+                raw_joy = JOYSTICK_BTN_NAMES.get(current_key, f"JOY BUTTON {current_key}")
+                key_name = tr('ui', raw_joy)
 
             row_rect = pygame.Rect(list_rect.x, y_offset, list_rect.width, self.item_height)
             
             if row_rect.bottom > list_rect.top and row_rect.top < list_rect.bottom:
                 pygame.draw.line(screen, (55, 55, 55), (row_rect.left, row_rect.bottom - 1), (row_rect.right, row_rect.bottom - 1), 1)
 
-                name_surf = config.font_16.render(name, False, config.WHITE)
+                name_surf = config.font_16.render(tr('ui', name), False, config.WHITE)
                 screen.blit(name_surf, (row_rect.x + int(10 * config.UI_SCALE), row_rect.centery - name_surf.get_height() // 2))
                 
                 btn_w = int(250 * config.UI_SCALE)
@@ -522,7 +523,7 @@ class KeybindsMenuUI:
                 if key_btn_rect.collidepoint(mouse_pos):
                     hovered_key_id = f"bind_{action}"
                 
-                display_text = "PRESS ANY KEY..." if self.waiting_for_key == action else key_name
+                display_text = tr('ui', "PRESS ANY KEY...") if self.waiting_for_key == action else key_name
                 draw_btn(screen, key_btn_rect, display_text, mouse_pos, enabled=True, base_color=(50, 50, 50))
                 
                 if self.waiting_for_key == action:

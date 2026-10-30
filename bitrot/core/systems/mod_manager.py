@@ -332,7 +332,7 @@ class ModManager:
                                 except Exception:
                                     pass
                             elif m_file.endswith('.json'):
-                                if folder_name in ('npc', 'animals', 'world_builds', 'player_builds', 'npc_dialogs'):
+                                if folder_name in ('npc', 'animals', 'world_builds', 'player_builds', 'npc_dialogs', 'radio', 'radios'):
                                     belongs = True
                             elif m_file.endswith('.csv') and folder_name == 'buildings':
                                 belongs = True

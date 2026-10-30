@@ -18,41 +18,30 @@ THE WORLD IS DEAD. BUSINESS IS BOOMING.
 
 You are on the Next Petrol Archipelago, a cluster of islands fortified by the last surviving Brazilian energy giants and pharmaceutical distributors. For years, this was the world's battery and its pharmacy—supplying oil and vaccines to a dying globe.
 
-Managed by a fragile alliance of corporate titans: Rosskrild & Silva (40%), Gethulius (30%), and Exxoil (20%). The island were safe. Until they got greedy.
+Managed by a fragile alliance of corporate titans: Rosskrild & Silva, Gethulius and Exxoil. The island were safe. Until they got greedy.
 
 A military rescue mission brought back "survivors" from the continent. One was asymptomatic. The rest were time bombs. Now, the military facility has fallen, the infection is loose, and the corporate paradise has turned into a tropical hell.
-
-**YOU ARE NOBODY.**
-
-You are a third-party contractor. A fix-it guy. You don't have a clearance level, you don't have a squad, and you don't even know which of the shadow partners actually signed your paycheck.
-
-You have three objectives. Choose wisely, because the island is listening.
-
-* **DIE:** Succumb to the rot, the rogues, or the island.
-* **DOMINATE:** Turn this hell into your home.
-* **ESCAPE:** Signal the continent for a rescue that might never come.
 
 ---
 
 
 ### [ Inventory ]
 
-* **Managing Items** : Left-click and hold an item to drag it across inventory slots. Drop items outside the UI (into the world) to discard them. 
-* **Quick Access Belt** : Drop essential weapons into your Belt slots to quickly equip them using keys 1-5.
-* **Gear & Armor** : Drop items into the Gear menu to equip clothing. Clothes don't just change your appearance; they act as an armor shield. Incoming damage depletes your clothing's durability first before hurting you. 
-* **Carry Weight** : Keep a close eye on your total weight! Carrying too much makes you over-encumbered. This will drastically increase your stamina drain.
+* **Items** : Left-click to open context menu and click hold an item to drag it across inventory slots. Drop items outside the UI (into the world) to discard them. 
+* **Belt** : Drop essential weapons into your Belt slots to quickly equip.
+* **Gear** : Place clothes into the Gear modal to equip and expand belt. Clothes don't just change your appearance; they act as an armor shield. Incoming damage depletes your clothing's durability first before hurting you. 
 
 ### [ Tips ]
 
-* **Weather Hazards**: Rain isn't just cosmetic. Standing out in a downpour without thick clothing will cause you to catch a sickness that rapidly increases your Infection level. Layer up to increase your weather protection!
+* **Weather**: Rain isn't just cosmetic. Standing out in a downpour without thick clothing will cause you to catch a sickness that rapidly increases your Infection level. Layer up to increase your weather protection!
 
-* **Safe Resting**: Not all sleep is equal. Sleeping on a proper bed or bench restores your energy significantly faster than sleeping on the floor and is the only way to slowly regenerate lost health while resting. 
+* **Resting**: Restore your stamina steping by a bench or bed or stop moving. 
 
-* **Combat Tactics**: Always aim before attacking. Melee combat is exhausting; keep an eye on your stamina because fighting while exhausted makes your weapons less effective and drains your energy. 
+* **Combat**: Always aim before attacking. Melee combat is exhausting; keep an eye on your stamina because fighting while exhausted makes your weapons less effective and drains your energy.
 
 * **Vehicles**: Approach a vehicle and enter. Remember to check the motor, key, fuel and battery, and be aware that roadkills will damage the car over time!
 
-* **Crafting & Maintenance**: Open the Crafting menu to combine items, dismantle junk, and survive. Keep an eye on your weapon's durability, as it can break in the middle of a fight. 
+* **Crafting**: Open the Crafting menu to combine items, dismantle junk, and survive. Keep an eye on your weapon's durability, as it can break in the middle of a fight. 
 
 
 ### [ Credits ]

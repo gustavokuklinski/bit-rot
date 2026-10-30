@@ -447,7 +447,7 @@ def handle_npc_save(game, npc):
             fuel_taken = min(player_fuel, fuel_cost)
             consume_player_fuel_units(player, fuel_taken)
             _teleport_npc_to_lobby(game, npc)
-            display_message(f"{tr('msg', 'Rescued')} {npc.name} {tr('msg', 'to Lobby! (1 Charm &')} {fuel_taken} {tr('msg', 'Fuel used)')}")
+            display_message(f"{tr('msg', 'Rescued')} {npc.name} {tr('msg', 'to Lobby! (1 Charm and')} {fuel_taken} {tr('msg', 'Fuel used)')}")
         elif player_fuel > 0 and not has_charm:
             display_message(tr('msg', f"{npc.name} is at the Port! Need a Charm and Fuel to rescue to the Lobby."))
         else:
@@ -471,7 +471,7 @@ def handle_npc_save(game, npc):
         consume_player_fuel_units(player, fuel_taken)
         _consume_player_charm(player)
         _teleport_npc_to_lobby(game, npc)
-        display_message(f"{tr('msg', 'Rescued')} {npc.name} {tr('msg', 'to Lobby! (1 Charm &')} {fuel_taken} {tr('msg', 'Fuel used)')}")
+        display_message(f"{tr('msg', 'Rescued')} {npc.name} {tr('msg', 'to Lobby! (1 Charm and')} {fuel_taken} {tr('msg', 'Fuel used)')}")
 
     else:
         display_message(tr('msg', "Rescue requires Fuel (to Port) or Fuel + Charm (to Lobby)!"))

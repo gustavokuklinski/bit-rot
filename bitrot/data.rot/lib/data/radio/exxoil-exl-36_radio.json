@@ -1,0 +1,19 @@
+{
+    "radio": {
+        "name": "[Exxoil] EXL-36",
+        "frequency": "random",
+        "stream_config": [
+            "12:00",
+            "00:00",
+            "random"
+        ],
+        "streams": [
+            "[STATIC]...How is GTH-42? They were blackout!...[STATIC]",
+            "[STATIC]...GTH-42, The outbreak comes from a heli...[STATIC]\n[STATIC][NOISE][GUNSHOTS]... They are here! Ahhh...[STATIC]",
+            "[STATIC]...Keep strong survivors! We will rebuild...[STATIC]",
+            "[STATIC]...EXL-36 still operating... We hear you...[STATIC]",
+            "[STATIC]...Ration your food and stay indoors. The horde is moving...[STATIC]",
+            "[STATIC]...Avoid the horde, stay quiet. May God be with us...[STATIC]"
+        ]
+    }
+}

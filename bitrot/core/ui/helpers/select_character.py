@@ -679,17 +679,19 @@ def draw_select_character_screen(game, state, mouse_pos):
             cost = t_def.get('cost', 0)
             prefix = "+" if cost > 0 else "-"
             col = (130, 255, 130) if cost > 0 else (255, 130, 130)
-            t_line = font_12.render(f"{prefix} {base_name}", False, col)
+            translated_trait = tr('trait', base_name)
+            t_line = font_12.render(f"{prefix} {translated_trait}", False, col)
             game.game_screen.blit(t_line, (card_rect.left + S(22), line_cursor_y))
             line_cursor_y += S(16)
 
         # Starter Items summary
         if c_def.get('items'):
             line_cursor_y += S(6)
-            items_str = ", ".join(c_def['items'])
-            items_txt = f"Items: {items_str}"
+            translated_items = [tr('item', it) if tr('item', it) != it else tr('cloth', it) for it in c_def['items']]
+            items_str = ", ".join(translated_items)
+            items_txt = f"{tr('ui', 'Items:')} {items_str}"
             if font_12.size(items_txt)[0] > card_w - S(36):
-                items_txt = f"Items: {len(c_def['items'])} starters"
+                items_txt = f"{tr('ui', 'Items:')} {len(c_def['items'])} {tr('ui', 'starters')}"
             it_surf = font_12.render(items_txt, False, (130, 200, 255))
             game.game_screen.blit(it_surf, (card_rect.left + S(18), line_cursor_y))
 
@@ -800,13 +802,19 @@ def draw_select_character_screen(game, state, mouse_pos):
         # Show actual clothes list including hair and head equipment
         active_clothes = state.get('class_dynamic_gear', {}).get(hovered_class['id'], {}).get('clothes', hovered_class['clothes'])
         for c_name in active_clothes:
-            tooltip_lines.append(f"  • {c_name}")
+            c_trans = tr('cloth', c_name)
+            if c_trans == c_name:
+                c_trans = tr('item', c_name)
+            tooltip_lines.append(f"  • {c_trans}")
 
         if hovered_class.get('items'):
             tooltip_lines.append("")
             tooltip_lines.append(f"{tr('ui', 'Starter Items:')}")
             for it_name in hovered_class['items']:
-                tooltip_lines.append(f"  • {it_name}")
+                it_trans = tr('item', it_name)
+                if it_trans == it_name:
+                    it_trans = tr('cloth', it_name)
+                tooltip_lines.append(f"  • {it_trans}")
 
         tooltip_lines.append("")
         tooltip_lines.append(tr('ui', "Traits:"))
@@ -814,7 +822,7 @@ def draw_select_character_screen(game, state, mouse_pos):
             t_def = TRAIT_DEFINITIONS.get(t_id, {})
             t_name = t_def.get('name', t_id)
             t_cost = t_def.get('cost', 0)
-            tooltip_lines.append(f"  • {t_name} ({t_cost:+})")
+            tooltip_lines.append(f"  • {tr('trait', t_name)} ({t_cost:+})")
 
         t_proxy = SimpleNamespace(
             name=tr('ui', hovered_class['name']),

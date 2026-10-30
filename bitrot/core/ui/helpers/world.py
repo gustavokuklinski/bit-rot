@@ -394,7 +394,7 @@ def _draw_world_screen(game, state, mouse_pos):
         pygame.draw.rect(game.game_screen, (200, 130, 20), next_rect, border_radius=border_radius)
         if next_rect.collidepoint(mouse_pos):
             pygame.draw.rect(game.game_screen, (220, 150, 40), next_rect.inflate(-S(4), -S(4)), border_radius=border_radius)
-        next_txt = font_16.render(tr('ui', "SAVE & CONTINUE"), True, WHITE)
+        next_txt = font_16.render(tr('ui', "SAVE AND CONTINUE"), True, WHITE)
     else:
         pygame.draw.rect(game.game_screen, BTN_GREEN, next_rect, border_radius=border_radius)
         if next_rect.collidepoint(mouse_pos):

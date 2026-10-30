@@ -972,7 +972,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         tooltip_targets = [
             (game.pause_button_rect, f"{tr('ui', 'Pause')} ({get_key_name('pause') or 'F2'})"), 
             (game.menu_hud_button_rect, f"{tr('ui', 'Toggle UI Menus')} ({get_key_name('toggle_menu') or 'F3'})"),
-            (game.modals_all_button_rect, f"{tr('ui', 'Toggle & Reset UI')} ({get_key_name('toggle_modals') or 'TAB'})"),
+            (game.modals_all_button_rect, f"{tr('ui', 'Toggle and Reset UI')} ({get_key_name('toggle_modals') or 'TAB'})"),
             (getattr(game, 'status_button_rect', None), f"{tr('ui', 'Player Status')} ({get_key_name('toggle_status') or 'F5'})"),
             (getattr(game, 'inventory_button_rect', None), f"{tr('ui', 'Inventory')} ({get_key_name('toggle_inventory') or 'F6'})"),
             (getattr(game, 'gear_button_rect', None), f"{tr('ui', 'Gear')} ({get_key_name('toggle_gear') or 'F7'})"),

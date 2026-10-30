@@ -1,0 +1,18 @@
+{
+    "radio": {
+        "name": "City General",
+        "frequency": "120.0",
+        "stream_config": [
+            "08:00",
+            "20:00",
+            "random"
+        ],
+        "streams": [
+            "[STATIC]...This is triage center 4. We are out of morphine and clean bandages...[STATIC]",
+            "[STATIC]...Patient zero is still unstable. Please, we need a containment team immediately! [COF][COF]...[STATIC]",
+            "[STATIC]...To any surviving medical staff: report to the East Wing for reorganization...[STATIC]",
+            "[STATIC]...The infection rate is climbing. We can't keep them out of the ward much longer... [NOISE][SCREAMING]...[STATIC]",
+            "[STATIC]...Is anyone receiving this? We have three wounded civilians. Please respond...[STATIC]"
+        ]
+    }
+}

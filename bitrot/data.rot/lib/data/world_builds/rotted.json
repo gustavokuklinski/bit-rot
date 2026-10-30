@@ -25,7 +25,7 @@
             "default": 900000
           },
           "time_sunrise_hr": {
-            "value": 5.5,
+            "value": 6.0,
             "name": "Time sunrise",
             "default": 5.5
           },
@@ -35,7 +35,7 @@
             "default": 17.5
           },
           "time_start_hr": {
-            "value": 6.0,
+            "value": 7.0,
             "name": "Start hour",
             "default": 6.0
           },
@@ -45,12 +45,12 @@
             "default": false
           },
           "all_visible": {
-            "value": false,
+            "value": true,
             "name": "All containers are opened",
             "default": false
           },
           "infinite_liquid": {
-            "value": false,
+            "value": true,
             "name": "Liquids are infinite",
             "default": true
           },
@@ -59,10 +59,20 @@
             "name": "Generate Military Chunk",
             "default": true
           },
+          "disable_discover_island": {
+            "value": false,
+            "name": "Can't discover new islands",
+            "default": false
+          },
           "generate_lobby_chunk": {
             "value": true,
             "name": "Generate Lobby Chunk",
             "default": true
+          },
+          "no_boat_to_lobby": {
+            "value": true,
+            "name": "Can't navigate back Lobby",
+            "default": false
           },
           "start_at_the_lobby": {
             "value": false,

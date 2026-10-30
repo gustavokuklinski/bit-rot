@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <language name="pt_BR">
+    <!-- Window / Modal Titles -->
     <modal>
         <modal name="Inventory" translation_modal="Inventário" />
         <modal name="Player Status" translation_modal="Status do Jogador" />
@@ -7,7 +8,7 @@
         <modal name="Gear" translation_modal="Equipamento" />
         <modal name="Messages" translation_modal="Mensagens" />
         <modal name="Nearby" translation_modal="Proximidades" />
-        <modal name="Slots Overview" translation_modal="Visão Geral" />
+        <modal name="Slots Overview" translation_modal="Visão Geral dos Espaços" />
         <modal name="Map" translation_modal="Mapa" />
         <modal name="Load Game" translation_modal="Carregar Jogo" />
         <modal name="Settings" translation_modal="Configurações" />
@@ -17,11 +18,15 @@
         <modal name="Controls Configuration" translation_modal="Configuração de Controles" />
     </modal>
 
+    <!-- Sub-tab Headers -->
     <tab>
         <tab name="Player" translation_tab="Jogador" />
         <tab name="Settings" translation_tab="Configurações" />
         <tab name="Clock" translation_tab="Relógio" />
         <tab name="Map" translation_tab="Mapa" />
+        <tab name="Apps" translation_tab="Aplicativos" />
+        <tab name="Radio" translation_tab="Rádio" />
+        <tab name="VOIP" translation_tab="VOIP" />
         <tab name="MP3" translation_tab="MP3" />
         <tab name="Info" translation_tab="Informações" />
         <tab name="Vehicle" translation_tab="Veículo" />
@@ -35,10 +40,15 @@
         <tab name="Status" translation_tab="Status" />
         <tab name="Record" translation_tab="Habilidades" />
         <tab name="Quests" translation_tab="Missões" />
+        <tab name="World" translation_tab="Mundo" />
+        <tab name="UI" translation_tab="Interface" />
+        <tab name="Audio" translation_tab="Áudio" />
+        <tab name="Mods" translation_tab="Mods" />
     </tab>
 
+    <!-- UI Buttons, Labels, Setup, and Menus -->
     <ui>
-        <!-- Menus & Game Over -->
+        <!-- Game State & Pause -->
         <ui name="PAUSED" translation_ui="PAUSADO" />
         <ui name="GAME PAUSED AND SAVED" translation_ui="JOGO PAUSADO E SALVO" />
         <ui name="Continue" translation_ui="Continuar" />
@@ -49,22 +59,62 @@
         <ui name="LOAD GAME" translation_ui="CARREGAR JOGO" />
         <ui name="New Game" translation_ui="Novo Jogo" />
         <ui name="Settings" translation_ui="Configurações" />
+        <ui name="Preferences" translation_ui="Preferências" />
+        <ui name="Global Preferences" translation_ui="Preferências Globais" />
         <ui name="Exit" translation_ui="Sair" />
         <ui name="Quit" translation_ui="Sair" />
+        <ui name="Back" translation_ui="Voltar" />
+        <ui name="Back to Menu" translation_ui="Voltar ao Menu" />
+        <ui name="Apply" translation_ui="Aplicar" />
+        <ui name="Reset" translation_ui="Restaurar" />
+        <ui name="Delete" translation_ui="Excluir" />
+        <ui name="Send" translation_ui="Enviar" />
+        <ui name="Top" translation_ui="Topo" />
+        <ui name="Author" translation_ui="Autor" />
+
+        <!-- Game Over -->
         <ui name="YOU DIED" translation_ui="VOCÊ MORREU" />
         <ui name="YOU ROTTED" translation_ui="VOCÊ APODRECEU" />
-        <ui name="Back to Menu" translation_ui="Voltar ao Menu" />
         <ui name="You Killed:" translation_ui="Você Matou:" />
         <ui name="Rotters Dead:" translation_ui="Podres Mortos:" />
         <ui name="Days Survived:" translation_ui="Dias Sobrevividos:" />
-        <ui name="Back" translation_ui="Voltar" />
-        <ui name="Apply" translation_ui="Aplicar" />
-        <ui name="Delete" translation_ui="Excluir" />
-        <ui name="Empty Slot" translation_ui="Espaço Vazio" />
-        <ui name="Send" translation_ui="Enviar" />
-        <ui name="Preferences" translation_ui="Preferências" />
-        
-        <!-- Player Creation Screen -->
+        <ui name="New Character" translation_ui="Novo Personagem" />
+
+        <!-- World Selection Screen -->
+        <ui name="SELECT GAME WORLD" translation_ui="SELECIONE O MUNDO DO JOGO" />
+        <ui name="Choose your game mode to begin your journey" translation_ui="Escolha o seu modo de jogo para iniciar a jornada" />
+        <ui name="Select Mode" translation_ui="Selecionar Modo" />
+        <ui name="Sandbox" translation_ui="Personalizado" />
+        <ui name="All visible" translation_ui="Tudo visível" />
+        <ui name="All containers are opened" translation_ui="Todos os recipientes iniciam abertos" />
+        <ui name="Infinite liquid" translation_ui="Líquido infinito" />
+        <ui name="Liquids are infinite" translation_ui="Fontes de líquidos no mapa são infinitas" />
+        <ui name="Permadeath" translation_ui="Morte permanente" />
+        <ui name="Delete save when die" translation_ui="Exclui o arquivo de salvamento ao morrer" />
+
+        <!-- World Setup & Rules -->
+        <ui name="World Rules" translation_ui="Regras do Mundo" />
+        <ui name="World Preset" translation_ui="Predefinição do Mundo" />
+        <ui name="World Seed (12-digit):" translation_ui="Semente do Mundo (12 dígitos):" />
+        <ui name="SAVE AND CONTINUE" translation_ui="SALVAR E CONTINUAR" />
+        <ui name="NEXT: PLAYER SETUP" translation_ui="PRÓXIMO: CRIAR PERSONAGEM" />
+        <ui name="True" translation_ui="Sim" />
+        <ui name="False" translation_ui="Não" />
+        <ui name="Chunks" translation_ui="Áreas" />
+        <ui name="tiles" translation_ui="quadrados" />
+        <ui name="min" translation_ui="min" />
+        <ui name="sec" translation_ui="seg" />
+
+        <!-- Character Selection Screen -->
+        <ui name="CHOOSE YOUR CHARACTER" translation_ui="ESCOLHA SEU PERSONAGEM" />
+        <ui name="Select your origin or customize your survivor" translation_ui="Selecione sua origem ou personalize seu sobrevivente" />
+        <ui name="Name:" translation_ui="Nome:" />
+        <ui name="More info" translation_ui="Mais detalhes" />
+        <ui name="Start Game" translation_ui="Iniciar Jogo" />
+        <ui name="Custom Build" translation_ui="Criação Livre" />
+        <ui name="Starter Items:" translation_ui="Itens Iniciais:" />
+
+        <!-- Player Setup Screen -->
         <ui name="Preset" translation_ui="Predefinição" />
         <ui name="Player Name:" translation_ui="Nome do Jogador:" />
         <ui name="Survivor" translation_ui="Sobrevivente" />
@@ -73,110 +123,141 @@
         <ui name="Male" translation_ui="Masculino" />
         <ui name="Female" translation_ui="Feminino" />
         <ui name="Clothes" translation_ui="Roupas" />
+        <ui name="Clothes:" translation_ui="Roupas:" />
+        <ui name="None" translation_ui="Nenhum" />
         <ui name="Professions" translation_ui="Profissões" />
         <ui name="Traits" translation_ui="Traços" />
+        <ui name="Traits:" translation_ui="Traços:" />
         <ui name="Points:" translation_ui="Pontos:" />
         <ui name="Current Stats" translation_ui="Status Atuais" />
+        <ui name="Rate" translation_ui="Taxa" />
         <ui name="START GAME" translation_ui="INICIAR JOGO" />
 
-        <!-- Settings Screen -->
-        <ui name="Settings Control" translation_ui="Controle de Configurações" />
-        <ui name="Configuration Values" translation_ui="Valores de Configuração" />
-        <ui name="Restart to apply." translation_ui="Reinicie para aplicar." />
-        <ui name="Reset Default" translation_ui="Restaurar Padrão" />
-        <ui name="True" translation_ui="Sim" />
-        <ui name="False" translation_ui="Não" />
-        <ui name="Muted" translation_ui="Mudo" />
-        <ui name="Extreme Low" translation_ui="Muito Baixo" />
-        <ui name="Low" translation_ui="Baixo" />
-        <ui name="Balanced" translation_ui="Equilibrado" />
-        <ui name="High" translation_ui="Alto" />
-        <ui name="Extreme High" translation_ui="Muito Alto" />
-        <ui name="Custom" translation_ui="Personalizado" />
-        <ui name="min" translation_ui="min" />
-        <ui name="sec" translation_ui="seg" />
-        <ui name="World" translation_ui="Mundo" />
-        <ui name="Native (Max)" translation_ui="Nativa (Máxima)" />
-        <ui name="Windowed" translation_ui="Janela" />
-        <ui name="Fullscreen" translation_ui="Tela Cheia" />
-
-        <!-- Config Keys -->
-        <ui name="water_autodrink" translation_ui="Beber Água Auto." />
-        <ui name="zombie_respawn_timer_ms" translation_ui="Tempo Respawn Zumbi" />
-        <ui name="time_transition_hr" translation_ui="Transição de Tempo" />
-        <ui name="zoom_start" translation_ui="Zoom Inicial" />
-        <ui name="zoom_far" translation_ui="Zoom Afastado" />
-        <ui name="zoom_near" translation_ui="Zoom Aproximado" />
-        <ui name="water_threshold" translation_ui="Limite Sede (Auto)" />
-        <ui name="zombie_spawn_per_chunk" translation_ui="Zumbis por Área" />
-        <ui name="zombie_multiplier" translation_ui="Multiplicador de Zumbis" />
-        <ui name="static_percent" translation_ui="Porcentagem NPC Estático" />
-        <ui name="hostile_percent" translation_ui="Porcentagem NPC Hostil" />
-        <ui name="npc_spawn_per_chunk" translation_ui="NPCs por Área" />
-        <ui name="vehicle_spawn_per_chunk" translation_ui="Veículos por Área" />
-        <ui name="has_fuel_chance" translation_ui="Chance Combustível" />
-        <ui name="has_key_chance" translation_ui="Chance Chave" />
-        <ui name="has_motor_chance" translation_ui="Chance Motor" />
-        <ui name="has_battery_chance" translation_ui="Chance Bateria" />
-        <ui name="has_tires_chance" translation_ui="Chance Pneus" />
-        <ui name="ui_background_music" translation_ui="Música de Fundo" />
-        <ui name="ui_show_tutorial_default" translation_ui="Exibir Tutorial ao Iniciar" />
-        <ui name="animal_spawn_per_chunk" translation_ui="Animais por Área" />
-        <ui name="animal_respawn_ms_timer" translation_ui="Tempo Respawn Animais" />
-        <ui name="view_radius" translation_ui="Raio de Visão" />
-        <ui name="time_daylength" translation_ui="Duração do Dia" />
-        <ui name="time_sunrise_hr" translation_ui="Hora do Amanhecer" />
-        <ui name="time_sunset_hr" translation_ui="Hora do Anoitecer" />
-        <ui name="time_start_hr" translation_ui="Hora Inicial" />
-        <ui name="map_chunks" translation_ui="Dimensão do Mapa" />
-        <ui name="wander" translation_ui="Zumbis Vagam" />
-        <ui name="spawn" translation_ui="Qtd. Spawn Zumbis" />
-        <ui name="respawn_timer" translation_ui="Tempo Respawn Geral" />
-        <ui name="item_spawn_chance_multiplier" translation_ui="Multiplicador de Itens" />
-        <ui name="language" translation_ui="Idioma" />
-        <ui name="window_mode" translation_ui="Modo de Janela" />
-        <ui name="resolution" translation_ui="Resolução" />
-        <ui name="volume_music" translation_ui="Volume Música" />
-        <ui name="volume_background" translation_ui="Volume Ambiente" />
-        <ui name="volume_atmospheric" translation_ui="Volume Atmosférico" />
-        <ui name="volume_animal" translation_ui="Volume Animais" />
-        <ui name="volume_npc" translation_ui="Volume NPCs" />
-        <ui name="volume_zombie" translation_ui="Volume Zumbis" />
-        <ui name="volume_player" translation_ui="Volume Jogador" />
-        <ui name="volume_vehicle" translation_ui="Volume Veículos" />
-        <ui name="volume_items" translation_ui="Volume Itens" />
-        <ui name="volume_map" translation_ui="Volume Mapa" />
-
-        <!-- HUD & Button Tooltips -->
-        <ui name="Pause and Save (F2)" translation_ui="Pausar e Salvar (F2)" />
-        <ui name="Pause and Save" translation_ui="Pausar e Salvar" />
-        <ui name="Toggle UI Menus (SHIFT+M)" translation_ui="Alternar Menus HUD (SHIFT+M)" />
+        <!-- HUD, Buttons & Tooltips -->
+        <ui name="Pause" translation_ui="Pausar" />
+        <ui name="Pause (F2)" translation_ui="Pausar (F2)" />
+        <ui name="Toggle UI Menus" translation_ui="Alternar Menus HUD" />
+        <ui name="Toggle UI Menus (F3)" translation_ui="Alternar Menus HUD (F3)" />
+        <ui name="Toggle and Reset UI" translation_ui="Alternar e Redefinir Interface" />
+        <ui name="Toggle &amp; Reset UI (TAB)" translation_ui="Alternar e Redefinir Interface (TAB)" />
+        <ui name="Reset Modals (F4)" translation_ui="Redefinir Janelas (F4)" />
         <ui name="Player Status" translation_ui="Status do Jogador" />
+        <ui name="Player Status (F5)" translation_ui="Status do Jogador (F5)" />
         <ui name="Inventory" translation_ui="Inventário" />
+        <ui name="Inventory (F6)" translation_ui="Inventário (F6)" />
         <ui name="Gear" translation_ui="Equipamento" />
-        <ui name="Slots Overview" translation_ui="Visão Geral" />
+        <ui name="Gear (F7)" translation_ui="Equipamento (F7)" />
         <ui name="Nearby" translation_ui="Proximidades" />
-        <ui name="Ground" translation_ui="Chão" />
+        <ui name="Nearby (F8)" translation_ui="Proximidades (F8)" />
+        <ui name="Slots Overview" translation_ui="Visão Geral dos Espaços" />
+        <ui name="Slots Overview (F9)" translation_ui="Visão Geral dos Espaços (F9)" />
         <ui name="Messages" translation_ui="Mensagens" />
+        <ui name="Messages (F10)" translation_ui="Mensagens (F10)" />
         <ui name="Crafting" translation_ui="Criação" />
-        <ui name="Help and Tutorial (?)" translation_ui="Ajuda e Tutorial (?)" />
+        <ui name="Crafting (C)" translation_ui="Criação (C)" />
+        <ui name="Help and Tutorial" translation_ui="Ajuda e Tutorial" />
+        <ui name="Help and Tutorial (F1)" translation_ui="Ajuda e Tutorial (F1)" />
+        <ui name="Ground" translation_ui="Chão" />
+        <ui name="GPS Minimap" translation_ui="Minimapa GPS" />
+        <ui name="Click to open" translation_ui="Clique para abrir" />
         <ui name="Click to start" translation_ui="Clique para iniciar" />
+        <ui name="Click to go" translation_ui="Clique para ir" />
+        <ui name="Loading" translation_ui="Carregando" />
         <ui name="Loading..." translation_ui="Carregando..." />
+        <ui name="Loading Chunk" translation_ui="Carregando Área" />
+        <ui name="Respawning" translation_ui="Ressuscitando" />
+        <ui name="Opening" translation_ui="Abrindo" />
+        <ui name="Removing" translation_ui="Removendo" />
+        <ui name="Installing" translation_ui="Instalando" />
+        <ui name="Refueling" translation_ui="Reabastecendo" />
+        <ui name="Siphoning Fuel" translation_ui="Drenando Combustível" />
+        <ui name="Open" translation_ui="Abrir" />
+        <ui name="Closed container" translation_ui="Recipiente fechado" />
+        <ui name="Trunk is locked" translation_ui="Porta-malas trancado" />
+        <ui name="Locked" translation_ui="Trancado" />
+        <ui name="Empty" translation_ui="Vazio" />
+        <ui name="Empty Slot" translation_ui="Espaço Vazio" />
+        <ui name="units" translation_ui="unidades" />
+        <ui name="Location:" translation_ui="Localização:" />
+        <ui name="Door" translation_ui="Porta" />
+        <ui name="Window" translation_ui="Janela" />
+        <ui name="Belt" translation_ui="Cinto" />
+        <ui name="Slot" translation_ui="Espaço" />
+        <ui name="Slots" translation_ui="Espaços" />
+        <ui name="Container" translation_ui="Recipiente" />
+        <ui name="Open Container" translation_ui="Recipiente Aberto" />
+        <ui name="Nearby Container" translation_ui="Recipiente Próximo" />
+        <ui name="Vehicle Trunk" translation_ui="Porta-malas do Veículo" />
+        <ui name="Send to" translation_ui="Enviar para" />
+        <ui name="UI Tip" translation_ui="Dica de Interface" />
 
-        <!-- Config Blocks -->
-        <ui name="Game" translation_ui="Jogo" />
-        <ui name="Map" translation_ui="Mapa" />
-        <ui name="Player" translation_ui="Jogador" />
-        <ui name="Durability" translation_ui="Durabilidade" />
-        <ui name="Vehicle" translation_ui="Veículo" />
-        <ui name="Item_spawning" translation_ui="Geração de Itens" />
-        <ui name="Animal" translation_ui="Animais" />
-        <ui name="Zombie" translation_ui="Zumbis" />
-        <ui name="Npc" translation_ui="NPCs" />
-        <ui name="Ui" translation_ui="Interface" />
-        <ui name="Audio" translation_ui="Áudio" />
+        <!-- Navigation & Sector Overlays -->
+        <ui name="Lobby (Safe Haven)" translation_ui="Refúgio (Zona Segura)" />
+        <ui name="Lobby" translation_ui="Refúgio" />
+        <ui name="Destination:" translation_ui="Destino:" />
+        <ui name="Fuel needed:" translation_ui="Combustível necessário:" />
+        <ui name="Available fuel:" translation_ui="Combustível disponível:" />
+        <ui name="Island" translation_ui="Ilha" />
+        <ui name="Sector" translation_ui="Setor" />
+        <ui name="Discover a new isolated island." translation_ui="Descubra uma nova ilha isolada." />
+        <ui name="Cost:" translation_ui="Custo:" />
+        <ui name="Rescue survivor: requires Fuel, Charm, or both." translation_ui="Resgatar sobrevivente: requer Combustível, Amuleto ou ambos." />
+        <ui name="To remove barricade need:" translation_ui="Para remover a barricada precisa:" />
+        <ui name="Place barricade need:" translation_ui="Para instalar barricada precisa:" />
+        <ui name="Barricade must be in inventory" translation_ui="A barricada precisa estar no inventário" />
+        <ui name="Required Materials:" translation_ui="Materiais Necessários:" />
+        <ui name="Requires:" translation_ui="Requer:" />
+        <ui name="Key Slot" translation_ui="Espaço da Chave" />
+        <ui name="Insert key into vehicle ignition" translation_ui="Inserir chave na ignição do veículo" />
+        <ui name="Fuel Tank" translation_ui="Tanque de Combustível" />
+        <ui name="Add fuel to" translation_ui="Abastecer" />
+        <ui name="Engine" translation_ui="Motor" />
+        <ui name="Install engine in" translation_ui="Instalar motor em" />
+        <ui name="Battery" translation_ui="Bateria" />
+        <ui name="Install battery in" translation_ui="Instalar bateria em" />
+        <ui name="Mount tire on" translation_ui="Instalar pneu em" />
+        <ui name="Front Left" translation_ui="Dianteiro Esquerdo" />
+        <ui name="Front Right" translation_ui="Dianteiro Direito" />
+        <ui name="Back Left" translation_ui="Traseiro Esquerdo" />
+        <ui name="Back Right" translation_ui="Traseiro Direito" />
 
-        <!-- Stats & Progression -->
+        <!-- World Info & Atmospheric -->
+        <ui name="World Info" translation_ui="Informações do Mundo" />
+        <ui name="Daylight" translation_ui="Luz do Dia" />
+        <ui name="Darkness" translation_ui="Escuridão" />
+        <ui name="Twilight" translation_ui="Crepúsculo" />
+        <ui name="Sunrise" translation_ui="Amanhecer" />
+        <ui name="Rain" translation_ui="Chuva" />
+        <ui name="Fog" translation_ui="Neblina" />
+        <ui name="Rain/Fog" translation_ui="Chuva/Neblina" />
+        <ui name="Clear" translation_ui="Limpo" />
+        <ui name="Weather: Clear" translation_ui="Clima: Limpo" />
+        <ui name="Weather: Raining" translation_ui="Clima: Chovendo" />
+        <ui name="Weather: Unknown" translation_ui="Clima: Desconhecido" />
+        <ui name="Rain in" translation_ui="Chuva em" />
+        <ui name="Rain in:" translation_ui="Chuva em:" />
+        <ui name="Time" translation_ui="Hora" />
+        <ui name="Now" translation_ui="Agora" />
+        <ui name="No Signal" translation_ui="Sem Sinal" />
+        <ui name="Offline" translation_ui="Desconectado" />
+        <ui name="Radio Frequency" translation_ui="Frequência de Rádio" />
+        <ui name="Kills:" translation_ui="Abates:" />
+        <ui name="Survived:" translation_ui="Sobrevivido:" />
+        <ui name="Days" translation_ui="Dias" />
+        <ui name="day" translation_ui="dia" />
+        <ui name="days" translation_ui="dias" />
+        <ui name="Day" translation_ui="Dia" />
+
+        <!-- Stats, Attributes & Progression -->
+        <ui name="Health" translation_ui="Saúde" />
+        <ui name="Stamina" translation_ui="Energia" />
+        <ui name="Water" translation_ui="Água" />
+        <ui name="Food" translation_ui="Comida" />
+        <ui name="Defence" translation_ui="Defesa" />
+        <ui name="Anxiety" translation_ui="Ansiedade" />
+        <ui name="Weight" translation_ui="Peso" />
+        <ui name="Infection" translation_ui="Infecção" />
+        <ui name="Sickness" translation_ui="Doença" />
         <ui name="Strength" translation_ui="Força" />
         <ui name="Fitness" translation_ui="Aptidão Física" />
         <ui name="Agility" translation_ui="Agilidade" />
@@ -187,124 +268,171 @@
         <ui name="Aiming" translation_ui="Pontaria" />
         <ui name="Maintenance" translation_ui="Manutenção" />
         <ui name="Intelligence" translation_ui="Inteligência" />
-        <ui name="Health" translation_ui="Saúde" />
-        <ui name="Stamina" translation_ui="Energia" />
-        <ui name="Water" translation_ui="Água" />
-        <ui name="Food" translation_ui="Comida" />
-        <ui name="Anxiety" translation_ui="Ansiedade" />
-        <ui name="Weight" translation_ui="Peso" />
-        <ui name="Infection" translation_ui="Infecção" />
-        <ui name="Sickness" translation_ui="Doença" />
-        <ui name="Defence" translation_ui="Defesa" />
-        <ui name="Rate" translation_ui="Taxa" />
         <ui name="XP" translation_ui="XP" />
         <ui name="Experience" translation_ui="Experiência" />
         <ui name="Progress:" translation_ui="Progresso:" />
+        <ui name="Progress" translation_ui="Progresso" />
         <ui name="Boost:" translation_ui="Bônus:" />
         <ui name="Skill up!" translation_ui="Habilidade Aumentou!" />
+        <ui name="Card Boost:" translation_ui="Bônus do Cartão:" />
+        <ui name="Card XP Boost:" translation_ui="Bônus de XP do Cartão:" />
+        <ui name="Live Learning:" translation_ui="Aprendizado Ativo:" />
 
-        <!-- Clothes & Slots -->
+        <!-- Clothing Slots -->
         <ui name="Hair" translation_ui="Cabelo" />
         <ui name="Head" translation_ui="Cabeça" />
         <ui name="Legs" translation_ui="Pernas" />
         <ui name="Feet" translation_ui="Pés" />
         <ui name="Body" translation_ui="Tronco" />
         <ui name="Util" translation_ui="Util" />
-        <ui name="Util2" translation_ui="Util2" />
-        <ui name="Util3" translation_ui="Util3" />
+        <ui name="Util 1" translation_ui="Util 1" />
+        <ui name="Util 2" translation_ui="Util 2" />
+        <ui name="Util 3" translation_ui="Util 3" />
+        <ui name="Util2" translation_ui="Util 2" />
+        <ui name="Util3" translation_ui="Util 3" />
         <ui name="Arms" translation_ui="Braços" />
         <ui name="Hands" translation_ui="Mãos" />
         <ui name="Facial" translation_ui="Rosto" />
-        <ui name="Empty" translation_ui="Vazio" />
-        <ui name="units" translation_ui="unidades" />
-        <ui name="Location:" translation_ui="Local:" />
-        <ui name="Door" translation_ui="Porta" />
-        <ui name="Window" translation_ui="Janela" />
 
-        <!-- World Info & Weather -->
-        <ui name="World Info" translation_ui="Informações do Mundo" />
-        <ui name="Daylight" translation_ui="Luz do Dia" />
-        <ui name="Darkness" translation_ui="Escuridão" />
-        <ui name="Twilight" translation_ui="Crepúsculo" />
-        <ui name="Sunrise" translation_ui="Amanhecer" />
-        <ui name="Kills:" translation_ui="Abates:" />
-        <ui name="Survived:" translation_ui="Sobrevividos:" />
-        <ui name="Days" translation_ui="Dias" />
-        <ui name="day" translation_ui="dia" />
-        <ui name="days" translation_ui="dias" />
-        <ui name="Day" translation_ui="Dia" />
-        <ui name="Weather: Clear" translation_ui="Clima: Limpo" />
-        <ui name="Rain in" translation_ui="Chuva em" />
-        <ui name="Rain in:" translation_ui="Chuva em:" />
-        <ui name="Weather: Raining" translation_ui="Clima: Chovendo" />
-        <ui name="Weather: Unknown" translation_ui="Clima: Desconhecido" />
-        <ui name="Time" translation_ui="Hora" />
-        <ui name="Now" translation_ui="Agora" />
-        <ui name="No Signal" translation_ui="Sem Sinal" />
-        <ui name="Offline" translation_ui="Desconectado" />
-
-        <!-- Quest Status -->
+        <!-- Quest & Milestones Tracking -->
         <ui name="In Progress" translation_ui="Em Progresso" />
         <ui name="Next Petrol" translation_ui="Próximo Posto" />
-        <ui name="Island Quest" translation_ui="Missão da Ilha" />
-        <ui name="Completed" translation_ui="Concluídas" />
-        <ui name="Completed Milestones" translation_ui="Marcos Concluídos" />
-        <ui name="Locked Milestones" translation_ui="Marcos Bloqueados" />
+        <ui name="Recipe Books" translation_ui="Livros de Receitas" />
+        <ui name="Milestones" translation_ui="Marcos" />
+        <ui name="Completed" translation_ui="Concluído" />
         <ui name="Status:" translation_ui="Status:" />
-        <ui name="Locked" translation_ui="Bloqueada" />
-        <ui name="Check your quest tab" translation_ui="Veja sua aba de missões" />
-        <ui name="Quest completed!" translation_ui="Missão concluída!" />
+        <ui name="Read" translation_ui="Lido" />
+        <ui name="Unread" translation_ui="Não lido" />
+        <ui name="Task" translation_ui="Tarefa" />
+        <ui name="Objective" translation_ui="Objetivo" />
+        <ui name="Locked" translation_ui="Bloqueado" />
+        <ui name="No recipes recorded." translation_ui="Nenhuma receita registrada." />
 
-        <!-- Breadcrumb & UI elements -->
-        <ui name="Belt" translation_ui="Cinto" />
-        <ui name="Slot" translation_ui="Espaço" />
-        <ui name="Slots" translation_ui="Espaços" />
-        <ui name="Gear" translation_ui="Equipamento" />
-        <ui name="Inventory" translation_ui="Inventário" />
-
-        <!-- Crafting UI -->
+        <!-- Crafting Modal -->
         <ui name="Search..." translation_ui="Pesquisar..." />
-        <ui name="Select a recipe to view details" translation_ui="Selecione uma receita para ver os detalhes" />
+        <ui name="Select a recipe to view details" translation_ui="Selecione uma receita para ver detalhes" />
         <ui name="(None available)" translation_ui="(Nenhum disponível)" />
         <ui name="Required Ingredients:" translation_ui="Ingredientes Necessários:" />
-        <ui name="Any" translation_ui="Qualquer" />
+        <ui name="Ingredients" translation_ui="Ingredientes" />
+        <ui name="Ingredients:" translation_ui="Ingredientes:" />
+        <ui name="Open Craft" translation_ui="Abrir Criação" />
+        <ui name="Ready to craft" translation_ui="Pronto para criar" />
+        <ui name="Missing skill" translation_ui="Faltando habilidade" />
+        <ui name="Missing skill:" translation_ui="Habilidade necessária:" />
+        <ui name="Quantity" translation_ui="Quantidade" />
         <ui name="OR Skills:" translation_ui="OU Habilidades:" />
         <ui name="Requires Skills:" translation_ui="Requer Habilidades:" />
         <ui name="Requires Magazine:" translation_ui="Requer Revista:" />
         <ui name="Time:" translation_ui="Tempo:" />
         <ui name="LOCKED (MAG/SKILL)" translation_ui="BLOQUEADO (REVISTA/HABILIDADE)" />
-        <ui name="NEED MAGAZINE" translation_ui="PRECISA DE REVISTA" />
-        <ui name="NEED SKILLS" translation_ui="PRECISA DE HABILIDADES" />
+        <ui name="NEED ITEM IN INVENTORY" translation_ui="PRECISA DO ITEM NO INVENTÁRIO" />
         <ui name="CRAFT ITEM" translation_ui="CRIAR ITEM" />
         <ui name="REPAIR ITEM" translation_ui="CONSERTAR ITEM" />
         <ui name="DISMANTLE" translation_ui="DESMONTAR" />
         <ui name="MISSING RESOURCES" translation_ui="RECURSOS INSUFICIENTES" />
+        <ui name="Dismantling" translation_ui="Desmontando" />
+        <ui name="Repairing" translation_ui="Reparando" />
+        <ui name="Crafting" translation_ui="Criando" />
 
-        <ui name="Ingredients" translation_ui="Ingredientes" />
-        <ui name="Open Craft" translation_ui="Abrir criação" />
-        <ui name="Requires:" translation_ui="Requer:" />
-        <ui name="Ready to craft" translation_ui="Pronto para criar" />
-        <ui name="Missing skill" translation_ui="Faltando habilidades" />
-        <ui name="Remove with:" translation_ui="Remova com:" />
-        <ui name="Barricade must be in inventory" translation_ui="Barricada precisa estar no inventário" />
-        <ui name="Required Materials:" translation_ui="Requer os itens:" />
+        <!-- NPC Trade Shop -->
+        <ui name="Your Funds" translation_ui="Seus Recursos" />
+        <ui name="Price" translation_ui="Preço" />
 
-        <ui name="Closed container" translation_ui="Recipiente fechado" />
+        <!-- Preferences Screen Options -->
+        <ui name="Resolution" translation_ui="Resolução" />
+        <ui name="CRT Filter" translation_ui="Filtro CRT" />
+        <ui name="Windowed" translation_ui="Janela" />
+        <ui name="Fullscreen" translation_ui="Tela Cheia" />
+
+        <ui name="Items:" translation_ui="Itens:" />
+        <ui name="starters" translation_ui="iniciais" />
+        <ui name="Starter Items:" translation_ui="Itens Iniciais:" />
+        <ui name="Clothes:" translation_ui="Roupas:" />
+
+        <!-- Controls & Keybinds -->
+        <ui name="Controls Configuration" translation_ui="Configuração de Controles" />
+        <ui name="Keyboard and Mouse" translation_ui="Teclado e Mouse" />
+        <ui name="Controller Joystick" translation_ui="Controle / Joystick" />
+        <ui name="PRESS ANY KEY..." translation_ui="PRESSIONE QUALQUER TECLA..." />
+        <ui name="Key in use for:" translation_ui="Tecla já em uso para:" />
+        <ui name="LEFT CLICK" translation_ui="CLIQUE ESQUERDO" />
+        <ui name="RIGHT CLICK" translation_ui="CLIQUE DIREITO" />
+        <ui name="MIDDLE CLICK" translation_ui="CLIQUE DO MEIO" />
+        <ui name="MOUSE BTN" translation_ui="BOTÃO DO MOUSE" />
+        <ui name="JOY BUTTON" translation_ui="BOTÃO DO CONTROLE" />
+
+        <!-- Keyboard Keybind Names -->
+        <ui name="Move Up" translation_ui="Mover para Cima" />
+        <ui name="Move Down" translation_ui="Mover para Baixo" />
+        <ui name="Move Left" translation_ui="Mover para Esquerda" />
+        <ui name="Move Right" translation_ui="Mover para Direita" />
+        <ui name="Run" translation_ui="Correr" />
+        <ui name="Aim" translation_ui="Mirar" />
+        <ui name="Interact" translation_ui="Interagir" />
+        <ui name="Chat (T)" translation_ui="Bate-papo (T)" />
+        <ui name="Help and Tutorial (F1)" translation_ui="Ajuda e Tutorial (F1)" />
+        <ui name="Pause (F2)" translation_ui="Pausar (F2)" />
+        <ui name="Toggle UI Menus (F3)" translation_ui="Alternar Menus HUD (F3)" />
+        <ui name="Reset Modals (F4)" translation_ui="Redefinir Janelas (F4)" />
+        <ui name="Toggle Status (F5)" translation_ui="Alternar Status (F5)" />
+        <ui name="Toggle Inventory (F6)" translation_ui="Alternar Inventário (F6)" />
+        <ui name="Toggle Gear (F7)" translation_ui="Alternar Equipamento (F7)" />
+        <ui name="Toggle Nearby (F8)" translation_ui="Alternar Proximidades (F8)" />
+        <ui name="Toggle Slots (F9)" translation_ui="Alternar Espaços (F9)" />
+        <ui name="Toggle Messages (F10)" translation_ui="Alternar Mensagens (F10)" />
+        <ui name="Toggle Crafting" translation_ui="Alternar Criação" />
+        <ui name="Reload Weapon" translation_ui="Recarregar Arma" />
+        <ui name="Toggle Engine" translation_ui="Alternar Motor" />
+        <ui name="Shove / Brake" translation_ui="Empurrar / Frear" />
+        <ui name="Toggle Modals (TAB)" translation_ui="Alternar Menus (TAB)" />
+        <ui name="Shoot / Attack" translation_ui="Atirar / Atacar" />
+        <ui name="Aim Weapon" translation_ui="Mirar Arma" />
+
+        <!-- Joystick Keybind Names -->
+        <ui name="Move Up (D-Pad)" translation_ui="Mover para Cima (Direcional)" />
+        <ui name="Move Down (D-Pad)" translation_ui="Mover para Baixo (Direcional)" />
+        <ui name="Move Left (D-Pad)" translation_ui="Mover para Esquerda (Direcional)" />
+        <ui name="Move Right (D-Pad)" translation_ui="Mover para Direita (Direcional)" />
+        <ui name="Interact (A)" translation_ui="Interagir (A)" />
+        <ui name="Run (B)" translation_ui="Correr (B)" />
+        <ui name="Reload Weapon (Y)" translation_ui="Recarregar Arma (Y)" />
+        <ui name="Toggle Engine (LB)" translation_ui="Alternar Motor (LB)" />
+        <ui name="Shove / Brake (RB)" translation_ui="Empurrar / Frear (RB)" />
+        <ui name="Toggle Modals" translation_ui="Alternar Menus" />
+        <ui name="Pause Game" translation_ui="Pausar Jogo" />
+        <ui name="Reset Modals" translation_ui="Redefinir Janelas" />
+
+        <!-- Common Special Keys -->
+        <ui name="SPACE" translation_ui="ESPAÇO" />
+        <ui name="LEFT SHIFT" translation_ui="SHIFT ESQ." />
+        <ui name="RIGHT SHIFT" translation_ui="SHIFT DIR." />
+        <ui name="LEFT CTRL" translation_ui="CTRL ESQ." />
+        <ui name="RIGHT CTRL" translation_ui="CTRL DIR." />
+        <ui name="RETURN" translation_ui="ENTER" />
+        <ui name="TAB" translation_ui="TAB" />
+        <ui name="ESCAPE" translation_ui="ESC" />
+        <ui name="BACKSPACE" translation_ui="BACKSPACE" />
+        <ui name="D-PAD UP" translation_ui="DIRECIONAL CIMA" />
+        <ui name="D-PAD DOWN" translation_ui="DIRECIONAL BAIXO" />
+        <ui name="D-PAD LEFT" translation_ui="DIRECIONAL ESQUERDA" />
+        <ui name="D-PAD RIGHT" translation_ui="DIRECIONAL DIREITA" />
     </ui>
 
+    <!-- Alert Notifications -->
     <alert>
         <alert name="You are hurt, use a Medkit." translation_alert="Você está ferido, use um kit médico." />
-        <alert name="You are tired, take a Rest." translation_alert="Você está exausto, descanse um pouco." />
+        <alert name="You are tired, take a Rest." translation_alert="Você está cansado, descanse um pouco." />
         <alert name="You are thirsty." translation_alert="Você está com sede." />
-        <alert name="You are hungry, try some MRE's." translation_alert="Você está com fome, coma algo nutritivo." />
-        <alert name="You are feeling sleepy, take a nap." translation_alert="Você está com sono, tire um cochilo." />
+        <alert name="You are hungry, try some MRE's." translation_alert="Você está com fome, tente comer algo." />
+        <alert name="You are feeling sleepy, take a nap." translation_alert="Você está com sono, tire uma soneca." />
         <alert name="You are anxious, try reading." translation_alert="Você está ansioso, tente ler um livro." />
-        <alert name="Are you feeling sick or infected?" translation_alert="Você está doente ou infectado?" />
-        <alert name="You are carrying too much weight." translation_alert="Carga excessiva! Você está sobrecarregado." />
+        <alert name="You are dizzy and your vision is blurred." translation_alert="Você está tonto e sua visão está embaçada." />
+        <alert name="Are you feeling sick or infected?" translation_alert="Você está se sentindo doente ou infectado?" />
+        <alert name="You are carrying too much weight." translation_alert="Você está carregando peso demais." />
         <alert name="You are carrying a heavy load." translation_alert="Você está carregando uma carga pesada." />
-        <alert name="You are drunk and your vision is blurred." translation_alert="Você está bêbado, sua visão está turva" />
     </alert>
 
+    <!-- Context Menu Actions -->
     <context>
         <context name="Walk Here" translation_context="Andar até aqui" />
         <context name="Examine" translation_context="Examinar" />
@@ -339,8 +467,12 @@
         <context name="Send all to Inventory" translation_context="Enviar tudo ao Inventário" />
         <context name="Remove" translation_context="Remover" />
         <context name="Remove fuel to" translation_context="Drenar combustível para" />
+        <context name="Install on Vehicle" translation_context="Instalar no Veículo" />
+        <context name="Travel to" translation_context="Viajar para" />
+        <context name="Discover Island" translation_context="Descobrir Ilha" />
+        <context name="Save" translation_context="Resgatar" />
 
-        <!-- Vehicle contextual actions -->
+        <!-- Vehicle Contextual Options -->
         <context name="Vehicle options" translation_context="Opções do veículo" />
         <context name="Trunk" translation_context="Porta-malas" />
         <context name="Add key" translation_context="Inserir chave" />
@@ -353,7 +485,7 @@
         <context name="Back Left" translation_context="Traseiro Esquerdo" />
         <context name="Back Right" translation_context="Traseiro Direito" />
 
-        <!-- World / Map tiles -->
+        <!-- World / Map Tiles -->
         <context name="Open door/window" translation_context="Abrir porta/janela" />
         <context name="Close door/window" translation_context="Fechar porta/janela" />
         <context name="Barricate" translation_context="Barricar" />
@@ -365,12 +497,15 @@
         <context name="Talk" translation_context="Conversar" />
     </context>
 
+    <!-- Vehicle UI Labels -->
     <vehicle>
         <vehicle name="Engine:" translation_vehicle="Motor:" />
+        <vehicle name="Motor:" translation_vehicle="Motor:" />
+        <vehicle name="Lights:" translation_vehicle="Faróis:" />
+        <vehicle name="Light:" translation_vehicle="Luzes:" />
+        <vehicle name="km/h" translation_vehicle="km/h" />
         <vehicle name="[ON]" translation_vehicle="[LIGADO]" />
         <vehicle name="[OFF]" translation_vehicle="[DESLIGADO]" />
-        <vehicle name="Lights:" translation_vehicle="Faróis:" />
-        <vehicle name="km/h" translation_vehicle="km/h" />
         <vehicle name="D" translation_vehicle="M" />
         <vehicle name="YOU" translation_vehicle="VOCÊ" />
         <vehicle name="Motor" translation_vehicle="Motor" />
@@ -378,8 +513,10 @@
         <vehicle name="Fuel" translation_vehicle="Combustível" />
         <vehicle name="Battery" translation_vehicle="Bateria" />
         <vehicle name="TIRE" translation_vehicle="PNEU" />
+        <vehicle name="TIRES" translation_vehicle="PNEUS" />
     </vehicle>
 
+    <!-- Dialogue and NPC Interaction -->
     <dialog>
         <dialog name="Talking to:" translation_dialog="Conversando com:" />
         <dialog name="Name:" translation_dialog="Nome:" />
@@ -395,8 +532,16 @@
         <dialog name="You:" translation_dialog="Você:" />
         <dialog name="[Click anywhere to go back]" translation_dialog="[Clique em qualquer lugar para voltar]" />
         <dialog name="No special memories recorded." translation_dialog="Nenhuma memória especial gravada." />
-        <dialog name="NPC Trade Shop:" translation_dialog="Comércio com Sobrevivente:" />
+        <dialog name="NPC Trade Shop" translation_dialog="Comércio do Sobrevivente" />
+        <dialog name="NPC Trade Shop:" translation_dialog="Comércio do Sobrevivente:" />
+        <dialog name="This NPC is sold out." translation_dialog="Este sobrevivente esgotou seu estoque." />
         <dialog name="This NPC has nothing to trade." translation_dialog="Este sobrevivente não tem nada para negociar." />
+        <dialog name="Select an item to buy" translation_dialog="Selecione um item para comprar" />
+        <dialog name="BUY" translation_dialog="COMPRAR" />
+        <dialog name="Select an item first!" translation_dialog="Selecione um item primeiro!" />
+        <dialog name="Not enough money! Need" translation_dialog="Dinheiro insuficiente! Necessário" />
+        <dialog name="Your inventory is full!" translation_dialog="Seu inventário está cheio!" />
+        <dialog name="Bought" translation_dialog="Comprou" />
         <dialog name="Offer:" translation_dialog="Oferta:" />
         <dialog name="SELL" translation_dialog="VENDER" />
         <dialog name="TRADE" translation_dialog="TROCAR" />
@@ -405,23 +550,21 @@
         <dialog name="Cannot sell currency!" translation_dialog="Não é possível vender dinheiro!" />
         <dialog name="Your item must be empty to sell!" translation_dialog="O recipiente deve estar vazio para venda!" />
         <dialog name="Sold for" translation_dialog="Vendido por" />
-        <dialog name="Select an NPC item first!" translation_dialog="Selecione um item do sobrevivente primeiro!" />
         <dialog name="Drop an item to offer!" translation_dialog="Solte um item em troca!" />
         <dialog name="Your item must be empty to trade!" translation_dialog="O recipiente deve estar vazio para troca!" />
-        <dialog name="Your inventory is full!" translation_dialog="Seu inventário está cheio!" />
         <dialog name="Purchase successful!" translation_dialog="Compra realizada com sucesso!" />
-        <dialog name="Not enough money! Need" translation_dialog="Dinheiro insuficiente! Necessário" />
         <dialog name="Trade successful!" translation_dialog="Troca concluída com sucesso!" />
         <dialog name="Offer too low!" translation_dialog="Oferta muito baixa!" />
         <dialog name="Invalid trade combination!" translation_dialog="Combinação de troca inválida!" />
     </dialog>
 
+    <!-- Tooltips -->
     <tooltip>
-        <!-- Item Tooltip Details -->
         <tooltip name="Type:" translation_tooltip="Tipo:" />
         <tooltip name="Requires:" translation_tooltip="Requer:" />
         <tooltip name="or" translation_tooltip="ou" />
         <tooltip name="Teaches:" translation_tooltip="Ensina:" />
+        <tooltip name="Teaches" translation_tooltip="Ensina" />
         <tooltip name="Contents:" translation_tooltip="Conteúdo:" />
         <tooltip name="Defence:" translation_tooltip="Defesa:" />
         <tooltip name="Load:" translation_tooltip="Carga:" />
@@ -440,29 +583,33 @@
         <tooltip name="Fuel:" translation_tooltip="Combustível:" />
         <tooltip name="Safe radius:" translation_tooltip="Raio seguro:" />
         <tooltip name="Liquid:" translation_tooltip="Líquido:" />
+        <tooltip name="Belt slots:" translation_tooltip="Espaços no cinto:" />
         <tooltip name="tiles" translation_tooltip="quadrados" />
 
-        <!-- Tab Tooltips -->
-        <tooltip name="Overview" translation_tooltip="Visão Geral do Personagem" />
-        <tooltip name="Player Status" translation_tooltip="Status Biológico" />
+        <tooltip name="Overview" translation_tooltip="Visão Geral" />
+        <tooltip name="Player Status" translation_tooltip="Status do Jogador" />
         <tooltip name="Skills" translation_tooltip="Registro de Habilidades" />
         <tooltip name="Quests" translation_tooltip="Missões Ativas" />
         <tooltip name="Clock" translation_tooltip="Relógio" />
         <tooltip name="Map" translation_tooltip="Mapa" />
+        <tooltip name="Chunk map" translation_tooltip="Mapa do Setor" />
         <tooltip name="Apps" translation_tooltip="Aplicativos - Insira cartões SD" />
+        <tooltip name="Mobile Apps - Insert SD Cards" translation_tooltip="Aplicativos Móveis - Insira Cartões SD" />
+        <tooltip name="Open crafting menu" translation_tooltip="Abrir menu de criação" />
 
-        <!-- World Interaction Overlays -->
-        <tooltip name="interact_npc" translation_tooltip="Conversar [{key} / RMB]" />
-        <tooltip name="interact_vehicle" translation_tooltip="Entrar/Sair do veículo [{key} / RMB]" />
-        <tooltip name="engine_vehicle" translation_tooltip="Ligar/Desligar o motor [{key} / RMB]" />
-        <tooltip name="vehicle_options_rmb" translation_tooltip="RMB para Opções" />
-        <tooltip name="stair_interact" translation_tooltip="Subir/Descer [{key} / RMB]" />
-        <tooltip name="generic_interact" translation_tooltip="Interagir [{key} / RMB]" />
-        <tooltip name="inspect_container" translation_tooltip="Inspecionar [{key} / RMB]" />
+        <!-- Overlay Interaction Labels -->
+        <tooltip name="interact_npc" translation_tooltip="Conversar [{key}]" />
+        <tooltip name="interact_vehicle" translation_tooltip="Entrar/Sair [{key}]" />
+        <tooltip name="engine_vehicle" translation_tooltip="Ligar/Desligar Motor [{key}]" />
+        <tooltip name="vehicle_options_rmb" translation_tooltip="Opções do Veículo [RMB]" />
+        <tooltip name="stair_interact" translation_tooltip="Subir/Descer [{key}]" />
+        <tooltip name="generic_interact" translation_tooltip="Interagir [{key}]" />
+        <tooltip name="inspect_container" translation_tooltip="Abrir [{key}]" />
+        <tooltip name="chunk_travel" translation_tooltip="Ir para o setor [{key}]" />
+        <tooltip name="Right click to navigate" translation_tooltip="Clique com o botão direito para navegar" />
 
-        <!-- Context menu tooltips -->
         <tooltip name="Remove with:" translation_tooltip="Remova com:" />
-        <tooltip name="Barricade must be in inventory" translation_tooltip="Barricada precisa estar no inventário" />
+        <tooltip name="Barricade must be in inventory" translation_tooltip="A barricada precisa estar no inventário" />
         <tooltip name="Required Materials:" translation_tooltip="Requer os itens:" />
 
         <tooltip name="Motor" translation_tooltip="Motor" />
@@ -484,207 +631,312 @@
         <tooltip name="Weight" translation_tooltip="Peso Carregado" />
         <tooltip name="Current time cycle" translation_tooltip="Ciclo horário global" />
         <tooltip name="Time of day and rain" translation_tooltip="Fase solar e previsão de chuva" />
-
         <tooltip name="Type" translation_tooltip="Tipo" />
+        <tooltip name="true" translation_tooltip="Sim" />
+        <tooltip name="false" translation_tooltip="Não" />
     </tooltip>
 
+    <!-- In-Game Log & Feedback Messages -->
     <msg>
-        <!-- Weapon & Combat -->
+        <!-- Weapons & Combat -->
         <msg name="Already reloading." translation_msg="Já está recarregando." />
         <msg name="Cannot reload: No gun equipped." translation_msg="Não é possível recarregar: Nenhuma arma empunhada." />
-        <msg name="is already full" translation_msg="já está carregada(o) no máximo" />
-        <msg name="No" translation_msg="Nenhum" />
+        <msg name="is already full" translation_msg="já está cheio(a)" />
+        <msg name="No" translation_msg="Nenhum(a)" />
         <msg name="found." translation_msg="encontrado(a)." />
         <msg name="Reloading" translation_msg="Recarregando" />
-        <msg name="Finished reloading" translation_msg="Recarga finalizada em" />
+        <msg name="Finished reloading" translation_msg="Recarga concluída em" />
         <msg name="Load:" translation_msg="Carga:" />
         <msg name="Unloaded" translation_msg="Descarregou" />
         <msg name="from" translation_msg="de" />
-        <msg name="Inventory full. Dropped ammo on ground." translation_msg="Inventário cheio! Munição caiu no chão." />
-        <msg name="No space to unload ammo!" translation_msg="Sem espaço livre para retirar a munição!" />
-        <msg name="broke and was removed from your belt." translation_msg="quebrou e soltou-se do seu cinto." />
-        <msg name="broke and was removed from your inventory." translation_msg="quebrou e foi descartado do inventário." />
+        <msg name="Inventory full. Dropped ammo on ground." translation_msg="Inventário cheio. Munição caiu no chão." />
+        <msg name="No space to unload ammo!" translation_msg="Sem espaço para descarregar munição!" />
+        <msg name="broke and was removed from your belt." translation_msg="quebrou e foi removido do seu cinto." />
+        <msg name="broke and was removed from your inventory." translation_msg="quebrou e foi removido do seu inventário." />
         <msg name="is broken and unequipped." translation_msg="está quebrado(a) e foi desequipado(a)." />
-        <msg name="is out of ammo." translation_msg="está sem munição!" />
+        <msg name="is out of ammo." translation_msg="está sem munição." />
         <msg name="is broken." translation_msg="está quebrado(a)." />
-        <msg name="You attacked the animal for" translation_msg="Você atingiu o animal causando" />
+        <msg name="You attacked the animal for" translation_msg="Você atacou o animal causando" />
         <msg name="damage!" translation_msg="de dano!" />
-        <msg name="You killed the animal!" translation_msg="Você abateu o animal!" />
+        <msg name="damage." translation_msg="de dano." />
+        <msg name="You killed the animal!" translation_msg="Você matou o animal!" />
         <msg name="You attacked" translation_msg="Você atacou" />
         <msg name="for" translation_msg="causando" />
-        <msg name="damage." translation_msg="de dano." />
         <msg name="You pushed an enemy away!" translation_msg="Você empurrou um inimigo para longe!" />
         <msg name="Your" translation_msg="Seu(sua)" />
         <msg name="broke!" translation_msg="quebrou!" />
 
-        <!-- Utilities & Fuel -->
-        <msg name="does not use fuel." translation_msg="não consome combustível." />
+        <!-- Fuel & Utility Items -->
+        <msg name="does not use fuel." translation_msg="não usa combustível." />
         <msg name="found to reload." translation_msg="encontrado(a) para abastecimento." />
-        <msg name="durability is already full." translation_msg="está em condição perfeita." />
-        <msg name="left to use." translation_msg="restante para uso." />
-        <msg name="Used 1" translation_msg="Consumiu 1" />
-        <msg name="to reload" translation_msg="para recarregar" />
-        <msg name="Durability set to:" translation_msg="Durabilidade restaurada para:" />
+        <msg name="durability is already full." translation_msg="durabilidade já está no máximo." />
+        <msg name="left to use." translation_msg="restante para usar." />
+        <msg name="Used 1" translation_msg="Usou 1" />
+        <msg name="to reload" translation_msg="para abastecer" />
+        <msg name="Durability set to:" translation_msg="Durabilidade ajustada para:" />
         <msg name="Requires" translation_msg="Necessita de" />
-        <msg name="to turn on." translation_msg="para acender/ligar." />
+        <msg name="to turn on." translation_msg="para ligar." />
         <msg name="This item can only be turned on/off when Placed on the ground." translation_msg="Este item só pode ser ligado ou desligado quando posicionado no chão." />
         <msg name="Cannot turn on" translation_msg="Não foi possível ligar" />
         <msg name=", it´s out of power." translation_msg=", a carga acabou." />
         <msg name="No matches to light the lantern." translation_msg="Sem fósforos para acender a lanterna." />
-        <msg name="Campfire extinguished when picked up." translation_msg="A fogueira se apagou ao ser recolhida." />
+        <msg name="Campfire extinguished when picked up." translation_msg="A fogueira apagou-se ao ser recolhida." />
         <msg name="extinguished when picked up." translation_msg="apagou-se ao ser recolhido(a)." />
 
         <!-- Inventory & World Manipulation -->
         <msg name="Belt is full." translation_msg="O cinto está lotado." />
         <msg name="Equipped" translation_msg="Equipou" />
         <msg name="to belt." translation_msg="no cinto." />
+        <msg name="to belt slot" translation_msg="no espaço do cinto" />
         <msg name="Merged all of" translation_msg="Agrupou todo o suprimento de" />
         <msg name="into" translation_msg="em" />
-        <msg name="Sent" translation_msg="Transferiu" />
+        <msg name="Sent" translation_msg="Enviou" />
+        <msg name="Sent to" translation_msg="Enviou para" />
         <msg name="to" translation_msg="para" />
+        <msg name="to inventory." translation_msg="para o inventário." />
         <msg name="Inventory full. Could not transfer remaining" translation_msg="Inventário cheio. Não foi possível transferir o restante de" />
+        <msg name="Inventory full. Item dropped on ground." translation_msg="Inventário cheio. Item caiu no chão." />
         <msg name="Cannot drop items so quickly." translation_msg="Aguarde um instante antes de largar itens novamente." />
-        <msg name="Item is too far away to interact with." translation_msg="Muito distante para interagir." />
+        <msg name="Item is too far away to interact with." translation_msg="Item muito distante para interagir." />
         <msg name="Too far away to interact." translation_msg="Muito longe para alcançar." />
+        <msg name="Too far to interact with them." translation_msg="Muito longe para interagir." />
         <msg name="Too far to talk to them." translation_msg="Aproxime-se mais para conversar." />
-        <msg name="Select a location to place the item." translation_msg="Selecione um piso livre ao seu redor para posicionar." />
-        <msg name="Cannot place item here, blocked by obstacle!" translation_msg="Local obstruído por um obstáculo!" />
-        <msg name="Too far to place item!" translation_msg="Muito distante para colocar aqui!" />
-        <msg name="Cannot place liquid directly." translation_msg="Líquidos não podem ser colocados diretamente no chão." />
-        <msg name="Grabbed" translation_msg="Coletou" />
+        <msg name="Select a location to place the item." translation_msg="Selecione um local para posicionar o item." />
+        <msg name="Cannot place item here, blocked by obstacle!" translation_msg="Não é possível posicionar o item aqui, bloqueado por um obstáculo!" />
+        <msg name="Cannot place item in a doorway or window!" translation_msg="Não é possível posicionar um item em um vão de porta ou janela!" />
+        <msg name="Too far to place item!" translation_msg="Muito longe para posicionar o item!" />
+        <msg name="Cannot place liquid directly." translation_msg="Líquidos não podem ser posicionados diretamente." />
+        <msg name="Grabbed" translation_msg="Pegou" />
         <msg name="into inventory." translation_msg="para o inventário." />
-        <msg name="No space to grab the item." translation_msg="Sem espaço disponível para coletar o item." />
-        <msg name="Inventory is full." translation_msg="O inventário está lotado." />
-        <msg name="Cannot drop a container into itself." translation_msg="Não é permitido colocar uma bolsa dentro dela mesma." />
+        <msg name="No space to grab the item." translation_msg="Sem espaço para pegar o item." />
+        <msg name="Inventory is full." translation_msg="O inventário está cheio." />
+        <msg name="Cannot drop a container into itself." translation_msg="Não é possível colocar um recipiente dentro de si mesmo." />
         <msg name="Recursion detected: Cannot put container into itself." translation_msg="Impossível guardar o recipiente dentro de si mesmo." />
         <msg name="Cannot put the container inside itself." translation_msg="Recipiente não pode ser guardado dentro de si mesmo." />
         <msg name="This item will replace" translation_msg="Este item irá substituir" />
         <msg name="Cannot swap while looting." translation_msg="Não é possível realizar trocas durante o saque." />
-        <msg name="Cannot swap items while" translation_msg="Não é possível trocar itens ao" />
-        <msg name="Cannot swap items while equipping from external source." translation_msg="Impossível trocar itens diretamente de fontes externas." />
+        <msg name="Cannot swap items while" translation_msg="Não é possível trocar itens enquanto estiver" />
+        <msg name="Cannot swap items while equipping from external source." translation_msg="Não é possível trocar itens ao equipar de uma fonte externa." />
         <msg name="cannot carry that much weight." translation_msg="não suporta tanto peso." />
         <msg name="is full." translation_msg="está cheio(a)." />
         <msg name="Container is full." translation_msg="O recipiente está cheio." />
-        <msg name="Container is full by weight." translation_msg="Capacidade de peso máxima excedida no recipiente." />
-        <msg name="Container only accepts liquids." translation_msg="Este recipiente só comporta substâncias líquidas." />
-        <msg name="Liquid spills." translation_msg="O líquido escorreu e foi perdido." />
-        <msg name="spills and is lost." translation_msg="derramou completamente." />
-        <msg name="spills on the ground." translation_msg="escorreu pelo chão." />
-        <msg name="Liquid spills. It needs a container." translation_msg="O líquido derrama. É necessário um recipiente adequado." />
+        <msg name="Container is full of liquid." translation_msg="O recipiente está cheio de líquido." />
+        <msg name="is full of liquid." translation_msg="está cheio de líquido." />
+        <msg name="Liquid spills." translation_msg="O líquido derrama." />
+        <msg name="spills and is lost." translation_msg="derramou e foi perdido." />
+        <msg name="spills on the ground." translation_msg="derrama no chão." />
+        <msg name="The ... spills on the ground and is lost." translation_msg="O líquido derrama no chão e é perdido." />
+        <msg name="The ... spills on the ground." translation_msg="O líquido derrama no chão." />
+        <msg name="A portion of" translation_msg="Uma porção de" />
+        <msg name="spills." translation_msg="derrama." />
+        <msg name="All of the" translation_msg="Todo o" />
+        <msg name="Discarded empty" translation_msg="Descartou o frasco vazio de" />
+        <msg name="Looting" translation_msg="Saqueando" />
+        <msg name="Storing" translation_msg="Guardando" />
+        <msg name="Equipping" translation_msg="Equipando" />
+        <msg name="Transferring" translation_msg="Transferindo" />
+        <msg name="Busy..." translation_msg="Ocupado..." />
         <msg name="Poured" translation_msg="Despejou" />
         <msg name="The" translation_msg="O(A)" />
-        <msg name="Discarded empty" translation_msg="Descartou o frasco vazio de" />
-        <msg name="Looting" translation_msg="Vasculhando" />
-        <msg name="Busy..." translation_msg="Ocupado..." />
+        <msg name="Dropped" translation_msg="Largou" />
+        <msg name="on ground." translation_msg="no chão." />
+        <msg name="Someone is already opening this container." translation_msg="Alguém já está abrindo este recipiente." />
+        <msg name="Container is closed." translation_msg="O recipiente está fechado." />
+        <msg name="Requires vehicle key to open." translation_msg="Requer a chave do veículo para abrir." />
+        <msg name="This item cannot be equipped to belt." translation_msg="Este item não pode ser equipado no cinto." />
+        <msg name="This item cannot be placed on the belt." translation_msg="Este item não pode ser colocado no cinto." />
+        <msg name="This item cannot be placed in this container." translation_msg="Este item não pode ser colocado neste recipiente." />
+        <msg name="Invalid gear slot." translation_msg="Espaço de equipamento inválido." />
+        <msg name="Only utility items can be equipped in Util slots." translation_msg="Apenas itens utilitários podem ser equipados nos espaços Util." />
+        <msg name="Utility items can only be equipped in Util slots." translation_msg="Itens utilitários só podem ser equipados nos espaços Util." />
+        <msg name="Cannot equip this item." translation_msg="Não é possível equipar este item." />
+        <msg name="Invalid destination container." translation_msg="Recipiente de destino inválido." />
+        <msg name="Cannot send items into a closed container." translation_msg="Não é possível enviar itens para um recipiente fechado." />
+        <msg name="Target has no inventory capacity." translation_msg="O destino não tem capacidade de inventário." />
+        <msg name="Transferred" translation_msg="Transferiu" />
+        <msg name="Only SD cards can be inserted here." translation_msg="Apenas cartões SD podem ser inseridos aqui." />
 
-        <!-- Consumption & Healing -->
-        <msg name="to use." translation_msg="para utilizar." />
+        <!-- Consumption & Health -->
+        <msg name="Item must be in inventory to use." translation_msg="O item precisa estar no inventário para ser usado." />
+        <msg name="Too far away to use." translation_msg="Muito longe para usar." />
+        <msg name="to use." translation_msg="para usar." />
         <msg name="Cannot use" translation_msg="Não é possível usar" />
-        <msg name=", it is empty." translation_msg=", está esgotado(a)." />
-        <msg name="Used" translation_msg="Consumiu" />
-        <msg name="Restored" translation_msg="Recuperou" />
-        <msg name="Health." translation_msg="Pontos de Saúde." />
-        <msg name="Reduced" translation_msg="Aliviou" />
+        <msg name=", it is empty." translation_msg=", está vazio." />
+        <msg name="Used" translation_msg="Usou" />
+        <msg name="Restored" translation_msg="Restaurou" />
+        <msg name="Health." translation_msg="de Saúde." />
+        <msg name="Reduced" translation_msg="Reduziu" />
         <msg name="by" translation_msg="em" />
-        <msg name="Cannot consume" translation_msg="Não é possível ingerir" />
-        <msg name=": no valid effects found." translation_msg=": nenhum efeito disponível." />
-        <msg name="used up." translation_msg="esgotou-se." />
+        <msg name="used up." translation_msg="foi consumido(a)." />
+        <msg name="Action cancelled." translation_msg="Ação cancelada." />
+        <msg name="You feel dizzy and your vision narrows..." translation_msg="Você se sente tonto e sua visão se estreita..." />
 
         <!-- Repairs & Barricades -->
-        <msg name="Need: Hammer, 2 Plank and 4 Nails." translation_msg="Necessário: Martelo, 2 Tábuas e 4 Pregos." />
-        <msg name="Need: Hammer (Any), 4 Plank and 8 Nails." translation_msg="Necessário: Martelo, 4 Tábuas e 8 Pregos." />
-        <msg name="Need: Axe (Any), Pickaxe or Crowbar." translation_msg="Necessário: Machado, Picareta ou Pé de Cabra." />
-        <msg name="barricaded successfully." translation_msg="barricada(o) com sucesso." />
-        <msg name="unbarricaded successfully." translation_msg="desbarricada(o) com sucesso." />
-        <msg name="You are too exhausted to chop/mine!" translation_msg="Exausto demais para quebrar ou minerar!" />
-        <msg name="Player is in the doorway, cannot close." translation_msg="Você está obstruindo o vão da porta." />
-        <msg name="Door is completely blocked, cannot close." translation_msg="A porta está completamente bloqueada." />
+        <msg name="Barricade placed successfully." translation_msg="Barricada posicionada com sucesso." />
+        <msg name="Barricade must be in inventory." translation_msg="A barricada precisa estar no inventário." />
+        <msg name="Barricade removed." translation_msg="Barricada removida." />
+        <msg name="Need:" translation_msg="Necessário:" />
+        <msg name="Requires magazine:" translation_msg="Requer revista:" />
+        <msg name="Missing:" translation_msg="Faltando:" />
+        <msg name="Door/Window repaired successfully." translation_msg="Porta/Janela reparada com sucesso." />
+        <msg name="Door is barricaded!" translation_msg="A porta está barricada!" />
+        <msg name="Barricade destroyed!" translation_msg="Barricada destruída!" />
+        <msg name="Door/Window broken!" translation_msg="Porta/Janela quebrada!" />
+        <msg name="destroyed!" translation_msg="destruído(a)!" />
+        <msg name="Player is in the doorway, cannot close." translation_msg="O jogador está no vão da porta, não é possível fechar." />
+        <msg name="Doorway is blocked, cannot close." translation_msg="A passagem está bloqueada, não é possível fechar." />
+        <msg name="You are too exhausted to chop/mine!" translation_msg="Você está muito exausto para quebrar ou minerar!" />
         <msg name="No repair kit found for" translation_msg="Nenhum kit de reparo encontrado para" />
         <msg name="is already in perfect condition." translation_msg="já está em perfeitas condições." />
         <msg name="Repaired" translation_msg="Consertou" />
-        <msg name="points using" translation_msg="pontos através de" />
+        <msg name="points using" translation_msg="pontos usando" />
         <msg name="points." translation_msg="pontos." />
         <msg name="No damaged" translation_msg="Nenhum(a)" />
-        <msg name="It contains items!" translation_msg="Não pode ser usado pois contém itens guardados!" />
-        <msg name="Missing" translation_msg="Falta" />
-        <msg name="of" translation_msg="de" />
+        <msg name="found to repair." translation_msg="danificado(a) encontrado(a) para reparar." />
+        <msg name="found." translation_msg="encontrado(a)." />
+        <msg name="It contains items!" translation_msg="Contém itens em seu interior!" />
+        <msg name="Missing skill:" translation_msg="Habilidade necessária:" />
+        <msg name="Missing ingredients:" translation_msg="Ingredientes em falta:" />
+        <msg name="At least one required item must be in your inventory." translation_msg="Pelo menos um item necessário deve estar no seu inventário." />
+        <msg name="Missing required ingredients." translation_msg="Faltam ingredientes obrigatórios." />
 
-        <!-- Recipes & Reading -->
+        <!-- Recipes & Crafting -->
         <msg name="You read" translation_msg="Você leu" />
         <msg name=", but learn nothing new." translation_msg=", mas não aprendeu nada de novo." />
-        <msg name="You already know the recipes in" translation_msg="Você já domina as receitas de" />
-        <msg name="You reviewed" translation_msg="Você revisou o conteúdo de" />
+        <msg name="You already know the recipes in" translation_msg="Você já conhece as receitas de" />
+        <msg name="You reviewed" translation_msg="Você revisou" />
         <msg name="Reading" translation_msg="Lendo" />
-        <msg name="Crafted:" translation_msg="Produziu:" />
-        <msg name="Crafting yielded nothing." translation_msg="A confecção não rendeu itens." />
+        <msg name="Crafted:" translation_msg="Criado:" />
+        <msg name="Crafting yielded nothing." translation_msg="A criação não rendeu nada." />
         <msg name="Dismantled into:" translation_msg="Desmontado em:" />
-        <msg name="Dismantling yielded nothing." translation_msg="A desmontagem não resultou em materiais úteis." />
+        <msg name="The item must be in inventory or nearby to craft" translation_msg="O item deve estar no inventário ou por perto para criar" />
+        <msg name="You haven't unlocked this recipe yet." translation_msg="Você ainda não desbloqueou esta receita." />
 
         <!-- Vehicles -->
-        <msg name="Vehicle is full! No free seats." translation_msg="O veículo está com todos os assentos ocupados." />
+        <msg name="Vehicle is already occupied!" translation_msg="O veículo já está ocupado!" />
         <msg name="Entered" translation_msg="Embarcou em" />
-        <msg name="Driver's Seat" translation_msg="Assento do Motorista" />
-        <msg name="Seat 2" translation_msg="Assento 2" />
-        <msg name="Seat 3" translation_msg="Assento 3" />
-        <msg name="Seat 4" translation_msg="Assento 4" />
         <msg name="Exited vehicle" translation_msg="Desembarcou do veículo" />
-        <msg name="Cannot start engine: No driver in the driver's seat." translation_msg="Não é possível ligar o motor: Não há motorista no volante." />
+        <msg name="Cannot start engine: No driver." translation_msg="Não é possível ligar o motor: Sem motorista." />
         <msg name="engine turned OFF." translation_msg="motor DESLIGADO." />
-        <msg name="Cannot start. Missing/Empty:" translation_msg="Impossível dar partida. Ausente ou vazio:" />
-        <msg name="Cannot equip" translation_msg="Impossível instalar" />
-        <msg name="slot." translation_msg="no compartimento." />
+        <msg name="Cannot start. Missing/Empty:" translation_msg="Impossível dar partida. Faltando/Vazio:" />
+        <msg name="Cannot equip" translation_msg="Não é possível equipar" />
+        <msg name="in" translation_msg="em" />
+        <msg name="slot." translation_msg="espaço." />
         <msg name="Installed" translation_msg="Instalou" />
-        <msg name="in vehicle" translation_msg="no veículo" />
-        <msg name="Inserted" translation_msg="Inseriu" />
-        <msg name="You do not have a suitable item for this slot." translation_msg="Você não carrega uma peça compatível para este espaço." />
-        <msg name="Removed" translation_msg="Desinstalou" />
-        <msg name="Removed fuel to" translation_msg="Drenou combustível para" />
+        <msg name="into vehicle." translation_msg="no veículo." />
+        <msg name="Added" translation_msg="Adicionou" />
+        <msg name="fuel units to vehicle." translation_msg="unidades de combustível ao veículo." />
+        <msg name="Refueling" translation_msg="Reabastecendo" />
         <msg name="Roadkill! Zombie splattered." translation_msg="Atropelamento! Zumbi esmagado." />
         <msg name="Roadkill! Animal splattered." translation_msg="Atropelamento! Animal atropelado." />
         <msg name="You ran over an animal!" translation_msg="Você atropelou um animal!" />
         <msg name="You ran over" translation_msg="Você atropelou" />
-        <msg name="A tire has broken!" translation_msg="Um dos pneus arrebentou!" />
-        <msg name="Cannot turn on lights: No Battery Power." translation_msg="Bateria sem carga para acender os faróis." />
-        <msg name="Engine died (No Fuel)." translation_msg="O motor morreu: Tanque vazio." />
-        <msg name="Engine died (No Battery)." translation_msg="O motor apagou: Falha de bateria." />
-        <msg name="Engine stopped (Battery Dead/Missing)." translation_msg="Motor parou: Bateria descarregada ou ausente." />
-        <msg name="Engine failed (Motor Destroyed/Missing)." translation_msg="Falha no motor: Bloco destruído ou ausente." />
-        <msg name="Engine stopped (Missing Tire)." translation_msg="Motor parou: Pneu estourado ou ausente." />
-        <msg name="Engine stopped (Key removed)." translation_msg="Motor desligado: Chave removida da ignição." />
+        <msg name="A tire has broken!" translation_msg="Um pneu quebrou!" />
+        <msg name="Cannot turn on lights: No Battery Power." translation_msg="Não é possível ligar as luzes: Sem Bateria." />
+        <msg name="Engine died (No Fuel)." translation_msg="O motor morreu (Sem Combustível)." />
+        <msg name="Engine died (No Battery)." translation_msg="O motor apagou (Sem Bateria)." />
+        <msg name="Engine stopped (Battery Dead/Missing)." translation_msg="Motor desligado (Bateria descarregada/ausente)." />
+        <msg name="Engine failed (Motor Destroyed/Missing)." translation_msg="Falha no motor (Motor destruído/ausente)." />
+        <msg name="Engine stopped (Missing Tire)." translation_msg="Motor desligado (Pneu ausente)." />
+        <msg name="Engine stopped (Key removed)." translation_msg="Motor desligado (Chave removida)." />
+        <msg name="Engine stopped (Battery removed)." translation_msg="Motor desligado (Bateria removida)." />
+        <msg name="Vehicle requires key inserted in the Key slot." translation_msg="O veículo requer a chave inserida no espaço da Chave." />
+        <msg name="Need a vehicle key to interact." translation_msg="Precisa da chave do veículo para interagir." />
+        <msg name="Vehicle trunk is locked! Requires vehicle key." translation_msg="O porta-malas do veículo está trancado! Requer chave do veículo." />
+        <msg name="Vehicle parts must be sent to inventory first." translation_msg="Peças de veículo precisam ser enviadas para o inventário primeiro." />
+        <msg name="Use 'Remove fuel to' to transfer fuel into a container." translation_msg="Use 'Drenar combustível para' para transferir combustível para um recipiente." />
+        <msg name="No vehicle found." translation_msg="Nenhum veículo encontrado." />
+        <msg name="No fuel to remove." translation_msg="Sem combustível para retirar." />
+        <msg name="Target container not found." translation_msg="Recipiente de destino não encontrado." />
+        <msg name="No vehicle nearby." translation_msg="Nenhum veículo próximo." />
+        <msg name="Item cannot be installed on this vehicle." translation_msg="O item não pode ser instalado neste veículo." />
+        <msg name="No vehicle modal open." translation_msg="Nenhuma janela de veículo aberta." />
+        <msg name="Cannot remove the fuel tank. Right-click to siphon." translation_msg="Não é possível remover o tanque de combustível. Clique com o botão direito para drenar." />
 
-        <!-- Atmospheric & Time -->
-        <msg name="It started raining." translation_msg="Uma chuva começou a cair." />
-        <msg name="The rain stopped." translation_msg="A chuva cessou." />
-        <msg name="Dusk falls..." translation_msg="O crepúsculo se instala..." />
-        <msg name="It is now Night." translation_msg="A noite caiu." />
-        <msg name="The sky lightens..." translation_msg="O horizonte clareia..." />
-        <msg name="It is now Day." translation_msg="O dia amanheceu." />
-        <msg name="The horde grows stronger... (Day" translation_msg="A horda fica mais feroz... (Dia" />
+        <!-- Weather & Atmosphere -->
+        <msg name="It started raining." translation_msg="Começou a chover." />
+        <msg name="A thick fog rolls in." translation_msg="Uma névoa espessa se aproxima." />
+        <msg name="Rain begins pouring through heavy fog." translation_msg="A chuva começa a cair em meio à densa névoa." />
+        <msg name="The skies cleared up." translation_msg="O céu limpou." />
+        <msg name="The rain stopped." translation_msg="A chuva parou." />
+        <msg name="Dusk falls..." translation_msg="O crepúsculo cai..." />
+        <msg name="It is now Night." translation_msg="Agora é Noite." />
+        <msg name="The sky lightens..." translation_msg="O céu clareia..." />
+        <msg name="It is now Day." translation_msg="Agora é Dia." />
+        <msg name="The horde grows stronger... (Day" translation_msg="A horda fica mais forte... (Dia" />
 
-        <!-- Progression & Cheats -->
+        <!-- Navigation, Rescue & Islands -->
+        <msg name="You need Cartography maps to navigate further." translation_msg="Você precisa de mapas cartográficos para navegar mais longe." />
+        <msg name="Only static survivors can be rescued!" translation_msg="Apenas sobreviventes fixos podem ser resgatados!" />
+        <msg name="is already safe in the Lobby!" translation_msg="já está a salvo no Refúgio!" />
+        <msg name="is already safe at the Port!" translation_msg="já está a salvo no Porto!" />
+        <msg name="Evacuated" translation_msg="Evacuou" />
+        <msg name="to the Port!" translation_msg="para o Porto!" />
+        <msg name="Rescue requires Fuel or Charm!" translation_msg="O resgate requer Combustível ou Amuleto!" />
+        <msg name="Rescued" translation_msg="Resgatou" />
+        <msg name="to Lobby! (1 Charm and" translation_msg="para o Refúgio! (1 Amuleto e" />
+        <msg name="Fuel used)" translation_msg="Combustível usado)" />
+        <msg name="is at the Port! Need a Charm and Fuel to rescue to the Lobby." translation_msg="está no Porto! Precisa de um Amuleto e Combustível para resgatar para o Refúgio." />
+        <msg name="Need a Charm and Fuel to rescue survivor from Port to Lobby!" translation_msg="Precisa de um Amuleto e Combustível para resgatar sobrevivente do Porto para o Refúgio!" />
+        <msg name="to the Port with a Charm!" translation_msg="para o Porto com um Amuleto!" />
+        <msg name="to the Port! (Used all" translation_msg="para o Porto! (Usou todo o" />
+        <msg name="Fuel. Boat travel is now 50% cheaper!)" translation_msg="Combustível. Viagens de barco estão 50% mais baratas!)" />
+        <msg name="Rescue requires Fuel (to Port) or Fuel + Charm (to Lobby)!" translation_msg="O resgate requer Combustível (para o Porto) ou Combustível + Amuleto (para o Refúgio)!" />
+        <msg name="Not enough fuel! Need" translation_msg="Combustível insuficiente! Necessário" />
+        <msg name="to travel." translation_msg="para viajar." />
+        <msg name="to discover an island." translation_msg="para descobrir uma ilha." />
+        <msg name="Generator is not available in this world." translation_msg="O gerador de mundo não está disponível neste mundo." />
+        <msg name="Discovered Island" translation_msg="Ilha Descoberta" />
+        <msg name="Failed to navigate to destination." translation_msg="Falha ao navegar até o destino." />
+        <msg name="Arrived at destination." translation_msg="Chegou ao destino." />
+
+        <!-- Progression, Quests & Networking -->
         <msg name="Leveled up" translation_msg="Subiu de nível em" />
         <msg name="to level" translation_msg="para o nível" />
-        <msg name="Received" translation_msg="Recebido" />
-        <msg name="Quest Completed" translation_msg="Missão Concluída" />
-        <msg name="You were already awarded" translation_msg="Recompensa já recebida anteriormente" />
-        <msg name="GODZEN Mode Activated: Invincible and Invisible." translation_msg="Modo GODZEN Ativado: Invencível e Invisível." />
-        <msg name="GOD Mode Activated: Invincible." translation_msg="Modo GOD Ativado: Invencibilidade ligada." />
-        <msg name="Spawned" translation_msg="Criado(a)" />
-        <msg name="Could not spawn item" translation_msg="Não foi possível criar o item" />
-        <msg name="Could not find vehicle" translation_msg="Veículo não encontrado" />
-        <msg name="Debug:" translation_msg="Depuração:" />
-        <msg name="You" translation_msg="Você" />
-        <msg name="The item must be in inventory or nearby to craft" translation_msg="O item precisa estar no inventário ou nas proximidades para criar" />
-        <msg name="You feel dizzy and your vision blurs..." translation_msg="Você está tonto e sua visão embaça..." />
-        <msg name="The strong whiskey makes your head spin and your vision blurs..." translation_msg="Este whiskey é forte, sua cabeça está rodando..." />
-    
-        <msg name="Barricade placed successfully." translation_msg="Barricada instalada com sucesso." />
-        <msg name="Barricade must be in inventory." translation_msg="Barricada precisa estar no inventário." />
-        <msg name="Barricade removed." translation_msg="Barricada removida." />
-        <msg name="Need:" translation_msg="Precisa:" />
-        <msg name="Requires magazine:" translation_msg="Precisa da revista:" />
-        <msg name="Missing:" translation_msg="Faltando:" />
-        <msg name="Door/Window repaired successfully." translation_msg="Janela/Porta reparada com sucesso." />
-
+        <msg name="Gave:" translation_msg="Entregou:" />
+        <msg name="Received:" translation_msg="Recebeu:" />
+        <msg name="New Quest:" translation_msg="Nova Missão:" />
+        <msg name="Quest Completed:" translation_msg="Missão Concluída:" />
+        <msg name="GOD Mode Activated: Invincible." translation_msg="Modo DEUS Ativado: Invencível." />
+        <msg name="Spawned" translation_msg="Gerou" />
+        <msg name="into inventory." translation_msg="no inventário." />
+        <msg name="Could not spawn item" translation_msg="Não foi possível gerar o item" />
+        <msg name="Could not find vehicle" translation_msg="Não foi possível encontrar o veículo" />
+        <msg name="Not connected to any LAN radio network." translation_msg="Não conectado a nenhuma rede de rádio LAN." />
+        <msg name="Press [{controls}] to open UI" translation_msg="Pressione [{controls}] para abrir o menu" />
     </msg>
+
+    <!-- Item Types -->
+    <item_type>
+        <item_type name="weapon_melee" translation_item_type="Corpo a Corpo" />
+        <item_type name="weapon_ranged" translation_item_type="Arma de Fogo" />
+        <item_type name="weapon_throw" translation_item_type="Arremesso" />
+        <item_type name="tool" translation_item_type="Ferramenta" />
+        <item_type name="cloth" translation_item_type="Vestimenta" />
+        <item_type name="container" translation_item_type="Recipiente" />
+        <item_type name="consumable" translation_item_type="Consumível" />
+        <item_type name="consumable_food" translation_item_type="Comida" />
+        <item_type name="consumable_drink" translation_item_type="Bebida" />
+        <item_type name="consumable_medication" translation_item_type="Medicamento" />
+        <item_type name="consumable_drugs" translation_item_type="Substância" />
+        <item_type name="consumable_book" translation_item_type="Livro" />
+        <item_type name="consumable_ammo" translation_item_type="Munição" />
+        <item_type name="consumable_repair" translation_item_type="Kit de Reparo" />
+        <item_type name="resource" translation_item_type="Recurso" />
+        <item_type name="currency" translation_item_type="Moeda" />
+        <item_type name="recipe" translation_item_type="Receita" />
+        <item_type name="map" translation_item_type="Mapa" />
+        <item_type name="text" translation_item_type="Texto" />
+        <item_type name="utility" translation_item_type="Utilitário" />
+        <item_type name="mobile" translation_item_type="Celular" />
+        <item_type name="sd_card" translation_item_type="Cartão SD" />
+        <item_type name="charm" translation_item_type="Amuleto" />
+        <item_type name="vehicle" translation_item_type="Veículo" />
+        <item_type name="liquid" translation_item_type="Líquido" />
+        <item_type name="car_fuel" translation_item_type="Combustível" />
+        <item_type name="car_battery" translation_item_type="Bateria Veicular" />
+        <item_type name="car_motor" translation_item_type="Motor Veicular" />
+        <item_type name="car_tire" translation_item_type="Pneu Veicular" />
+        <item_type name="car_key" translation_item_type="Chave do Veículo" />
+    </item_type>
 </language>

@@ -1,0 +1,12 @@
+{
+    "radio": {
+        "name": "Military Satellite",
+        "frequency": "random",
+        "stream_config": [
+            "weather"
+        ],
+        "streams": [
+            "[STATIC]...[COF]...[COF]...This is the safety broadcast channel satellite...[STATIC]\n[STATIC]...Tropical, raining forming, expected at: {rain_time}...[COF]...[STATIC]"
+        ]
+    }
+}

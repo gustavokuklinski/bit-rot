@@ -276,6 +276,8 @@ def _draw_player_build_screen(game, state, mouse_pos):
                     display_item_name = tr('ui', "None")
                 else:
                     display_item_name = tr('cloth', selected_item)
+                    if display_item_name == selected_item:
+                        display_item_name = tr('item', selected_item)
 
                 text = font_12.render(display_item_name, False, WHITE)
                 text_x = cycle_rect_rel.x + (cycle_rect_rel.width - text.get_width()) // 2
