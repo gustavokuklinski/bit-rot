@@ -256,6 +256,17 @@ def handle_input(game):
 
                         modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll_offset))
 
+                elif modal.get('type') == 'npc_dialog' and modal.get('active_tab_index') == 2 and modal.get('trade_type_dd_open'):
+                    dd_pop = modal.get('trade_type_dd_popup_rect')
+                    if dd_pop and dd_pop.collidepoint(mouse_pos):
+                        cur_s = modal.get('trade_dd_scroll', 0)
+                        max_s = modal.get('trade_dd_max_scroll', 0)
+                        modal['trade_dd_scroll'] = max(0, min(cur_s - event.y, max_s))
+                    else:
+                        offset = modal.get('scroll_offset_y', 0)
+                        max_scroll = modal.get('max_scroll_offset', 0)
+                        modal['scroll_offset_y'] = max(0, min(offset - (event.y * 30), max_scroll))
+
                 elif modal.get('type') == 'mobile' and modal.get('active_tab') == 'Map':
                     dd_popup = modal.get('map_dropdown_popup_rect')
                     # Scroll through the dropdown list if open and hovered

@@ -136,6 +136,20 @@ def handle_mouse_down(game, event, mouse_pos):
                 break
         
         if topmost_modal:
+            # PRIORITY 0: Check NPC Trade Type dropdown popup clicks FIRST
+            if topmost_modal.get('type') == 'npc_dialog' and topmost_modal.get('trade_type_dd_open'):
+                dd_pop = topmost_modal.get('trade_type_dd_popup_rect')
+                if dd_pop and dd_pop.collidepoint(mouse_pos):
+                    # Intercept click so it NEVER triggers dragging or selects slots underneath
+                    for opt_rect, opt_val in topmost_modal.get('trade_type_dd_opt_rects', []):
+                        if opt_rect.collidepoint(mouse_pos):
+                            topmost_modal['trade_selected_type'] = opt_val
+                            topmost_modal['trade_type_dd_open'] = False
+                            if hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_ui_hover()
+                            return
+                    return
+
             # PRIORITY 0: If Messages modal has an active Debug dropdown popup open, check its clicks FIRST!
             # This ensures that options drawn on top of the title bar, close button, or subtabs can be selected without dragging.
             if topmost_modal.get('type') == 'messages' and topmost_modal.get('active_tab') == 'Debug':
@@ -267,6 +281,20 @@ def handle_mouse_down(game, event, mouse_pos):
 
             # --- [FIX] NPC DIALOG MODAL TABS & DIALOGUE CLICK HANDLER ---
             if topmost_modal.get('type') == 'npc_dialog':
+                rescue_btn = topmost_modal.get('rescue_button_rect')
+                if rescue_btn and rescue_btn.collidepoint(mouse_pos):
+                    from core.events.mouse_context_actions import handle_npc_save
+                    npc = topmost_modal.get('npc')
+                    if npc:
+                        was_at_port = getattr(npc, 'is_at_port', False)
+                        was_at_lobby = getattr(npc, 'is_at_lobby', False)
+                        handle_npc_save(game, npc)
+                        # If rescued to a new location, close the dialog modal
+                        if getattr(npc, 'is_at_lobby', False) != was_at_lobby or getattr(npc, 'is_at_port', False) != was_at_port:
+                            if topmost_modal in game.modals:
+                                game.modals.remove(topmost_modal)
+                    return
+
                 if 'tab_rects' in topmost_modal:
                     for i, tab_rect in enumerate(topmost_modal['tab_rects']):
                         if tab_rect.collidepoint(mouse_pos):
@@ -515,7 +543,9 @@ def handle_mouse_down(game, event, mouse_pos):
                         topmost_modal['last_drag_pos'] = mouse_pos
                         return
 
-            handle_left_click_drag_candidate(game, mouse_pos)
+            # Do NOT initiate dragging if the trade dropdown popup was clicked
+            if not (topmost_modal.get('type') == 'npc_dialog' and topmost_modal.get('trade_type_dd_open') and topmost_modal.get('trade_type_dd_popup_rect') and topmost_modal['trade_type_dd_popup_rect'].collidepoint(mouse_pos)):
+                handle_left_click_drag_candidate(game, mouse_pos)
             return
 
         if game.chat_active:
@@ -626,6 +656,15 @@ def handle_mouse_down(game, event, mouse_pos):
             elif event.button == 5:
                 topmost_modal['crafting_scroll_offset'] = min(max_scroll, offset + 1)
             return
+
+        if topmost_modal and topmost_modal.get('type') == 'npc_dialog' and topmost_modal.get('active_tab_index') == 2 and topmost_modal.get('trade_type_dd_open'):
+            dd_pop = topmost_modal.get('trade_type_dd_popup_rect')
+            if dd_pop and dd_pop.collidepoint(mouse_pos):
+                cur_s = topmost_modal.get('trade_dd_scroll', 0)
+                max_s = topmost_modal.get('trade_dd_max_scroll', 0)
+                dy = -1 if event.button == 4 else 1
+                topmost_modal['trade_dd_scroll'] = max(0, min(cur_s + dy, max_s))
+                return
 
         if topmost_modal and topmost_modal['type'] in ['text', 'help', 'slots', 'npc_dialog']:
             offset = topmost_modal.get('scroll_offset_y', 0)

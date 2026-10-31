@@ -119,81 +119,6 @@ python bitrot/bitrot.py
 
 We use [Nuitka](https://nuitka.net/) to compile Python code into machine-code executables for maximum performance.
 
-### Generating a Linux AppImage
-For a truly portable "single-file" experience on Linux, you can build an **AppImage**. This packages the standalone build into a read-only filesystem that runs on most distributions.
-
-**1. Install `appimagetool`:**
-```bash
-wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
-chmod +x appimagetool
-sudo mv appimagetool /usr/local/bin/
-```
-
-**2. Build the AppImage:**
-```bash
-# 1. Compile the application in standalone mode
-nuitka --standalone \
-  --assume-yes-for-downloads \
-  --output-dir=./build \
-  --static-libpython=yes \
-  --include-data-dir=bitrot/data.rot=data.rot \
-  bitrot/bitrot.py
-
-# 2. Stage files into an AppDir layout
-APPDIR="bitrot.AppDir"
-rm -rf "$APPDIR"
-mkdir -p "$APPDIR/usr/bin"
-cp -a build/bitrot.dist/* "$APPDIR/usr/bin/"
-
-# Identify the compiled binary name (bitrot or bitrot.bin)
-if [ -f "$APPDIR/usr/bin/bitrot.bin" ]; then
-  BIN_NAME="bitrot.bin"
-else
-  BIN_NAME="bitrot"
-fi
-chmod +x "$APPDIR/usr/bin/$BIN_NAME"
-
-# 3. Create the entry point (AppRun)
-cat << EOF > "$APPDIR/AppRun"
-#!/bin/sh
-HERE="\$(dirname "\$(readlink -f "\${0}")")"
-export LD_LIBRARY_PATH="\$HERE/usr/bin:\$LD_LIBRARY_PATH"
-exec "\$HERE/usr/bin/$BIN_NAME" "\$@"
-EOF
-chmod +x "$APPDIR/AppRun"
-
-# 4. Add desktop integration metadata & icon
-cat << EOF > "$APPDIR/bitrot.desktop"
-[Desktop Entry]
-Name=Bitrot
-Exec=AppRun
-Icon=bitrot
-Type=Application
-Categories=Utility;
-EOF
-
-if [ -f "bitrot/data.rot/icons/favicon.png" ]; then
-  cp "bitrot/data.rot/icons/favicon.png" "$APPDIR/bitrot.png"
-else
-  # 1x1 fallback PNG if icon is missing (required by appimagetool)
-  echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=" | base64 -d > "$APPDIR/bitrot.png"
-fi
-
-# 5. Pack into a final AppImage
-ARCH=x86_64 appimagetool "$APPDIR" Bitrot-x86_64.AppImage
-
-```
-*This will create a `.AppImage` file in the project root that can be shared and executed immediately.*
-
-**3. AppImage troubleshooting**
-
-AppImage requires fuse2 to run the final file.
-
-```bash 
-sudo apt install libfuse2 # Ubuntu/Debian based
-sudo pacman -S fuse2 # Arch based
-```
-
 ---
 
 ### Manual Build (Raw Commands)
@@ -202,19 +127,19 @@ If you prefer to run the compilation manually or customize the build flags, use 
 #### Linux
 ```bash
 # Build the game as a standalone directory
-nuitka --standalone --assume-yes-for-downloads --output-dir=./build --static-libpython=yes --include-data-dir=bitrot/data.rot=data.rot bitrot/bitrot.py
+nuitka --onefile --assume-yes-for-downloads --output-dir=./build --output-filename=bitrot.bin --static-libpython=yes --include-data-dir=bitrot/data.rot=data.rot bitrot/bitrot.py
 
 # Build the editor as a standalone directory
-nuitka --standalone --assume-yes-for-downloads --output-dir=./build --static-libpython=yes --include-data-dir=bitrot/data.rot=data.rot bitrot/editor.py
+nuitka --onefile --assume-yes-for-downloads --output-dir=./build --output-filename=bitrot.bin --static-libpython=yes --include-data-dir=bitrot/data.rot=data.rot bitrot/editor.py
 ```
 
 #### Windows
 ```bash
 # Build the game with a custom icon and no console window
-nuitka --standalone --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --output-dir=./build ./bitrot/bitrot.py
+nuitka --onefile --assume-yes-for-downloads --output-dir=./build --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --include-data-dir=./bitrot/data.rot=data.rot bitrot/bitrot.py
 
 # Build the editor with a custom icon and no console window
-nuitka --standalone --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --output-dir=./build ./bitrot/editor.py
+nuitka --onefile --assume-yes-for-downloads --output-dir=./build --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --include-data-dir=./bitrot/data.rot=data.rot bitrot/editor.py
 ```
 
 #### macOS
@@ -263,9 +188,9 @@ If you don't have the Windows SDK or Nuitka installed locally, you can use our *
 4. Select your target platform (Windows, Linux, or macOS).
 5. Click **Run workflow**.
 
-| Linux | AppImage | MacOS | Windows |
-| :--- | :--- | :--- | :--- |
-| <a href="https://github.com/gustavokuklinski/bit-rot/actions/workflows/bitrot-linux.yml"><img src="https://img.shields.io/github/actions/workflow/status/gustavokuklinski/bit-rot/bitrot-linux.yml?branch=main&style=flat-square&label=Linux" alt="GH Action" /></a> | <a href="https://github.com/gustavokuklinski/bit-rot/actions/workflows/bitrot-linux-appimage.yml"><img src="https://img.shields.io/github/actions/workflow/status/gustavokuklinski/bit-rot/bitrot-linux-appimage.yml?branch=main&style=flat-square&label=Linux" alt="GH Action" /></a> | <a href="https://github.com/gustavokuklinski/bit-rot/actions/workflows/bitrot-macos.yml"><img src="https://img.shields.io/github/actions/workflow/status/gustavokuklinski/bit-rot/bitrot-macos.yml?branch=main&style=flat-square&label=MacOS" alt="GH Action" /></a> | <a href="https://github.com/gustavokuklinski/bit-rot/actions/workflows/bitrot-windows.yml"><img src="https://img.shields.io/github/actions/workflow/status/gustavokuklinski/bit-rot/bitrot-windows.yml?branch=main&style=flat-square&label=Windows" alt="GH Action" /></a> |
+| Linux | MacOS | Windows |
+| :--- | :--- | :--- |
+| <a href="https://github.com/gustavokuklinski/bit-rot/actions/workflows/bitrot-linux.yml"><img src="https://img.shields.io/github/actions/workflow/status/gustavokuklinski/bit-rot/bitrot-linux.yml?branch=main&style=flat-square&label=Linux" alt="GH Action" /></a> | <a href="https://github.com/gustavokuklinski/bit-rot/actions/workflows/bitrot-macos.yml"><img src="https://img.shields.io/github/actions/workflow/status/gustavokuklinski/bit-rot/bitrot-macos.yml?branch=main&style=flat-square&label=MacOS" alt="GH Action" /></a> | <a href="https://github.com/gustavokuklinski/bit-rot/actions/workflows/bitrot-windows.yml"><img src="https://img.shields.io/github/actions/workflow/status/gustavokuklinski/bit-rot/bitrot-windows.yml?branch=main&style=flat-square&label=Windows" alt="GH Action" /></a> |
 
 ### Downloading the Build:
 Once the process is complete, GitHub will upload the compiled binaries as **Artifacts**. You can find them at the bottom of the specific Action run summary.

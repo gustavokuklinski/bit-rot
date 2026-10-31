@@ -122,13 +122,53 @@ def draw_npc_dialog_modal(surface, modal, game):
         stat_surf = font_12.render(stat, True, WHITE)
         surface.blit(stat_surf, (stats_x, stats_start_y + (i * line_height)))
 
+    # --- RESCUE BUTTON (Below HP) ---
+    rescue_y = stats_start_y + (len(stats) * line_height) + 8
+    rescue_w, rescue_h = 140, 26
+    rescue_rect = pygame.Rect(stats_x, rescue_y, rescue_w, rescue_h)
+    modal['rescue_button_rect'] = rescue_rect
+    # Properly scaled mouse coordinates
+    mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+
+    is_rescued_lobby = getattr(npc, 'is_at_lobby', False)
+    is_rescued_port = getattr(npc, 'is_at_port', False)
+    is_static = getattr(npc, 'is_static', False)
+
+    is_rescue_hover = rescue_rect.collidepoint(mouse_pos)
+
+    if is_rescued_lobby:
+        btn_bg = (20, 50, 25)
+        btn_border = GREEN
+        btn_text = tr('ui', "Safe in Lobby")
+        text_col = GREEN
+    elif is_rescued_port:
+        btn_bg = (55, 55, 25) if is_rescue_hover else (35, 35, 20)
+        btn_border = YELLOW if is_rescue_hover else (160, 160, 80)
+        btn_text = tr('ui', "Rescue to Lobby")
+        text_col = YELLOW
+    elif not is_static:
+        btn_bg = (30, 30, 30)
+        btn_border = (60, 60, 60)
+        btn_text = tr('ui', "Cannot Rescue")
+        text_col = (110, 110, 110)
+    else:
+        btn_bg = (60, 60, 60) if is_rescue_hover else (40, 40, 40)
+        btn_border = YELLOW if is_rescue_hover else WHITE
+        btn_text = tr('ui', "Save")
+        text_col = YELLOW if is_rescue_hover else WHITE
+
+    pygame.draw.rect(surface, btn_bg, rescue_rect, border_radius=4)
+    pygame.draw.rect(surface, btn_border, rescue_rect, 1, border_radius=4)
+
+    r_surf = font_12.render(btn_text, False, text_col)
+    surface.blit(r_surf, r_surf.get_rect(center=rescue_rect.center))
+
     col2_x = x + COL_1_WIDTH + PADDING
     text_area_width = width - COL_1_WIDTH - PADDING - 20
     
     active_tab = modal.get('active_tab_index', 0)
     
-    # Properly scaled mouse coordinates
-    mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+    
     
     tabs = [tr('dialog', 'Current Dialog'), tr('dialog', 'Special Dialogs'), tr('dialog', 'Trade')]
     tab_rects = draw_tabs(surface, font_12, col2_x, y + 40, tabs, active_tab, text_area_width, mouse_pos=mouse_pos)
@@ -136,6 +176,15 @@ def draw_npc_dialog_modal(surface, modal, game):
     
     content_y = tab_rects[0].bottom + 15
     dialogs = modal.get('dialogs', [])
+
+    # Ensure NPC trade stock regenerates as Default whenever dialog opens
+    if not modal.get('_trade_initialized', False):
+        modal['_trade_initialized'] = True
+        modal['trade_selected_type'] = 'Default'
+        modal['trade_selected_index'] = -1
+        modal['trade_type_dd_open'] = False
+        modal['trade_message'] = ""
+        npc.trade_stock_generated = False
 
     if active_tab == 0:
         active_index = modal.get('active_dialog_index', -1)
