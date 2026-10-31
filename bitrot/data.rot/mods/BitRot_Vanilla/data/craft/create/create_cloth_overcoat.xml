@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<recipe type="cloth" craft="create" output="Overcoat" magazine="Sewing Clothes" req_level="[maintenance:1, intelligence:1]" gain_xp="[maintenance:0.5, intelligence:0.5]" amount="1" time="7.0">
+<recipe type="cloth" craft="create" output="Overcoat" magazine="Sewing Cloth" req_level="[maintenance:1, intelligence:1]" gain_xp="[maintenance:0.5, intelligence:0.5]" amount="1" time="7.0">
     <ingredient name="Scissor" destroy="false" amount="1" />
     <ingredient name="Line Twine" destroy="true" amount="45" />
     <ingredient name="Denim Stripes" destroy="true" amount="10" />
