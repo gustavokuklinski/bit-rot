@@ -137,6 +137,7 @@ CHUNK_SIZE = 128
 WORLD_SEED = ""
 SPAWN_LOBBY_CHUNK = True
 SPAWN_MILITARY_CHUNK = True
+GENERATE_IMAGES = True
 
 ANIMAL_MAX_CHUNK = 6
 ANIMAL_SPAWN_COUNT = 6
@@ -290,6 +291,7 @@ def load_settings(world_preset="world"):
     global MAX_VEH_CHUNK, VEH_HAS_FUEL, VEH_HAS_KEY, VEH_HAS_MOTOR, VEH_HAS_BATTERY, VEH_HAS_TIRES
     global NPC_MAX_CHUNK, NPCS_PER_SPAWN, NPC_RESPAWN, ZOMBIE_MAX_CHUNK, BASE_ZOMBIE_MAX_CHUNK
     global MAP_CHUNKS, CHUNK_SIZE, WORLD_SEED, SPAWN_LOBBY_CHUNK, SPAWN_MILITARY_CHUNK
+    global GENERATE_IMAGES
     global UI_BACKGROUND_MUSIC, UI_SHOW_TUTORIAL_DEFAULT, RESOLUTION, WINDOW_MODE
     global UI_CRT_FILTER, CRT_FILTER
     global ANIMAL_MAX_CHUNK, ANIMALS_PER_SPAWN, ANIMAL_RESPAWN, ANIMAL_SPAWN_COUNT
@@ -412,6 +414,8 @@ def load_settings(world_preset="world"):
                 MAP_CHUNKS = int(_get_val(map_config, ['map_chunks', 'chunks'], 3))
                 CHUNK_SIZE = int(_get_val(map_config, ['chunk_size', 'size'], 128))
                 WORLD_SEED = str(_get_val(map_config, ['seed', 'world_seed'], ''))
+                gen_img_val = _get_val(map_config, ['generate_images', 'images'], False)
+                GENERATE_IMAGES = str(gen_img_val).lower() == 'false'
 
             player_config = root.get('player', {})
             if player_config:

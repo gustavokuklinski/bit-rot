@@ -107,6 +107,11 @@
             "value": "",
             "name": "World seed",
             "default": ""
+          },
+          "generate_images": {
+            "value": true,
+            "name": "Generate Map JPGs",
+            "default": true
           }
         },
         "item_spawning": {

@@ -687,6 +687,11 @@ class ProceduralGenerator(
     for (gx, gy) in self.active_chunks:
       self.generate_chunk_on_demand(gx, gy)
 
+    if getattr(core.data.config, 'GENERATE_IMAGES', True):
+      print("[ProceduralGenerator] Generating world map JPG images...")
+      for layer_idx in (1, 2, 3):
+        self.export_world_image(layer_idx, f"map_L{layer_idx}.jpg")
+
     try:
       with open(macro_meta_path, 'w') as f:
         json.dump(
@@ -815,6 +820,10 @@ class ProceduralGenerator(
         self.chunk_l3_priority_map[found_coord].append(random.choice(l3_cands))
 
     self.generate_chunk_on_demand(new_gx, new_gy)
+
+    if getattr(core.data.config, 'GENERATE_IMAGES', True):
+      for layer_idx in (1, 2, 3):
+        self.export_world_image(layer_idx, f"map_L{layer_idx}.jpg")
 
     macro_meta_path = os.path.join(self.output_folder, 'macro_world.json')
     try:

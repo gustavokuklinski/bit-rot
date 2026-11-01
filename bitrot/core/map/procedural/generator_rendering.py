@@ -3,10 +3,11 @@
 import os
 import csv
 import pygame
+from core.ui.mobile_map_tab import get_map_pixel_color, MINIMAP_COLORS
 
 class ProceduralGeneratorRendering:
     def export_world_image(self, layer_idx, output_filename):
-        """Exports the stitched 128x128 map layer to a JPG image handling island water."""
+        """Exports the stitched 128x128 map layer to a JPG image using the unified color palette."""
         def load_csv(path):
             if not os.path.exists(path): return []
             with open(path, 'r', newline='') as f:
@@ -19,9 +20,11 @@ class ProceduralGeneratorRendering:
         
         scale = 4 
         surf = pygame.Surface((map_w * scale, map_h * scale))
-        # Fill ocean water for all non-chunk areas
-        surf.fill((30, 144, 255))
-                
+        bg_fill = MINIMAP_COLORS['void_l1'] if layer_idx == 1 else MINIMAP_COLORS['void_caves']
+        surf.fill(bg_fill)
+        
+        tile_defs = getattr(self.game.tile_manager, 'definitions', {}) if hasattr(self.game, 'tile_manager') else {}
+
         for gy in range(self.grid_h):
             for gx in range(self.grid_w):
                 if hasattr(self, 'active_chunks') and (gx, gy) not in self.active_chunks:
@@ -39,34 +42,17 @@ class ProceduralGeneratorRendering:
                 if not b_data and not g_data:
                     continue
                 
+                offset_px_x = gx * chunk_w * scale
+                offset_px_y = gy * chunk_h * scale
+
                 for y in range(chunk_h):
                     for x in range(chunk_w):
-                        color = (30, 30, 30)
-                        
                         g_char = g_data[y][x] if y < len(g_data) and x < len(g_data[y]) else ' '
                         b_char = b_data[y][x] if y < len(b_data) and x < len(b_data[y]) else ' '
                         r_char = r_data[y][x] if y < len(r_data) and x < len(r_data[y]) else ' '
-                        
-                        if g_char != ' ':
-                            g_low = g_char.lower()
-                            if 'water' in g_low: color = (30, 144, 255)
-                            elif 'sand' in g_low: color = (238, 214, 175)
-                            elif 'dirty' in g_low: color = (139, 69, 19)
-                            elif 'asphalt' in g_low or 'road' in g_low: color = (80, 80, 80)
-                            elif 'grass' in g_low: color = (34, 139, 34)
-                            elif 'cave' in g_low: color = (60, 50, 40)
-                            else: color = (100, 100, 100)
-                            
-                        if b_char != ' ':
-                            b_low = b_char.lower()
-                            if b_char in ['@', '#'] or 'wall' in b_low: color = (150, 150, 150)
-                            elif 'tree' in b_low: color = (20, 80, 20)
-                            else: color = (120, 120, 120)
-                            
-                        if r_char != ' ':
-                            color = (70, 70, 70)
-                            
-                        rect = (((gx * chunk_w) + x) * scale, ((gy * chunk_h) + y) * scale, scale, scale)
+
+                        color = get_map_pixel_color(g_char, b_char, r_char, tile_defs, layer_idx=layer_idx)
+                        rect = (offset_px_x + x * scale, offset_px_y + y * scale, scale, scale)
                         pygame.draw.rect(surf, color, rect)
                         
         out_path = os.path.join(self.output_folder, output_filename)

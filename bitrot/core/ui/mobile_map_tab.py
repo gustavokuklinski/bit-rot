@@ -10,15 +10,61 @@ from core.map.map_loader import load_map_from_file
 from core.data.localization import tr
 
 MINIMAP_COLORS = {
-    ' ': (25, 25, 25),      # Empty / Non-dug cave
-    'G': (34, 139, 34),     # Forest/Grass
-    'W': (30, 144, 255),    # Water
-    'R': (100, 100, 100),   # Road/Street
-    'F': (20, 80, 20),      # Deep Forest
-    'C': (200, 200, 200),   # Walls
-    'default': (45, 45, 45) # Floors
+    'void_l1': (30, 144, 255),    # Ocean Water
+    'void_caves': (25, 25, 25),   # Underground Rock/Void
+    'water': (30, 144, 255),      # Water / Petrol
+    'sand': (238, 214, 175),      # Beach & Sand
+    'dirty': (139, 69, 19),       # Dirt & Trails
+    'road': (80, 80, 80),         # Asphalt & Roads
+    'grass': (34, 139, 34),       # Grassland
+    'cave': (60, 50, 40),         # Cave Floors
+    'floor': (100, 100, 100),     # Indoor Floors
+    'wall': (150, 150, 150),      # Walls & Border Obstacles
+    'tree': (20, 80, 20),         # Forest Trees
+    'object': (120, 120, 120),    # Props & Objects
+    'roof': (70, 70, 70),         # Roofs
+    'default': (100, 100, 100)
 }
 MINIMAP_PLAYER_COLOR = (0, 255, 255)
+
+def get_map_pixel_color(g_char, b_char, r_char, tile_defs=None, layer_idx=1):
+    """Calculates the exact RGB color matching the JPG export logic."""
+    color = MINIMAP_COLORS['void_l1'] if layer_idx == 1 else MINIMAP_COLORS['void_caves']
+
+    if g_char and g_char != ' ':
+        g_def = tile_defs.get(g_char) if tile_defs else None
+        g_low = (g_def.get('name', '') if g_def else g_char).lower()
+        if 'water' in g_low or 'petrol' in g_low or g_char.startswith('water_') or g_char.startswith('petrol_'):
+            color = MINIMAP_COLORS['water']
+        elif 'sand' in g_low:
+            color = MINIMAP_COLORS['sand']
+        elif 'dirty' in g_low:
+            color = MINIMAP_COLORS['dirty']
+        elif any(k in g_low for k in ['asphalt', 'road', 'street', 'path']):
+            color = MINIMAP_COLORS['road']
+        elif 'grass' in g_low:
+            color = MINIMAP_COLORS['grass']
+        elif 'cave' in g_low:
+            color = MINIMAP_COLORS['cave']
+        else:
+            color = MINIMAP_COLORS['floor']
+
+    if b_char and b_char != ' ':
+        b_def = tile_defs.get(b_char) if tile_defs else None
+        b_low = (b_def.get('name', '') if b_def else b_char).lower()
+        if b_char in ('@', '#') or 'wall' in b_low:
+            color = MINIMAP_COLORS['wall']
+        elif 'tree' in b_low or b_char.startswith('garden_tree'):
+            color = MINIMAP_COLORS['tree']
+        elif b_def and (b_def.get('is_obstacle', False) or b_def.get('is_statable', False)):
+            color = MINIMAP_COLORS['wall']
+        else:
+            color = MINIMAP_COLORS['object']
+
+    if r_char and r_char != ' ':
+        color = MINIMAP_COLORS['roof']
+
+    return color
 
 def parse_map_item_info(item_or_name):
     """
@@ -113,7 +159,7 @@ def generate_minimap_cache(game, full_map=False, target_chunk=None, target_layer
 
     tile_defs = game.tile_manager.definitions
     chunk_size = getattr(game, 'CHUNK_SIZE', 128)
-    bg_fill = MINIMAP_COLORS['W'] if current_layer == 1 else MINIMAP_COLORS[' ']
+    bg_fill = MINIMAP_COLORS['void_l1'] if current_layer == 1 else MINIMAP_COLORS['void_caves']
 
     if target_chunk:
         cache_surf = pygame.Surface((chunk_size, chunk_size))
@@ -133,40 +179,16 @@ def generate_minimap_cache(game, full_map=False, target_chunk=None, target_layer
 
         for y in range(chunk_size):
             for x in range(chunk_size):
-                final_char = ' '
+                g_char = g_data[y][x] if y < len(g_data) and x < len(g_data[y]) else ' '
+                b_char = b_data[y][x] if y < len(b_data) and x < len(b_data[y]) else ' '
+                r_char = r_data[y][x] if y < len(r_data) and x < len(r_data[y]) else ' '
 
-                if y < len(g_data) and x < len(g_data[y]):
-                    g_tile = g_data[y][x]
-                    if g_tile and g_tile != ' ':
-                        g_def = tile_defs.get(g_tile)
-                        g_name = g_def.get('name', '').lower() if g_def else ''
-                        if 'water' in g_name or g_tile.upper().startswith('W'): final_char = 'W'
-                        elif 'grass' in g_name or g_tile.upper().startswith('G'): final_char = 'G'
-                        elif 'forest' in g_name: final_char = 'F'
-                        else: final_char = 'default'
+                col = get_map_pixel_color(g_char, b_char, r_char, tile_defs, layer_idx=current_layer)
+                try:
+                    pixels[x, y] = col
+                except IndexError:
+                    pass
 
-                if y < len(b_data) and x < len(b_data[y]):
-                    b_tile = b_data[y][x]
-                    if b_tile and b_tile != ' ':
-                        b_def = tile_defs.get(b_tile)
-                        if b_def:
-                            b_name = b_def.get('name', '').lower()
-                            if any(k in b_name for k in ['road', 'street', 'asphalt', 'path']): final_char = 'R'
-                            elif b_def.get('is_obstacle') or 'wall' in b_name: final_char = 'C'
-                            elif 'floor' in b_name and 'grass' not in b_name: final_char = 'default'
-                            elif final_char == ' ': final_char = 'default'
-                        elif b_tile.upper().startswith('R'): final_char = 'R'
-                        elif final_char == ' ': final_char = 'default'
-
-                if y < len(r_data) and x < len(r_data[y]):
-                    r_tile = r_data[y][x]
-                    if r_tile and r_tile != ' ': final_char = 'C'
-
-                if final_char != ' ':
-                    try:
-                        pixels[x, y] = MINIMAP_COLORS.get(final_char, MINIMAP_COLORS['default'])
-                    except IndexError:
-                        pass
         pixels.close()
         return cache_surf
 
@@ -215,57 +237,21 @@ def generate_minimap_cache(game, full_map=False, target_chunk=None, target_layer
 
                 for y in range(chunk_size):
                     for x in range(chunk_size):
-                        final_char = ' '
+                        g_char = g_data[y][x] if y < len(g_data) and x < len(g_data[y]) else ' '
+                        b_char = b_data[y][x] if y < len(b_data) and x < len(b_data[y]) else ' '
+                        r_char = r_data[y][x] if y < len(r_data) and x < len(r_data[y]) else ' '
 
-                        if y < len(g_data) and x < len(g_data[y]):
-                            g_tile = g_data[y][x]
-                            if g_tile and g_tile != ' ':
-                                g_def = tile_defs.get(g_tile)
-                                g_name = g_def.get('name', '').lower() if g_def else ''
-                                if 'water' in g_name or g_tile.upper().startswith('W'):
-                                    final_char = 'W'
-                                elif 'grass' in g_name or g_tile.upper().startswith('G'):
-                                    final_char = 'G'
-                                elif 'forest' in g_name:
-                                    final_char = 'F'
-                                else:
-                                    final_char = 'default'
-
-                        if y < len(b_data) and x < len(b_data[y]):
-                            b_tile = b_data[y][x]
-                            if b_tile and b_tile != ' ':
-                                b_def = tile_defs.get(b_tile)
-                                if b_def:
-                                    b_name = b_def.get('name', '').lower()
-                                    if any(k in b_name for k in ['road', 'street', 'asphalt', 'path']):
-                                        final_char = 'R'
-                                    elif b_def.get('is_obstacle') or 'wall' in b_name:
-                                        final_char = 'C'
-                                    elif 'floor' in b_name and 'grass' not in b_name:
-                                        final_char = 'default'
-                                    elif final_char == ' ':
-                                        final_char = 'default'
-                                elif b_tile.upper().startswith('R'):
-                                    final_char = 'R'
-                                elif final_char == ' ':
-                                    final_char = 'default'
-
-                        if y < len(r_data) and x < len(r_data[y]):
-                            r_tile = r_data[y][x]
-                            if r_tile and r_tile != ' ':
-                                final_char = 'C'
-
-                        if final_char != ' ':
-                            try:
-                                pixels[offset_x + x, offset_y + y] = MINIMAP_COLORS.get(final_char, MINIMAP_COLORS['default'])
-                            except IndexError:
-                                pass
+                        col = get_map_pixel_color(g_char, b_char, r_char, tile_defs, layer_idx=current_layer)
+                        try:
+                            pixels[offset_x + x, offset_y + y] = col
+                        except IndexError:
+                            pass
 
         pixels.close()
         return cache_surf
 
     else:
-        # Single chunk map of player's current layer
+        # Single chunk map of player's current layer (Used by live GPS)
         base_layer = game.all_map_layers.get(current_layer, getattr(game, 'map_data', []))
         if not base_layer:
             return None
@@ -282,36 +268,15 @@ def generate_minimap_cache(game, full_map=False, target_chunk=None, target_layer
 
         for y in range(map_height):
             for x in range(map_width):
-                final_char = ' '
-                if y < len(ground_layer) and x < len(ground_layer[y]):
-                    g_tile = ground_layer[y][x]
-                    if g_tile and g_tile != ' ':
-                        g_def = tile_defs.get(g_tile)
-                        g_name = g_def.get('name', '').lower() if g_def else ''
-                        if 'water' in g_name or g_tile.upper().startswith('W'): final_char = 'W'
-                        elif 'grass' in g_name or g_tile.upper().startswith('G'): final_char = 'G'
-                        elif 'forest' in g_name: final_char = 'F'
-                        else: final_char = 'default'
+                g_char = ground_layer[y][x] if y < len(ground_layer) and x < len(ground_layer[y]) else ' '
+                b_char = base_layer[y][x] if y < len(base_layer) and x < len(base_layer[y]) else ' '
+                r_char = roof_layer[y][x] if y < len(roof_layer) and x < len(roof_layer[y]) else ' '
 
-                if y < len(base_layer) and x < len(base_layer[y]):
-                    b_tile = base_layer[y][x]
-                    if b_tile and b_tile != ' ':
-                        b_def = tile_defs.get(b_tile)
-                        if b_def:
-                            b_name = b_def.get('name', '').lower()
-                            if any(k in b_name for k in ['road', 'street', 'asphalt', 'path']): final_char = 'R'
-                            elif b_def.get('is_obstacle') or 'wall' in b_name: final_char = 'C'
-                            elif 'floor' in b_name and 'grass' not in b_name: final_char = 'default'
-                            elif final_char == ' ': final_char = 'default'
-                        elif b_tile.upper().startswith('R'): final_char = 'R'
-                        elif final_char == ' ': final_char = 'default'
-
-                if y < len(roof_layer) and x < len(roof_layer[y]):
-                    r_tile = roof_layer[y][x]
-                    if r_tile and r_tile != ' ': final_char = 'C'
-
-                if final_char != ' ':
-                    pixels[x, y] = MINIMAP_COLORS.get(final_char, MINIMAP_COLORS['default'])
+                col = get_map_pixel_color(g_char, b_char, r_char, tile_defs, layer_idx=current_layer)
+                try:
+                    pixels[x, y] = col
+                except IndexError:
+                    pass
 
         pixels.close()
         return cache_surf
