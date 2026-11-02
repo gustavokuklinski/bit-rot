@@ -38,38 +38,79 @@ def _get_friendly_value_display(key, value):
 
     return ""
 
+def _get_world_presets_dir():
+    candidates = [
+        os.path.join(get_writable_dir(), "data.rot", "save", "world"),
+        os.path.join(BASE_DIR, "data.rot", "save", "world"),
+        os.path.join(get_writable_dir(), "bitrot", "data.rot", "save", "world"),
+        os.path.join(BASE_DIR, "bitrot", "data.rot", "save", "world"),
+    ]
+    for d in candidates:
+        if os.path.exists(d):
+            return d
+    target = os.path.join(get_writable_dir(), "data.rot", "save", "world")
+    os.makedirs(target, exist_ok=True)
+    return target
+
 def _load_world_presets(state):
-    preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "config")
-    os.makedirs(preset_dir, exist_ok=True)
-    
+    preset_dir = _get_world_presets_dir()
     presets = ["world"]
     try:
-        files = [f for f in os.listdir(preset_dir) if f.startswith('world-') and f.endswith('.json')]
+        files = [f for f in os.listdir(preset_dir) if f.endswith('.json')]
         for f in sorted(files):
-            presets.append(f.replace('.json', ''))
+            name = os.path.splitext(f)[0]
+            if name != 'world' and name not in presets:
+                presets.append(name)
     except Exception:
         pass
     state['config_preset_list'] = presets
 
 def _clone_to_custom(state):
-    """(Modified) Sandbox edits now only update the unsaved state indicator."""
     state['world_unsaved'] = True
 
 def _save_world_preset(state):
-    preset_name = state.get('world_preset_name', 'world')
+    preset_name = state.get('world_preset_name', '').strip()
+    if not preset_name or preset_name == "world":
+        preset_name = state.get('selected_config_preset', 'world')
     if not preset_name:
-        preset_name = 'world'
-    preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "config")
-    os.makedirs(preset_dir, exist_ok=True)
+        preset_name = datetime.now().strftime("world_%Y%m%d_%H%M%S")
+
+    # Avoid spaces: convert to underscores
+    preset_name = preset_name.replace(' ', '_')
+    state['world_preset_name'] = preset_name
+    state['selected_config_preset'] = preset_name
+
+    preset_dir = _get_world_presets_dir()
     save_path = os.path.join(preset_dir, f"{preset_name}.json")
+
+    # Sync seed into world_data map block
+    if 'map' not in state['world_data']:
+        state['world_data']['map'] = {}
+    if 'seed' not in state['world_data']['map']:
+        state['world_data']['map']['seed'] = {'name': 'World seed', 'default': ''}
+    state['world_data']['map']['seed']['value'] = str(state.get('world_seed', ''))
+
     save_config_json(state['world_data'], save_path)
     state['world_unsaved'] = False
     _load_world_presets(state)
 
 def _delete_world_preset(state):
+    preset_name = state.get('selected_config_preset', 'world')
+    if preset_name and preset_name != 'world':
+        preset_dir = _get_world_presets_dir()
+        filepath = os.path.join(preset_dir, f"{preset_name}.json")
+        try:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+        except Exception as e:
+            print(f"Error deleting preset: {e}")
+
+    state['selected_config_preset'] = 'world'
+    state['world_preset_name'] = datetime.now().strftime("world_%Y%m%d_%H%M%S")
     path = core.data.config.get_world_config_path('world')
     state['world_data'] = load_config_data(path)
     state['world_unsaved'] = False
+    _load_world_presets(state)
 
 def _draw_world_screen(game, state, mouse_pos):
     if not hasattr(game, 'world_setup_state'):
@@ -86,21 +127,23 @@ def _draw_world_screen(game, state, mouse_pos):
         correct_path = core.data.config.get_world_config_path(preset_name)
         state['world_data'] = load_config_data(correct_path)
         state['world_unsaved'] = False
-        
-        # Pull seed from preset XML if available, otherwise generate fresh
-        if 'world_seed' in state and state['world_seed']:
-            # Keep the seed we already have (the fresh one from New Game)
-            pass 
-        else:
-            # Only generate if we are loading a preset that has no seed
-            xml_seed = state['world_data'].get('map', {}).get('seed', {}).get('value', '')
-            if xml_seed and str(xml_seed).strip():
-                state['world_seed'] = str(xml_seed).strip()
-            else:
-                state['world_seed'] = "".join(str(random.randint(0, 9)) for _ in range(12))
-
         state['seed_input_active'] = False
         _load_world_presets(state)
+
+    # Always ensure preset name field is pre-filled with a timestamp
+    if not state.get('world_preset_name'):
+        state['world_preset_name'] = datetime.now().strftime("world_%Y%m%d_%H%M%S")
+
+    # Always ensure a valid seed exists and is synchronized
+    if not state.get('world_seed'):
+        existing_seed = state.get('world_data', {}).get('map', {}).get('seed', {}).get('value', '')
+        if existing_seed and str(existing_seed).strip():
+            state['world_seed'] = str(existing_seed).strip()
+        else:
+            state['world_seed'] = "".join(str(random.randint(0, 9)) for _ in range(12))
+
+    if 'map' in state['world_data'] and 'seed' in state['world_data']['map']:
+        state['world_data']['map']['seed']['value'] = str(state['world_seed'])
 
     center_offset_x = (GAME_WIDTH - S(1280)) // 2
     center_offset_y = (GAME_HEIGHT - S(720)) // 2
@@ -164,9 +207,9 @@ def _draw_world_screen(game, state, mouse_pos):
         draw_items.append(('header', block))
         for key, val_data in config_data[block].items():
             if key == 'seed': 
-                continue  # Seed has its own dedicated input on the right panel
+                continue
             if key == 'spawn' and block in ['zombie', 'npc', 'animal']:
-                continue  # Hide spawns to be auto-calculated behind the scenes
+                continue
             draw_items.append(('item', block, key, val_data))
 
     total_h = len(draw_items) * line_h
@@ -202,7 +245,7 @@ def _draw_world_screen(game, state, mouse_pos):
                 abs_rect = pygame.Rect(content_rect.x + input_rect.x, content_rect.y + input_rect.y, input_rect.width, input_rect.height)
                 
                 str_val = str(val).lower()
-                is_bool = str_val in ('true', 'false')
+                is_bool = str_val in ('true', 'false') or isinstance(val, bool)
                 
                 is_time_cycle = key in ['time_sunrise_hr', 'time_sunset_hr', 'time_start_hr']
                 is_percent_cycle = ('chance' in key) or (block == 'item_spawning' and 'multiplier' in key) or key in ['static_percent', 'hostile_percent']
@@ -223,11 +266,10 @@ def _draw_world_screen(game, state, mouse_pos):
                     sub.blit(info_surf, (info_pos_x, y_off + S(12)))
 
                 if is_bool:
-                    # Check if this setting is locked/disabled by another setting
                     is_disabled = False
                     if key in ('start_at_the_lobby', 'start_lobby', 'no_boat_to_lobby'):
-                        lobby_gen_val = config_data.get('game', {}).get('generate_lobby_chunk', {}).get('value', 'true')
-                        if str(lobby_gen_val).lower() != 'true':
+                        lobby_gen_val = config_data.get('game', {}).get('generate_lobby_chunk', {}).get('value', True)
+                        if str(lobby_gen_val).lower() not in ('true', '1') and lobby_gen_val is not True:
                             str_val = "false"
                             is_disabled = True
 
@@ -247,7 +289,7 @@ def _draw_world_screen(game, state, mouse_pos):
                     pygame.draw.rect(sub, bg_color, input_rect, border_radius=3)
                     pygame.draw.rect(sub, border_color, input_rect, 1, border_radius=3)
 
-                    val_text = tr('ui', "True") if str_val == "true" else tr('ui', "False")
+                    val_text = tr('ui', "True") if (val is True or str_val == "true") else tr('ui', "False")
                     txt_surf = font_12.render(val_text, False, text_color)
                     text_x = input_rect.x + (input_rect.width - txt_surf.get_width()) // 2
                     text_y = input_rect.y + (input_rect.height - txt_surf.get_height()) // 2
@@ -323,6 +365,7 @@ def _draw_world_screen(game, state, mouse_pos):
     
     state['world_content_rect'] = content_rect
     
+    # --- RIGHT PANEL (WORLD PRESET, SAVE/DELETE, DROPDOWN, WORLD SEED) ---
     preset_rect = pygame.Rect(col4_x, base_y, col4_width, S(550))
     preset_header = pygame.Rect(preset_rect.x, preset_rect.y, preset_rect.width, header_height)
     preset_body = pygame.Rect(preset_rect.x, preset_rect.y + header_height, preset_rect.width, preset_rect.height - header_height)
@@ -332,33 +375,87 @@ def _draw_world_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, WHITE, preset_rect, 1, border_radius=border_radius)
     game.game_screen.blit(font_12.render(tr('ui', "World Preset"), False, WHITE), (preset_header.x + S(10), preset_header.y + S(7)))
 
+    # 1. Preset Name Field (Pre-filled with timestamp)
+    cur_y = preset_body.y + S(12)
+    game.game_screen.blit(font_12.render(tr('ui', "Preset Name:"), False, WHITE), (preset_body.x + padding, cur_y))
+    name_input_rect = pygame.Rect(preset_body.x + padding, cur_y + S(20), preset_body.width - padding * 2, S(30))
+    
+    pygame.draw.rect(game.game_screen, (50, 50, 50), name_input_rect)
+    pygame.draw.rect(game.game_screen, WHITE if state.get('name_input_active') else GRAY, name_input_rect, 1)
+    
+    preset_name_text = state.get('world_preset_name', '')
+    p_name_surf = font_12.render(preset_name_text, False, WHITE)
+    clickable_rects['name_input'] = name_input_rect
+    
+    if state.get('name_input_active') and int(pygame.time.get_ticks() / 500) % 2 == 0:
+        cursor_x = name_input_rect.x + S(6) + p_name_surf.get_width()
+        pygame.draw.line(game.game_screen, WHITE, (cursor_x, name_input_rect.y + S(5)), (cursor_x, name_input_rect.bottom - S(5)), S(2))
+        
+    game.game_screen.blit(p_name_surf, (name_input_rect.x + S(6), name_input_rect.y + S(7)))
 
-    seed_y = S(20) + 60
-    game.game_screen.blit(font_12.render(tr('ui', "World Seed (12-digit):"), False, WHITE), (preset_body.x + padding, seed_y))
-    seed_input_rect = pygame.Rect(preset_body.x + padding, seed_y + S(25), preset_body.width - padding*2, S(30))
+    # 2. Save and Delete Buttons
+    cur_y = name_input_rect.bottom + S(12)
+    btn_w = (preset_body.width - (padding * 2) - S(10)) // 2
+    
+    save_btn_rect = pygame.Rect(preset_body.x + padding, cur_y, btn_w, S(30))
+    is_save_hover = save_btn_rect.collidepoint(mouse_pos)
+    pygame.draw.rect(game.game_screen, (80, 80, 80) if is_save_hover else (60, 60, 60), save_btn_rect, border_radius=4)
+    save_txt = font_12.render(tr('ui', "Save"), False, WHITE)
+    game.game_screen.blit(save_txt, save_txt.get_rect(center=save_btn_rect.center))
+    clickable_rects['save_button'] = save_btn_rect
+
+    delete_btn_rect = pygame.Rect(save_btn_rect.right + S(10), cur_y, btn_w, S(30))
+    is_del_hover = delete_btn_rect.collidepoint(mouse_pos)
+    pygame.draw.rect(game.game_screen, (80, 80, 80) if is_del_hover else (60, 60, 60), delete_btn_rect, border_radius=4)
+    del_txt = font_12.render(tr('ui', "Delete"), False, WHITE)
+    game.game_screen.blit(del_txt, del_txt.get_rect(center=delete_btn_rect.center))
+    clickable_rects['delete_button'] = delete_btn_rect
+
+    # 3. Presets Dropdown Selector
+    cur_y = save_btn_rect.bottom + S(14)
+    load_dd_rect = pygame.Rect(preset_body.x + padding, cur_y, preset_body.width - padding * 2, S(30))
+    clickable_rects['load_dropdown_button'] = load_dd_rect
+    is_dd_hover = load_dd_rect.collidepoint(mouse_pos)
+    
+    pygame.draw.rect(game.game_screen, (60, 60, 60) if is_dd_hover else (50, 50, 50), load_dd_rect)
+    pygame.draw.rect(game.game_screen, YELLOW if is_dd_hover else WHITE, load_dd_rect, 1)
+    
+    selected_preset = state.get('selected_config_preset', "world")
+    game.game_screen.blit(font_12.render(selected_preset, False, WHITE), (load_dd_rect.x + S(6), load_dd_rect.y + S(7)))
+    pygame.draw.polygon(game.game_screen, WHITE, [
+        (load_dd_rect.right - S(15), load_dd_rect.y + S(11)),
+        (load_dd_rect.right - S(5), load_dd_rect.y + S(11)),
+        (load_dd_rect.right - S(10), load_dd_rect.y + S(18))
+    ])
+
+    # 4. World Seed Input (At the bottom of presets)
+    cur_y = load_dd_rect.bottom + S(22)
+    game.game_screen.blit(font_12.render(tr('ui', "World Seed (12-digit):"), False, WHITE), (preset_body.x + padding, cur_y))
+    seed_input_rect = pygame.Rect(preset_body.x + padding, cur_y + S(20), preset_body.width - padding * 2, S(30))
     
     pygame.draw.rect(game.game_screen, (50, 50, 50), seed_input_rect)
-    pygame.draw.rect(game.game_screen, WHITE, seed_input_rect, 1)
+    pygame.draw.rect(game.game_screen, WHITE if state.get('seed_input_active') else GRAY, seed_input_rect, 1)
     
     seed_text = state.get('world_seed', '')
     seed_surf = font_12.render(seed_text, False, WHITE)
     clickable_rects['seed_input'] = seed_input_rect
     
     if state.get('seed_input_active') and int(pygame.time.get_ticks() / 500) % 2 == 0:
-        cursor_x = seed_input_rect.x + S(5) + seed_surf.get_width()
+        cursor_x = seed_input_rect.x + S(6) + seed_surf.get_width()
         pygame.draw.line(game.game_screen, WHITE, (cursor_x, seed_input_rect.y + S(5)), (cursor_x, seed_input_rect.bottom - S(5)), S(2))
         
-    game.game_screen.blit(seed_surf, (seed_input_rect.x + S(5), seed_input_rect.y + S(5)))
+    game.game_screen.blit(seed_surf, (seed_input_rect.x + S(6), seed_input_rect.y + S(7)))
 
+    # 5. Dropdown Popup Overlay (Drawn on top)
     if state.get('config_dd_active'):
         options = state.get('config_preset_list', ["world"])
         option_height = S(25)
-        max_visible = 5
+        max_visible = 6
         visible_count = min(len(options), max_visible)
         list_height = visible_count * option_height
         total_height = len(options) * option_height
         
-        list_rect = pygame.Rect(load_dd_rect.x, load_dd_rect.bottom, load_dd_rect.width, list_height)
+        list_rect = pygame.Rect(load_dd_rect.x, load_dd_rect.bottom + S(2), load_dd_rect.width, list_height)
         state['config_list_rect'] = list_rect
         
         pygame.draw.rect(game.game_screen, (30, 30, 30), list_rect)
@@ -379,9 +476,11 @@ def _draw_world_screen(game, state, mouse_pos):
                 row_rect_abs = pygame.Rect(list_rect.x, list_rect.y + y_offset, list_rect.width, option_height)
                 
                 if row_rect_rel.bottom > 0 and row_rect_rel.top < list_rect.height:
-                    if row_rect_abs.collidepoint(mouse_pos):
+                    is_h = row_rect_abs.collidepoint(mouse_pos)
+                    if is_h:
                         pygame.draw.rect(list_surface, (70, 70, 70), row_rect_rel)
-                    list_surface.blit(font_12.render(option_name, False, WHITE), (row_rect_rel.x + S(5), row_rect_rel.y + S(2)))
+                    col_txt = YELLOW if option_name == selected_preset else WHITE
+                    list_surface.blit(font_12.render(option_name, False, col_txt), (row_rect_rel.x + S(6), row_rect_rel.y + S(4)))
                     clickable_rects["load_dropdown_options"].append((option_name, row_rect_abs))
                 y_offset += option_height
 
@@ -412,7 +511,7 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
     def S(val): return int(val * scale)
 
     if clickable_rects is None:
-        clickable_rects = _draw_world_screen(game, mouse_pos)
+        clickable_rects = _draw_world_screen(game, state, mouse_pos)
 
     if event.type == pygame.MOUSEWHEEL:
         rect = state.get('world_content_rect')
@@ -430,9 +529,14 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
                 state['world_unsaved'] = True
             elif event.key == pygame.K_RETURN: 
                 state['name_input_active'] = False
+            elif event.key == pygame.K_SPACE or event.unicode == ' ':
+                # Replace space with underscore
+                state['world_preset_name'] = current_val + '_'
+                state['world_unsaved'] = True
             else: 
-                if len(current_val) < 25 and event.unicode.isprintable():
-                    state['world_preset_name'] = current_val + event.unicode
+                if len(current_val) < 28 and event.unicode.isprintable():
+                    char_to_add = '_' if event.unicode == ' ' else event.unicode
+                    state['world_preset_name'] = current_val + char_to_add
                     state['world_unsaved'] = True
 
         elif state.get('seed_input_active'):
@@ -478,12 +582,11 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
             state['world_scroll_drag_last_y'] = mouse_pos[1]
             return
 
+        # Save and Continue
         if clickable_rects.get('next_tab') and clickable_rects['next_tab'].collidepoint(mouse_pos):
-            preset_name = state.get('selected_config_preset', 'world')
-            if state.get('world_unsaved', False) or preset_name != 'world':
-                _save_world_preset(state)
+            # Save the preset
+            _save_world_preset(state)
 
-            # Create the save folder with world.json for Sandbox mode
             mode_id = state.get('chosen_mode', 'sandbox')
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             save_name = f"save_{mode_id}_{timestamp}"
@@ -501,10 +604,14 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
             game.player_setup_state['world_json_path'] = world_json_path
             game.player_setup_state['world_data'] = state['world_data']
             game.player_setup_state['world_seed'] = state.get('world_seed', '')
-            game.player_setup_state['selected_config_preset'] = preset_name
-            game.player_setup_state['world_preset_name'] = preset_name
+            game.player_setup_state['selected_config_preset'] = state.get('selected_config_preset', 'world')
+            game.player_setup_state['world_preset_name'] = state.get('world_preset_name', 'world')
             game.player_setup_state['chosen_mode'] = mode_id
             game.player_setup_state['current_tab'] = 'Player'
+            return
+
+        if clickable_rects.get('name_input') and clickable_rects['name_input'].collidepoint(mouse_pos):
+            state['name_input_active'] = True
             return
 
         if clickable_rects.get('seed_input') and clickable_rects['seed_input'].collidepoint(mouse_pos):
@@ -527,11 +634,11 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
                         state['world_preset_name'] = option_name
                         state['config_dd_active'] = False
                         
+                        # Automatically load the selected preset and fulfill fields
                         path = core.data.config.get_world_config_path(option_name)
                         state['world_data'] = load_config_data(path)
                         state['world_unsaved'] = False
                         
-                        # Load seed stored in this preset if present
                         xml_seed = state['world_data'].get('map', {}).get('seed', {}).get('value', '')
                         if xml_seed and str(xml_seed).strip():
                             state['world_seed'] = str(xml_seed).strip()
@@ -563,29 +670,23 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
 
                     current_val = setting_obj['value']
 
-                    # Rule: If trying to toggle start_at_the_lobby or no_boat_to_lobby when generate_lobby_chunk is false, disallow interaction completely
                     if key in ('start_at_the_lobby', 'start_lobby', 'no_boat_to_lobby'):
-                        lobby_gen_val = state['world_data'].get('game', {}).get('generate_lobby_chunk', {}).get('value', 'true')
-                        if str(lobby_gen_val).lower() != 'true':
-                            # Do nothing, maintain dark gray disabled state
+                        lobby_gen_val = state['world_data'].get('game', {}).get('generate_lobby_chunk', {}).get('value', True)
+                        if str(lobby_gen_val).lower() not in ('true', '1') and lobby_gen_val is not True:
                             clicked_input = True
                             break
 
-                    new_val = "false" if str(current_val).lower() == "true" else "true"
+                    is_true = (current_val is True or str(current_val).lower() == "true")
+                    new_val = not is_true
 
-                    # Rule: If disabling generate_lobby_chunk, force start_at_the_lobby and no_boat_to_lobby to false as well
-                    if key in ('generate_lobby_chunk', 'spawn_lobby_chunk') and new_val == "false":
+                    if key in ('generate_lobby_chunk', 'spawn_lobby_chunk') and not new_val:
                         if 'game' in state['world_data']:
                             if 'start_at_the_lobby' in state['world_data']['game']:
                                 if isinstance(state['world_data']['game']['start_at_the_lobby'], dict):
-                                    state['world_data']['game']['start_at_the_lobby']['value'] = "false"
-                                else:
-                                    state['world_data']['game']['start_at_the_lobby'] = {'value': 'false', 'name': 'Start game at the Lobby'}
+                                    state['world_data']['game']['start_at_the_lobby']['value'] = False
                             if 'no_boat_to_lobby' in state['world_data']['game']:
                                 if isinstance(state['world_data']['game']['no_boat_to_lobby'], dict):
-                                    state['world_data']['game']['no_boat_to_lobby']['value'] = "false"
-                                else:
-                                    state['world_data']['game']['no_boat_to_lobby'] = {'value': 'false', 'name': "Can't navigate back Lobby"}
+                                    state['world_data']['game']['no_boat_to_lobby']['value'] = False
 
                     state['world_data'][block][key]['value'] = new_val
                     _clone_to_custom(state)
@@ -644,32 +745,31 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
                         new_val = current_val_float
 
                     if is_view_cycle or is_max_ent_cycle or is_legacy_cycle or is_int_percent_cycle:
-                        state['world_data'][block][key]['value'] = str(int(new_val))
+                        state['world_data'][block][key]['value'] = int(new_val)
                     else:
-                        state['world_data'][block][key]['value'] = str(new_val)
+                        state['world_data'][block][key]['value'] = float(new_val)
 
-                    # --- Automatic synchronization rules ---
                     if is_max_ent_cycle and block in ['zombie', 'npc', 'animal']:
                         spawn_val = max(1, int(new_val) // 2)
                         if 'spawn' not in state['world_data'][block]:
-                             state['world_data'][block]['spawn'] = {'value': str(spawn_val), 'name': 'spawns'}
+                             state['world_data'][block]['spawn'] = {'value': spawn_val, 'name': 'spawns'}
                         else:
                              if not isinstance(state['world_data'][block]['spawn'], dict):
-                                 state['world_data'][block]['spawn'] = {'value': str(spawn_val), 'name': 'spawns'}
-                             state['world_data'][block]['spawn']['value'] = str(spawn_val)
+                                 state['world_data'][block]['spawn'] = {'value': spawn_val, 'name': 'spawns'}
+                             state['world_data'][block]['spawn']['value'] = spawn_val
 
                     if key == 'static_percent':
                         hostile_val = round(1.0 - new_val, 2)
                         if 'hostile_percent' in state['world_data'][block]:
                             if not isinstance(state['world_data'][block]['hostile_percent'], dict):
-                                state['world_data'][block]['hostile_percent'] = {'value': str(hostile_val), 'name': 'Hostile NPC percentage'}
-                            state['world_data'][block]['hostile_percent']['value'] = str(hostile_val)
+                                state['world_data'][block]['hostile_percent'] = {'value': hostile_val, 'name': 'Hostile NPC percentage'}
+                            state['world_data'][block]['hostile_percent']['value'] = hostile_val
                     elif key == 'hostile_percent':
                         static_val = round(1.0 - new_val, 2)
                         if 'static_percent' in state['world_data'][block]:
                             if not isinstance(state['world_data'][block]['static_percent'], dict):
-                                state['world_data'][block]['static_percent'] = {'value': str(static_val), 'name': 'Static NPC percentage'}
-                            state['world_data'][block]['static_percent']['value'] = str(static_val)
+                                state['world_data'][block]['static_percent'] = {'value': static_val, 'name': 'Static NPC percentage'}
+                            state['world_data'][block]['static_percent']['value'] = static_val
 
                     _clone_to_custom(state)
                     state['world_unsaved'] = True

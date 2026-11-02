@@ -395,7 +395,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         from core.ui.helpers.trait_config_loader import save_config_json, load_config_data
         game_settings = player_data.get('game_settings')
         if not game_settings:
-            default_path = os.path.join(DATA_PATH, "world.json")
+            default_path = core.data.config.get_world_config_path("world")
             game_settings = load_config_data(default_path)
         save_config_json(game_settings, world_json_path)
 
@@ -703,7 +703,7 @@ def load_game(game, save_folder_name):
     if os.path.exists(world_json_path):
         core.data.config.load_settings(world_json_path)
     else:
-        core.data.config.load_settings(os.path.join(DATA_PATH, "world.json"))
+        core.data.config.load_settings(core.data.config.get_world_config_path("world"))
         
     try:
         host_file = os.path.join(save_path, "host.json")

@@ -8,6 +8,7 @@ from core.data.config import *
 from core.data.localization import tr
 from core.ui.modals import draw_scrollbar
 from core.systems.mod_manager import mod_manager
+from core.ui.helpers.trait_config_loader import sanitize_config_dict
 
 _mod_logo_cache = {}
 
@@ -147,9 +148,10 @@ def save_preferences_json(data, filepath=None):
         except Exception:
             existing_prefs = {}
 
+    
     merged = dict(existing_prefs)
     merged.update(data)
-    out = {"preferences": merged}
+    out = {"preferences": sanitize_config_dict(merged)}
     try:
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, 'w', encoding='utf-8') as f:

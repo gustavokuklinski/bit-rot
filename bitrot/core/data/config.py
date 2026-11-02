@@ -197,7 +197,7 @@ def get_preferences_path(for_save=False):
     return filepath
 
 def get_world_config_path(preset="world"):
-    """Gets the world configuration path, allowing absolute paths for per-save configs."""
+    """Gets the world configuration path, targeting data.rot/save/config/world/."""
     if not preset:
         preset = "world"
 
@@ -206,42 +206,45 @@ def get_world_config_path(preset="world"):
     if os.path.exists(preset + ".json"):
         return preset + ".json"
 
-    if preset.endswith(".json") or preset.endswith(".xml"):
+    if preset.endswith(".json"):
         preset = os.path.splitext(preset)[0]
+
+    filename = f"{preset}.json"
+    if preset == "sandbox":
+        filename = "world.json"
 
     writable_root = get_writable_dir()
 
-    if preset == "sandbox":
-        sandbox_candidates = [
-            os.path.join(writable_root, "data.rot", "save", "config", "world.json"),
-            os.path.join(BASE_DIR, "data.rot", "save", "config", "world.json")
-        ]
-        for path in sandbox_candidates:
-            if os.path.exists(path):
-                return path
-        return os.path.join(DATA_PATH, "world.json")
+    # Search candidates across new world folder paths
+    candidates = [
+        # 1. Primary: data.rot/save/config/world/
+        os.path.join(writable_root, "data.rot", "save", "world", filename),
+        os.path.join(BASE_DIR, "data.rot", "save", "world", filename),
+        os.path.join(writable_root, "bitrot", "data.rot", "save", "world", filename),
+        os.path.join(BASE_DIR, "bitrot", "data.rot", "save", "world", filename),
 
-    if preset != "world":
-        custom_candidates = [
-            os.path.join(writable_root, "data.rot", "save", "config", f"{preset}.json"),
-            os.path.join(BASE_DIR, "data.rot", "save", "config", f"{preset}.json")
-        ]
-        for path in custom_candidates:
-            if os.path.exists(path):
-                return path
+        # 2. Fallback to legacy data.rot/save/config/
+        os.path.join(writable_root, "data.rot", "save", "config", filename),
+        os.path.join(BASE_DIR, "data.rot", "save", "config", filename),
 
-    lib_candidates = [
-        os.path.join(get_writable_dir(), "data.rot", "save", "config", "world.json"),
-        os.path.join(DATA_PATH, "world.json"),
-        os.path.join(DATA_PATH, "config", "world.json"),
-        os.path.join(BASE_DIR, "data.rot", "lib", "data", "world.json"),
-        os.path.join(BASE_DIR, "data.rot", "lib", "data", "config", "world.json")
+        # 3. Library fallbacks
+        os.path.join(DATA_PATH, filename),
+        os.path.join(DATA_PATH, "config", filename),
+        os.path.join(BASE_DIR, "data.rot", "lib", "data", filename),
     ]
-    for path in lib_candidates:
+
+    for path in candidates:
         if os.path.exists(path):
             return path
 
-    return os.path.join(DATA_PATH, "world.json")
+    # Preferred destination path (never points to data.rot/lib/data/)
+    default_dir = os.path.join(writable_root, "data.rot", "save", "world")
+    if not os.path.exists(default_dir):
+        alt_dir = os.path.join(BASE_DIR, "data.rot", "save", "world")
+        if os.path.exists(alt_dir):
+            default_dir = alt_dir
+
+    return os.path.join(default_dir, filename)
 
 class ImageFontWrapper:
     def __init__(self, font_path, size, is_sysfont=False, max_cache_size=256):
@@ -414,8 +417,8 @@ def load_settings(world_preset="world"):
                 MAP_CHUNKS = int(_get_val(map_config, ['map_chunks', 'chunks'], 3))
                 CHUNK_SIZE = int(_get_val(map_config, ['chunk_size', 'size'], 128))
                 WORLD_SEED = str(_get_val(map_config, ['seed', 'world_seed'], ''))
-                gen_img_val = _get_val(map_config, ['generate_images', 'images'], False)
-                GENERATE_IMAGES = str(gen_img_val).lower() == 'false'
+                gen_img_val = _get_val(map_config, ['generate_images', 'images'], True)
+                GENERATE_IMAGES = str(gen_img_val).lower() == 'true'
 
             player_config = root.get('player', {})
             if player_config:

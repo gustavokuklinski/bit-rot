@@ -91,9 +91,9 @@
         "default": ""
       },
       "generate_images": {
-        "value": false,
+        "value": true,
         "name": "Generate Map JPGs",
-        "default": false
+        "default": true
       }
     },
     "item_spawning": {

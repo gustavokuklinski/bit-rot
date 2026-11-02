@@ -134,33 +134,41 @@ def _apply_build_and_proceed(game, state, mode_id, filename):
         path = core.data.config.get_world_config_path('world')
         world_data = load_config_data(path)
 
-    # Apply checkbox states directly to world configuration
+    # Apply checkbox states as native booleans
     if 'game' not in world_data:
         world_data['game'] = {}
 
     world_data['game']['all_visible'] = {
-        'value': 'true' if state.get('all_visible', False) else 'false',
+        'value': bool(state.get('all_visible', False)),
         'name': 'All containers are opened',
-        'default': 'false'
+        'default': False
     }
     
     world_data['game']['infinite_liquid'] = {
-        'value': 'true' if state.get('infinite_liquid', True) else 'false',
+        'value': bool(state.get('infinite_liquid', True)),
         'name': 'Liquids are infinite',
-        'default': 'true'
+        'default': True
     }
 
     world_data['game']['permadeath'] = {
-        'value': 'true' if state.get('permadeath', False) else 'false',
+        'value': bool(state.get('permadeath', False)),
         'name': 'Delete save when die',
-        'default': 'false'
+        'default': False
     }
+
+    # Ensure a fresh 12-digit seed is generated
+    if not state.get('world_seed'):
+        state['world_seed'] = "".join(str(random.randint(0, 9)) for _ in range(12))
+
+    # Sync seed into the map configuration block before saving
+    if 'map' not in world_data:
+        world_data['map'] = {}
+    if 'seed' not in world_data['map']:
+        world_data['map']['seed'] = {'name': 'World seed', 'default': ''}
+    world_data['map']['seed']['value'] = str(state['world_seed'])
 
     state['world_data'] = world_data
     state['chosen_mode'] = mode_id
-    
-    if not state.get('world_seed'):
-        state['world_seed'] = "".join(str(random.randint(0, 9)) for _ in range(12))
 
     # Create the save folder with world.json
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -451,21 +459,30 @@ def handle_select_world_events(game, state, event, mouse_pos, clickable_rects):
             if 'game' not in world_data:
                 world_data['game'] = {}
             world_data['game']['all_visible'] = {
-                'value': 'true' if state.get('all_visible', False) else 'false',
+                'value': bool(state.get('all_visible', False)),
                 'name': 'All containers are opened',
-                'default': 'false'
+                'default': False
             }
-            
             world_data['game']['infinite_liquid'] = {
-                'value': 'true' if state.get('infinite_liquid', True) else 'false',
+                'value': bool(state.get('infinite_liquid', True)),
                 'name': 'Liquids are infinite',
-                'default': 'false'
+                'default': True
             }
             world_data['game']['permadeath'] = {
-                'value': 'true' if state.get('permadeath', False) else 'false',
+                'value': bool(state.get('permadeath', False)),
                 'name': 'Delete save when die',
-                'default': 'false'
+                'default': False
             }
+
+            # Generate fresh seed for Sandbox
+            if not state.get('world_seed'):
+                state['world_seed'] = "".join(str(random.randint(0, 9)) for _ in range(12))
+
+            if 'map' not in world_data:
+                world_data['map'] = {}
+            if 'seed' not in world_data['map']:
+                world_data['map']['seed'] = {'name': 'World seed', 'default': ''}
+            world_data['map']['seed']['value'] = str(state['world_seed'])
 
             state['world_data'] = world_data
 
@@ -473,6 +490,7 @@ def handle_select_world_events(game, state, event, mouse_pos, clickable_rects):
                 game.world_setup_state = {}
             game.world_setup_state['world_data'] = world_data
             game.world_setup_state['chosen_mode'] = 'sandbox'
+            game.world_setup_state['world_seed'] = state['world_seed']
             return
 
         for mode, rect in clickable_rects.get('cards', []):

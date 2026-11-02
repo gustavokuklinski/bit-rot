@@ -91,7 +91,7 @@ def save_game(game):
             from core.ui.helpers.trait_config_loader import save_config_json, load_config_data
             w_data = getattr(game, 'world_setup_state', {}).get('world_data')
             if not w_data:
-                w_data = load_config_data(os.path.join(DATA_PATH, "world.json"))
+                w_data = load_config_data(core.data.config.get_world_config_path("world"))
             save_config_json(w_data, world_json_path)
         
         # --- 1. PREPARE INDIVIDUAL PLAYER DATA ---

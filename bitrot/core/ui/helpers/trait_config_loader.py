@@ -100,11 +100,66 @@ def load_config_data(filepath):
         print(f"Error loading config {filepath}: {e}")
         return {}
 
+def clean_config_value(key, val):
+    """Converts stringified booleans and numbers into native JSON types."""
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, (int, float)):
+        return val
+    if isinstance(val, str):
+        # Keep text fields as strings
+        if key.lower() in ('seed', 'world_seed', 'name', 'player_name', 'world_preset_name', 'author', 'language'):
+            return val
+
+        v_lower = val.strip().lower()
+        if v_lower == 'true':
+            return True
+        if v_lower == 'false':
+            return False
+
+        # Convert clean integers
+        try:
+            return int(val)
+        except ValueError:
+            pass
+
+        # Convert clean floats
+        try:
+            return float(val)
+        except ValueError:
+            pass
+
+    return val
+
+def sanitize_config_dict(data):
+    """Recursively converts config dictionaries to use native numbers and booleans."""
+    if not isinstance(data, dict):
+        return data
+    cleaned = {}
+    for k, v in data.items():
+        if isinstance(v, dict):
+            if 'value' in v:
+                sub_dict = dict(v)
+                sub_dict['value'] = clean_config_value(k, sub_dict['value'])
+                if 'default' in sub_dict:
+                    sub_dict['default'] = clean_config_value(k, sub_dict['default'])
+                cleaned[k] = sub_dict
+            else:
+                cleaned[k] = sanitize_config_dict(v)
+        elif isinstance(v, list):
+            cleaned[k] = [sanitize_config_dict(x) if isinstance(x, dict) else clean_config_value(k, x) for x in v]
+        else:
+            cleaned[k] = clean_config_value(k, v)
+    return cleaned
+
 def save_config_json(data, filepath):
     if filepath.endswith('.xml'):
         filepath = os.path.splitext(filepath)[0] + '.json'
     root_tag = "world" if "world" in os.path.basename(filepath).lower() else "preferences"
-    out = {root_tag: data}
+
+    # Sanitize values to eliminate quotes around numbers and booleans
+    sanitized_data = sanitize_config_dict(data)
+    out = {root_tag: sanitized_data}
 
     try:
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -117,15 +172,12 @@ def save_config_json(data, filepath):
 save_config_xml = save_config_json
 
 def _load_config_presets(state):
-    preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "config")
+    preset_dir = os.path.join(get_writable_dir(), "data.rot", "save", "world")
     if not os.path.exists(preset_dir):
         os.makedirs(preset_dir, exist_ok=True)
     presets = ["world"] 
     try:
-        files = [
-            f for f in os.listdir(preset_dir) 
-            if f.endswith('.json') and not f.startswith("preferences") and not f.startswith("keybinds") and not f.startswith("voip")
-        ]
+        files = [f for f in os.listdir(preset_dir) if f.endswith('.json')]
         for f in sorted(files):
             name = os.path.splitext(f)[0]
             if name != 'world' and name not in presets:
