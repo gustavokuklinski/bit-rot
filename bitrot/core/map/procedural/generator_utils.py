@@ -41,7 +41,6 @@ class ProceduralGeneratorUtils:
                     if 0 <= gx < mw and 0 <= gy < mh:
                         if layer == 'base':
                             if clear_base:
-                                # Overwrite base completely so trees, rocks, and walls are cleared
                                 target[layer][gy][gx] = tile if (tile and tile != '') else ' '
                             else:
                                 if tile and tile != ' ':
@@ -55,6 +54,20 @@ class ProceduralGeneratorUtils:
 
                         if 'protected_mask' in target:
                             target['protected_mask'][gy][gx] = 1
+
+        # Automatically apply default building floor (house_floor_01) under roofs if ground is empty or grass
+        if 'roof' in source and source['roof']:
+            roof_grid = source['roof']
+            for r in range(len(roof_grid)):
+                for c in range(len(roof_grid[r])):
+                    r_tile = roof_grid[r][c]
+                    if r_tile and r_tile != ' ':
+                        gx, gy = ox + c, oy + r
+                        if 0 <= gx < mw and 0 <= gy < mh:
+                            if target['ground'][gy][gx] in ('bg_grass', ' ', ''):
+                                target['ground'][gy][gx] = 'house_floor_01'
+                            if 'protected_mask' in target:
+                                target['protected_mask'][gy][gx] = 1
 
     def _blit_template_mapped(self, target_layers, source_tmpl, tx, ty, mw, mh, suffix=''):
         mask_key = 'protected_mask' + suffix

@@ -13,6 +13,7 @@ def _get_chunk_bg(bg_type):
         'boat': 'chunk_boat.jpg',
         'layer': 'chunk_layer.jpg',
         'island': 'chunk_island.jpg',
+        'discover': 'chunk_discover.jpg',
         'load': 'chunk_load.jpg',
         'respawn': 'chunk_load.jpg',
     }
@@ -92,7 +93,7 @@ def run_chunk_loading(game):
     center_x = GAME_WIDTH // 2
     bottom_y = GAME_HEIGHT - 60  # Aligned center-bottom
 
-    loading_title = getattr(game, '_chunk_loading_title', None) or tr('ui', 'Loading Chunk')
+    loading_title = getattr(game, '_chunk_loading_title', None) or tr('ui', 'Loading')
     btn_rect = None
 
     if not is_ready:

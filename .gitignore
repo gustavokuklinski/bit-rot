@@ -11,6 +11,9 @@ Bitrot-x86_64.AppImage
 /bitrot.onefile-build
 /game
 /data.rot/logs/*.log
+/data.rot/save/game/save_*
+/data.rot/save/config/*.json
 /bitrot/data.rot/server*
 /bitrot/data.rot/logs/*.log
+/bitrot/data.rot/save/game/save_*
 /bitrot/data.rot/lib/sfx/*/*-pygbag.ogg

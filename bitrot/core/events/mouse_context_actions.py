@@ -1461,9 +1461,18 @@ def handle_context_menu_click(game, mouse_pos):
 
                 if player_fuel < fuel_cost:
                     display_message(f"{tr('msg', 'Not enough fuel! Need')} {fuel_cost}x {fuel_name} {tr('msg', 'to discover an island.')}")
+                    if hasattr(game, 'sound_manager'):
+                        game.sound_manager.play_sound("vehicle_fail.ogg", subdir="vehicles", game=game, base_volume=0.8, is_critical=True)
+
                 elif not getattr(game, 'generator', None):
                     display_message(tr('msg', "Generator is not available in this world."))
                 else:
+                    # Trigger CHUNK_LOADING splash screen with chunk_discover.jpg
+                    game._chunk_loading_title = tr('ui', 'Discovering Island')
+                    game._chunk_loading_bg_type = 'discover'
+                    game._chunk_load_timer = None
+                    game.game_state = 'CHUNK_LOADING'
+                        
                     consume_player_fuel_units(game.player, fuel_cost)
                     new_gx, new_gy = game.generator.discover_new_isolated_island()
                     game.map_manager.refresh_maps()

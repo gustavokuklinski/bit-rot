@@ -1047,9 +1047,13 @@ class ProceduralGeneratorChunk:
         if force_forest:
             for y in range(h):
                 for x in range(w):
+                    # Never overwrite protected building templates or existing floors
+                    if layers.get('protected_mask') and layers['protected_mask'][y][x] == 1:
+                        continue
                     ground_tile = layers['ground'][y][x]
-                    if ground_tile != road_tile and ground_tile != sand_tile and ground_tile != dirt_tile and ground_tile != getattr(self, 'water_tile', 'water_01'):
-                         layers['ground'][y][x] = 'bg_grass'
+                    if ground_tile in ('house_floor_01', road_tile, sand_tile, dirt_tile, getattr(self, 'water_tile', 'water_01')) or 'floor' in ground_tile:
+                        continue
+                    layers['ground'][y][x] = 'bg_grass'
 
         # Border enforcement on Layer 1: '@' walls on top of sand, only on land
         sand_border_tile = getattr(self, 'sand_tile', 'beach_sand_01')
@@ -1313,6 +1317,14 @@ class ProceduralGeneratorChunk:
                 occupied_mask[ry][rx] = 1
                 if 'protected_mask' in layers:
                     layers['protected_mask'][ry][rx] = 1
+
+        # Ensure interior building footprint gets default building floor
+        if not is_cave:
+            for ry in range(ty, ty + th):
+                for rx in range(tx, tx + tw):
+                    if layers['roof'][ry][rx] != ' ' or (layers['base'][ry][rx] != ' ' and layers['base'][ry][rx] != '@'):
+                        if layers['ground'][ry][rx] in ('bg_grass', ' ', ''):
+                            layers['ground'][ry][rx] = 'house_floor_01'
 
         # 2. Paint pavement lot around the exterior perimeter only (never overwrite building interior)
         if not is_cave:

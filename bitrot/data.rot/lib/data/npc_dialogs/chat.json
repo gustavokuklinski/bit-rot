@@ -14,13 +14,18 @@
       "id": "lore_branch",
       "options": [
         {
-          "player_question": "What was it like when the Plague first hit?",
-          "npc_answer": "It was chaos. The news said it was a new flu. Then people started bleeding from their eyes. Rio was a warzone in three days.",
+          "player_question": "What was it like when the Pox first hit?",
+          "npc_answer": "It was chaos. The news said it was a new flu. Then people started bleeding from their black dots. Rio was a warzone in three days.",
           "priority": 10
         },
         {
           "player_question": "Why did Brazil fall so fast?",
-          "npc_answer": "Carnival, my friend. Millions of people, sweaty and packed together. The perfect breeding ground for the Plague. The government tried to lock us down, but it was too late.",
+          "npc_answer": "Carnival, my friend. Millions of people, sweaty and packed together. The perfect breeding ground for the Pox. The government tried to lockdown, but it was too late.",
+          "priority": 10
+        },
+        {
+          "player_question": "The archipelogo is large!",
+          "npc_answer": "Yes, they bought a lot of islets, some of then are part of a huge mid-ocean ridge.",
           "priority": 10
         }
       ]
