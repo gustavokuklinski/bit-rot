@@ -96,6 +96,8 @@ class CraftingCraftTab:
                 for container, key, item, ctype, _ in locations:
                     if removed >= to_remove:
                         break
+                    if ctype == 'maptile':
+                        continue
                     if item.name in valid_names:
                         has_item_load = (item.load is not None)
                         item_qty = item.load if has_item_load else 1
@@ -104,6 +106,9 @@ class CraftingCraftTab:
                             item.load -= take
                         removed += take
                         if (has_item_load and item.load <= 0) or (not has_item_load and take > 0):
+                            if hasattr(item, 'inventory') and item.inventory:
+                                item.inventory.clear()
+
                             if ctype == 'list':
                                 if item in container:
                                     container.remove(item)

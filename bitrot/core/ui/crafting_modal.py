@@ -162,10 +162,8 @@ class CraftingModal(BaseModal):
                     if hasattr(item, 'inventory') and item.inventory:
                         extract_list(item.inventory, path + [tr('item', item.name)])
 
-        # Always include main inventory
         extract_list(self.player.inventory, ["Inventory"])
         
-        # Belt and Gear if exclude_equipped is False
         if not exclude_equipped:
             for i in range(len(self.player.belt) - 1, -1, -1):
                 item = self.player.belt[i]
@@ -186,7 +184,6 @@ class CraftingModal(BaseModal):
                         extract_list(item.inventory, ["Gear", str(k).capitalize(), tr('item', item.name)])
         
         if include_nearby and self.game:
-            # 1. Nearby container contents
             if nearby_containers is None:
                 nearby_containers = self.game.find_nearby_containers()
             if nearby_containers:
@@ -195,7 +192,6 @@ class CraftingModal(BaseModal):
                         obj_name = getattr(obj, 'name', 'Ground')
                         extract_list(obj.inventory, ["Nearby", obj_name])
 
-            # 2. Loose ground dropped items within 1 tile of the player
             if hasattr(self.game, 'items_on_ground') and self.player and hasattr(self.player, 'rect'):
                 p_rect = self.player.rect
                 for i in range(len(self.game.items_on_ground) - 1, -1, -1):
@@ -212,6 +208,13 @@ class CraftingModal(BaseModal):
                             locations.append((self.game.items_on_ground, i, it, 'list', [tr('ui', "Ground")]))
                             if hasattr(it, 'inventory') and it.inventory:
                                 extract_list(it.inventory, [tr('ui', "Ground"), tr('item', it.name)])
+
+            # 3. Include nearby map tiles (like Stove)
+            from core.ui.crafting_common import get_nearby_map_tiles
+            for map_item, (gx, gy) in get_nearby_map_tiles(self.game):
+                if id(map_item) not in seen_item_ids:
+                    seen_item_ids.add(id(map_item))
+                    locations.append((None, (gx, gy), map_item, 'maptile', ["Nearby", map_item.name]))
                         
         return locations
 
@@ -299,7 +302,14 @@ class CraftingModal(BaseModal):
     def get_preview_image(self, name):
         try:
             item = Item.create_from_name(name)
-            return item.image if item else None
+            if item and item.image:
+                return item.image
+            # Fallback: check map tile definitions (e.g. Stove, Furnace)
+            if self.game and hasattr(self.game, 'tile_manager'):
+                for tile_def in self.game.tile_manager.definitions.values():
+                    if tile_def.get('name') == name and tile_def.get('image'):
+                        return tile_def['image']
+            return None
         except Exception:
             return None
 
@@ -388,6 +398,13 @@ class CraftingModal(BaseModal):
                     if (dx * dx + dy * dy) <= (TILE_SIZE * 1.5) ** 2:
                         seen_nearby_ids.add(id(it))
                         nearby_items.append(it)
+
+        # Include nearby map tiles
+        from core.ui.crafting_common import get_nearby_map_tiles
+        for map_item, _ in get_nearby_map_tiles(self.game):
+            if id(map_item) not in seen_nearby_ids:
+                seen_nearby_ids.add(id(map_item))
+                nearby_items.append(map_item)
 
         player_items = [loc[2] for loc in self._get_all_item_locations()]
 
@@ -540,7 +557,15 @@ class CraftingModal(BaseModal):
                 img = item.image
                 if img: img = pygame.transform.scale(img, (20, 20))
                 
-                qty_str = f"x{item.load}" if item.is_stackable() else f"Dur: {int(item.durability or 0)}"
+                if getattr(item, 'is_maptile', False):
+                    qty_str = tr('ui', "Nearby")
+                elif item.is_stackable():
+                    qty_str = f"x{item.load}"
+                elif item.durability is not None:
+                    qty_str = f"Dur: {int(item.durability)}"
+                else:
+                    qty_str = "x1"
+
                 breadcrumb = " > ".join(path)
                 s = font_12.render(f"{tr('item', item.name)} ({qty_str}) | {breadcrumb}", False, WHITE)
                 
@@ -575,6 +600,7 @@ class CraftingModal(BaseModal):
         return sorted(locs, key=lambda loc: 0 if loc[2].id == preferred_id else 1)
 
     def _validate_ingredients(self, recipe, nearby_containers=None, count=1):
+        from core.ui.crafting_common import container_holds_only_food_or_liquids
         count = max(1, int(count))
         for r_idx, req in enumerate(recipe.ingredients):
             if not req['destroy']: continue
@@ -592,7 +618,9 @@ class CraftingModal(BaseModal):
 
                 if item.name in valid_names:
                     if hasattr(item, 'inventory') and item.inventory: 
-                        return f"{tr('msg', 'Cannot use')} {tr('item', item.name)}: {tr('msg', 'It contains items!')}"
+                        # Allow crafting if container holds ONLY liquids, consumable drinks, or consumable foods
+                        if not container_holds_only_food_or_liquids(item):
+                            return f"{tr('msg', 'Cannot use')} {tr('item', item.name)}: {tr('msg', 'It contains items!')}"
 
                     item_qty = item.load if item.load is not None else 1
                     take = min(to_remove - removed_check, item_qty)

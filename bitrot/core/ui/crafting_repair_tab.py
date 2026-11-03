@@ -148,6 +148,9 @@ class CraftingRepairTab:
                             item.load -= take
                         removed += take
                         if (has_item_load and item.load <= 0) or (not has_item_load and take > 0):
+                            if hasattr(item, 'inventory') and item.inventory:
+                                item.inventory.clear()
+
                             if ctype == 'list':
                                 if item in container:
                                     container.remove(item)

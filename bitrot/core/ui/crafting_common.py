@@ -26,6 +26,108 @@ def player_has_at_least_one_ingredient(player, game, recipe):
                     return True
     return False
 
+def get_nearby_map_tiles(game, max_distance=TILE_SIZE * 2.0):
+    """Finds named map tiles and maptile containers within reach of the player to act as crafting stations/ingredients."""
+    if not game or not getattr(game, 'player', None):
+        return []
+
+    player = game.player
+    p_cx = player.rect.centerx
+    p_cy = player.rect.centery
+    max_dist_sq = max_distance * max_distance
+
+    tiles = []
+    seen_coords = set()
+
+    # 1. Check maptile containers in game.containers (e.g. Stove with type="maptile_container")
+    for obj in getattr(game, 'containers', []):
+        if getattr(obj, 'is_maptile', False) or getattr(obj, 'item_type', '') == 'maptile_container':
+            if hasattr(obj, 'rect'):
+                dx = p_cx - obj.rect.centerx
+                dy = p_cy - obj.rect.centery
+                if (dx * dx + dy * dy) <= max_dist_sq:
+                    gx = int(obj.rect.x // TILE_SIZE)
+                    gy = int(obj.rect.y // TILE_SIZE)
+                    seen_coords.add((gx, gy))
+
+                    tile_name = getattr(obj, 'name', None)
+                    if not tile_name or tile_name in ('Unknown', 'None'):
+                        continue
+
+                    img = getattr(obj, 'image', None)
+                    if not img and hasattr(obj, 'tile_def') and obj.tile_def:
+                        img = obj.tile_def.get('image')
+
+                    map_item = Item(tile_name, item_type='maptile')
+                    map_item.id = f"maptile_{gx}_{gy}"
+                    map_item.image = img
+                    map_item.rect = pygame.Rect(obj.rect.x, obj.rect.y, TILE_SIZE, TILE_SIZE)
+                    map_item.x = map_item.rect.x
+                    map_item.y = map_item.rect.y
+                    map_item.is_maptile = True
+                    map_item.load = None
+                    map_item.durability = None
+                    tiles.append((map_item, (gx, gy)))
+
+    # 2. Check static tiles in game.map_data within reach
+    if hasattr(game, 'map_data') and game.map_data and hasattr(game, 'map_manager'):
+        p_gx = int(p_cx // TILE_SIZE)
+        p_gy = int(p_cy // TILE_SIZE)
+        map_h = len(game.map_data)
+        map_w = len(game.map_data[0]) if map_h > 0 else 0
+
+        for dy in range(-2, 3):
+            for dx in range(-2, 3):
+                gx = p_gx + dx
+                gy = p_gy + dy
+                if 0 <= gy < map_h and 0 <= gx < map_w:
+                    if (gx, gy) in seen_coords:
+                        continue
+                    tile_def = game.map_manager.get_tile_at(gx, gy)
+                    if tile_def and tile_def.get('name') and tile_def.get('name') not in ('Unknown', 'None', ''):
+                        t_cx = gx * TILE_SIZE + TILE_SIZE // 2
+                        t_cy = gy * TILE_SIZE + TILE_SIZE // 2
+                        dist_sq = (p_cx - t_cx) ** 2 + (p_cy - t_cy) ** 2
+                        if dist_sq <= max_dist_sq:
+                            seen_coords.add((gx, gy))
+                            tile_name = tile_def['name']
+                            map_item = Item(tile_name, item_type='maptile')
+                            map_item.id = f"maptile_{gx}_{gy}"
+                            map_item.image = tile_def.get('image')
+                            map_item.rect = pygame.Rect(gx * TILE_SIZE, gy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                            map_item.x = map_item.rect.x
+                            map_item.y = map_item.rect.y
+                            map_item.is_maptile = True
+                            map_item.load = None
+                            map_item.durability = None
+                            tiles.append((map_item, (gx, gy)))
+
+    return tiles
+
+def container_holds_only_food_or_liquids(item):
+    """
+    Checks if a container holds ONLY liquids, consumable drinks, or consumable foods.
+    Returns True if empty or if every item inside matches allowed food/drink/liquid types.
+    """
+    if not item or not hasattr(item, 'inventory') or not item.inventory:
+        return True
+
+    allowed_types = {
+        'liquid', 'car_fuel', 'consumable_drink', 'consumable_food', 'food', 'drink'
+    }
+
+    for inside in item.inventory:
+        if not inside:
+            continue
+        itype = getattr(inside, 'item_type', '') or getattr(inside, 'type', '') or ''
+        is_liq = bool(getattr(inside, 'liquid', False)) or (itype in ('liquid', 'car_fuel')) or (inside.name in ('Water Unit', 'Dirty Water Unit', 'Fuel Unit'))
+        is_food_drink = itype in allowed_types or itype.startswith('consumable_food') or itype.startswith('consumable_drink')
+        
+        if not (is_liq or is_food_drink):
+            return False
+
+    return True
+
 def calculate_max_crafts(player, game, recipe, nearby_containers=None):
     """Calculates maximum possible crafts based on player inventory, gear, belt, and nearby items."""
     if not player:
@@ -498,8 +600,10 @@ def execute_recipe_craft(game, recipe, player=None, count=1, preferred_item_id=N
             continue
         for _, _, it, _, _ in locations:
             if it.name in req['names'] and hasattr(it, 'inventory') and it.inventory:
-                display_message(f"{tr('msg', 'Cannot use')} {tr('item', it.name)}: {tr('msg', 'It contains items!')}")
-                return
+                # Allow crafting if container contains ONLY liquids, consumable drinks, or consumable food
+                if not container_holds_only_food_or_liquids(it):
+                    display_message(f"{tr('msg', 'Cannot use')} {tr('item', it.name)}: {tr('msg', 'It contains items!')}")
+                    return
 
     craft_type = getattr(recipe, 'craft_type', 'create').lower()
     if craft_type == 'dismantle':
@@ -556,6 +660,8 @@ def execute_recipe_craft(game, recipe, player=None, count=1, preferred_item_id=N
             for container, key, it, ctype, _ in locs_now:
                 if removed >= to_remove:
                     break
+                if ctype == 'maptile':
+                    continue
                 if any(it.name.lower() == vn.lower() for vn in valid_names) and it != target_repair_item:
                     has_item_load = (it.load is not None)
                     item_qty = it.load if has_item_load else 1
@@ -572,6 +678,10 @@ def execute_recipe_craft(game, recipe, player=None, count=1, preferred_item_id=N
                     removed += take
 
                     if (has_item_load and it.load <= 0) or (not has_item_load and take > 0):
+                        # If the consumed item was a container holding liquids/food, spill or empty its inventory
+                        if hasattr(it, 'inventory') and it.inventory:
+                            it.inventory.clear()
+
                         if ctype == 'list':
                             if it in container:
                                 container.remove(it)
@@ -618,9 +728,6 @@ def execute_recipe_craft(game, recipe, player=None, count=1, preferred_item_id=N
     )
 
 def get_crafting_item_locations(player, game, include_nearby=True, nearby_containers=None, exclude_equipped=False):
-    """Gathers all item locations across player inventory, belt, clothes, nearby containers,
-    and items dropped on the ground within 1 tile of the player.
-    """
     locations = []
     seen_item_ids = set()
     
@@ -664,7 +771,7 @@ def get_crafting_item_locations(player, game, include_nearby=True, nearby_contai
                     obj_name = getattr(obj, 'name', 'Ground')
                     extract_list(obj.inventory, ["Nearby", obj_name])
                     
-        # 2. Loose ground dropped items within 1 tile (TILE_SIZE * 1.5) of the player
+        # 2. Loose ground dropped items within 1 tile of the player
         if hasattr(game, 'items_on_ground') and player and hasattr(player, 'rect'):
             p_rect = player.rect
             for i in range(len(game.items_on_ground) - 1, -1, -1):
@@ -681,6 +788,12 @@ def get_crafting_item_locations(player, game, include_nearby=True, nearby_contai
                         locations.append((game.items_on_ground, i, it, 'list', [tr('ui', "Ground")]))
                         if hasattr(it, 'inventory') and it.inventory:
                             extract_list(it.inventory, [tr('ui', "Ground"), tr('item', it.name)])
+
+        # 3. Nearby map tiles (like Stove, Anvil, Campfire, etc.)
+        for map_item, (gx, gy) in get_nearby_map_tiles(game):
+            if id(map_item) not in seen_item_ids:
+                seen_item_ids.add(id(map_item))
+                locations.append((None, (gx, gy), map_item, 'maptile', ["Nearby", map_item.name]))
                     
     return locations
 
