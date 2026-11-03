@@ -1026,6 +1026,11 @@ def handle_keyboard_events(game, event, action_triggered=None):
                         break
 
             if stair_tile and stair_tile.get('is_stair'):
+                
+                if getattr(game.player, 'vehicle', None):
+                    display_message(tr('msg', "Exit the vehicle to use the stair"))
+                    return
+
                 target_layer = stair_tile.get('target_layer')
                 if target_layer and target_layer != game.current_layer_index:
                     if game.player.layer_switch_cooldown <= 0:
@@ -1040,6 +1045,15 @@ def handle_keyboard_events(game, event, action_triggered=None):
 
             # 4. Standard interactables (NPCs, containers, vehicle entry, doors, boats)
             target = get_targeted_interactable(game)
+            if target and target.get('type') == 'maptile_teleport' and getattr(game.player, 'vehicle', None):
+                display_message(tr('msg', "Exit the vehicle to use the boat"))
+                return
+
+            # 3. Vehicle exit
+            if getattr(game.player, 'vehicle', None):
+                game.player.exit_vehicle(game)
+                return
+                
             if target:
                 if target['type'] == 'npc':
                     found_npc = target['entity']

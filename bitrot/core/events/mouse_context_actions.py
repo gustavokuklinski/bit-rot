@@ -1436,6 +1436,11 @@ def handle_context_menu_click(game, mouse_pos):
                 clicked_on_menu = True
 
             elif option == 'Travel to':
+                if getattr(game.player, 'vehicle', None):
+                    display_message(tr('msg', "Exit the vehicle to use the boat"))
+                    game.context_menu['active'] = False
+                    return
+
                 if target_sub_slot:
                     try:
                         dest_gx, dest_gy = map(int, target_sub_slot.split('_'))
@@ -1455,6 +1460,11 @@ def handle_context_menu_click(game, mouse_pos):
                 clicked_on_menu = True
 
             elif option == 'Discover Island':
+                if getattr(game.player, 'vehicle', None):
+                    display_message(tr('msg', "Exit the vehicle to discover island"))
+                    game.context_menu['active'] = False
+                    return
+
                 fuel_cost = 25
                 player_fuel = get_player_fuel_units(game.player)
                 fuel_name = tr('item', "Fuel Unit")

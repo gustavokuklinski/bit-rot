@@ -406,6 +406,12 @@ class Vehicle:
                     else:
                         return True, obstacle
 
+            # Block vehicle from passing through any door or window (open, closed, or broken)
+            if game:
+                from core.systems.utils import is_rect_on_door_or_window
+                if is_rect_on_door_or_window(game, rect_check):
+                    return True, None
+
             if game:
                 entities = game.zombies + (list(game.npcs) if hasattr(game.npcs, '__iter__') else []) + [game.player]
                 for entity in entities:

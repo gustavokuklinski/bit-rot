@@ -20,9 +20,10 @@ def teleport_player_to_chunk(game, dest_gx, dest_gy, dest_layer=1):
     if not getattr(game, 'player', None):
         return
 
-    # Exit vehicle if seated
+    # Vehicles cannot use boat
     if getattr(game.player, 'vehicle', None):
-        game.player.exit_vehicle(game)
+        display_message(tr('msg', "Exit the vehicle to use the boat"))
+        return
 
     current_map = game.map_manager.current_map_filename
     game.map_states.setdefault(current_map, {})
@@ -446,7 +447,7 @@ def is_door_or_window_tile(game, grid_x, grid_y):
     tile_def = game.map_manager.get_tile_at(grid_x, grid_y) if hasattr(game, 'map_manager') else None
     name = str(tile_def.get('name', '')).lower().strip() if tile_def else ''
 
-    if tile_def and (tile_def.get('is_statable') or tile_def.get('is_window')):
+    if tile_def and not tile_def.get('is_stair') and (tile_def.get('is_statable') or tile_def.get('is_window')):
         return True
     if any(k in char for k in ('door', 'window', '_open', '_close', '_broke')):
         return True

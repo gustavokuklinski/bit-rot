@@ -333,6 +333,10 @@ def handle_right_click(game, mouse_pos):
                                 click_index = 0
 
                         elif is_boat:
+                            if getattr(game.player, 'vehicle', None):
+                                display_message(tr('msg', "Exit the vehicle to use the boat"))
+                                return
+                                
                             clicked_item = {
                                 'name': tile.get('name', 'Boat'), 
                                 'type': 'maptile_teleport', 

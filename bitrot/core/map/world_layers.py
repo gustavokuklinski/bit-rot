@@ -355,6 +355,11 @@ def set_active_layer(game, layer_index, skip_cache_save=False):
         print(f"Error: Attempted to switch to non-existent layer {layer_index}")
         return False
 
+    # Block layer transitions via stairs while inside a vehicle
+    if not skip_cache_save and getattr(game, 'player', None) and getattr(game.player, 'vehicle', None):
+        display_message(tr('msg', "Exit the vehicle to use the stair"))
+        return False
+
     current_filename = game.map_manager.current_map_filename
     from_layer = getattr(game, 'current_layer_index', 1)
     from_gx = int(game.player.rect.centerx // TILE_SIZE) if getattr(game, 'player', None) else 0
@@ -665,11 +670,15 @@ def check_for_layer_teleport(game):
         return
         
     tile_char = current_map_data[tile_y][tile_x]
-    tile_def = game.tile_manager.definitions.get(tile_char)
+    tile_def = game.map_manager.get_tile_at(tile_x, tile_y)
     
     if tile_def and tile_def.get('is_stair'):
+        if getattr(player, 'vehicle', None):
+            display_message(tr('msg', "Exit the vehicle to use the stair"))
+            player.layer_switch_cooldown = 60
+            return
+
         target_layer = tile_def.get('target_layer')
-        
         if target_layer and target_layer != game.current_layer_index:
             print(f"Auto-teleport detected: Moving to Layer {target_layer}")
             if set_active_layer(game, target_layer):
