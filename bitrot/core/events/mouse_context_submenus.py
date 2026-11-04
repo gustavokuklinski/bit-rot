@@ -73,6 +73,72 @@ def build_equip_submenu(clicked_item, click_source, game):
         }
     return None
 
+def build_liquid_collect_submenu(dummy_liquid, game):
+    """Builds a 'Send to' submenu listing player containers that can store the target liquid."""
+    sub_opts = []
+    display_map = {}
+    tooltip_map = {}
+    colors_map = {}
+
+    candidate_containers = []
+    seen_ids = set()
+
+    def scan(items, loc_prefix):
+        item_iterable = items.values() if isinstance(items, dict) else items
+        for it in item_iterable:
+            if not it:
+                continue
+            if is_valid_send_to_container(it) and does_allow_liquid(it) and hasattr(it, 'inventory'):
+                it_id = str(getattr(it, 'id', id(it)))
+                if it_id not in seen_ids:
+                    # Prevent mixing with a different liquid
+                    has_different_liquid = False
+                    for inside in it.inventory:
+                        if inside and is_item_liquid(inside):
+                            if inside.name != dummy_liquid.name and (getattr(inside, 'load', 0) or 0) > 0:
+                                has_different_liquid = True
+                                break
+                    if not has_different_liquid:
+                        avail = get_container_liquid_capacity_units(it, dummy_liquid)
+                        if avail > 0:
+                            seen_ids.add(it_id)
+                            candidate_containers.append((it, it_id, loc_prefix))
+
+            if hasattr(it, 'inventory') and it.inventory:
+                scan(it.inventory, f"{loc_prefix} > {it.name}")
+
+    scan(getattr(game.player, 'inventory', []), tr('ui', 'Inventory'))
+    scan(getattr(game.player, 'belt', []), tr('ui', 'Belt'))
+    if hasattr(game.player, 'clothes'):
+        scan(game.player.clothes, tr('ui', 'Gear'))
+
+    liquid_name = dummy_liquid.name
+    if candidate_containers:
+        for c, c_id, loc_str in candidate_containers:
+            sub_opts.append(c_id)
+            c_name = getattr(c, 'name', tr('ui', 'Container'))
+            max_l = getattr(c, 'max_liquid', None)
+            cur_l = int(sum(getattr(x, 'load', 1) or 1 for x in getattr(c, 'inventory', []) if is_item_liquid(x)))
+            display_map[c_id] = f"{c_name} ({cur_l}/{max_l or '?'})"
+            tooltip_map[c_id] = f"{tr('ui', 'Send')} {tr('item', liquid_name)} {tr('ui', 'to')} {c_name}\n{tr('ui', 'Location:')} {loc_str}"
+            colors_map[c_id] = WHITE
+    else:
+        # Show disabled notification item so the context menu reliably appears
+        no_cont_id = "no_container"
+        sub_opts.append(no_cont_id)
+        display_map[no_cont_id] = tr('ui', "(No container in inventory)")
+        tooltip_map[no_cont_id] = tr('ui', "You need an empty or compatible liquid container.")
+        colors_map[no_cont_id] = GRAY
+
+    menu_label = f"{tr('ui', 'Send')} {tr('item', liquid_name)} {tr('ui', 'to')}"
+    return {
+        'label': menu_label,
+        'sub': sub_opts,
+        'display_names': display_map,
+        'tooltips': tooltip_map,
+        'colors': colors_map
+    }
+
 def build_install_vehicle_submenu(clicked_item, game):
     """Builds submenu for installing a part or refueling a nearby or open vehicle."""
     veh = None

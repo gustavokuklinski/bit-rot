@@ -9,6 +9,7 @@
       "water": 100.0,
       "food": 100.0,
       "anxiety": 0.0,
+      "drugs": 0.0,
       "infection": 0.0,
       "defence": 0.0
     },

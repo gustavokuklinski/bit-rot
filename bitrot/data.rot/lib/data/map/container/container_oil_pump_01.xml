@@ -2,11 +2,8 @@
     <visuals>
         <sprite file="misc_oil_pump_01.png" />
     </visuals>
-    <capacity value="5" />
+    <capacity value="2" />
     <loot>
-        <item item="Fuel Unit" chance="0.5" />
-        <item item="Fuel Unit" chance="0.5" />
-        <item item="Fuel Unit" chance="0.5" />
         <item item="Fuel Unit" chance="0.5" />
         <item item="Fuel Unit" chance="0.5" />
     </loot>

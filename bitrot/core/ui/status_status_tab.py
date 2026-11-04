@@ -27,12 +27,12 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         "HP": SPRITE_PATH + "ui/hp.png", "STM": SPRITE_PATH + "ui/stamina.png",
         "WTR": SPRITE_PATH + "ui/water.png", "FOD": SPRITE_PATH + "ui/food.png", 
         "INF": SPRITE_PATH + "ui/infection.png", "XP": SPRITE_PATH + "ui/xp.png", 
-        "ANX": SPRITE_PATH + "ui/axiety.png", "DEF": SPRITE_PATH + "ui/defence.png"
+        "ANX": SPRITE_PATH + "ui/axiety.png", "DRG": SPRITE_PATH + "ui/drugs.png","DEF": SPRITE_PATH + "ui/defence.png"
     }
     
     stat_names = {
         "HP": "Health", "STM": "Stamina", "WTR": "Water", "FOD": "Food", 
-        "INF": "Sickness", "ANX": "Anxiety", "DEF": "Defence"
+        "INF": "Sickness", "ANX": "Anxiety","DRG": "Drugs", "DEF": "Defence"
     }
 
     for k, path in icon_files.items():
@@ -48,6 +48,7 @@ def draw_status_tab(surface, player, modal, assets, zombies_killed):
         ("FOD", player.food, 100, GRAY),
         ("INF", player.infection, 100, GRAY),
         ("ANX", player.anxiety, 100, GRAY),
+        ("DRG", player.drugs, 100, GRAY),
         ("DEF", player.get_total_defence(), 100, GRAY)
     ]
     

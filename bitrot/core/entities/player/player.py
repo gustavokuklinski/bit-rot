@@ -14,6 +14,7 @@ from core.data.recipe_manager import RecipeManager
 from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS
 from core.data.progression_loader import PROGRESSION_CONFIG
 from core.systems.utils import create_smooth_entity_mask
+from core.entities.item.item_helpers import deserialize_item
 # Import Mixins
 from core.entities.player.player_stats import PlayerStats
 from core.entities.player.player_movement import PlayerMovement
@@ -70,8 +71,19 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.completed_quests = data.get('completed_quests', [])
         self.known_recipes = data.get('known_recipes', [])
         self.dialog_history = data.get('dialog_history', [])
+        self.special_dialogs = data.get('special_dialogs', [])
         self.completed_milestones = data.get('completed_milestones', [])
         self.milestone_progress = data.get('milestone_progress', {})
+        
+        raw_app_slots = data.get('app_slots', [None] * 5)
+        self.app_slots = []
+        for s in raw_app_slots[:5]:
+            if s:
+                self.app_slots.append(deserialize_item(s) if isinstance(s, (dict, str)) else s)
+            else:
+                self.app_slots.append(None)
+        while len(self.app_slots) < 5:
+            self.app_slots.append(None)
 
         if self.traits:
             for trait_id in self.traits:

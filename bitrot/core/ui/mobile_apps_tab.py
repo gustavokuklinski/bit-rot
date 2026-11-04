@@ -24,10 +24,12 @@ def get_card_map_value(item):
     return val.strip().lower() if val else None
 
 def draw_apps_tab(surface, game, modal, assets):
-    if not hasattr(game, 'app_state'):
-        game.app_state = {
-            'slots': [None] * 5
-        }
+    if getattr(game, 'player', None) and hasattr(game.player, 'app_slots'):
+        if not hasattr(game, 'app_state') or game.app_state.get('slots') is not game.player.app_slots:
+            game.app_state = {'slots': game.player.app_slots}
+    elif not hasattr(game, 'app_state'):
+        game.app_state = {'slots': [None] * 5}
+        
     state = game.app_state
 
     y_offset = modal['rect'].y + 75

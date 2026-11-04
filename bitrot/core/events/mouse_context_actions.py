@@ -525,8 +525,16 @@ def handle_context_menu_click(game, mouse_pos):
                         verified_item = container_item.inventory[index] if 0 <= index < len(container_item.inventory) else None
                     else:
                         verified_item = item
-                elif source in ('player_self', 'map_tile', 'vehicle_equipment', 'vehicle_slot', 'light_source'):
+                elif source in ('player_self', 'map_tile', 'vehicle_equipment', 'vehicle_slot', 'light_source', 'liquid_source'):
                     verified_item = item
+                
+                if source in ('map_tile', 'liquid_source') and isinstance(item, dict) and 'grid_x' in item and 'grid_y' in item:
+                    p_gx = int(game.player.rect.centerx // TILE_SIZE)
+                    p_gy = int(game.player.rect.centery // TILE_SIZE)
+                    if abs(item['grid_x'] - p_gx) > 1 or abs(item['grid_y'] - p_gy) > 1:
+                        display_message(tr('msg', "Too far away to interact."))
+                        game.context_menu['active'] = False
+                        return
                 
                 is_match = False
                 if verified_item is item or isinstance(item, dict):
@@ -732,8 +740,96 @@ def handle_context_menu_click(game, mouse_pos):
 
                 clicked_on_menu = True
 
-            elif option == 'Send to':
+            elif option == 'Send to' or option.startswith('Send '):
                 target_dest = target_sub_slot
+
+                if source == 'liquid_source':
+                    if target_dest == "no_container":
+                        display_message(tr('msg', "You need a container to collect liquid."))
+                        game.context_menu['active'] = False
+                        return
+
+                    liquid_name = item.get('liquid_name', 'Dirty Water Unit')
+                    dummy_liquid = Item.create_from_name(liquid_name)
+                    if not dummy_liquid:
+                        dummy_liquid = Item(liquid_name, 'liquid', liquid=True)
+
+                    target_container = None
+                    search_pools = [
+                        [b for b in game.player.belt if b and hasattr(b, 'inventory')],
+                        [it for it in game.player.inventory if it and hasattr(it, 'inventory')],
+                        [c for c in game.player.clothes.values() if c and hasattr(c, 'inventory')]
+                    ]
+
+                    def find_container_recursive(container_list, target_key):
+                        for c in container_list:
+                            if not c: continue
+                            if str(getattr(c, 'id', id(c))) == target_key or getattr(c, 'name', '') == target_key:
+                                return c
+                            if hasattr(c, 'inventory') and c.inventory:
+                                found = find_container_recursive(c.inventory, target_key)
+                                if found: return found
+                        return None
+
+                    for pool in search_pools:
+                        target_container = find_container_recursive(pool, target_dest)
+                        if target_container:
+                            break
+
+                    if not target_container:
+                        display_message(tr('msg', "Container not found."))
+                        game.context_menu['active'] = False
+                        return
+
+                    avail_units = get_container_liquid_capacity_units(target_container, dummy_liquid)
+                    if avail_units <= 0:
+                        display_message(f"{target_container.name} {tr('msg', 'is full of liquid.')}")
+                        game.context_menu['active'] = False
+                        return
+
+                    transfer_units = float(int(math.floor(float(avail_units))))
+                    if transfer_units <= 0:
+                        transfer_units = 1.0
+
+                    def do_collect_liquid():
+                        max_l_val = getattr(target_container, 'max_liquid', None)
+                        if max_l_val is not None and not math.isinf(float(max_l_val)):
+                            target_max_l = int(math.floor(float(max_l_val)))
+                        else:
+                            target_max_l = int(getattr(dummy_liquid, 'capacity', 100) or 100)
+
+                        stacked = False
+                        if hasattr(target_container, 'inventory'):
+                            for inv_it in target_container.inventory:
+                                is_inv_liq = getattr(inv_it, 'liquid', False) or getattr(inv_it, 'item_type', '') in ('liquid', 'car_fuel')
+                                if is_inv_liq and inv_it.name == liquid_name:
+                                    inv_it.load = (getattr(inv_it, 'load', 0) or 0) + transfer_units
+                                    inv_it.capacity = target_max_l
+                                    stacked = True
+                                    break
+
+                        if not stacked:
+                            target_cap = max(1, getattr(target_container, 'capacity', 0) or 1)
+                            if len(target_container.inventory) >= target_cap:
+                                display_message(tr('msg', "Container is full."))
+                                return
+
+                            new_liq = Item.create_from_name(liquid_name)
+                            if new_liq:
+                                new_liq.load = transfer_units
+                                new_liq.capacity = target_max_l
+                                target_container.inventory.append(new_liq)
+
+                        if hasattr(game, 'sound_manager'):
+                            game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, is_critical=True)
+
+                        display_message(f"{tr('msg', 'Collected')} {int(transfer_units)}x {tr('item', liquid_name)} {tr('msg', 'into')} {target_container.name}.")
+
+                    collect_time = get_transfer_time(game.player, base_time=1.0)
+                    action_label = f"{tr('ui', 'Collecting')} {tr('item', liquid_name)}"
+                    game.player.start_action(action_label, collect_time, do_collect_liquid, xp_reward=0.5)
+                    clicked_on_menu = True
+                    break
 
                 # Verify key requirement if sending from vehicle equipment
                 if source == 'vehicle_equipment' and container_item:
@@ -741,6 +837,8 @@ def handle_context_menu_click(game, mouse_pos):
                         display_message(tr('msg', "Vehicle requires key inserted in the Key slot."))
                         game.context_menu['active'] = False
                         return
+                
+
 
                 # An action is external (requires looting timer) if from world, vehicle, nearby, or external container
                 is_external = (

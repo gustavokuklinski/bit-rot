@@ -25,13 +25,13 @@ def item_allows_belt(item):
 
 
 def is_item_liquid(item):
-    """Checks if an item is a liquid (including type='liquid', 'car_fuel', and 'Fuel Unit')."""
+    """Checks if an item is a liquid (including type='liquid', 'car_fuel', and liquid unit items)."""
     if not item:
         return False
     itype = getattr(item, 'item_type', '') or getattr(item, 'type', '') or ''
     if itype in ('liquid', 'car_fuel'):
         return True
-    if getattr(item, 'name', '') == 'Fuel Unit':
+    if getattr(item, 'name', '') in ('Fuel Unit', 'Water Unit', 'Dirty Water Unit', 'Crude Oil Unit'):
         return True
     return bool(getattr(item, 'liquid', False))
 
@@ -85,7 +85,8 @@ def is_valid_send_to_container(obj):
         return False
 
     cap = getattr(obj, 'capacity', 0) or 0
-    if cap <= 0:
+    has_liquid_cap = does_allow_liquid(obj) and ((getattr(obj, 'max_liquid', 0) or 0) > 0 or does_allow_liquid(obj))
+    if cap <= 0 and not has_liquid_cap:
         return False
 
     # Standard containers, disposable containers, corpses, vehicles, and maptile containers
@@ -116,8 +117,10 @@ def get_item_types(item):
     if getattr(item, 'liquid', False) or itype in ('liquid', 'car_fuel'):
         types.add('liquid')
     name = getattr(item, 'name', '')
-    if name == 'Fuel Unit':
+    if name in ('Fuel Unit', 'Crude Oil Unit'):
         types.add('car_fuel')
+        types.add('liquid')
+    if name in ('Water Unit', 'Dirty Water Unit'):
         types.add('liquid')
     return types
 
@@ -309,27 +312,34 @@ def get_active_sd_cards(player_or_game):
         return []
 
     game = None
-    if hasattr(player_or_game, 'app_state'):
+    player = None
+
+    if hasattr(player_or_game, 'app_slots'):
+        player = player_or_game
+        game = getattr(player, 'game', None)
+    elif hasattr(player_or_game, 'app_state'):
         game = player_or_game
-    elif hasattr(player_or_game, 'game') and getattr(player_or_game, 'game'):
-        game = player_or_game.game
+        player = getattr(game, 'player', None)
+    elif hasattr(player_or_game, 'player'):
+        game = player_or_game
+        player = game.player
 
     if not game:
         import core.messages
         game = getattr(core.messages, '_game_instance', None)
 
-    if not game:
-        return []
-
-    player = getattr(game, 'player', None)
-    if not player and hasattr(player_or_game, 'progression'):
-        player = player_or_game
+    if not player and game:
+        player = getattr(game, 'player', None)
 
     if not player or not player_has_mobile(player):
         return []
 
+    slots_source = getattr(player, 'app_slots', None)
+    if not slots_source and game:
+        slots_source = getattr(game, 'app_state', {}).get('slots', [])
+
     active_cards = []
-    for slot in getattr(game, 'app_state', {}).get('slots', []):
+    for slot in (slots_source or []):
         if slot and getattr(slot, 'item_type', '') == 'sd_card':
             active_cards.append(slot)
     return active_cards

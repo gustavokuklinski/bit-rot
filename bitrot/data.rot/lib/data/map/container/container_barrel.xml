@@ -4,6 +4,7 @@
     </visuals>
     <capacity value="1" />
     <loot>
+        <item item="Crude Oil Unit" chance="0.5" min="10" max="50" />
         <item item="Fuel Unit" chance="0.2" min="10" max="50" />
         <item item="Water Unit" chance="0.2" min="15" max="60" />
         <item item="Dirty Water Unit" chance="0.2" min="20" max="80" />

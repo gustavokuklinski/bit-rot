@@ -137,6 +137,9 @@ def save_game(game):
             progression_data = game.player.progression.attributes
             is_player_alive = not getattr(game.player, 'is_dead', False) and game.player.health > 0
 
+            # Collect active SD Card slots directly from the player
+            player_app_slots = getattr(game.player, 'app_slots', getattr(game, 'app_state', {}).get('slots', [None] * 5))
+
             player_data = {
                 "player_id": player_id,
                 "name": game.player.name,
@@ -153,7 +156,7 @@ def save_game(game):
                     "stamina": game.player.stamina,
                     "infection": game.player.infection,
                     "anxiety": game.player.anxiety,
-                    "drugs": getattr(game.player, 'drugs', 0.0)
+                    "drugs": game.player.drugs
                 },
                 "attributes": attributes_base,
                 "progression": progression_data,
@@ -165,12 +168,13 @@ def save_game(game):
                 "belt": [serialize_item(i) for i in game.player.belt],
                 "clothes": {slot: serialize_item(item) for slot, item in game.player.clothes.items()},
                 "clothes_colors": {slot: list(getattr(item, 'color', (255, 255, 255))) for slot, item in game.player.clothes.items() if item},
-                "quests": getattr(game.player, 'quests', []),
-                "completed_quests": getattr(game.player, 'completed_quests', []),
+                "quests": list(getattr(game.player, 'quests', [])),
+                "completed_quests": list(getattr(game.player, 'completed_quests', [])),
                 "dialog_history": list(getattr(game.player, 'dialog_history', [])),
-                "special_dialogs": getattr(game.player, 'special_dialogs', []),
-                "completed_milestones": getattr(game.player, 'completed_milestones', []),
-                "milestone_progress": getattr(game.player, 'milestone_progress', {})
+                "special_dialogs": list(getattr(game.player, 'special_dialogs', [])),
+                "completed_milestones": list(getattr(game.player, 'completed_milestones', [])),
+                "milestone_progress": dict(getattr(game.player, 'milestone_progress', {})),
+                "app_slots": [serialize_item(i) for i in player_app_slots[:5]]
             }
 
             player_file_path = os.path.join(player_dir, f"{player_id}.json")
@@ -515,7 +519,6 @@ def save_game(game):
             "containers": container_data,
             "open_modals": saved_open_modals,
             "modal_positions": game.last_modal_positions,
-            "app_slots": [i.to_dict() if hasattr(i, 'to_dict') else i for i in getattr(game, 'app_state', {}).get('slots', [])],
             "barricades": saved_barricades,
             "radio_frequencies": getattr(game, 'radio_frequencies', {}),
             "current_radio_freq": getattr(game, 'current_radio_freq', 110.42),

@@ -1,0 +1,9 @@
+<item name="Crude Oil Unit" type="liquid" allow_use="false">
+    <properties>
+        <load min="1" max="50" />
+        <capacity value="50" />
+        
+        <sprite file="liquid_crude_oil_unit.png" />
+    </properties>
+    <spawn chance="1.0" />
+</item>

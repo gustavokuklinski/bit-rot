@@ -53,8 +53,8 @@ def draw_player_alerts(surface, player):
     if player.anxiety >= PROGRESSION_CONFIG.get_stat('anxiety', 'alert_threshold', 30.0):
         active_alerts.append(("ui/axiety.png", (150, 0, 150), tr('alert', "You are anxious, try reading.")))
     
-    if getattr(player, 'drugs', 0.0) >= 30.0:
-        active_alerts.append(("ui/drunk.png", (220, 100, 220), tr('alert', "You are dizzy and your vision is blurred.")))
+    if player.drugs >= PROGRESSION_CONFIG.get_stat('drugs', 'alert_threshold', 30.0):
+        active_alerts.append(("ui/drugs.png", (220, 100, 220), tr('alert', "You are dizzy and your vision is blurred.")))
 
     if player.infection >= PROGRESSION_CONFIG.get_stat('infection', 'alert_threshold', 70.0): 
         active_alerts.append(("ui/infection.png", YELLOW, tr('alert', "Are you feeling sick or infected?")))

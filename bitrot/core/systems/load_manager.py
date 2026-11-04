@@ -442,6 +442,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     game.player_name = player_data.get('name', "Player")
     game.player = Player(player_data=player_data)
     game.player.game = game
+    game.app_state = {'slots': game.player.app_slots}
     
     game.zoom_level = core.data.config.START_ZOOM
     
@@ -783,7 +784,7 @@ def load_game(game, save_folder_name):
         game.player.rect.topleft = (game.player.x, game.player.y)
         
         game.player.inventory = [deserialize_item(d) for d in player_data.get('inventory', []) if deserialize_item(d)]
-        game.player.drugs = float(player_data.get('stats', {}).get('drugs', 0.0))
+        # game.player.drugs = float(player_data.get('stats', {}).get('drugs', 0.0))
 
         game.player.belt = []
         for item_data in player_data.get('belt', [None]*3)[:3]:
@@ -808,12 +809,32 @@ def load_game(game, save_folder_name):
         # Synchronize belt slots with equipped util clothes
         game.player.sync_belt_slots(game)
         
-        game.player.quests = player_data.get('quests', [])
-        game.player.completed_quests = player_data.get('completed_quests', [])
-        game.player.dialog_history = player_data.get('dialog_history', [])
-        game.player.special_dialogs = player_data.get('special_dialogs', [])
-        
-        with open(os.path.join(save_path, "world.json"), "r") as f:
+        game.player.quests = list(player_data.get('quests', []))
+        game.player.completed_quests = list(player_data.get('completed_quests', []))
+        game.player.dialog_history = list(player_data.get('dialog_history', []))
+        game.player.special_dialogs = list(player_data.get('special_dialogs', []))
+        game.player.completed_milestones = list(player_data.get('completed_milestones', []))
+        game.player.milestone_progress = dict(player_data.get('milestone_progress', {}))
+
+        # Restore player Mobile SD Card slots
+        raw_app_slots = player_data.get('app_slots', [None] * 5)
+        game.player.app_slots = []
+        for s in raw_app_slots[:5]:
+            if s:
+                game.player.app_slots.append(deserialize_item(s) if isinstance(s, (dict, str)) else s)
+            else:
+                game.player.app_slots.append(None)
+        while len(game.player.app_slots) < 5:
+            game.player.app_slots.append(None)
+
+        game.app_state = {'slots': game.player.app_slots}
+
+        # Check world state file (world.jsonl takes priority over world.json)
+        world_state_path = os.path.join(save_path, "world.jsonl")
+        if not os.path.exists(world_state_path):
+            world_state_path = os.path.join(save_path, "world.json")
+            
+        with open(world_state_path, "r") as f:
             world_data = json.load(f)
 
         # Restore modal positions
@@ -869,10 +890,6 @@ def load_game(game, save_folder_name):
                 else:
                     game.modals.append(new_m)
         
-        game.app_state = {'slots': [None] * 5}
-        for idx, s_data in enumerate(world_data.get('app_slots', [])):
-            if s_data and idx < 5:
-                game.app_state['slots'][idx] = deserialize_item(s_data)
         
         if not RadioManager.STATIONS:
             RadioManager.load_radios()

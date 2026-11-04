@@ -4,6 +4,7 @@ from core.draw import draw_game
 from core.events.mouse import handle_mouse_down, handle_right_click
 from core.events.mouse_drag import handle_mouse_up, handle_mouse_motion
 from core.data.localization import tr
+from core.events.keyboard import toggle_pause
 
 def run_paused(game):
     if not getattr(game, 'is_mixer_paused', False):
@@ -40,13 +41,13 @@ def run_paused(game):
     banner_height = 28
     
     # Draw Dark Gray Background Banner
-    banner_rect = pygame.Rect(start_x, 0, total_content_width, banner_height)
+    banner_rect = pygame.Rect(start_x, 100, total_content_width, banner_height)
     pygame.draw.rect(game.game_screen, (30, 30, 30, 240), banner_rect) # Darker gray
-    pygame.draw.line(game.game_screen, (60, 60, 60), (start_x, banner_height), (start_x + total_content_width, banner_height), 1)
+    #pygame.draw.line(game.game_screen, (60, 60, 60), (start_x, banner_height), (start_x + total_content_width, banner_height), 1)
 
     # --- 3. DRAW ELEMENTS AND DEFINE HITBOXES ---
     current_x = start_x + 10
-    y_offset = (banner_height - font_12.get_linesize()) // 2 # Vertical centering
+    y_offset = (banner_height - font_12.get_linesize()) + 94 # Vertical centering
 
     # Draw "PAUSED"
     game.game_screen.blit(txt_paused, (current_x, y_offset))
@@ -61,9 +62,9 @@ def run_paused(game):
 
     # Logic for Buttons (Hitboxes)
     # We create a Rect based on the text width for precise clicking
-    btn_continue = pygame.Rect(current_x, 4, txt_cont.get_width(), 20)
-    btn_save = pygame.Rect(current_x, 4, txt_save.get_width(), 20) # X will be set below
-    btn_exit = pygame.Rect(current_x, 4, txt_exit.get_width(), 20) # X will be set below
+    btn_continue = pygame.Rect(current_x, 104, txt_cont.get_width(), 20)
+    btn_save = pygame.Rect(current_x, 104, txt_save.get_width(), 20) # X will be set below
+    btn_exit = pygame.Rect(current_x, 104, txt_exit.get_width(), 20) # X will be set below
 
     def draw_banner_btn(rect, text_surf):
         mouse_pos = game._get_scaled_mouse_pos()

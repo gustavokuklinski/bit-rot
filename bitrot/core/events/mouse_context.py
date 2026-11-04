@@ -293,39 +293,72 @@ def handle_right_click(game, mouse_pos):
             dy = game.player.rect.centery - tile_cy
             dist_sq = dx*dx + dy*dy
 
-            if tile:
-                char = ""
-                try: char = game.map_data[grid_y][grid_x]
-                except: pass
-                
+            # Resolve ground and base characters with layer fallback
+            ground_data = getattr(game, 'ground_data', None)
+            if not ground_data and hasattr(game, 'all_ground_layers'):
+                ground_data = game.all_ground_layers.get(getattr(game, 'current_layer_index', 1), [])
+
+            map_data = getattr(game, 'map_data', None)
+            if not map_data and hasattr(game, 'all_map_layers'):
+                map_data = game.all_map_layers.get(getattr(game, 'current_layer_index', 1), [])
+
+            g_char = ""
+            if ground_data and 0 <= grid_y < len(ground_data) and 0 <= grid_x < len(ground_data[grid_y]):
+                g_char = str(ground_data[grid_y][grid_x]).strip()
+
+            b_char = ""
+            if map_data and 0 <= grid_y < len(map_data) and 0 <= grid_x < len(map_data[grid_y]):
+                b_char = str(map_data[grid_y][grid_x]).strip()
+
+            char = b_char or g_char
+
+            if tile or g_char or b_char:
                 is_boat = (
-                    tile.get('type') == "maptile_teleport" or 
-                    tile.get('name') in ("tp_boat", "teleport_boat") or 
+                    (tile and (tile.get('type') == "maptile_teleport" or 
+                     tile.get('name') in ("tp_boat", "teleport_boat") or
+                     'boat' in str(tile.get('name', '')).lower())) or
                     char in ("tp_boat", "teleport_boat") or
-                    'boat' in str(tile.get('name', '')).lower()
+                    b_char in ("tp_boat", "teleport_boat") or
+                    g_char in ("tp_boat", "teleport_boat")
+                )
+
+                is_water = not is_boat and (
+                    g_char.lower().startswith('water_') or 
+                    b_char.lower().startswith('water_') or 
+                    'water_' in g_char.lower() or 
+                    'water_' in b_char.lower() or
+                    (tile and 'water_' in str(tile.get('name', '')).lower())
+                )
+
+                is_petrol = not is_boat and (
+                    g_char.lower().startswith('petrol_') or 
+                    b_char.lower().startswith('petrol_') or 
+                    'petrol_' in g_char.lower() or 
+                    'petrol_' in b_char.lower() or
+                    (tile and 'petrol_' in str(tile.get('name', '')).lower())
                 )
                 
                 is_door_window = (
-                    tile.get('is_statable') or 
+                    (tile and (tile.get('is_statable') or tile.get('is_window'))) or 
                     '_open' in char.lower() or 
                     '_close' in char.lower() or 
                     '_broke' in char.lower() or
                     'door' in char.lower() or 
                     'window' in char.lower() or
-                    (tile.get('name') and ('door' in tile['name'].lower() or 'window' in tile['name'].lower()))
+                    (tile and tile.get('name') and ('door' in tile['name'].lower() or 'window' in tile['name'].lower()))
                 )
 
                 p_grid_x = int(game.player.rect.centerx // TILE_SIZE)
                 p_grid_y = int(game.player.rect.centery // TILE_SIZE)
 
-                # The tile must be within 1 tile of the player (8 surrounding neighbor tiles or the player's tile)
-                is_tile_in_range = (abs(grid_x - p_grid_x) <= 1 and abs(grid_y - p_grid_y) <= 1)
-                if tile.get('type') == "maptile_car":
+                # Exactly 1 tile away (adjacent or diagonal neighbor) or within 2-tile radius
+                is_tile_in_range = (abs(grid_x - p_grid_x) <= 1 and abs(grid_y - p_grid_y) <= 1) or (dist_sq <= (TILE_SIZE * 2.0) ** 2)
+                if tile and tile.get('type') == "maptile_car":
                     is_tile_in_range = is_tile_in_range or (dist_sq <= (TILE_SIZE * 2.0) ** 2)
 
-                if is_boat or is_door_window or tile.get('type') == "maptile_car":
+                if is_boat or is_water or is_petrol or is_door_window or (tile and tile.get('type') == "maptile_car"):
                     if is_tile_in_range:
-                        if tile.get('type') == "maptile_car":
+                        if tile and tile.get('type') == "maptile_car":
                             vehicle = game.map_manager.get_vehicle_at(grid_x, grid_y)
                             if vehicle:
                                 clicked_item = vehicle
@@ -336,9 +369,9 @@ def handle_right_click(game, mouse_pos):
                             if getattr(game.player, 'vehicle', None):
                                 display_message(tr('msg', "Exit the vehicle to use the boat"))
                                 return
-                                
+
                             clicked_item = {
-                                'name': tile.get('name', 'Boat'), 
+                                'name': tile.get('name', 'Boat') if tile else 'Boat', 
                                 'type': 'maptile_teleport', 
                                 'grid_x': grid_x, 
                                 'grid_y': grid_y, 
@@ -346,13 +379,23 @@ def handle_right_click(game, mouse_pos):
                             }
                             click_source = 'map_tile'
 
+                        elif is_water or is_petrol:
+                            clicked_item = {
+                                'name': 'Water' if is_water else 'Petrol',
+                                'type': 'liquid_source',
+                                'liquid_name': 'Dirty Water Unit' if is_water else 'Crude Oil Unit',
+                                'grid_x': grid_x,
+                                'grid_y': grid_y
+                            }
+                            click_source = 'liquid_source'
+
                         elif is_door_window:
                             clicked_item = {
-                                'name': tile.get('name', 'Object'), 
+                                'name': tile.get('name', 'Object') if tile else 'Object', 
                                 'type': 'map_tile', 
                                 'grid_x': grid_x, 
                                 'grid_y': grid_y, 
-                                'state': tile.get('state'),
+                                'state': tile.get('state') if tile else None,
                                 'char': char
                             }
                             click_source = 'map_tile'
@@ -611,6 +654,26 @@ def handle_right_click(game, mouse_pos):
             else:
                 options.append('Send to')
 
+        elif click_source == 'liquid_source':
+            if getattr(game.player, 'vehicle', None):
+                display_message(tr('msg', "Exit the vehicle to interact."))
+                game.context_menu['active'] = False
+                return
+
+            liquid_name = clicked_item['liquid_name']
+            dummy_liquid = Item.create_from_name(liquid_name)
+            if not dummy_liquid:
+                dummy_liquid = Item(liquid_name, 'liquid', liquid=True)
+
+            from core.events.mouse_context_submenus import build_liquid_collect_submenu
+            send_sub = build_liquid_collect_submenu(dummy_liquid, game)
+            if send_sub:
+                options = [send_sub]
+            else:
+                display_message(f"{tr('msg', 'No suitable container to collect')} {tr('item', liquid_name)}.")
+                game.context_menu['active'] = False
+                return
+
         is_maptile = False
         if isinstance(clicked_item, dict):
             if clicked_item.get('type') in ['maptile', 'maptile_container', 'map_tile', 'maptile_teleport']:
@@ -633,7 +696,8 @@ def handle_right_click(game, mouse_pos):
         )
         is_player_item = is_in_inv_or_gear_modal or is_nested_in_player
 
-        if click_source in ('map_tile', 'light_source', 'player_self', 'vehicle_equipment', 'vehicle_slot', 'npc'):
+        # Add 'liquid_source' here to prevent falling through to get_item_context_options:
+        if click_source in ('map_tile', 'light_source', 'player_self', 'vehicle_equipment', 'vehicle_slot', 'npc', 'liquid_source'):
             pass
 
         elif getattr(clicked_item, 'item_type', '') == 'vehicle':
