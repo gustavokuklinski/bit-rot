@@ -660,6 +660,11 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         self.rect.topleft = (round(self.x), round(self.y))
 
+        if moved_any:
+            from core.systems.utils import add_entity_footstep
+            actual_dist = math.hypot(self.dx, self.dy)
+            add_entity_footstep(game, self, actual_dist)
+
     def _handle_combat(self, target_entity, game, multiplier, current_time):
         weapon = getattr(self, 'equipped_weapon', None)
         is_ranged_weapon = weapon and weapon.item_type == 'weapon_ranged'

@@ -571,6 +571,11 @@ class PlayerMovement:
                         self.y -= step_y
                         self.rect.y = round(self.y)
 
+            # Record footstep dots when walking on foot
+            from core.systems.utils import add_entity_footstep
+            actual_moved = math.hypot(move_x, move_y)
+            add_entity_footstep(game, self, actual_moved)
+
         # --- CHUNK BOUNDARY CLAMP (Manual transition required via 'E') ---
         if not getattr(game, 'is_giant_map', False):
             chunk_width_px = getattr(game, 'map_width_pixels', game.CHUNK_SIZE * TILE_SIZE)

@@ -164,6 +164,7 @@ class Vehicle:
 
     def brake(self, brake_force=0.9, game=None): 
         if not self.active: return
+        self._brake_timer = pygame.time.get_ticks()
         multiplier = game.dt_mult if game else 1.0
         scale = math.pow(brake_force, multiplier)
         
@@ -337,6 +338,12 @@ class Vehicle:
     def move(self, dx, dy, obstacles, game=None):
         if not self.active: return
 
+        if game:
+            from core.systems.utils import add_vehicle_trails
+            now_t = pygame.time.get_ticks()
+            is_braking = (now_t - getattr(self, '_brake_timer', 0)) < 350
+            add_vehicle_trails(game, self, dx, dy, is_braking=is_braking)
+
         if abs(dx) > abs(dy):
             if dx > 0: self.facing = 'right'
             elif dx < 0: self.facing = 'left'
@@ -361,6 +368,8 @@ class Vehicle:
                 self.active = False
                 self.car_state = "Off"
                 self.velocity = [0, 0]
+                self._prev_t1 = None
+                self._prev_t2 = None
                 if self.engine_channel:
                     self.engine_channel.stop()
                     self.engine_channel = None
@@ -499,6 +508,9 @@ class Vehicle:
             self.active = False
             self.car_state = "Off"
 
+            self._prev_t1 = None
+            self._prev_t2 = None
+            
             if self.engine_channel:
                 self.engine_channel.stop()
                 self.engine_channel = None

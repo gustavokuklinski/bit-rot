@@ -162,3 +162,5 @@ def update_entities(game, GRID_SIZE, zombies_to_remove):
     game.splashes = [s for s in game.splashes if current_time - s['time'] < s['duration']][:150]
     if hasattr(game, 'blood_stains'):
         game.blood_stains = [s for s in game.blood_stains if current_time - s['time'] < s['duration']][:250]
+    if hasattr(game, 'ground_trails'):
+        game.ground_trails = [t for t in game.ground_trails if current_time - t['time'] < t['duration']][:500]

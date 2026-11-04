@@ -122,6 +122,7 @@ class Game:
         self.corpses = []
         self.splashes = []
         self.blood_stains = []
+        self.ground_trails = [] 
         self.rain_particles = []
         self.map_lights = [] 
         self.all_light_layers = {} 

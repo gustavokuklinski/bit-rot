@@ -264,6 +264,165 @@ def resolve_stuck_in_obstacle(entity, obstacles, game):
                 entity.x += push
             entity.rect.topleft = (round(entity.x), round(entity.y))
 
+
+def get_terrain_trail_info(game, world_x, world_y):
+    """Returns terrain category ('sand', 'dirty', or None) and corresponding imprint color."""
+    gx = int(world_x // TILE_SIZE)
+    gy = int(world_y // TILE_SIZE)
+    gd = getattr(game, 'ground_data', None)
+    if gd and 0 <= gy < len(gd) and 0 <= gx < len(gd[gy]):
+        char = str(gd[gy][gx]).lower().strip()
+        if 'sand' in char or 'beach' in char:
+            return 'sand', (185, 155, 110)
+        elif 'dirty' in char or 'dirt' in char:
+            return 'dirty', (95, 48, 16)
+    return None, None
+
+def add_entity_footstep(game, entity, dist_moved):
+    """Spawns an alternating left/right footstep dot when walking on sand or dirt."""
+    if not game or dist_moved <= 0:
+        return
+    if not hasattr(game, 'ground_trails'):
+        game.ground_trails = []
+
+    entity._step_accum = getattr(entity, '_step_accum', 0.0) + dist_moved
+    if entity._step_accum < 9.0:
+        return
+    entity._step_accum = 0.0
+
+    foot_x = entity.rect.centerx
+    foot_y = entity.rect.bottom - 2
+
+    terrain, color = get_terrain_trail_info(game, foot_x, foot_y)
+    if not terrain:
+        return
+
+    side = getattr(entity, '_foot_side', 1)
+    entity._foot_side = -side
+
+    vx = getattr(entity, 'vx', getattr(entity, 'dx', 0))
+    vy = getattr(entity, 'vy', getattr(entity, 'dy', 0))
+    if vx != 0 or vy != 0:
+        mag = math.hypot(vx, vy) or 1.0
+        off_x = (-vy / mag) * 2.0 * side
+        off_y = (vx / mag) * 2.0 * side
+    else:
+        off_x = 2.0 * side
+        off_y = 0.0
+
+    game.ground_trails.append({
+        'type': 'dot',
+        'pos': (int(foot_x + off_x), int(foot_y + off_y)),
+        'color': color,
+        'size': 2,
+        'time': pygame.time.get_ticks(),
+        'duration': 18000
+    })
+
+def add_vehicle_trails(game, vehicle, dx, dy, is_braking=False):
+    """Creates two continuous parallel line trails for vehicles."""
+    if not game:
+        return
+    if not hasattr(game, 'ground_trails'):
+        game.ground_trails = []
+
+    dist = math.hypot(dx, dy)
+    if dist <= 0:
+        vehicle._prev_t1 = None
+        vehicle._prev_t2 = None
+        return
+
+    # Calculate perpendicular vector for left and right wheels
+    cx = vehicle.rect.centerx
+    cy = vehicle.rect.centery
+    nx = -dy / dist
+    ny = dx / dist
+
+    # Position tracks near the rear/center axle
+    half_track = min(vehicle.rect.width, vehicle.rect.height) * 0.35
+    rear_offset = max(vehicle.rect.width, vehicle.rect.height) * 0.20
+    fx = dx / dist
+    fy = dy / dist
+
+    axle_x = cx - fx * rear_offset
+    axle_y = cy - fy * rear_offset
+
+    curr_t1 = (axle_x + nx * half_track, axle_y + ny * half_track)
+    curr_t2 = (axle_x - nx * half_track, axle_y - ny * half_track)
+
+    prev_t1 = getattr(vehicle, '_prev_t1', None)
+    prev_t2 = getattr(vehicle, '_prev_t2', None)
+
+    # Initialize previous positions on first movement frame or after teleport
+    if prev_t1 is None or prev_t2 is None:
+        vehicle._prev_t1 = curr_t1
+        vehicle._prev_t2 = curr_t2
+        return
+
+    # Guard against map chunk teleports or sudden jumps
+    seg_len = math.hypot(curr_t1[0] - prev_t1[0], curr_t1[1] - prev_t1[1])
+    if seg_len > 32.0:
+        vehicle._prev_t1 = curr_t1
+        vehicle._prev_t2 = curr_t2
+        return
+
+    # Record line segment once vehicle has traveled at least 3.5 pixels
+    if seg_len < 3.5:
+        return
+
+    now = pygame.time.get_ticks()
+
+    if is_braking:
+        # Skid mark lines on all floor types
+        skid_color = (35, 35, 35)
+        for prev_p, curr_p in [(prev_t1, curr_t1), (prev_t2, curr_t2)]:
+            game.ground_trails.append({
+                'type': 'line',
+                'start': (int(prev_p[0]), int(prev_p[1])),
+                'end': (int(curr_p[0]), int(curr_p[1])),
+                'color': skid_color,
+                'width': 2,
+                'time': now,
+                'duration': 22000
+            })
+        vehicle._prev_t1 = curr_t1
+        vehicle._prev_t2 = curr_t2
+    else:
+        # Normal driving: each tire only leaves lines on sand and dirty floors
+        t1_valid = False
+        t2_valid = False
+
+        terrain1, col1 = get_terrain_trail_info(game, curr_t1[0], curr_t1[1])
+        if terrain1:
+            game.ground_trails.append({
+                'type': 'line',
+                'start': (int(prev_t1[0]), int(prev_t1[1])),
+                'end': (int(curr_t1[0]), int(curr_t1[1])),
+                'color': col1,
+                'width': 2,
+                'time': now,
+                'duration': 16000
+            })
+            t1_valid = True
+
+        terrain2, col2 = get_terrain_trail_info(game, curr_t2[0], curr_t2[1])
+        if terrain2:
+            game.ground_trails.append({
+                'type': 'line',
+                'start': (int(prev_t2[0]), int(prev_t2[1])),
+                'end': (int(curr_t2[0]), int(curr_t2[1])),
+                'color': col2,
+                'width': 2,
+                'time': now,
+                'duration': 16000
+            })
+            t2_valid = True
+
+        # Anchor points for the next segment
+        vehicle._prev_t1 = curr_t1 if t1_valid else None
+        vehicle._prev_t2 = curr_t2 if t2_valid else None
+
+
 def capture_pause_screen(game):
     """Creates a black and white version of the current screen for the pause menu."""
     game.paused_surface = game.game_screen.copy()

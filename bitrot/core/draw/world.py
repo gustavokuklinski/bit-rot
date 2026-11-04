@@ -180,3 +180,35 @@ def draw_world(game, surface, offset_x, offset_y, view_w, view_h):
                 (int(stain_wx + offset_x), int(stain_wy + offset_y)), 
                 stain['size'] // 2
             )
+    
+    # --- 7. Draw Footsteps and Vehicle Trails ---
+    if hasattr(game, 'ground_trails'):
+        min_view_x, max_view_x = -offset_x - 50, -offset_x + view_w + 50
+        min_view_y, max_view_y = -offset_y - 50, -offset_y + view_h + 50
+        for trail in game.ground_trails:
+            color = trail.get('color', (100, 100, 100))
+
+            if trail.get('type') == 'line':
+                x1, y1 = trail['start']
+                x2, y2 = trail['end']
+                # Viewport culling
+                if not (min_view_x < x1 < max_view_x or min_view_x < x2 < max_view_x):
+                    continue
+                if not (min_view_y < y1 < max_view_y or min_view_y < y2 < max_view_y):
+                    continue
+
+                sx1 = int(x1 + offset_x)
+                sy1 = int(y1 + offset_y)
+                sx2 = int(x2 + offset_x)
+                sy2 = int(y2 + offset_y)
+                pygame.draw.line(surface, color, (sx1, sy1), (sx2, sy2), trail.get('width', 2))
+
+            else:
+                # Footstep dot (Player, Zombie, NPC)
+                tx, ty = trail['pos']
+                if not (min_view_x < tx < max_view_x and min_view_y < ty < max_view_y):
+                    continue
+                sx = int(tx + offset_x)
+                sy = int(ty + offset_y)
+                size = trail.get('size', 2)
+                surface.fill(color, pygame.Rect(sx, sy, size, size))

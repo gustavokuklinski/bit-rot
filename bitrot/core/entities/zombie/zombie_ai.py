@@ -610,6 +610,11 @@ class ZombieAI:
 
         self.rect.topleft = (round(self.x), round(self.y))
 
+        if moved_any:
+            from core.systems.utils import add_entity_footstep
+            actual_dist = math.hypot(move_x, move_y)
+            add_entity_footstep(game, self, actual_dist)
+
     def _try_attack_obstacle(self, hit_obstacle, game, current_time, multiplier):
         gx = hit_obstacle.x // TILE_SIZE
         gy = hit_obstacle.y // TILE_SIZE
