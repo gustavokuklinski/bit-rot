@@ -11,6 +11,7 @@
         <item name="Matches" chance="0.5" />
         <item name="Lantern off" chance="0.5" />
         <item name="Lighter off" chance="0.5" />
+        <item name="Pocket Flashlight off" chance="0.5" />
         <item name="Lighter fluid" chance="0.5" />
     </loot>
     <spawn chance="1" />

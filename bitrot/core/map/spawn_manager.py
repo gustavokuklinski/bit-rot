@@ -387,7 +387,6 @@ def manage_dynamic_npcs(game):
         layer_num = int(match.group(1))
         curr_coord = (int(match.group(2)), int(match.group(3)))
         if curr_coord == getattr(game.generator, 'lobby_chunk', None) and layer_num == 1:
-            # FIX: Do NOT delete rescued NPCs in the Lobby!
             return
     
     max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
@@ -396,6 +395,11 @@ def manage_dynamic_npcs(game):
         return
 
     px, py = game.player.rect.centerx, game.player.rect.centery
+    view_radius = getattr(game, 'player_view_radius', 12 * TILE_SIZE)
+
+    # Despawn roaming hostiles just outside the view radius boundary (8 tiles away)
+    despawn_radius = view_radius + (8 * TILE_SIZE)
+    despawn_radius_sq = despawn_radius * despawn_radius
 
     for npc in list(game.npcs):
         if not hasattr(npc, 'layer'):
@@ -405,12 +409,13 @@ def manage_dynamic_npcs(game):
             game.npcs.remove(npc)
             continue
         
-        # PRESERVE static and friendly NPCs from deletion
+        # Preserve static and friendly NPCs
         if getattr(npc, 'is_static', False) or getattr(npc, 'is_friendly', False):
             continue
 
+        # Despawn distant roaming hostiles
         dist_sq = (npc.rect.centerx - px) ** 2 + (npc.rect.centery - py) ** 2
-        if dist_sq > NPC_DESPAWN_RADIUS**2:
+        if dist_sq > despawn_radius_sq and getattr(npc, 'aggro_timer', 0) <= 0:
             game.npcs.remove(npc)
 
     curr_layer = game.current_layer_index
@@ -423,7 +428,7 @@ def manage_dynamic_npcs(game):
     if len(game.npcs) >= max_npc_chunk:
         return
 
-    # Roaming dynamic NPCs are spawned as hostile (HNPC)
+    # Spawn right outside view boundary
     async_spawner.request_spawn(
         'hnpc',
         count=1,
@@ -431,7 +436,7 @@ def manage_dynamic_npcs(game):
         obstacles=getattr(game, 'obstacles', []),
         map_w=getattr(game, 'map_width_pixels', 3000),
         map_h=getattr(game, 'map_height_pixels', 3000),
-        view_radius=getattr(game, 'player_view_radius', 240),
+        view_radius=view_radius,
         player_pos=(px, py),
     )
 

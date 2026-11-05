@@ -8,6 +8,7 @@
         <item name="Survivor Guide Basic" chance="0.5" />
         <item name="Island Map" chance="0.5" />
         <item name="Knife" chance="0.5" />
+        <item name="Pocket Flashlight off" chance="0.5" />
     </loot>
     <spawn chance="1" />
 </item>

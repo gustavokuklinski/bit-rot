@@ -86,14 +86,19 @@ class ZombieGraphics:
         return composite
 
     def draw(self, surface, offset_x, offset_y, opacity=255):
+        # Skip costly rotation and math animations if entity is dormant or fading out off-screen
+        is_dormant = getattr(self, 'is_dormant', False)
+        draw_angle = 0
         wiggle_y = 0
-        draw_angle = getattr(self, 'walk_anim_angle', 0)
 
-        if draw_angle != 0:
-            phase_shift = id(self) % 1000
-            current_time = pygame.time.get_ticks()
-            wiggle_y = int(math.sin(current_time * 0.015 + phase_shift) * 2)
-            draw_angle = int(draw_angle + math.sin(current_time * 0.01 + phase_shift) * 5)
+        # Only animate if active, moving, and visible
+        if not is_dormant and opacity > 80:
+            raw_angle = getattr(self, 'walk_anim_angle', 0)
+            if raw_angle != 0:
+                phase_shift = id(self) % 1000
+                current_time = pygame.time.get_ticks()
+                wiggle_y = int(math.sin(current_time * 0.015 + phase_shift) * 2)
+                draw_angle = int(raw_angle + math.sin(current_time * 0.01 + phase_shift) * 5)
 
         self._current_wiggle_y = wiggle_y
         draw_rect = self.rect.move(offset_x, offset_y + wiggle_y)
@@ -109,7 +114,6 @@ class ZombieGraphics:
             current_image = self._get_composite_image('center')
 
         if current_image:
-            # Skip copy/fill operations if fully opaque
             if opacity < 150:
                 temp_image = current_image.copy()
                 temp_image.fill((0, 0, 0, 255), special_flags=pygame.BLEND_RGBA_MULT)
@@ -119,7 +123,8 @@ class ZombieGraphics:
             else:
                 temp_image = current_image
 
-            if draw_angle != 0:
+            # Only call transform.rotate if there is an angle and entity is within view
+            if draw_angle != 0 and not is_dormant:
                 rotated_img = pygame.transform.rotate(temp_image, draw_angle)
                 rot_rect = rotated_img.get_rect(center=draw_rect.center)
                 surface.blit(rotated_img, rot_rect)
@@ -132,7 +137,7 @@ class ZombieGraphics:
             else:
                 temp_surface.fill((self.color[0], self.color[1], self.color[2], opacity))
 
-            if draw_angle != 0:
+            if draw_angle != 0 and not is_dormant:
                 rotated_surf = pygame.transform.rotate(temp_surface, draw_angle)
                 rot_rect = rotated_surf.get_rect(center=draw_rect.center)
                 surface.blit(rotated_surf, rot_rect)

@@ -1,0 +1,10 @@
+<item name="Pocket Flashlight on" type="utility" state="on" allow_belt="true" tip="Light source">
+    <properties>
+        <durability min="1" max="100" />
+        
+        <light min="1" max="4" />
+        <fuel type="[Powerbank]" />
+        <sprite file="utility_pocket_flashlight_on.png" />
+    </properties>
+    <spawn chance="0" />
+</item>

@@ -17,6 +17,6 @@
         <item type="container" min="1" max="3" chance="0.30" />
         <item type="utility" min="1" max="3" chance="0.30" />
         <item type="cloth" min="1" max="2" id="util" chance="0.30" />
-
+        <item type="container_disposable" min="1" max="2" chance="0.15" />
     </loot>
 </map>

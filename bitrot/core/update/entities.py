@@ -1,7 +1,7 @@
-# core/update/entities.py
+# In core/update/entities.py
+
 import pygame
 import math
-import random
 from core.data.config import TILE_SIZE, CHUNK_SIZE
 import core.data.config
 from core.entities.zombie.zombie import Zombie
@@ -10,7 +10,7 @@ from core.entities.item.item import Item
 from core.update.utils import get_nearby_obstacles
 
 def _process_entity_substepping(entity, nearby_obstacles, game):
-    """Processes knockback physics and obstacle collisions for an entity."""
+    """Processes knockback physics and obstacle collisions for an active entity."""
     if getattr(entity, 'knockback_timer', 0) <= 0:
         return
 
@@ -43,62 +43,58 @@ def _process_entity_substepping(entity, nearby_obstacles, game):
     entity.knockback_velocity[1] *= decay
     entity.knockback_timer -= game.dt_ms
 
-def _update_entity_batch(entity_list, player_x, player_y, lod_base_radius_sq, max_per_frame, grid_size, game, is_animal_batch=False):
-    """Generic updater for both zombie and animal batches with LOD and spatial separation."""
-    current_time = pygame.time.get_ticks()
-    processed_count = 0
+def _update_entity_batch(entity_list, player_x, player_y, view_radius, grid_size, game, is_animal_batch=False):
+    """
+    Performance-optimized updater:
+    - Eliminates O(N log N) list sorting.
+    - Entities outside (view_radius + 3 tiles) become completely DORMANT (0 CPU cost).
+    """
+    dormant_radius = view_radius + (3 * TILE_SIZE)
+    dormant_radius_sq = dormant_radius * dormant_radius
+    curr_layer = getattr(game, 'current_layer_index', 1)
 
-    def get_min_player_dist_sq(e):
-        return (player_x - e.rect.centerx)**2 + (player_y - e.rect.centery)**2
-
-    entities_by_dist = sorted(entity_list, key=get_min_player_dist_sq)
-
-    for entity in entities_by_dist:
+    for entity in entity_list:
         if getattr(entity, 'is_dead', False) or getattr(entity, 'health', 0) <= 0:
             continue
-        dist_sq = get_min_player_dist_sq(entity)
+
+        if getattr(entity, 'layer', 1) != curr_layer:
+            continue
+
+        dx = player_x - entity.rect.centerx
+        dy = player_y - entity.rect.centery
+        dist_sq = dx * dx + dy * dy
+
         is_chasing = getattr(entity, 'state', None) == 'chasing'
         is_aggroed = getattr(entity, 'aggro_timer', 0) > 0
 
-        if dist_sq > lod_base_radius_sq * 4 and not is_chasing and not is_aggroed:
+        # --- DORMANT SLEEP STATE ---
+        # When outside the view radius and not actively in combat, skip all simulation
+        if dist_sq > dormant_radius_sq and not is_chasing and not is_aggroed:
+            entity.vx = 0
+            entity.vy = 0
+            entity.walk_anim_angle = 0
+            entity.is_dormant = True
             continue
 
-        if dist_sq > lod_base_radius_sq:
-            lod_skip = 3 if dist_sq <= lod_base_radius_sq * 2 else 6
-            if current_time % (lod_skip * 16) > 16 and not is_aggroed:
-                if hasattr(entity, 'knockback_timer') and entity.knockback_timer > 0:
-                    entity.knockback_timer -= game.dt_ms
-                continue
+        entity.is_dormant = False
 
-        processed_count += 1
-        if processed_count > max_per_frame:
-            break
+        # Active entity updates
+        nearby = [e for e in game.quadtree.query(entity.rect.inflate(grid_size, grid_size)) if e != entity]
+        obstacles = get_nearby_obstacles(entity.rect, game.cached_obstacle_grid, grid_size)
 
-        if dist_sq <= lod_base_radius_sq:
-            nearby = [e for e in game.quadtree.query(entity.rect.inflate(grid_size, grid_size)) if e != entity]
-            obstacles = get_nearby_obstacles(entity.rect, game.cached_obstacle_grid, grid_size)
-        elif dist_sq <= lod_base_radius_sq * 2:
-            nearby = [e for e in game.quadtree.query(entity.rect.inflate(grid_size // 2, grid_size // 2)) if e != entity]
-            obstacles = []
-        else:
-            nearby, obstacles = [], []
-
-        # Inter-entity soft collision/repulsion
+        # Soft entity repulsion
         for other in nearby:
             if not getattr(other, 'is_dead', False) and entity.rect.colliderect(other.rect):
-                if is_animal_batch and hasattr(entity, 'mask') and hasattr(other, 'mask') and entity.mask and other.mask:
-                    if not entity.mask.overlap(other.mask, (other.rect.x - entity.rect.x, other.rect.y - entity.rect.y)):
-                        continue
-                dx = entity.rect.centerx - other.rect.centerx
-                dy = entity.rect.centery - other.rect.centery
-                overlap_dist_sq = dx*dx + dy*dy
-                if overlap_dist_sq < TILE_SIZE**2:
+                odx = entity.rect.centerx - other.rect.centerx
+                ody = entity.rect.centery - other.rect.centery
+                overlap_dist_sq = odx * odx + ody * ody
+                if overlap_dist_sq < TILE_SIZE * TILE_SIZE:
                     if not hasattr(entity, 'knockback_velocity') or isinstance(entity.knockback_velocity, tuple):
                         entity.knockback_velocity = [0.0, 0.0]
                     dist = math.sqrt(overlap_dist_sq) if overlap_dist_sq > 0.001 else 0.001
                     push = max(0.2, min(2.0, (TILE_SIZE - dist) / TILE_SIZE))
-                    entity.knockback_velocity[0] += (dx / dist) * push
-                    entity.knockback_velocity[1] += (dy / dist) * push
+                    entity.knockback_velocity[0] += (odx / dist) * push
+                    entity.knockback_velocity[1] += (ody / dist) * push
                     entity.knockback_timer = max(getattr(entity, 'knockback_timer', 0), 50)
 
         if getattr(entity, 'aggro_timer', 0) > 0:
@@ -109,22 +105,17 @@ def _update_entity_batch(entity_list, player_x, player_y, lod_base_radius_sq, ma
         entity.update_ai(game.player.rect, obstacles, ai_nearby, game)
 
 def update_entities(game, GRID_SIZE, zombies_to_remove):
-    map_chunks = getattr(core.data.config, 'MAP_CHUNKS', 2)
-    max_zombies = max(12, 25 - (map_chunks * 2))
-    max_animals = max(6, max_zombies // 2)
-
     if getattr(game, 'player', None):
         px, py = game.player.rect.centerx, game.player.rect.centery
+        view_radius = getattr(game, 'player_view_radius', 12 * TILE_SIZE)
     else:
         px, py = (0, 0)
+        view_radius = 12 * TILE_SIZE
 
-    lod_radius_sq = int(CHUNK_SIZE * 22 * (1.0 + map_chunks * 0.15)) ** 2
+    # Process entities without global sort overhead
+    _update_entity_batch(getattr(game, 'active_zombies', game.zombies), px, py, view_radius, GRID_SIZE, game, is_animal_batch=False)
+    _update_entity_batch(getattr(game, 'active_animals', []), px, py, view_radius, GRID_SIZE, game, is_animal_batch=True)
 
-    # Process batches
-    _update_entity_batch(getattr(game, 'active_zombies', game.zombies[:]), px, py, lod_radius_sq, max_zombies, GRID_SIZE, game, is_animal_batch=False)
-    _update_entity_batch(getattr(game, 'active_animals', []), px, py, lod_radius_sq, max_animals, GRID_SIZE, game, is_animal_batch=True)
-
-    # Clean dead entities
     if zombies_to_remove:
         game.zombies = [z for z in game.zombies if z not in zombies_to_remove]
     
@@ -149,18 +140,9 @@ def update_entities(game, GRID_SIZE, zombies_to_remove):
     if hasattr(game, 'containers') and game.containers:
         Item.cleanup_disposables(game.containers, game.modals)
 
-    # Clean modals attached to dropped/distant items
-    if getattr(game, 'modals', None) and getattr(game, 'player', None):
-        for modal in list(game.modals):
-            if modal['type'] in ('container', 'text', 'big_map', 'mobile'):
-                container_item = modal.get('item')
-                if container_item and hasattr(container_item, 'rect') and (container_item in game.items_on_ground):
-                    if (px - container_item.rect.centerx)**2 + (py - container_item.rect.centery)**2 > (TILE_SIZE * 1.5) ** 2:
-                        game.modals.remove(modal)
-    
     current_time = pygame.time.get_ticks()
-    game.splashes = [s for s in game.splashes if current_time - s['time'] < s['duration']][:150]
+    game.splashes = [s for s in game.splashes if current_time - s['time'] < s['duration']][:100]
     if hasattr(game, 'blood_stains'):
-        game.blood_stains = [s for s in game.blood_stains if current_time - s['time'] < s['duration']][:250]
+        game.blood_stains = [s for s in game.blood_stains if current_time - s['time'] < s['duration']][:150]
     if hasattr(game, 'ground_trails'):
-        game.ground_trails = [t for t in game.ground_trails if current_time - t['time'] < t['duration']][:500]
+        game.ground_trails = [t for t in game.ground_trails if current_time - t['time'] < t['duration']][:200]

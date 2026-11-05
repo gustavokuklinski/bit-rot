@@ -52,12 +52,12 @@ def run_playing(game):
 
     px, py = game.player.rect.center if game.player else (0, 0)
     
-    view_w = int(getattr(game, 'dynamic_w', 1280) / getattr(game, 'zoom_level', 1.0))
-    view_h = int(getattr(game, 'dynamic_h', 720) / getattr(game, 'zoom_level', 1.0))
-    SIMULATION_DISTANCE = max(700, int(math.hypot(view_w, view_h) / 2) + 120)
+    # Restrict simulation boundary to view radius + buffer (instead of 700+ pixels)
+    view_radius = getattr(game, 'player_view_radius', 12 * TILE_SIZE)
+    SIMULATION_DISTANCE = max(320, int(view_radius + (4 * TILE_SIZE)))
 
-    MAX_ACTIVE_ZOMBIES = 60
-    MAX_ACTIVE_ANIMALS = 30
+    MAX_ACTIVE_ZOMBIES = 40
+    MAX_ACTIVE_ANIMALS = 20
 
     game.active_zombies = []
     game.visible_items = []
@@ -94,18 +94,31 @@ def run_playing(game):
             game.active_animals.append(item)
 
     if len(game.active_zombies) > MAX_ACTIVE_ZOMBIES:
-        game.active_zombies.sort(key=lambda z: (z.rect.centerx - px)**2 + (z.rect.centery - py)**2)
         game.active_zombies = game.active_zombies[:MAX_ACTIVE_ZOMBIES]
     
     if len(game.active_animals) > MAX_ACTIVE_ANIMALS:
-        game.active_animals.sort(key=lambda a: (a.rect.centerx - px)**2 + (a.rect.centery - py)**2)
         game.active_animals = game.active_animals[:MAX_ACTIVE_ANIMALS]
 
-    game.active_npcs = [n for n in game.npcs if abs(n.rect.centerx - px) < SIMULATION_DISTANCE and abs(n.rect.centery - py) < SIMULATION_DISTANCE]
-    
-    MAX_ACTIVE_NPCS = 10
+    # Dormancy culling for NPCs outside view radius
+    npc_dormant_radius_sq = (view_radius + (3 * TILE_SIZE)) ** 2
+    game.active_npcs = []
+    for n in game.npcs:
+        if n.is_dead:
+            continue
+        ndx = n.rect.centerx - px
+        ndy = n.rect.centery - py
+        ndist_sq = ndx * ndx + ndy * ndy
+        if ndist_sq <= npc_dormant_radius_sq or getattr(n, 'aggro_timer', 0) > 0:
+            n.is_dormant = False
+            game.active_npcs.append(n)
+        else:
+            n.vx = 0
+            n.vy = 0
+            n.walk_anim_angle = 0
+            n.is_dormant = True
+
+    MAX_ACTIVE_NPCS = 8
     if len(game.active_npcs) > MAX_ACTIVE_NPCS:
-        game.active_npcs.sort(key=lambda n: (n.rect.centerx - px)**2 + (n.rect.centery - py)**2)
         game.active_npcs = game.active_npcs[:MAX_ACTIVE_NPCS]
 
     quadtree_needs_rebuild = False
@@ -179,24 +192,8 @@ def run_playing(game):
     MAX_NPCS_PER_FRAME = 8
     
     for npc in game.active_npcs:
-        if player_pos:
-            dx = npc.rect.centerx - player_pos[0]
-            dy = npc.rect.centery - player_pos[1]
-            dist_sq = dx*dx + dy*dy
-            
-            if dist_sq > NPC_UPDATE_RADIUS_SQ and npc.state != 'chasing':
-                continue
-            
-            if dist_sq > 400**2 and npc.state != 'chasing':
-                if dist_sq <= 800**2 and game.frame_count % 2 != 0:
-                    continue
-                elif dist_sq > 800**2 and game.frame_count % 4 != 0:
-                    continue
-        
-        npcs_updated += 1
-        if npcs_updated > MAX_NPCS_PER_FRAME:
-            break
-            
+        if getattr(npc, 'is_dormant', False):
+            continue
         npc.update(game)
 
     game._cleanup_modals()
