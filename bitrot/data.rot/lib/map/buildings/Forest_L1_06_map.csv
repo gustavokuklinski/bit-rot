@@ -1,10 +1,10 @@
 ,,,,,garden_tree_8,,,,
 garden_dirty_2,garden_grass_3,garden_grass_3,garden_tree_3,garden_tree_3,garden_tree_3,,garden_grass_1,garden_tree_3,
-,garden_grass_3,garden_tree_3,garden_dirty_1,garden_dirty_1,,garden_tree_8,garden_stone,garden_grass_1,garden_grass_1
-garden_dirty_2,garden_tree_3,,,garden_tree_8,garden_dirty_1,garden_grass_3,garden_grass_3,garden_dirty_1,garden_dirty_1
-garden_grass_3,garden_stone,garden_dirty_1,garden_dirty_1,garden_grass_1,garden_dirty_1,garden_tree_8,,garden_tree_3,
-,garden_grass_1,garden_tree_8,garden_grass_3,,garden_tree_8,garden_dirty_2,garden_tree_8,,
-,garden_tree_8,garden_dirty_1,garden_grass_1,garden_stone,garden_tree_8,garden_grass_3,garden_dirty_1,,garden_dirty_2
+,garden_grass_3,garden_tree_3,garden_dirty_1,garden_dirty_1,petrol_full_top_right_01,petrol_top_01,petrol_top_01,petrol_full_top_left_01,garden_grass_1
+garden_dirty_2,garden_tree_3,,,garden_tree_8,petrol_right_01,petrol_01,petrol_01,petrol_left_01,garden_dirty_1
+garden_grass_3,garden_stone,garden_dirty_1,garden_dirty_1,garden_grass_1,petrol_right_01,petrol_01,,petrol_left_01,
+,garden_grass_1,garden_tree_8,garden_grass_3,,petrol_full_right_01,petrol_bottom_01,petrol_01,petrol_left_01,
+,garden_tree_8,garden_dirty_1,garden_grass_1,garden_stone,garden_tree_8,garden_grass_3,petrol_full_right_01,petrol_full_bottom_left_01,garden_dirty_2
 ,,garden_tree_8,garden_tree_8,garden_dirty_1,garden_tree_8,garden_tree_8,,garden_grass_1,
 ,garden_tree_3,,garden_tree_8,garden_grass_3,garden_tree_8,garden_grass_3,garden_tree_3,,
 ,,garden_grass_1,,,,garden_stone,,,garden_tree_3

@@ -111,7 +111,8 @@ class AsyncSpawnManager:
   def _find_out_of_sight(self, px, py, spawn_r, obstacles, map_w, map_h):
     start_angle = random.uniform(0, math.pi * 2)
     steps = 24
-    offsets = [0, TILE_SIZE, -TILE_SIZE, 2 * TILE_SIZE]
+    # Spawn right along the outer perimeter (2 to 4 tiles past view radius)
+    offsets = [0, TILE_SIZE * 2, TILE_SIZE * 3]
 
     for r_off in offsets:
       cur_r = max(TILE_SIZE * 5, spawn_r + r_off)
@@ -402,8 +403,8 @@ def manage_dynamic_npcs(game):
     px, py = game.player.rect.centerx, game.player.rect.centery
     view_radius = getattr(game, 'player_view_radius', 12 * TILE_SIZE)
 
-    # Despawn roaming hostiles just outside the view radius boundary (8 tiles away)
-    despawn_radius = view_radius + (8 * TILE_SIZE)
+    # FIX: Despawn radius must be significantly larger than spawn radius (16 tiles away vs 3 tiles)
+    despawn_radius = view_radius + (16 * TILE_SIZE)
     despawn_radius_sq = despawn_radius * despawn_radius
 
     for npc in list(game.npcs):
@@ -414,11 +415,11 @@ def manage_dynamic_npcs(game):
             game.npcs.remove(npc)
             continue
         
-        # Preserve static and friendly NPCs
+        # Preserve static and friendly NPCs from despawning
         if getattr(npc, 'is_static', False) or getattr(npc, 'is_friendly', False):
             continue
 
-        # Despawn distant roaming hostiles
+        # Only despawn when player has moved far away
         dist_sq = (npc.rect.centerx - px) ** 2 + (npc.rect.centery - py) ** 2
         if dist_sq > despawn_radius_sq and getattr(npc, 'aggro_timer', 0) <= 0:
             game.npcs.remove(npc)
@@ -430,10 +431,11 @@ def manage_dynamic_npcs(game):
                 game.npcs.add(npc)
         game.layer_npcs[curr_layer] = []
 
-    if len(game.npcs) >= max_npc_chunk:
+    current_layer_npcs = [n for n in game.npcs if getattr(n, 'layer', 1) == curr_layer and not n.is_dead]
+    if len(current_layer_npcs) >= max_npc_chunk:
         return
 
-    # Spawn right outside view boundary
+    # Spawn just outside view boundary (3 tiles away)
     async_spawner.request_spawn(
         'hnpc',
         count=1,
@@ -441,7 +443,7 @@ def manage_dynamic_npcs(game):
         obstacles=getattr(game, 'obstacles', []),
         map_w=getattr(game, 'map_width_pixels', 3000),
         map_h=getattr(game, 'map_height_pixels', 3000),
-        view_radius=view_radius,
+        view_radius=view_radius + (2 * TILE_SIZE),
         player_pos=(px, py),
     )
 

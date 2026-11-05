@@ -1,10 +1,10 @@
 @@,wall_glass_01,wall_glass_01,wall_glass_01,wall_glass_01,@@,outside_metal_fence_1,outside_metal_fence_1,outside_metal_door_01_broke,outside_metal_fence_1
-wall_glass_01,,,,misc_barrel,@@,factory_industrial_pipe_right,misc_oil_pump_02,misc_barrel,outside_metal_fence_1
+wall_glass_01,garden_dirty_1,,garden_tall_grass,misc_barrel,@@,factory_industrial_pipe_right,misc_oil_pump_02,misc_barrel,outside_metal_fence_1
 wall_glass_01,,store_sale_02,store_sale_02,misc_barrel,@@,@@,@@,@@,@@
-wall_glass_01,,,,,@@,military_radio,lab_cupboard_01,medical_cupboard_01,@@
-door_02_close,,store_sale_01,store_sale_01,store_sale_01,@@,,,,wall_glass_01
+wall_glass_01,,garden_tall_grass,,garden_dirty_1,@@,military_radio,lab_cupboard_01,medical_cupboard_01,@@
+door_02_close,,store_sale_01,store_sale_01,store_sale_01,@@,garden_dirty_1,,,wall_glass_01
 @@,@@,@@,@@,@@,@@,@@,door_02_close,@@,@@
-door_02_close,,,,medical_cupboard_01,@@,military_crate,,house_computer,wall_glass_01
-wall_glass_01,house_table,house_computer,,house_wardrobe,@@,military_crate,,house_bench,wall_glass_01
-wall_glass_01,house_bench,,,lab_cupboard_01,@@,military_crate,,house_computer,wall_glass_01
+door_02_close,,garden_dirty_1,,medical_cupboard_01,@@,military_crate,,house_computer,wall_glass_01
+wall_glass_01,house_table,house_computer,,house_wardrobe,@@,military_crate,garden_grass_1,house_bench,wall_glass_01
+wall_glass_01,house_bench,,garden_grass_1,lab_cupboard_01,@@,military_crate,garden_dirty_1,house_computer,wall_glass_01
 @@,wall_glass_01,wall_glass_01,wall_glass_01,wall_glass_01,@@,wall_glass_01,door_02_close,wall_glass_01,@@

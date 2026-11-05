@@ -157,7 +157,7 @@
         "default": 0.4
       },
       "respawn": {
-        "value": false,
+        "value": true,
         "name": "Zombie respawn on death",
         "default": true
       }
@@ -179,7 +179,7 @@
         "default": 0.2
       },
       "respawn": {
-        "value": false,
+        "value": true,
         "name": "NPC respawn on death",
         "default": true
       }
