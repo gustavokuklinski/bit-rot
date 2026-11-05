@@ -14,7 +14,8 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
     attribute_ids = [
         "strength", "fitness", "agility",
         "lucky", "melee", "ranged",
-        "maintenance", "intelligence"
+        "maintenance", "intelligence",
+        "fishing", "cooking", "mechanics", "weld"
     ]
 
     start_x = modal_rect.left + 15
@@ -79,7 +80,7 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
         if row_rect.collidepoint(mouse_pos):
             pending_tooltip = {
                 "label": label, 
-                "curr_xp": int(curr_xp), 
+                "curr_xp": curr_xp, 
                 "req_xp": req_xp,
                 "boost_info": boost_info
             }
@@ -91,7 +92,7 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
                 
                 # Default white progress line
                 self.tooltip_lines = [
-                    f"{tr('ui', 'Progress:')} {data['curr_xp']} / {data['req_xp']} XP"
+                    f"{tr('ui', 'Progress:')} {data['curr_xp']:.1f} / {data['req_xp']} XP"
                 ]
 
                 b = data.get('boost_info', {})

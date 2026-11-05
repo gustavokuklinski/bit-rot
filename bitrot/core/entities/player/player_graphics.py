@@ -139,6 +139,39 @@ class PlayerGraphics:
                 else:
                     surface.blit(img_to_draw, draw_rect)
 
+
+        if getattr(self, 'action_timer', 0) > 0 and getattr(self, 'fishing_target_pos', None):
+            start_px = draw_rect.centerx
+            start_py = draw_rect.centery - 2  # Hand/rod height
+            target_px = self.fishing_target_pos[0] + offset_x
+            target_py = self.fishing_target_pos[1] + offset_y
+
+            # Midpoint with dynamic gravitational sag and subtle water-current bobbing
+            mid_x = (start_px + target_px) / 2.0
+            mid_y = (start_py + target_py) / 2.0
+            dist = math.hypot(target_px - start_px, target_py - start_py)
+            
+            bob = math.sin(pygame.time.get_ticks() * 0.005) * 1.5
+            sag = max(6.0, dist * 0.22) + bob
+            control_x = mid_x
+            control_y = mid_y + sag
+
+            # Sample 14 segments along the quadratic curve B(t) = (1-t)^2 P0 + 2(1-t)t P1 + t^2 P2
+            num_points = 14
+            curve_points = []
+            for step in range(num_points + 1):
+                t = step / float(num_points)
+                inv_t = 1.0 - t
+                bx = (inv_t * inv_t * start_px) + (2.0 * inv_t * t * control_x) + (t * t * target_px)
+                by = (inv_t * inv_t * start_py) + (2.0 * inv_t * t * control_y) + (t * t * target_py)
+                curve_points.append((int(bx), int(by)))
+
+            if len(curve_points) >= 2:
+                # 2-pixel clean fishing line (soft monofilament off-white color)
+                pygame.draw.lines(surface, (230, 235, 245), False, curve_points, 2)
+                # Small 2x2 water float/bobber at line end
+                pygame.draw.circle(surface, (255, 60, 60), (int(target_px), int(target_py)), 2)
+
         # Weapons (Idle / Melee / Aiming)
         if self.active_weapon and self.active_weapon.image:
             is_swinging = (self.melee_swing_timer > 0)

@@ -385,6 +385,7 @@ def process_chat_command(game, text):
             game.player.max_stamina = 100.0
             game.player.infection = 0.0
             game.player.anxiety = 0.0
+            game.player.drugs = 0.0
 
             for part in getattr(game.player, 'body_parts', {}).values():
                 part['value'] = 100.0
@@ -674,7 +675,10 @@ DEFAULT_MODAL_POSITIONS = {
 def reset_modal_positions(game):
     if hasattr(game, 'last_modal_positions'):
         game.last_modal_positions.update(DEFAULT_MODAL_POSITIONS)
-    game.modals.clear()
+    
+    # Close main UI panels and reopen them at factory default positions
+    MAIN_PANEL_TYPES = {'gear', 'inventory', 'nearby', 'messages', 'status', 'slots'}
+    game.modals = [m for m in game.modals if m.get('type') not in MAIN_PANEL_TYPES]
     if hasattr(game, 'saved_modals'):
         game.saved_modals.clear()
     toggle_default_ui(game)
@@ -691,30 +695,31 @@ def toggle_default_ui(game):
     MAIN_PANEL_TYPES = {'gear', 'inventory', 'nearby', 'messages', 'status', 'slots'}
     is_main_ui_open = any(m.get('type') in MAIN_PANEL_TYPES for m in getattr(game, 'modals', []))
 
-    # Check if a standalone container modal is currently open
-    open_container_modal = next((m for m in game.modals if m.get('type') == 'container'), None)
-    container_to_dock = open_container_modal.get('item') if open_container_modal else None
-
     if is_main_ui_open:
-        # If the UI is open -> hide all modals
-        game.modals.clear()
+        # Hide only the standard panels; keep Vehicle, Mobile, NPC dialogs, etc. open
+        game.modals = [m for m in game.modals if m.get('type') not in MAIN_PANEL_TYPES]
         if hasattr(game, 'saved_modals'):
             game.saved_modals.clear()
     else:
-        # If hidden -> show and reset default UI
-        game.modals.clear()
-        if hasattr(game, 'saved_modals'):
-            game.saved_modals.clear()
+        # Check if a standalone container modal is open and dock it into Nearby
+        open_container_modal = next((m for m in game.modals if m.get('type') == 'container'), None)
+        container_to_dock = open_container_modal.get('item') if open_container_modal else None
+        if container_to_dock and open_container_modal in game.modals:
+            game.modals.remove(open_container_modal)
 
-        if hasattr(game, 'last_modal_positions'):
-            game.last_modal_positions.update(DEFAULT_MODAL_POSITIONS)
-
-        toggle_gear_modal(game)
-        toggle_inventory_modal(game)
-        toggle_nearby_modal(game)
-        toggle_messages_modal(game)
-        toggle_status_modal(game)
-        toggle_slots_modal(game)
+        # Open each default panel if it isn't already active (preserving current positions)
+        if not any(m.get('type') == 'gear' for m in game.modals):
+            toggle_gear_modal(game)
+        if not any(m.get('type') == 'inventory' for m in game.modals):
+            toggle_inventory_modal(game)
+        if not any(m.get('type') == 'nearby' for m in game.modals):
+            toggle_nearby_modal(game)
+        if not any(m.get('type') == 'messages' for m in game.modals):
+            toggle_messages_modal(game)
+        if not any(m.get('type') == 'status' for m in game.modals):
+            toggle_status_modal(game)
+        if not any(m.get('type') == 'slots' for m in game.modals):
+            toggle_slots_modal(game)
 
         # Place the previously opened container into Nearby
         if container_to_dock:

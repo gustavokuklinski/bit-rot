@@ -64,6 +64,7 @@ def load_player_builds():
                         name = b_info.get('name', cid.capitalize())
                         subtitle = b_info.get('subtitle', "")
                         desc = b_info.get('description', "")
+                        profession = b_info.get('profession', "")  # <-- Extracted profession
 
                         raw_color = b_info.get('color', b_info.get('accent', [255, 255, 255]))
                         if isinstance(raw_color, (list, tuple)) and len(raw_color) >= 3:
@@ -92,6 +93,7 @@ def load_player_builds():
                             'description': desc,
                             'accent': accent,
                             'color': accent,
+                            'profession': profession,  # <-- Stored in class definition
                             'clothes': clothes_list,
                             'clothes_dict': clothes_dict,
                             'items': items_list
@@ -235,24 +237,66 @@ def init_class_colors(dynamic_gear=None, randomize=False):
     return colors
 
 
-def generate_random_traits():
-    """Generates balanced 4 traits: exactly 2 positive and 2 negative traits, excluding professions."""
+def resolve_profession(prof_identifier):
+    """
+    Finds the trait ID and definition for a profession specified in player_builds.
+    Matches by ID or by 'name' attribute from traits.json (case-insensitive).
+    """
+    if not prof_identifier or not TRAIT_DEFINITIONS:
+        return None, None
+
+    target = str(prof_identifier).strip().lower()
+    target_norm = target.replace('_', ' ')
+
+    # 1. Match by trait ID
+    for t_id, t_data in TRAIT_DEFINITIONS.items():
+        if t_id.lower() == target or t_id.lower().replace('_', ' ') == target_norm:
+            return t_id, t_data
+
+    # 2. Match by 'name' from traits.json
+    for t_id, t_data in TRAIT_DEFINITIONS.items():
+        t_name = str(t_data.get('name', '')).strip().lower()
+        if t_name == target or t_name.replace('_', ' ') == target_norm:
+            return t_id, t_data
+
+    return None, None
+
+def get_build_profession(class_def):
+    """Returns (profession_id, profession_display_name) for a build class."""
+    raw = class_def.get('profession', '')
+    if not raw:
+        return None, None
+    prof_id, prof_data = resolve_profession(raw)
+    if prof_id and prof_data:
+        return prof_id, prof_data.get('name', prof_id)
+    return raw, raw
+
+def generate_random_traits(profession_id=None):
+    """Generates balanced 4 traits (2 positive, 2 negative) and includes the profession if defined."""
     available = {k: v for k, v in TRAIT_DEFINITIONS.items() if not v.get('is_profession', False)}
     if not available:
-        return []
-
-    pos_traits = [k for k, v in available.items() if v.get('cost', 0) > 0]
-    neg_traits = [k for k, v in available.items() if v.get('cost', 0) < 0]
+        return [profession_id] if profession_id else []
 
     chosen = []
     disabled = set()
+
+    # If this build has a profession from traits.json, add it first and record its conflicts
+    if profession_id and profession_id in TRAIT_DEFINITIONS:
+        chosen.append(profession_id)
+        prof_data = TRAIT_DEFINITIONS[profession_id]
+        for c in prof_data.get('conflicts', []):
+            disabled.add(c)
+        disabled.add(profession_id)
+
+    pos_traits = [k for k, v in available.items() if v.get('cost', 0) > 0 and k not in disabled]
+    neg_traits = [k for k, v in available.items() if v.get('cost', 0) < 0 and k not in disabled]
 
     random.shuffle(pos_traits)
     random.shuffle(neg_traits)
 
     # 1. Roll 2 Positive Traits
     for t_id in pos_traits:
-        if len([t for t in chosen if available[t].get('cost', 0) > 0]) >= 2:
+        if len([t for t in chosen if t in available and available[t].get('cost', 0) > 0]) >= 2:
             break
         if t_id not in disabled:
             chosen.append(t_id)
@@ -262,7 +306,7 @@ def generate_random_traits():
 
     # 2. Roll 2 Negative Traits
     for t_id in neg_traits:
-        if len([t for t in chosen if available[t].get('cost', 0) < 0]) >= 2:
+        if len([t for t in chosen if t in available and available[t].get('cost', 0) < 0]) >= 2:
             break
         if t_id not in disabled:
             chosen.append(t_id)
@@ -272,11 +316,13 @@ def generate_random_traits():
 
     return chosen
 
-
-
 def init_all_class_traits():
-    """Rolls a unique balanced 4-trait combination independently for every class."""
-    return {c['id']: generate_random_traits() for c in CHARACTER_CLASSES}
+    """Rolls traits independently for each class, including its configured profession from traits.json."""
+    traits_map = {}
+    for c in CHARACTER_CLASSES:
+        prof_id, _ = get_build_profession(c)
+        traits_map[c['id']] = generate_random_traits(profession_id=prof_id)
+    return traits_map
 
 
 def _render_paper_doll(class_id, clothes_names, class_colors=None, size=(48, 48)):
@@ -392,6 +438,11 @@ def _start_with_class(game, state, class_def):
     class_traits = state.get('class_traits', {}).get(class_def['id'], [])
     final_player_data['traits'] = list(class_traits)
 
+    # Store profession identifier
+    prof_id, prof_name = get_build_profession(class_def)
+    if prof_id:
+        final_player_data['profession'] = prof_name
+
     # Starter Inventory Items
     starter_items = list(class_def.get('items', []))
     final_player_data['initial_loot'] = starter_items
@@ -485,7 +536,8 @@ def draw_select_character_screen(game, state, mouse_pos):
     else:
         for c in CHARACTER_CLASSES:
             if c['id'] not in state['class_traits']:
-                state['class_traits'][c['id']] = generate_random_traits()
+                prof_id, _ = get_build_profession(c)
+                state['class_traits'][c['id']] = generate_random_traits(profession_id=prof_id)
 
     if 'class_dynamic_gear' not in state:
         state['class_dynamic_gear'] = init_class_dynamic_gear()
@@ -665,15 +717,28 @@ def draw_select_character_screen(game, state, mouse_pos):
         )
 
         # Bullets / Summary Inside Card
-        line_cursor_y = card_rect.top + S(146)
+        line_cursor_y = card_rect.top + S(144)
 
-        # Each Class's Own 4 Rolled Traits (2 Positives, 2 Negatives)
+        # Display Profession if defined
+        prof_id, prof_name = get_build_profession(c_def)
+        if prof_name:
+            prof_lbl = font_12.render(f"{tr('ui', 'Profession')}:", False, (255, 215, 0))
+            game.game_screen.blit(prof_lbl, (card_rect.left + S(18), line_cursor_y))
+            
+            p_name_tr = tr('trait', prof_name)
+            p_val = font_12.render(p_name_tr, False, WHITE)
+            game.game_screen.blit(p_val, (card_rect.left + S(18) + prof_lbl.get_width() + S(6), line_cursor_y))
+            line_cursor_y += S(18)
+
+        # Traits Header
         traits_header = font_12.render(tr('ui', "Traits:"), False, YELLOW)
         game.game_screen.blit(traits_header, (card_rect.left + S(18), line_cursor_y))
-        line_cursor_y += S(18)
+        line_cursor_y += S(17)
 
         class_traits = state['class_traits'].get(c_def['id'], [])
-        for t_id in class_traits:
+        # Only display non-profession traits under "Traits:" list
+        display_traits = [t for t in class_traits if t != prof_id]
+        for t_id in display_traits:
             t_def = TRAIT_DEFINITIONS.get(t_id, {})
             base_name = t_def.get('name', t_id.capitalize())
             cost = t_def.get('cost', 0)
@@ -682,11 +747,11 @@ def draw_select_character_screen(game, state, mouse_pos):
             translated_trait = tr('trait', base_name)
             t_line = font_12.render(f"{prefix} {translated_trait}", False, col)
             game.game_screen.blit(t_line, (card_rect.left + S(22), line_cursor_y))
-            line_cursor_y += S(16)
+            line_cursor_y += S(15)
 
         # Starter Items summary
         if c_def.get('items'):
-            line_cursor_y += S(6)
+            line_cursor_y += S(4)
             translated_items = [tr('item', it) if tr('item', it) != it else tr('cloth', it) for it in c_def['items']]
             items_str = ", ".join(translated_items)
             items_txt = f"{tr('ui', 'Items:')} {items_str}"
@@ -780,7 +845,6 @@ def draw_select_character_screen(game, state, mouse_pos):
     if hovered_class:
         class_traits = state['class_traits'].get(hovered_class['id'], [])
         
-        # Word wrap description into ~40 character lines so tooltip never stretches wide
         desc = hovered_class['description']
         desc_lines = []
         words = desc.split(' ')
@@ -796,10 +860,19 @@ def draw_select_character_screen(game, state, mouse_pos):
 
         tooltip_lines = list(desc_lines)
         
+        # Display profession in tooltip
+        prof_id, prof_name = get_build_profession(hovered_class)
+        if prof_name:
+            tooltip_lines.append("")
+            tooltip_lines.append(f"{tr('ui', 'Profession')}: {tr('trait', prof_name)}")
+            if prof_id and prof_id in TRAIT_DEFINITIONS:
+                p_tooltip = TRAIT_DEFINITIONS[prof_id].get('tooltip')
+                if p_tooltip:
+                    tooltip_lines.append(f"  {tr('trait_tooltip', p_tooltip)}")
+
         tooltip_lines.append("")
         tooltip_lines.append(f"{tr('ui', 'Clothes:')}")
         
-        # Show actual clothes list including hair and head equipment
         active_clothes = state.get('class_dynamic_gear', {}).get(hovered_class['id'], {}).get('clothes', hovered_class['clothes'])
         for c_name in active_clothes:
             c_trans = tr('cloth', c_name)
@@ -818,7 +891,8 @@ def draw_select_character_screen(game, state, mouse_pos):
 
         tooltip_lines.append("")
         tooltip_lines.append(tr('ui', "Traits:"))
-        for t_id in class_traits:
+        display_traits = [t for t in class_traits if t != prof_id]
+        for t_id in display_traits:
             t_def = TRAIT_DEFINITIONS.get(t_id, {})
             t_name = t_def.get('name', t_id)
             t_cost = t_def.get('cost', 0)

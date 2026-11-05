@@ -10,11 +10,6 @@
             "target": "unarmed_damage",
             "value": 0.05,
             "type": "multiplier_add"
-          },
-          {
-            "target": "carry_weight",
-            "value": 1.5,
-            "type": "flat"
           }
         ]
       },
@@ -126,6 +121,26 @@
             "type": "flat"
           }
         ]
+      },
+      "fishing": {
+        "name": "Fishing",
+        "image": "ui/lucky.png",
+        "base_xp": 300
+      },
+      "cooking": {
+        "name": "Cooking",
+        "image": "ui/lucky.png",
+        "base_xp": 300
+      },
+      "mechanics": {
+        "name": "Mechanics",
+        "image": "ui/lucky.png",
+        "base_xp": 300
+      },
+      "weld": {
+        "name": "Weld",
+        "image": "ui/lucky.png",
+        "base_xp": 300
       }
     },
     "stats": {

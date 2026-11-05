@@ -1,4 +1,4 @@
-<recipe type="car_fuel" craft="create" output="[{baseItem:Fuel Canister}, {loot:[Fuel Unit:15]}]" gain_xp="[agility:0.1, maintenance:0.1]" amount="1" time="10.0">
+<recipe type="car_fuel" craft="create" output="[{baseItem:Fuel Canister}, {loot:[Fuel Unit:15]}]" gain_xp="[intelligence: 1.0, agility:0.1, maintenance:0.1]" amount="1" time="10.0">
     <ingredient name="Fuel Canister" destroy="true" amount="1" />
     <ingredient name="Crude Oil Unit" destroy="true" amount="10" />
     <ingredient name="Dirty Water Unit" destroy="true" amount="5" />

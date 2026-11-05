@@ -1,8 +1,8 @@
 {
   "player_traits": {
     "professions": {
-      "Profession_Unemployed": {
-        "name": "Unemployed",
+      "Profession_Civilian": {
+        "name": "Civilian",
         "cost": 0,
         "tooltip": "A blank slate. No bonuses, but no deficits.",
         "disable": [
@@ -12,7 +12,8 @@
           "Profession_Spy",
           "Profession_Scientist",
           "Profession_Nurse",
-          "Profession_Police_Officer"
+          "Profession_Police_Officer",
+          "Profession_Military_Officer"
         ],
         "attributes": {
           "level": {
@@ -31,8 +32,9 @@
           "Profession_Mechanic",
           "Profession_Spy",
           "Profession_Scientist",
-          "Profession_Unemployed",
-          "Profession_Police_Officer"
+          "Profession_Civilian",
+          "Profession_Police_Officer",
+          "Profession_Military_Officer"
         ],
         "attributes": {
           "level": {
@@ -58,8 +60,9 @@
           "Profession_Mechanic",
           "Profession_Spy",
           "Profession_Scientist",
-          "Profession_Unemployed",
-          "Profession_Nurse"
+          "Profession_Civilian",
+          "Profession_Nurse",
+          "Profession_Military_Officer"
         ],
         "attributes": {
           "level": {
@@ -76,6 +79,35 @@
           "Survivor Guide Basic"
         ]
       },
+      "Profession_Military_Officer": {
+        "name": "Military Officer",
+        "cost": 4,
+        "tooltip": "Proficient with firearms and moderately fit.",
+        "disable": [
+          "Profession_Maintenance",
+          "Profession_CEO_assistant",
+          "Profession_Mechanic",
+          "Profession_Spy",
+          "Profession_Scientist",
+          "Profession_Civilian",
+          "Profession_Nurse",
+          "Profession_Police_Officer"
+        ],
+        "attributes": {
+          "level": {
+            "strength": 5,
+            "fitness": 5,
+            "agility": 3,
+            "maintenance": 2,
+            "intelligence": 2,
+            "ranged": 2,
+            "lucky": 2
+          }
+        },
+        "recipe": [
+          "Survivor Guide Basic"
+        ]
+      },
       "Profession_Scientist": {
         "name": "Scientist",
         "cost": 3,
@@ -85,9 +117,10 @@
           "Profession_CEO_assistant",
           "Profession_Mechanic",
           "Profession_Spy",
-          "Profession_Unemployed",
+          "Profession_Civilian",
           "Profession_Nurse",
-          "Profession_Police_Officer"
+          "Profession_Police_Officer",
+          "Profession_Military_Officer"
         ],
         "attributes": {
           "level": {
@@ -111,10 +144,11 @@
           "Profession_Maintenance",
           "Profession_Scientist",
           "Profession_CEO_assistant",
-          "Profession_Unemployed",
+          "Profession_Civilian",
           "Profession_Spy",
           "Profession_Nurse",
-          "Profession_Police_Officer"
+          "Profession_Police_Officer",
+          "Profession_Military_Officer"
         ],
         "attributes": {
           "level": {
@@ -122,7 +156,8 @@
             "fitness": 5,
             "agility": 2,
             "maintenance": 4,
-            "intelligence": 2
+            "intelligence": 2,
+            "mechanic": 2
           }
         },
         "recipe": [
@@ -138,9 +173,10 @@
           "Profession_Scientist",
           "Profession_CEO_assistant",
           "Profession_Mechanic",
-          "Profession_Unemployed",
+          "Profession_Civilian",
           "Profession_Nurse",
-          "Profession_Police_Officer"
+          "Profession_Police_Officer",
+          "Profession_Military_Officer"
         ],
         "attributes": {
           "level": {
@@ -165,9 +201,10 @@
           "Profession_Spy",
           "Profession_Scientist",
           "Profession_Mechanic",
-          "Profession_Unemployed",
+          "Profession_Civilian",
           "Profession_Nurse",
-          "Profession_Police_Officer"
+          "Profession_Police_Officer",
+          "Profession_Military_Officer"
         ],
         "attributes": {
           "level": {
@@ -191,10 +228,11 @@
           "Profession_Spy",
           "Profession_Scientist",
           "Profession_Mechanic",
-          "Profession_Unemployed",
+          "Profession_Civilian",
           "Profession_Nurse",
           "Profession_Police_Officer",
-          "Profession_CEO_assistant"
+          "Profession_CEO_assistant",
+          "Profession_Military_Officer"
         ],
         "attributes": {
           "level": {
@@ -416,7 +454,8 @@
         "tooltip": "-15% slower recovery stamina and +15% faster increase anxiety",
         "stats": {
           "stamina": -15,
-          "anxiety": 15
+          "anxiety": 15,
+          "drugs": 5
         },
         "config": {
           "ZOMBIE_MAX_CHUNK": 2
@@ -430,7 +469,8 @@
           "agility": -15
         },
         "stats": {
-          "anxiety": 15
+          "anxiety": 15,
+          "drugs": 100
         },
         "config": {
           "ZOMBIE_MAX_CHUNK": 2

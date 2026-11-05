@@ -1,4 +1,4 @@
-<recipe type="resource" craft="dismantle" time="5.0" gain_xp="[intelligence:0.5, maintenance:0.2]">
+<recipe type="resource" craft="dismantle" time="5.0" magazine="Vehicle Engineering Tire" gain_xp="[intelligence:0.5, maintenance:0.2, mechanics:0.5]">
     <ingredient name="Car Tire" destroy="true" amount="1" />
     <ingredient name="Screwdriver" destroy="false" amount="1" />
     <ingredient name="Blueprint" destroy="true" amount="5" />

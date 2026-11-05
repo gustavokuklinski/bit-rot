@@ -5,6 +5,7 @@
       "subtitle": "Armed Forces",
       "description": "The small nations who still survive and distribuite the vaccines to the world.",
       "color": [255, 206, 149],
+      "profession": "Military Officer",
       "clothes": {
         "head": "Beret",
         "feet": "Military Boots",

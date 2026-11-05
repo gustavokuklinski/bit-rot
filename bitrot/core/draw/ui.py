@@ -677,6 +677,8 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         stats = [
             ('hp', 'ui/hp.png', player.health, player.max_health, 'Health'),
             ('stm', 'ui/stamina.png', player.stamina, player.max_stamina, 'Stamina'),
+            ('fod', 'ui/food.png', getattr(player, 'food', 100.0), 100.0, 'Food'),
+            ('wtr', 'ui/water.png', getattr(player, 'water', 100.0), 100.0, 'Water'),
             ('def', 'ui/defence.png', player.get_total_defence(), 100.0, 'Defence')
         ]
 
@@ -696,12 +698,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             ratio = max(0.0, min(1.0, (val / max_val))) if max_val > 0 else 0.0
             fill_w = int(bar_w * ratio)
 
-            if key == 'hp':
-                bar_color = GRAY
-            elif key == 'stm':
-                bar_color = GRAY
-            else:
-                bar_color = GRAY
+            bar_color = GRAY
 
             # Standard bar pattern: (30, 30, 30) background, color fill, 1px white border
             pygame.draw.rect(surface, (30, 30, 30), border_rect)
@@ -711,7 +708,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             pygame.draw.rect(surface, WHITE, border_rect, 1)
 
             row_rect = pygame.Rect(box_x, curr_y, 22 + bar_w, 16)
-            if key == 'def':
+            if key in ('def', 'fod', 'wtr'):
                 tooltip_text = f"{tr('ui', label_key)}: {int(val)}%"
             else:
                 tooltip_text = f"{tr('ui', label_key)}: {int(val)}/{int(max_val)}"
@@ -972,7 +969,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         tooltip_targets = [
             (game.pause_button_rect, f"{tr('ui', 'Pause')} ({get_key_name('pause') or 'F2'})"), 
             (game.menu_hud_button_rect, f"{tr('ui', 'Toggle UI Menus')} ({get_key_name('toggle_menu') or 'F3'})"),
-            (game.modals_all_button_rect, f"{tr('ui', 'Toggle and Reset UI')} ({get_key_name('toggle_modals') or 'TAB'})"),
+            (game.modals_all_button_rect, f"{tr('ui', 'Toggle UI')} ({get_key_name('toggle_modals') or 'TAB'})"),
             (getattr(game, 'status_button_rect', None), f"{tr('ui', 'Player Status')} ({get_key_name('toggle_status') or 'F5'})"),
             (getattr(game, 'inventory_button_rect', None), f"{tr('ui', 'Inventory')} ({get_key_name('toggle_inventory') or 'F6'})"),
             (getattr(game, 'gear_button_rect', None), f"{tr('ui', 'Gear')} ({get_key_name('toggle_gear') or 'F7'})"),

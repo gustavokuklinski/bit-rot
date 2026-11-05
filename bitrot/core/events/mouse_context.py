@@ -350,9 +350,15 @@ def handle_right_click(game, mouse_pos):
 
                 p_grid_x = int(game.player.rect.centerx // TILE_SIZE)
                 p_grid_y = int(game.player.rect.centery // TILE_SIZE)
+                is_adjacent_tile = (abs(grid_x - p_grid_x) <= 1 and abs(grid_y - p_grid_y) <= 1)
+                tile_dist = math.hypot(game.player.rect.centerx - tile_cx, game.player.rect.centery - tile_cy)
 
-                # Exactly 1 tile away (adjacent or diagonal neighbor) or within 2-tile radius
-                is_tile_in_range = (abs(grid_x - p_grid_x) <= 1 and abs(grid_y - p_grid_y) <= 1) or (dist_sq <= (TILE_SIZE * 2.0) ** 2)
+                # Water tiles can be targeted up to 4.5 tiles for fishing; other objects require 1-2 tiles
+                if is_water:
+                    is_tile_in_range = (tile_dist <= TILE_SIZE * 4.5)
+                else:
+                    is_tile_in_range = is_adjacent_tile or (dist_sq <= (TILE_SIZE * 2.0) ** 2)
+
                 if tile and tile.get('type') == "maptile_car":
                     is_tile_in_range = is_tile_in_range or (dist_sq <= (TILE_SIZE * 2.0) ** 2)
 
@@ -384,8 +390,11 @@ def handle_right_click(game, mouse_pos):
                                 'name': 'Water' if is_water else 'Petrol',
                                 'type': 'liquid_source',
                                 'liquid_name': 'Dirty Water Unit' if is_water else 'Crude Oil Unit',
-                                'grid_x': grid_x,
-                                'grid_y': grid_y
+                                'grid_x': grid_x, 
+                                'grid_y': grid_y,
+                                'tile_pos': (grid_x * TILE_SIZE + TILE_SIZE // 2, grid_y * TILE_SIZE + TILE_SIZE // 2),
+                                'char': char,
+                                'g_char': g_char
                             }
                             click_source = 'liquid_source'
 
@@ -660,17 +669,54 @@ def handle_right_click(game, mouse_pos):
                 game.context_menu['active'] = False
                 return
 
-            liquid_name = clicked_item['liquid_name']
-            dummy_liquid = Item.create_from_name(liquid_name)
-            if not dummy_liquid:
-                dummy_liquid = Item(liquid_name, 'liquid', liquid=True)
+            options = []
 
-            from core.events.mouse_context_submenus import build_liquid_collect_submenu
-            send_sub = build_liquid_collect_submenu(dummy_liquid, game)
-            if send_sub:
-                options = [send_sub]
-            else:
-                display_message(f"{tr('msg', 'No suitable container to collect')} {tr('item', liquid_name)}.")
+            # Check tile distance
+            p_gx = int(game.player.rect.centerx // TILE_SIZE)
+            p_gy = int(game.player.rect.centery // TILE_SIZE)
+            is_1_tile_away = (abs(clicked_item['grid_x'] - p_gx) <= 1 and abs(clicked_item['grid_y'] - p_gy) <= 1)
+            dist_to_water = math.hypot(clicked_item['grid_x'] - p_gx, clicked_item['grid_y'] - p_gy)
+
+            # Check if water tile
+            is_water_tile = (
+                clicked_item.get('name') == 'Water' or
+                'water' in str(clicked_item.get('char', '')).lower() or
+                'water' in str(clicked_item.get('g_char', '')).lower() or
+                clicked_item.get('liquid_name') == 'Dirty Water Unit'
+            )
+
+            # 1. Fishing option (Allowed up to 4.5 tiles away)
+            has_fishing_rod = False
+            if is_water_tile and dist_to_water <= 4.5:
+                from core.events.mouse_context_actions import get_equipped_fishing_rod
+                if get_equipped_fishing_rod(game.player):
+                    has_fishing_rod = True
+                    options.append('Fishing')
+
+            # 2. Water collection option (Strictly allowed ONLY within 1 tile)
+            if is_1_tile_away:
+                liquid_name = clicked_item['liquid_name']
+                dummy_liquid = Item.create_from_name(liquid_name)
+                if not dummy_liquid:
+                    dummy_liquid = Item(liquid_name, 'liquid', liquid=True)
+
+                from core.events.mouse_context_submenus import build_liquid_collect_submenu
+                send_sub = build_liquid_collect_submenu(dummy_liquid, game)
+                if send_sub and send_sub.get('sub') and send_sub['sub'] != ['no_container']:
+                    options.append(send_sub)
+                elif not has_fishing_rod:
+                    if send_sub:
+                        options.append(send_sub)
+                    else:
+                        display_message(f"{tr('msg', 'No suitable container to collect')} {tr('item', liquid_name)}.")
+                        game.context_menu['active'] = False
+                        return
+            elif not has_fishing_rod:
+                display_message(tr('msg', "Too far away to collect water."))
+                game.context_menu['active'] = False
+                return
+
+            if not options:
                 game.context_menu['active'] = False
                 return
 

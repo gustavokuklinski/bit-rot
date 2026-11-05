@@ -5,6 +5,7 @@
       "subtitle": "Main Work Force",
       "description": "The main work force who paid to be safe and get a part of the new world.",
       "color": [255, 206, 149],
+      "profession": "Unemployed",
       "clothes": {
         "feet": "Sneakers",
         "body": "Next Petrol Tshirt",

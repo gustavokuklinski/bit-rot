@@ -3,6 +3,7 @@
 import json
 import os
 from core.data.config import DATA_PATH
+from core.systems.mod_manager import mod_manager
 
 class ProgressionConfig:
     def __init__(self):
@@ -26,11 +27,15 @@ class ProgressionConfig:
 
 def load_progression_json():
     config = ProgressionConfig()
-    path = os.path.join(DATA_PATH, 'player', 'progression.json')
+    path = mod_manager.get_override_path(os.path.join(DATA_PATH, 'player', 'progression.json'))
 
     if not os.path.exists(path):
-        print(f"Warning: Progression JSON not found at {path}. Using defaults.")
-        return config
+        fallback_path = os.path.join(DATA_PATH, 'player', 'progression.json')
+        if os.path.exists(fallback_path):
+            path = fallback_path
+        else:
+            print(f"Warning: Progression JSON not found at {path}. Using defaults.")
+            return config
 
     try:
         with open(path, 'r', encoding='utf-8') as f:

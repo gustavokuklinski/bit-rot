@@ -63,7 +63,6 @@ def handle_mouse_up(game, event, mouse_pos):
                             if slot_rect.collidepoint(mouse_pos):
                                 vehicle = modal['vehicle']
 
-                                # Key slot can accept keys; all other slots require key in Key slot
                                 if slot_name != 'key' and vehicle.equipment.get('key') is None:
                                     display_message(tr('msg', "Vehicle requires key inserted in the Key slot."))
                                     dropped_successfully = False
@@ -72,41 +71,33 @@ def handle_mouse_up(game, event, mouse_pos):
                                 valid_drop = vehicle.can_equip(game.dragged_item, slot_name)
                                 if valid_drop:
                                     item_ref = game.dragged_item
-                                    item_ref = game.dragged_item
                                     item_ref.rect.center = game.player.rect.center
                                     if item_ref not in game.items_on_ground:
                                         game.items_on_ground.append(item_ref)
 
                                     if slot_name == 'fuel':
                                         def do_refuel_vehicle():
-                                            # 1. Remove from source first
                                             _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
-                                            
-                                            # 2. Perform refuel
                                             trans, err = vehicle.refuel(item_ref)
                                             if err:
                                                 display_message(tr('msg', err))
-                                                # If refuel failed, give the item back immediately
                                                 return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
                                                 return
-                                    
-                                            # FIX: STRICTOR RETURN LOGIC
-                                            # Calculate if there is actually anything left to return
+
+                                            # Award Mechanics XP
+                                            game.player.progression.add_xp(game.player, 'mechanics', 0.5)
+                                            display_message(f"{tr('msg', 'Refueled vehicle.')} (+0.5 XP Mechanics)")
+
                                             has_fuel_left = False
                                             if hasattr(item_ref, 'load'):
-                                                has_fuel_left = item_ref.load > 0.1 # Use epsilon for floats
-                                            
-                                            is_canister = hasattr(item_ref, 'inventory') # It's a fuel can/container
-                                            
-                                            # Only return if it's a canister (even if empty) 
-                                            # OR if it's a loose unit that still has fuel.
-                                            # If it's a loose 'Fuel Unit' and load <= 0, it is destroyed.
+                                                has_fuel_left = item_ref.load > 0.1
+                                            is_canister = hasattr(item_ref, 'inventory')
+
                                             if is_canister or has_fuel_left:
                                                 return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
-                                    
+
                                         transfer_time = get_transfer_time(game.player)
                                         game.player.start_action(tr('msg', "Refueling"), transfer_time, do_refuel_vehicle, xp_reward=0.5)
-                                    
                                         dropped_successfully = True 
                                     else:
                                         def do_equip_vehicle():
@@ -118,11 +109,16 @@ def handle_mouse_up(game, event, mouse_pos):
                                                 else:
                                                     game.items_on_ground.append(old_item)
                                                     old_item.rect.center = game.player.rect.center
-                                    
+                                            vehicle.update_stats_from_equipment()
+
+                                            # Award Mechanics XP
+                                            if slot_name in ('battery', 'motor') or slot_name.startswith('tire_'):
+                                                game.player.progression.add_xp(game.player, 'mechanics', 1.0)
+                                                display_message(f"{tr('msg', 'Installed')} {tr('item', item_ref.name)} {tr('msg', 'into vehicle.')} (+1.0 XP Mechanics)")
+
                                         action_name = tr('msg', "Equipping") if not is_external_source else tr('msg', "Transferring")
                                         transfer_time = get_transfer_time(game.player)
                                         game.player.start_action(action_name, transfer_time, do_equip_vehicle, xp_reward=0.5)
-
                                         dropped_successfully = True
 
                                     game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
@@ -1247,7 +1243,8 @@ def handle_mouse_up(game, event, mouse_pos):
                                 if err:
                                     display_message(tr('msg', err))
                                 else:
-                                    display_message(f"{tr('msg', 'Added')} {int(trans)} {tr('msg', 'fuel units to vehicle.')}")
+                                    game.player.progression.add_xp(game.player, 'mechanics', 0.5)
+                                    display_message(f"{tr('msg', 'Added')} {int(trans)} {tr('msg', 'fuel units to vehicle.')} (+0.5 XP Mechanics)")
                                     if hasattr(item_ref, 'load') and item_ref.load <= 0:
                                         game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                         return
@@ -1259,7 +1256,12 @@ def handle_mouse_up(game, event, mouse_pos):
                                     else:
                                         old_it.rect.center = game.player.rect.center
                                         game.items_on_ground.append(old_it)
-                                display_message(f"{tr('msg', 'Installed')} {tr('item', item_ref.name)} {tr('msg', 'into vehicle.')}")
+                                v.update_stats_from_equipment()
+                                if matching_slot in ('battery', 'motor') or matching_slot.startswith('tire_'):
+                                    game.player.progression.add_xp(game.player, 'mechanics', 1.0)
+                                    display_message(f"{tr('msg', 'Installed')} {tr('item', item_ref.name)} {tr('msg', 'into vehicle.')} (+1.0 XP Mechanics)")
+                                else:
+                                    display_message(f"{tr('msg', 'Installed')} {tr('item', item_ref.name)} {tr('msg', 'into vehicle.')}")
                                 game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                 return
 
