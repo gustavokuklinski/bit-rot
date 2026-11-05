@@ -124,22 +124,22 @@
       },
       "fishing": {
         "name": "Fishing",
-        "image": "ui/lucky.png",
+        "image": "ui/fishing.png",
         "base_xp": 300
       },
       "cooking": {
         "name": "Cooking",
-        "image": "ui/lucky.png",
+        "image": "ui/cooking.png",
         "base_xp": 300
       },
       "mechanics": {
         "name": "Mechanics",
-        "image": "ui/lucky.png",
+        "image": "ui/mechanics.png",
         "base_xp": 300
       },
       "weld": {
         "name": "Weld",
-        "image": "ui/lucky.png",
+        "image": "ui/weld.png",
         "base_xp": 300
       }
     },
