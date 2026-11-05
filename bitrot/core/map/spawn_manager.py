@@ -195,7 +195,6 @@ class AsyncSpawnManager:
             game.npcs.add(npc)
 
       elif e_type in ('hnpc', 'fnpc'):
-        # Only suppress dynamic NPCs on Layer 1 of the Lobby chunk
         curr_map = getattr(game.map_manager, 'current_map_filename', '')
         match = re.match(r'map_L(\d+)_(\d+)_(\d+)_map\.csv', curr_map)
         if match and getattr(game, 'generator', None):
@@ -207,10 +206,16 @@ class AsyncSpawnManager:
         max_npc = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
         max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
         if max_npc > 0 and max_npc_chunk > 0 and len(game.npcs) < max_npc:
-          is_friendly = (e_type == 'fnpc')
+          is_friendly = (e_type == 'fnpc') and (layer == 1)
           npc = NPC(x, y, game, is_static=is_friendly, layer=layer)
           npc.is_friendly = is_friendly
-          game.npcs.add(npc)
+
+          # Route to layer cache if player changed layers during async generation
+          if layer != getattr(game, 'current_layer_index', 1):
+              if not hasattr(game, 'layer_npcs'): game.layer_npcs = {}
+              game.layer_npcs.setdefault(layer, []).append(npc)
+          else:
+              game.npcs.add(npc)
 
 # Global instance
 async_spawner = AsyncSpawnManager()

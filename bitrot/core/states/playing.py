@@ -99,12 +99,17 @@ def run_playing(game):
     if len(game.active_animals) > MAX_ACTIVE_ANIMALS:
         game.active_animals = game.active_animals[:MAX_ACTIVE_ANIMALS]
 
-    # Dormancy culling for NPCs outside view radius
+    # Dormancy culling for NPCs: ONLY select NPCs on the current layer!
+    curr_layer = getattr(game, 'current_layer_index', 1)
     npc_dormant_radius_sq = (view_radius + (3 * TILE_SIZE)) ** 2
     game.active_npcs = []
+
     for n in game.npcs:
         if n.is_dead:
             continue
+        if getattr(n, 'layer', 1) != curr_layer:
+            continue  # Stop L1/L2 NPCs from being active on L3
+
         ndx = n.rect.centerx - px
         ndy = n.rect.centery - py
         ndist_sq = ndx * ndx + ndy * ndy

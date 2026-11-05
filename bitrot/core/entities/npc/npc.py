@@ -331,17 +331,22 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         if self.is_dead: return 
         resolve_stuck_in_obstacle(self, obstacles, game)
 
+        # Friendly NPCs cannot be pushed or knocked back
+        if getattr(self, 'is_friendly', False):
+            self.knockback_timer = 0
+            self.knockback_velocity = [0.0, 0.0]
+
         multiplier = 1.0
         
         speed_mult = 1.0
         gx = self.rect.centerx // TILE_SIZE
         gy = self.rect.centery // TILE_SIZE
-        if hasattr(game, 'map_manager'):
+        if hasattr(game, 'map_manager') and getattr(self, 'layer', 1) == 1:
             tile_def = game.map_manager.get_tile_at(gx, gy)
             if tile_def:
                 name = tile_def.get('name', '').lower()
                 if 'window' in name or tile_def.get('is_window'):
-                    speed_mult = 0.35 
+                    speed_mult = 0.35
 
         effective_speed = self.speed * multiplier * game.dt_mult * speed_mult
         current_time = pygame.time.get_ticks()

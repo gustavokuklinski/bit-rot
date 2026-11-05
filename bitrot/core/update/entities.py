@@ -84,6 +84,9 @@ def _update_entity_batch(entity_list, player_x, player_y, view_radius, grid_size
 
         # Soft entity repulsion
         for other in nearby:
+            if getattr(other, 'is_friendly', False) or getattr(entity, 'is_friendly', False):
+                continue
+
             if not getattr(other, 'is_dead', False) and entity.rect.colliderect(other.rect):
                 odx = entity.rect.centerx - other.rect.centerx
                 ody = entity.rect.centery - other.rect.centery

@@ -481,7 +481,21 @@ class PlayerMovement:
 
             speed_mult = 1.0
 
-            entities = zombies + (list(game.npcs) if hasattr(game, 'npcs') and hasattr(game.npcs, '__iter__') else []) + getattr(game, 'active_animals', [])
+            # 1. STRICT LAYER FILTER: Only check entities on the player's current layer
+            curr_layer = getattr(game, 'current_layer_index', 1)
+            raw_entities = zombies + (list(game.npcs) if hasattr(game, 'npcs') and hasattr(game.npcs, '__iter__') else []) + getattr(game, 'active_animals', [])
+
+            entities = []
+            for e in raw_entities:
+                if getattr(e, 'layer', 1) != curr_layer:
+                    continue  # Prevents invisible L1/L2 entities from blocking L3!
+                
+                # 2. PASSTHROUGH FNPCs: Friendly NPCs never slow down the player and cannot be pushed
+                if getattr(e, 'is_friendly', False):
+                    continue
+
+                entities.append(e)
+
             for entity in entities:
                 if not getattr(entity, 'is_dead', False) and self.rect.colliderect(entity.rect):
                     if hasattr(self, 'mask') and hasattr(entity, 'mask') and self.mask and entity.mask:
@@ -504,14 +518,16 @@ class PlayerMovement:
                         entity.knockback_velocity[1] += random.choice([-1.0, 1.0]) * push_power
                     entity.knockback_timer = max(getattr(entity, 'knockback_timer', 0), 100)
 
-            gx = self.rect.centerx // TILE_SIZE
-            gy = self.rect.centery // TILE_SIZE
-            if hasattr(game, 'map_manager'):
-                tile_def = game.map_manager.get_tile_at(gx, gy)
-                if tile_def:
-                    name = tile_def.get('name', '').lower()
-                    if 'window' in name or tile_def.get('is_window'):
-                        speed_mult = min(speed_mult, 0.35)
+            # Windows only slow down on surface (Layer 1)
+            if curr_layer == 1:
+                gx = self.rect.centerx // TILE_SIZE
+                gy = self.rect.centery // TILE_SIZE
+                if hasattr(game, 'map_manager'):
+                    tile_def = game.map_manager.get_tile_at(gx, gy)
+                    if tile_def:
+                        name = tile_def.get('name', '').lower()
+                        if 'window' in name or tile_def.get('is_window'):
+                            speed_mult = min(speed_mult, 0.35)
 
             move_x = self.vx * speed_mult * game.dt_mult
             move_y = self.vy * speed_mult * game.dt_mult

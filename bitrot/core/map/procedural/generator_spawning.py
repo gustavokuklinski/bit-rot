@@ -132,7 +132,7 @@ class ProceduralGeneratorSpawning:
                 layers['spawn'][ny][nx] = 'HNPC'
 
     def _scatter_npcs_l2(self, layers, w, h, suffix='_L2'):
-        """Scatters NPCs in underground layers (L2 or L3)."""
+        """Scatters NPCs in underground layers (L2 or L3). All underground spawns are HNPC."""
         npc_max_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
         if npc_max_chunk <= 0: return
 
@@ -178,33 +178,10 @@ class ProceduralGeneratorSpawning:
         count_to_spawn = min(len(potential_tiles), max_npcs_global)
         if count_to_spawn <= 0: return
 
-        # Never spawn FNPC at L2 or L3: all underground spawns are HNPC
-        spawn_types = ['HNPC'] * count_to_spawn
-        
-        chosen = random.sample(potential_tiles, len(spawn_types))
-        for i, (nx, ny) in enumerate(chosen):
-            spawn[ny][nx] = spawn_types[i]
-            
-        static_pct = getattr(core.data.config, 'NPC_STATIC_PERCENT', 0.40)
-        hostile_pct = getattr(core.data.config, 'NPC_HOSTILE_PERCENT', 0.60)
-
-        num_static = int(count_to_spawn * static_pct)
-        num_normal = int(count_to_spawn * hostile_pct)
-        
-        total_valid = num_static + num_normal
-        if total_valid <= 0: return
-        
-        if total_valid > len(potential_tiles):
-            ratio = len(potential_tiles) / total_valid
-            num_static = int(num_static * ratio)
-            num_normal = int(num_normal * ratio)
-
-        spawn_types = ['FNPC'] * num_static + ['HNPC'] * num_normal
-        random.shuffle(spawn_types)
-        
-        chosen = random.sample(potential_tiles, len(spawn_types))
-        for i, (nx, ny) in enumerate(chosen):
-            spawn[ny][nx] = spawn_types[i]
+        # Underground spawns are strictly roaming hostiles (never static FNPC roadblocks)
+        chosen = random.sample(potential_tiles, count_to_spawn)
+        for (nx, ny) in chosen:
+            spawn[ny][nx] = 'HNPC'
 
     def _scatter_vehicles(self, layers, mask, w, h):
         street_tiles = []

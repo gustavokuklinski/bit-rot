@@ -78,8 +78,13 @@ class SpatialManager:
             self._last_item_count = len(g.items_on_ground)
             force = True
         if not force and g.frame_count % 60 != 0: return 
+
+        curr_layer = getattr(g, 'current_layer_index', 1)
         g.item_grid.clear()
         for i in g.items_on_ground:
+            # Filter by current layer to prevent L1 animals/items leaking to L3
+            if getattr(i, 'layer', 1) != curr_layer:
+                continue
             key = (int(i.rect.centerx // g.GRID_CELL_SIZE), int(i.rect.centery // g.GRID_CELL_SIZE))
             if key not in g.item_grid: g.item_grid[key] = []
             g.item_grid[key].append(i)
@@ -89,8 +94,16 @@ class SpatialManager:
         if not hasattr(self, '_last_container_count'): self._last_container_count = 0
         if len(g.containers) == self._last_container_count and g.frame_count % 60 != 0: return  
         self._last_container_count = len(g.containers)
+
+        curr_layer = getattr(g, 'current_layer_index', 1)
         g.container_grid.clear()
         for c in g.containers:
+            # Filter by current layer (vehicles only exist on Layer 1)
+            c_layer = getattr(c, 'layer', 1)
+            if getattr(c, 'item_type', '') == 'vehicle' and curr_layer != 1:
+                continue
+            if c_layer != curr_layer:
+                continue
             key = (int(c.rect.centerx // g.GRID_CELL_SIZE), int(c.rect.centery // g.GRID_CELL_SIZE))
             if key not in g.container_grid: g.container_grid[key] = []
             g.container_grid[key].append(c)
