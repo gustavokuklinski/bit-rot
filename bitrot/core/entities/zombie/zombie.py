@@ -139,8 +139,9 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
             id_name = f"ID: {self.name}"
             id_item = Item.create_from_name(id_name)
             if id_item:
-                info_text = f"Name: {self.name}\nSex: {self.sex}\n"
+                info_text = f"Name: {self.name}\nSex: {self.sex}"
                 id_item.text = info_text
+                id_item.original_text = info_text
                 self.inventory.append(id_item)
         except Exception as e:
             print(f"Warning: Could not generate ID for zombie: {e}")

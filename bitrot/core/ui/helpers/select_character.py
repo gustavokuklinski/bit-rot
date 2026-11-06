@@ -438,6 +438,19 @@ def _start_with_class(game, state, class_def):
     class_traits = state.get('class_traits', {}).get(class_def['id'], [])
     final_player_data['traits'] = list(class_traits)
 
+    # Transfer starting stats from traits (like drugs: 100 for Drunk)
+    if 'stats' not in final_player_data:
+        final_player_data['stats'] = {}
+
+    for t_name in final_player_data['traits']:
+        t_def = TRAIT_DEFINITIONS.get(t_name, {})
+        for s_key, s_val in t_def.get('stats', {}).items():
+            if s_key == 'drugs':
+                final_player_data['stats']['drugs'] = max(
+                    float(final_player_data['stats'].get('drugs', 0.0)),
+                    float(s_val)
+                )
+
     # Store profession identifier
     prof_id, prof_name = get_build_profession(class_def)
     if prof_id:

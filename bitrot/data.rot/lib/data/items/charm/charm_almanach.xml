@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <item name="Almanach" type="charm" tip="Generic manual.\n+5% Intelligence\n+5% Maintenance">
     <properties>
-        <sprite file="consumable_magazine_general_content.png" />
+        <sprite file="charm/charm_almanach.png" />
         
     </properties>
     <attributes>

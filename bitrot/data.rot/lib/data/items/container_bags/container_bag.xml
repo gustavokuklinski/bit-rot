@@ -1,7 +1,7 @@
 <item name="Bag" type="container" allow_belt="false">
     <properties>
         <capacity value="5" />
-        <sprite file="container_bag.png" />
+        <sprite file="container_bags/container_bag.png" />
          
     </properties>
     <loot>

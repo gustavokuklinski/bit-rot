@@ -4,7 +4,7 @@
         
         <light min="1" max="4" />
         <fuel type="[Powerbank]" />
-        <sprite file="utility_pocket_flashlight_on.png" />
+        <sprite file="utility/utility_pocket_flashlight_on.png" />
     </properties>
     <spawn chance="0" />
 </item>

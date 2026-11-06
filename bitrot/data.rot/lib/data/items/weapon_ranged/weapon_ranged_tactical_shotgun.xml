@@ -9,7 +9,7 @@
         <damage min="65" max="150" />
         <firing pellets="6" spread_angle="6" distance="15" />
         <skill type="range" />
-        <sprite file="weapon_ranged_tactical_shotgun.png" />
+        <sprite file="weapon_ranged/weapon_ranged_tactical_shotgun.png" />
         <knockback value="7" />
     </properties>
     <sound>

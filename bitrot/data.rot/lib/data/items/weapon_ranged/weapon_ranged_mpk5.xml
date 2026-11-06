@@ -9,7 +9,7 @@
         <damage min="25" max="65" />
         <firing pellets="1" spread_angle="3" machine_gun="true" firing_second="0.1" distance="25" />
         <skill type="range" />
-        <sprite file="weapon_ranged_mpk5.png" />
+        <sprite file="weapon_ranged/weapon_ranged_mpk5.png" />
         <knockback value="3" />
     </properties>
     <sound>

@@ -2,7 +2,7 @@
     <properties>
         <capacity value="3" />
         
-        <sprite file="container_suitcase.png" />
+        <sprite file="container_bags/container_suitcase.png" />
     </properties>
     <loot>
         <item name="Money WBRL" chance="0.6" />

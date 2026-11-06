@@ -5,7 +5,7 @@
         <load value="5" />
         <capacity value="5" />
         
-        <sprite file="consumable_food_coffee.png" />
+        <sprite file="consumable_food/consumable_food_coffee.png" />
     </properties>
     <spawn chance="1" />
 </item>

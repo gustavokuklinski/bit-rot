@@ -5,7 +5,7 @@
         <light min="0" max="0" />
         <fuel type="[Alcohol, Ligther Fluid, Ragged Cloth, Plank, Log]" />
         <require type="[Matches, Lighter on]" />
-        <sprite file="utility_campfire_off.png" />
+        <sprite file="utility/utility_campfire_off.png" />
     </properties>
     <spawn chance="1" />
 </item>

@@ -131,31 +131,15 @@ class Item:
                 self.image = base
 
     def update_dynamic_text(self, player):
-        """Replaces placeholders in the item's original text dynamically."""
-        if self.original_text and ("[PLAYER" in self.original_text or "[LIST" in self.original_text):
+        """Replaces placeholders in the item's text dynamically."""
+        # Do not overwrite Zombie or NPC IDs
+        if getattr(self, 'name', '').startswith("ID: "):
+            return
+
+        if self.original_text and "[PLAYER" in self.original_text:
             text = self.original_text
             text = text.replace("[PLAYER NAME]", str(getattr(player, 'name', 'Unknown')))
             text = text.replace("[PLAYER SEX]", str(getattr(player, 'sex', 'Unknown')))
-            
-            traits = getattr(player, 'traits', [])
-            traits_list = "\n                - ".join(traits) if traits else "None"
-            text = text.replace("[LIST TO TRAITS]", traits_list)
-            
-            quests = getattr(player, 'quests', [])
-            completed = getattr(player, 'completed_quests', [])
-            
-            quest_strings = []
-            for q in quests:
-                status = "(Completed)" if q in completed else "(Open)"
-                quest_strings.append(f"{q} {status}")
-                
-            quests_list = "\n                - ".join(quest_strings) if quest_strings else "None"
-            text = text.replace("[LIST OF QUEST]", quests_list)
-            
-            recipes = getattr(player, 'known_recipes', [])
-            recipes_list = "\n                - ".join(recipes) if recipes else "None"
-            text = text.replace("[LIST TO RECIPES]", recipes_list)
-            
             self.text = text
 
     def to_dict(self):

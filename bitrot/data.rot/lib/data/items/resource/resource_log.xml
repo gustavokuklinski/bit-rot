@@ -3,7 +3,7 @@
         <load min="1" max="5" />
         
         <capacity value="5" />
-        <sprite file="resource_log.png" />
+        <sprite file="resource/resource_log.png" />
     </properties>
     <spawn chance="1.0" />
 </item>

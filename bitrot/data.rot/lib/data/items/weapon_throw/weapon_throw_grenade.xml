@@ -6,7 +6,7 @@
         <damage min="40" max="90" />
         <explosion value="3" />
         <skill type="range" />
-        <sprite file="weapon_throw_grenade.png" />
+        <sprite file="weapon_throw/weapon_throw_grenade.png" />
     </properties>
     <spawn chance="1" />
     <sound>

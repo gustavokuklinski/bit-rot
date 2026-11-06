@@ -3,7 +3,7 @@
         <load value="1" />
         
         <capacity value="5" />
-        <sprite file="resource_repair_motor.png" />
+        <sprite file="resource/resource_repair_motor.png" />
     </properties>
     <spawn chance="1" />
 </item>

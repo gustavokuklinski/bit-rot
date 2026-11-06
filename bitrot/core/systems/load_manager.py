@@ -1013,7 +1013,12 @@ def load_game(game, save_folder_name):
                 if data.get('is_corpse') or (isinstance(data.get('name'), str) and data['name'].startswith('Corpse')):
                     name = data.get('name', 'Dead corpse')
                     image_path = data.get('image_path')
-                    is_player_corpse = data.get('is_player_corpse', False) or ('of' in name.lower() and 'zombie' not in name.lower())
+
+                    # FIX: Only flag as player corpse if explicitly saved as is_player_corpse=True
+                    # or if the sprite path specifically belongs to the player ('player/dead.png')
+                    is_player_corpse = bool(data.get('is_player_corpse', False)) or bool(
+                        image_path and 'player' in image_path.lower() and 'zombie' not in image_path.lower()
+                    )
                     
                     default_decay = (30 * 60 * 1000) if is_player_corpse else 600000
                     remaining_decay = data.get('remaining_decay_ms', data.get('decay_ms', default_decay))
@@ -1042,12 +1047,14 @@ def load_game(game, save_folder_name):
                     item.layer = item_layer
                     item.map_filename = item_map
                     
+                    # Strictly tint yellow ONLY for player corpses; keep zombie/NPC corpses dark gray
                     if is_player_corpse:
                         item.is_placed = True
                         item.color = (255, 255, 0)
                         item.apply_yellow_tint()
                     else:
                         item.is_placed = False
+                        # item.color = WHITE
 
                     if item_map == active_map and item_layer == active_layer:
                         game.items_on_ground.append(item)

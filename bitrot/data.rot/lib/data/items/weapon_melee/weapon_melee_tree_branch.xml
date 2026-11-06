@@ -4,7 +4,7 @@
         
         <damage min="1" max="3" />
         <skill type="melee" />
-        <sprite file="weapon_melee_tree_branch.png" />
+        <sprite file="weapon_melee/weapon_melee_tree_branch.png" />
         <knockback value="1" />
     </properties>
     <spawn chance="1.0" />

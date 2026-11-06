@@ -1,7 +1,7 @@
 <item name="Car Key Pickup" type="car_key" allow_belt="false">
     <properties>
         <key value="car_pickup" />
-        <sprite file="car_key_pickup.png" />
+        <sprite file="car_key/car_key_pickup.png" />
     </properties>
     <spawn chance="1" />
 </item>

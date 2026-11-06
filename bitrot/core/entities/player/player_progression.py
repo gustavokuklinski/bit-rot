@@ -247,7 +247,12 @@ class PlayerProgression:
         if weapon and getattr(weapon, 'item_type', '') in ['weapon_melee', 'tool']:
             stamina_cost = 0.0
         else:
-            stamina_cost = self.config.get_stat('stamina', 'melee_cost', 0.02)
+            base_cost = self.config.get_stat('stamina', 'melee_cost', 0.02)
+            # Higher fitness level reduces melee stamina consumption (up to 50% reduction at Lv 10)
+            fitness_lvl = min(10, self.get_fitness(player))
+            fitness_reduction = 1.0 - (fitness_lvl * 0.05)
+            stamina_cost = max(0.005, base_cost * fitness_reduction)
+
         if player.stamina > 0 and stamina_cost > 0:
             player.stamina = max(0.0, player.stamina - stamina_cost)
         return True
@@ -274,14 +279,22 @@ class PlayerProgression:
     def get_stamina_consumption(self, is_running, player):
         base_run_cost = self.config.get_stat('stamina', 'run_cost_base', 0.08)
         base = base_run_cost if is_running else 0.0
+
+        # 1. Base flat reduction from Agility / traits ('stamina_consumption_reduction')
         _, flat_red = self.get_derived_bonus('stamina_consumption_reduction')
-        modifier = max(0.1, 1.0 - flat_red) 
+
+        # 2. Higher Fitness level directly reduces stamina consumption (5% per level, up to 50% at Lv 10)
+        fitness_lvl = min(10, self.get_fitness(player))
+        fitness_mult = max(0.5, 1.0 - (fitness_lvl * 0.05))
+
+        modifier = max(0.05, (1.0 - flat_red) * fitness_mult)
         return base * modifier
 
     def get_stamina_regeneration(self, player):
         base_regen = self.config.get_stat('stamina', 'regen_base', 0.03)
         _, flat = self.get_derived_bonus('stamina_regen')
-        trait_mod = 1.0 + (self.get_stamina_bonus(player) / 100.0)
+        # Clamp multiplier to at least 10% so stamina recovery never completely halts
+        trait_mod = max(0.1, 1.0 + (self.get_stamina_bonus(player) / 100.0))
         return max(0, (base_regen + flat) * trait_mod)
 
     def get_weapon_durability_loss(self, player):

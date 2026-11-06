@@ -2,7 +2,7 @@
     <properties>
         <capacity value="15" />
         
-        <sprite file="container_large_backpack.png" />
+        <sprite file="container_bags/container_large_backpack.png" />
     </properties>
     <loot>
     </loot>

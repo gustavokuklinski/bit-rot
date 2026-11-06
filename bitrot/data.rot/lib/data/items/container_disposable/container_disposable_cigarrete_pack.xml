@@ -1,7 +1,7 @@
 <item name="Cigarette Pack" type="container_disposable" allow_belt="false" allow_type="[consumable_drugs]" disallow_type="[container]" tip="This container will be\ndestroyed when empty">
     <properties>
         <capacity value="1" />
-        <sprite file="container_disposable_cigarrete_pack.png" />
+        <sprite file="container_disposable/container_disposable_cigarrete_pack.png" />
         
     </properties>
     <loot>

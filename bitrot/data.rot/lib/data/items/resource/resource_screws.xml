@@ -3,7 +3,7 @@
         <load min="1" max="100" />
         
         <capacity value="100" />
-        <sprite file="resource_screws.png" />
+        <sprite file="resource/resource_screws.png" />
     </properties>
     <spawn chance="1" />
 </item>

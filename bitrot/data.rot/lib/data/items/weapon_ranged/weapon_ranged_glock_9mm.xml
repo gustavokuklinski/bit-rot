@@ -9,7 +9,7 @@
         <damage min="16" max="40" />
         <firing pellets="1" spread_angle="0"  distance="20"/>
         <skill type="range" />
-        <sprite file="weapon_ranged_glock_9mm.png" />
+        <sprite file="weapon_ranged/weapon_ranged_glock_9mm.png" />
         <knockback value="2" />
     </properties>
     <sound>

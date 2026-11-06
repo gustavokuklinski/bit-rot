@@ -82,30 +82,7 @@ def draw_text_modal(surface, game, modal, assets):
         
         # 2. Replace Player Sex
         processed_text = processed_text.replace("[PLAYER SEX]", getattr(player, 'sex', 'Unknown'))
-        
-        # 3. Replace Traits List
-        player_traits = getattr(player, 'traits', [])
-        
-        # Note: The "            " spaces are to match the indentation in your XML
-        if player_traits:
-            # Format the trait list using TRAIT_DEFINITIONS to get the actual name
-            trait_list_str = "\n".join([f"            - {TRAIT_DEFINITIONS.get(trait, {}).get('name', trait.capitalize())}" for trait in player_traits])
-            processed_text = processed_text.replace("- [LIST TO TRAITS]", trait_list_str)
-        else:
-            # If no traits, replace placeholder with "- None"
-            processed_text = processed_text.replace("- [LIST TO TRAITS]", "            - None")
 
-        # 4. Replace Recipes List
-        player_recipes = getattr(player, 'known_recipes', [])
-        
-        if player_recipes:
-            # Format the recipe list
-            recipe_list_str = "\n".join([f"            - {recipe.title()}" for recipe in player_recipes])
-            processed_text = processed_text.replace("- [LIST TO RECIPES]", recipe_list_str)
-        else:
-            # If no recipes, replace placeholder with "- None"
-            processed_text = processed_text.replace("- [LIST TO RECIPES]", "            - None")
-    
     text_to_display = processed_text
 
     wrapped_lines = wrap_text(text_to_display, content_width, font_12)

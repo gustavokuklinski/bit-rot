@@ -4,7 +4,7 @@
         
         <damage min="4" max="8" />
         <skill type="melee" />
-        <sprite file="weapon_melee_primitive_hammer.png" />
+        <sprite file="weapon_melee/weapon_melee_primitive_hammer.png" />
         <knockback value="1" />
     </properties>
     <spawn chance="1" />

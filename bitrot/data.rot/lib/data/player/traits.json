@@ -157,7 +157,7 @@
             "agility": 2,
             "maintenance": 4,
             "intelligence": 2,
-            "mechanic": 2
+            "mechanics": 2
           }
         },
         "recipe": [
@@ -451,7 +451,7 @@
       "smoker": {
         "name": "Smoker",
         "cost": -2,
-        "tooltip": "-15% slower recovery stamina and +15% faster increase anxiety",
+        "tooltip": "-15% slower recovery stamina, +15% faster anxiety, starts with nicotine",
         "stats": {
           "stamina": -15,
           "anxiety": 15,
@@ -464,7 +464,7 @@
       "drunk": {
         "name": "Drunk",
         "cost": -2,
-        "tooltip": "-15% XP Agility penalty and +15% faster increase anxiety",
+        "tooltip": "-15% XP Agility penalty, +15% faster anxiety, starts heavily drunk",
         "attributes": {
           "agility": -15
         },
@@ -490,7 +490,7 @@
       "sedentary": {
         "name": "Sedentary",
         "cost": -4,
-        "tooltip": "-30% stamina, -10% Speed",
+        "tooltip": "-30% stamina recovery, -10% Speed",
         "stats": {
           "stamina": -30
         },
@@ -539,7 +539,7 @@
       "high_thirst": {
         "name": "High Thirst",
         "cost": -2,
-        "tooltip": "-25% water recovery",
+        "tooltip": "25% faster water decay",
         "stats": {
           "water": -25
         },
@@ -550,7 +550,7 @@
       "sweet_tooth": {
         "name": "Sweet Tooth",
         "cost": -2,
-        "tooltip": "-20% food recovery",
+        "tooltip": "20% faster food decay",
         "stats": {
           "food": -20
         },

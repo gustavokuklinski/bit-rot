@@ -6,7 +6,7 @@
         <damage min="20" max="60" />
         <explosion value="2" />
         <skill type="range" />
-        <sprite file="weapon_throw_improvised_bomb.png" />
+        <sprite file="weapon_throw/weapon_throw_improvised_bomb.png" />
     </properties>
     <spawn chance="1" />
     <sound>

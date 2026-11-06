@@ -1,7 +1,7 @@
 <item name="Bowl" type="container" allow_belt="false" allow_type="[liquid, consumable_food]">
     <properties>
         <capacity value="2" />
-        <sprite file="container_bowl.png" />
+        <sprite file="container_cooking/container_cooking_bowl.png" />
         <max_liquid value="2" />
     </properties>
     <spawn chance="1" />

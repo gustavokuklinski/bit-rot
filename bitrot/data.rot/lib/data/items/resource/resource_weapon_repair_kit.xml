@@ -3,7 +3,7 @@
         <load value="1" />
         
         <capacity value="5" />
-        <sprite file="resource_weapon_repair_kit.png" />
+        <sprite file="resource/resource_weapon_repair_kit.png" />
     </properties>
     <spawn chance="1" />
 </item>

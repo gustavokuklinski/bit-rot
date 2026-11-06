@@ -3,7 +3,7 @@
         <load min="1" max="50" />
         <capacity value="50" />
         
-        <sprite file="liquid_crude_oil_unit.png" />
+        <sprite file="liquid/liquid_crude_oil_unit.png" />
     </properties>
     <spawn chance="1.0" />
 </item>

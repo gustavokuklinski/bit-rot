@@ -183,7 +183,10 @@ class NPCCombat:
             map_filename=map_name
         )
         
+        EXCLUDED_CORPSE_SLOTS = ('hair', 'facial')
         for item in self.inventory:
+            if getattr(item, 'slot', None) in EXCLUDED_CORPSE_SLOTS or getattr(item, 'name', '') in ('Bald', 'Mowalk', 'Cut', 'Crew', 'Long'):
+                continue
             if hasattr(item, 'layer'):
                 item.layer = corpse_layer
             corpse.inventory.append(item)
@@ -194,22 +197,29 @@ class NPCCombat:
             corpse.inventory.append(self.equipped_weapon)
             
         if hasattr(self, 'clothes') and self.clothes:
-            for cloth_data in self.clothes.values():
+            for slot_key, cloth_data in self.clothes.items():
+                if slot_key in EXCLUDED_CORPSE_SLOTS:
+                    continue
                 if isinstance(cloth_data, Item):
+                    if getattr(cloth_data, 'slot', None) in EXCLUDED_CORPSE_SLOTS:
+                        continue
                     cloth_data.layer = corpse_layer
                     corpse.inventory.append(cloth_data)
                 elif isinstance(cloth_data, dict):
+                    if cloth_data.get('slot') in EXCLUDED_CORPSE_SLOTS:
+                        continue
                     name = cloth_data.get('name')
-                    if name:
+                    if name and name not in ('Bald', 'Mowalk', 'Cut', 'Crew', 'Long'):
                         it = Item.create_from_name(name)
-                        if it:
+                        if it and getattr(it, 'slot', None) not in EXCLUDED_CORPSE_SLOTS:
                             it.layer = corpse_layer
                             corpse.inventory.append(it)
                 elif isinstance(cloth_data, str):
-                    it = Item.create_from_name(cloth_data)
-                    if it:
-                        it.layer = corpse_layer
-                        corpse.inventory.append(it)
+                    if cloth_data not in ('Bald', 'Mowalk', 'Cut', 'Crew', 'Long'):
+                        it = Item.create_from_name(cloth_data)
+                        if it and getattr(it, 'slot', None) not in EXCLUDED_CORPSE_SLOTS:
+                            it.layer = corpse_layer
+                            corpse.inventory.append(it)
 
         game.items_on_ground.append(corpse)
 

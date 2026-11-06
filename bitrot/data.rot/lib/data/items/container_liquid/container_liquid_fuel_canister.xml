@@ -1,7 +1,7 @@
 <item name="Fuel Canister" type="container" allow_belt="false" allow_type="[liquid, car_fuel]" tip="Only liquids allowed">
     <properties>
         <capacity value="1" />
-        <sprite file="container_liquid_fuel_canister.png" />
+        <sprite file="container_liquid/container_liquid_fuel_canister.png" />
         
         <max_liquid value="25" />
     </properties>

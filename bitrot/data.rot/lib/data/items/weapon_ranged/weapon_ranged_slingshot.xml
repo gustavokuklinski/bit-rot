@@ -8,7 +8,7 @@
         <damage min="5" max="15" />
         <firing pellets="1" spread_angle="0"  distance="10"/>
         <skill type="range" />
-        <sprite file="weapon_ranged_slingshot.png" />
+        <sprite file="weapon_ranged/weapon_ranged_slingshot.png" />
         <knockback value="3" />
     </properties>
     <spawn chance="1" />

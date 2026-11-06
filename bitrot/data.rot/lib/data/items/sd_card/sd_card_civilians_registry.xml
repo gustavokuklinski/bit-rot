@@ -1,6 +1,6 @@
 <item name="Civilians Registry" type="sd_card" tip="Civilian personel track\nUse with Mobile > Apps">
     <properties>
-        <sprite file="sd_card.png" />
+        <sprite file="sd_card/sd_card.png" />
         
         <map value="show_friendly_npc" />
     </properties>

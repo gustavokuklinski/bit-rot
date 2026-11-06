@@ -1,7 +1,7 @@
 <item name="Survivor Kit" type="container" allow_belt="false" disallow_type="[container]">
     <properties>
         <capacity value="4" />
-        <sprite file="container_survivor_kit.png" />
+        <sprite file="container_kits/container_survivor_kit.png" />
         
     </properties>
     <loot>

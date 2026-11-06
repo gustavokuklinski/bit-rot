@@ -6,7 +6,7 @@
         <damage min="15" max="25" />
         <explosion value="5" />
         <skill type="range" />
-        <sprite file="weapon_throw_molotov.png" />
+        <sprite file="weapon_throw/weapon_throw_molotov.png" />
     </properties>
     <spawn chance="1" />
     <sound>

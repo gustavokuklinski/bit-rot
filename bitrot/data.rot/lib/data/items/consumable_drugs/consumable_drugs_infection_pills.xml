@@ -1,11 +1,10 @@
 <item name="Infection Pills" type="consumable_drugs" allow_belt="true"  allow_use="true" consume_time="0.1">
     <properties>
-        <restore status="[health]" value="1" />
         <reduce status="[infection]" value="5" />
         <load value="1" />
         <capacity value="10" />
         
-        <sprite file="consumable_drugs_infection_pills.png" />
+        <sprite file="consumable_drugs/consumable_drugs_infection_pills.png" />
     </properties>
     <spawn chance="1" />
 </item>

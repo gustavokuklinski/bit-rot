@@ -5,7 +5,7 @@
         <load value="1" />
         <capacity value="5" />
         
-        <sprite file="consumable_drugs_vaccine.png" />
+        <sprite file="consumable_drugs/consumable_drugs_vaccine.png" />
     </properties>
     <spawn chance="1" />
 </item>

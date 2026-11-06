@@ -142,10 +142,13 @@ class ZombieCombat:
         if not hasattr(self, 'inventory') or self.inventory is None:
             self.inventory = []
 
+        # Exclude hair and facial slots from dropping into corpse
+        EXCLUDED_CORPSE_SLOTS = ('hair', 'facial')
         if hasattr(self, 'clothes'):
             for slot, cloth_item in self.clothes.items():
-                if cloth_item:
-                    self.inventory.append(cloth_item)
+                if cloth_item and slot not in EXCLUDED_CORPSE_SLOTS:
+                    if getattr(cloth_item, 'slot', None) not in EXCLUDED_CORPSE_SLOTS:
+                        self.inventory.append(cloth_item)
             self.clothes = {}
 
         # 1. Play sound
@@ -177,6 +180,9 @@ class ZombieCombat:
         )
 
         for item in self.inventory:
+            # Prevent hair/facial items from being added to the corpse
+            if getattr(item, 'slot', None) in EXCLUDED_CORPSE_SLOTS or getattr(item, 'name', '') in ('Bald', 'Mowalk', 'Cut', 'Crew', 'Long'):
+                continue
             if hasattr(item, 'layer'):
                 item.layer = corpse_layer
             corpse.inventory.append(item)
@@ -188,8 +194,12 @@ class ZombieCombat:
                     chance_val /= 100.0
                 if random.random() <= chance_val:
                     item_name = loot_entry.get('item')
+                    if item_name in ('Bald', 'Mowalk', 'Cut', 'Crew', 'Long'):
+                        continue
                     new_item = Item.create_from_name(item_name)
                     if new_item:
+                        if getattr(new_item, 'slot', None) in EXCLUDED_CORPSE_SLOTS:
+                            continue
                         new_item.layer = corpse_layer
                         new_item.map_filename = map_name
                         corpse.inventory.append(new_item)

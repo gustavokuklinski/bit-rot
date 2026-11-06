@@ -6,7 +6,7 @@
         <load value="1" />
         <capacity value="5" />
         
-        <sprite file="consumable_drink_juice_box.png" />
+        <sprite file="consumable_drink/consumable_drink_juice_box.png" />
     </properties>
     <spawn chance="1" />
 </item>

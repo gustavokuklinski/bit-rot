@@ -3,7 +3,7 @@
         <load min="1" max="4" />
         
         <capacity value="4" />
-        <sprite file="resource_slice_rubber.png" />
+        <sprite file="resource/resource_slice_rubber.png" />
     </properties>
     <spawn chance="1" />
 </item>

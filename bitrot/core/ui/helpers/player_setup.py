@@ -62,6 +62,7 @@ def _load_stat_icons():
         "water": SPRITE_PATH + "ui/water.png",
         "food": SPRITE_PATH + "ui/food.png",
         "anxiety": SPRITE_PATH + "ui/axiety.png", 
+        "drugs": SPRITE_PATH + "ui/drugs.png", 
         "infection": SPRITE_PATH + "ui/infection.png",
         "defence": SPRITE_PATH + "ui/defence.png",
         "strength": SPRITE_PATH + "ui/strength.png",
@@ -72,6 +73,10 @@ def _load_stat_icons():
         "lucky": SPRITE_PATH + "ui/lucky.png",
         "agility": SPRITE_PATH + "ui/agility.png",
         "intelligence": SPRITE_PATH + "ui/intelligence.png",
+        "fishing": SPRITE_PATH + "ui/fishing.png",
+        "cooking": SPRITE_PATH + "ui/cooking.png",
+        "mechanics": SPRITE_PATH + "ui/mechanics.png",
+        "weld": SPRITE_PATH + "ui/weld.png",
     }
     
     for key, path in icon_files.items():
@@ -598,7 +603,7 @@ def _draw_player_build_screen(game, state, mouse_pos):
             base_value = state['base_data']['stats'].get(stat, 100.0)
             trait_mod = display_modifiers.get(stat, 0)
             stat_name_str = f"{tr('ui', stat.capitalize())}:"
-            trait_str = f"{int(trait_mod):+}% {tr('ui', 'Rate')}"
+            trait_str = f"{int(trait_mod):+}%"
             
             mod_color = WHITE
             if trait_mod > 0: mod_color = (100, 255, 100) 
@@ -914,7 +919,18 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
                 final_player_data['traits'] = state['chosen_traits']
                 final_player_data['visuals'] = {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'}
                 final_player_data['sounds'] = { 'steps': 'steps.ogg' }
+                
+                if 'stats' not in final_player_data:
+                    final_player_data['stats'] = {}
 
+                for t_name in final_player_data['traits']:
+                    t_def = TRAIT_DEFINITIONS.get(t_name, {})
+                    t_stats = t_def.get('stats', {})
+                    if 'drugs' in t_stats:
+                        final_player_data['stats']['drugs'] = max(
+                            float(final_player_data['stats'].get('drugs', 0.0)),
+                            float(t_stats['drugs'])
+                        )
                 
 
                 # Normal single player logic below...

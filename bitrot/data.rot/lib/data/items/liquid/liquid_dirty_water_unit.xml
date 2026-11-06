@@ -7,7 +7,7 @@
         <load min="1" max="100" />
         <capacity value="100" />
         
-        <sprite file="liquid_dirty_water_unit.png" />
+        <sprite file="liquid/liquid_dirty_water_unit.png" />
     </properties>
     <spawn chance="1.0" />
 </item>

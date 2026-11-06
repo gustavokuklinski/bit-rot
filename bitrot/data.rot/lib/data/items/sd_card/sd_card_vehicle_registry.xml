@@ -1,6 +1,6 @@
 <item name="Vehicle Registry" type="sd_card" tip="Vehicles on map (Blue)\nUse with Mobile > Apps">
     <properties>
-        <sprite file="sd_card.png" />
+        <sprite file="sd_card/sd_card.png" />
         
         <map value="show_vehicles" />
     </properties>

@@ -5,7 +5,7 @@
     tip="Use to navigate the boat"
     >
     <properties>
-        <sprite file="map_cartography.png" />
+        <sprite file="map/map_cartography.png" />
         
     </properties>
     <spawn chance="1" />

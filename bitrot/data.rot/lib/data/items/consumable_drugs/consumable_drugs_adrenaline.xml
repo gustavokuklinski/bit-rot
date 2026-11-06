@@ -1,0 +1,12 @@
+<item name="Adrenaline" type="consumable_drugs" allow_belt="true"  allow_use="true" consume_time="1.2">
+    <properties>
+        <restore status="[stamina]" value="20" />
+        <reduce status="[anxiety]" value="20" />
+        <reduce status="[drugs]" value="60" />
+        <load value="1" />
+        <capacity value="5" />
+        
+        <sprite file="consumable_drugs/consumable_drugs_vaccine.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

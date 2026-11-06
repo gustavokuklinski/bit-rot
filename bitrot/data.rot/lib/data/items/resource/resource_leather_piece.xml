@@ -3,7 +3,7 @@
         <load min="1" max="20" />
         
         <capacity value="20" />
-        <sprite file="resource_leather_piece.png" />
+        <sprite file="resource/resource_leather_piece.png" />
     </properties>
     <spawn chance="1" />
 </item>

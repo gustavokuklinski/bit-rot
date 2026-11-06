@@ -1,7 +1,7 @@
 <item name="Plastic Bottle" type="container" allow_type="[liquid, car_fuel]" allow_belt="false" tip="Only liquids allowed">
     <properties>
         <capacity value="1" />
-        <sprite file="container_liquid_plastic_bottle.png" />
+        <sprite file="container_liquid/container_liquid_plastic_bottle.png" />
         
         <max_liquid value="20" />
     </properties>

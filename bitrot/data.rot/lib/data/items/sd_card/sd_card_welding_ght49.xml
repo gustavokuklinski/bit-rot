@@ -1,6 +1,6 @@
 <item name="welding_ght-49" type="sd_card" tip="Mobile App: +2 INT, +3 MAINT, +70% INT XP, +90% MAINT XP">
     <properties>
-        <sprite file="sd_card.png" />
+        <sprite file="sd_card/sd_card.png" />
         
         <map value="welding_ght_49" />
         <!-- Instant Level Buffs while attached -->

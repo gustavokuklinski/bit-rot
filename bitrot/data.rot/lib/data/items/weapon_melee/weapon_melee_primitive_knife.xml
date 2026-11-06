@@ -4,7 +4,7 @@
         
         <damage min="3" max="8" />
         <skill type="melee" />
-        <sprite file="weapon_melee_primitive_knife.png" />
+        <sprite file="weapon_melee/weapon_melee_primitive_knife.png" />
         <knockback value="0" />
     </properties>
     <spawn chance="1" />

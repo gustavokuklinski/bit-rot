@@ -6,7 +6,7 @@
         <load min="1" max="12" />
         <capacity value="12" />
         
-        <sprite file="consumable_food_chocolate_black.png" />
+        <sprite file="consumable_food/consumable_food_chocolate_black.png" />
     </properties>
     <spawn chance="1.0" />
 </item>

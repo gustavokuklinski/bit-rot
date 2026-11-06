@@ -66,7 +66,16 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.drugs = float(stats.get('drugs', 0.0))
 
         self.sex = data.get('sex', 'Male')
+
         self.traits = data.get('traits', [])
+
+        for trait_id in self.traits:
+            t_def = TRAIT_DEFINITIONS.get(trait_id, {})
+            trait_stats = t_def.get('stats', {})
+            if 'drugs' in trait_stats:
+                # Set initial drugs to the highest value defined by traits
+                self.drugs = max(self.drugs, float(trait_stats['drugs']))
+
         self.quests = data.get('quests', [])
         core.data.config.apply_player_traits_config(self.traits)
         self.completed_quests = data.get('completed_quests', [])
@@ -368,7 +377,10 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         
         if self.infection > 0:
             passive_inf_gain = PROGRESSION_CONFIG.get_stat('infection', 'passive_gain', 0.002)
-            self.infection = min(100.0, self.infection + (passive_inf_gain * multiplier * game.dt_mult))
+            # Vaccine (-20) reduces passive infection gain; Illness (+20) accelerates it
+            inf_bonus = self.progression.get_infection_bonus(self)
+            inf_mod = max(0.1, 1.0 + (inf_bonus / 100.0))
+            self.infection = min(100.0, self.infection + (passive_inf_gain * inf_mod * multiplier * game.dt_mult))
             
         is_starving = self.food <= 20.0
         is_dehydrated = self.water <= 20.0
@@ -402,8 +414,13 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         decay_rate = PROGRESSION_CONFIG.get_stat('metabolism', 'decay_rate_seconds', 5.0)
         
         if current_time - self.last_decay_time >= decay_rate:
-            water_mod = 1.0 + (self.progression.get_water_bonus(self) / 100.0)
-            food_mod = 1.0 + (self.progression.get_food_bonus(self) / 100.0)
+            # Positive trait bonus means SLOWER decay (Camel +20 -> 0.8x decay)
+            # Negative trait bonus means FASTER decay (High Thirst -25 -> 1.25x decay)
+            water_bonus = self.progression.get_water_bonus(self)
+            food_bonus = self.progression.get_food_bonus(self)
+
+            water_mod = max(0.1, 1.0 - (water_bonus / 100.0))
+            food_mod = max(0.1, 1.0 - (food_bonus / 100.0))
             
             base_water_decay = PROGRESSION_CONFIG.get_stat('water', 'decay_amount', 0.2)
             base_food_decay = PROGRESSION_CONFIG.get_stat('food', 'decay_amount', 0.1)

@@ -3,7 +3,7 @@
         <load min="100" max="350" />
         
         <capacity value="500" />
-        <sprite file="recipe_magazine_blue_print.png" />
+        <sprite file="resource/resource_blue_print.png" />
     </properties>
     <spawn chance="1" />
 </item>

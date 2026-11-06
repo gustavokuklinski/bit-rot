@@ -174,10 +174,13 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         self.current_attacker = None
 
         self.inventory = []
+        self.inventory = []
         id_name = f"ID: {self.name}"
         id_card = Item.create_from_name(id_name)
         if id_card:
-            id_card.text = f"Name: {self.name}\nSex: {self.sex}\n"
+            id_text = f"Name: {self.name}\nSex: {self.sex}"
+            id_card.text = id_text
+            id_card.original_text = id_text
             self.inventory.append(id_card)
         
         mobile = Item.create_from_name("Mobile off")
@@ -779,10 +782,12 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.inventory.append(self.equipped_weapon)
             self.equipped_weapon = None
             
+        EXCLUDED_CORPSE_SLOTS = ('hair', 'facial')
         if hasattr(self, 'clothes'):
             for slot, cloth_item in self.clothes.items():
-                if cloth_item:
-                    self.inventory.append(cloth_item)
+                if cloth_item and slot not in EXCLUDED_CORPSE_SLOTS:
+                    if getattr(cloth_item, 'slot', None) not in EXCLUDED_CORPSE_SLOTS:
+                        self.inventory.append(cloth_item)
             self.clothes = {}
 
         if hasattr(self, 'trade_stock') and self.trade_stock:

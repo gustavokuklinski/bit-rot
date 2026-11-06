@@ -4,7 +4,7 @@
         
         <light min="0" max="0" />
         <fuel type="Powerbank" />
-        <sprite file="mobile_off.png" />
+        <sprite file="mobile/mobile_off.png" />
     </properties>
     <spawn chance="1.0" />
 </item>

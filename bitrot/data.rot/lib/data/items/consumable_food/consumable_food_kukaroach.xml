@@ -7,7 +7,7 @@
         
         <load value="1" />
         <capacity value="100" />
-        <sprite file="consumable_food_kukaroach.png" />
+        <sprite file="consumable_food/consumable_food_kukaroach.png" />
     </properties>
     <spawn chance="1" />
 </item>

@@ -7,7 +7,7 @@
             <item item="[Nails]" destroy="true" amount="4" />
         </place>
         
-        <sprite file="resource_wood_barricade.png" />
+        <sprite file="resource/resource_wood_barricade.png" />
     </properties>
     <spawn chance="1.0" />
 </item>

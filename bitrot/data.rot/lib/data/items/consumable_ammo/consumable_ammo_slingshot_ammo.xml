@@ -4,7 +4,7 @@
         
         <load min="3" max="50" />
         <capacity value="50" />
-        <sprite file="consumable_ammo_slingshot_ammo.png" />
+        <sprite file="consumable_ammo/consumable_ammo_slingshot_ammo.png" />
     </properties>
     <spawn chance="1" />
 </item>

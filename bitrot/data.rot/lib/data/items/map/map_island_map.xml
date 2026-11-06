@@ -1,6 +1,6 @@
 <item name="Island Map" type="map" allow_belt="false">
     <properties>
-        <sprite file="map_island_map.png" />
+        <sprite file="map/map_island_map.png" />
         
     </properties>
     <spawn chance="1" />

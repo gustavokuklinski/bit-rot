@@ -1,6 +1,6 @@
 <item name="Family Photo" type="charm">
     <properties>
-        <sprite file="charm_family_photo_1.png" />
+        <sprite file="charm/charm_family_photo_1.png" />
         
     </properties>
     <attributes>

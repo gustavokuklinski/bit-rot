@@ -1,6 +1,6 @@
 <item name="TGWT-20260731" type="text" tip="Newspaper The Globe World Tribute. Issue: 2026-07-31">
     <properties>
-        <sprite file="text_newspaper.png" />
+        <sprite file="text/text_newspaper.png" />
         
         <text>
             THE GLOBE WORLD TRIBUNE #GWBC-20260731

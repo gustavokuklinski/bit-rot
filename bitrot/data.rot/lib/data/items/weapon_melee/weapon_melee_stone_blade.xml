@@ -4,7 +4,7 @@
         
         <damage min="2" max="5" />
         <skill type="melee" />
-        <sprite file="weapon_melee_stone_blade.png" />
+        <sprite file="weapon_melee/weapon_melee_stone_blade.png" />
         <knockback value="0" />
     </properties>
 

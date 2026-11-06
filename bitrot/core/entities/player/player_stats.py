@@ -97,16 +97,17 @@ class PlayerStats:
         # 2. When the defence reach Zero, start depleting the player Health
         health_bonus_perc = self.progression.get_health_bonus(self)
         
-        # Apply biological health bonus resistances to the overflow damage
-        if health_bonus_perc > 0 and remaining_damage > 0:
-             remaining_damage *= (1.0 - (health_bonus_perc / 100.0))
+        # Healthy (+15) reduces incoming damage; Frail (-15) increases incoming damage
+        if remaining_damage > 0:
+            damage_multiplier = max(0.1, 1.0 - (health_bonus_perc / 100.0))
+            remaining_damage *= damage_multiplier
              
         final_damage_taken = max(0, remaining_damage)
         self.health = max(0.0, self.health - final_damage_taken)
 
         # 3. Calculate Infection logically
         infection_bonus_perc = self.progression.get_infection_bonus(self)
-        infection_modifier = 1.0 + (infection_bonus_perc / 100.0)
+        infection_modifier = max(0.1, 1.0 + (infection_bonus_perc / 100.0))
         final_infection_taken = max(0, base_infection * infection_modifier)
 
         if final_infection_taken > 0:

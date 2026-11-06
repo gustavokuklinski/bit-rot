@@ -3,7 +3,7 @@
         
         <load min="1" max="150" />
         <capacity value="150" />
-        <sprite file="resource_ammo_38_bullet.png" />
+        <sprite file="resource/resource_ammo_38_bullet.png" />
     </properties>
     <spawn chance="1" />
 </item>

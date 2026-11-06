@@ -4,7 +4,7 @@
         
         <damage min="2" max="5" />
         <skill type="melee" />
-        <sprite file="weapon_melee_metalbar.png" />
+        <sprite file="weapon_melee/weapon_melee_metalbar.png" />
         <knockback value="1" />
     </properties>
     <spawn chance="1" />

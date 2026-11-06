@@ -1,0 +1,15 @@
+<item name="Meat Filet (Raw)" type="consumable_food" allow_belt="false" consume_time="1.0" allow_use="true">
+    <properties>
+        <restore status="[food]" value="1" />
+        <restore status="[water]" value="1" />
+        <restore status="[health]" value="1" />
+        <restore status="[stamina]" value="1" />
+        <restore status="[anxiety]" value="1" />
+        <restore status="[infection]" value="2" />
+        <load value="5" />
+        <capacity value="5" />
+        
+        <sprite file="consumable_food/consumable_food_raw_meat_filet.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

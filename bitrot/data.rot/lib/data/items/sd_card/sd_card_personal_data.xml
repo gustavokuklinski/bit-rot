@@ -2,7 +2,7 @@
     <properties>
         
         <map value="personal_data" />
-        <sprite file="sd_card.png" />
+        <sprite file="sd_card/sd_card.png" />
     </properties>
     <spawn chance="1.0" />
 </item>

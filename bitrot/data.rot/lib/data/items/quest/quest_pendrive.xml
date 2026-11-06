@@ -8,6 +8,6 @@
     spawn_layer="[1]">
     <properties>
         
-        <sprite file="quest_pendrive.png" />
+        <sprite file="quest/quest_pendrive.png" />
     </properties>
 </item>

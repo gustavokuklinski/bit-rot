@@ -4,7 +4,7 @@
         
         <light min="1" max="2" />
         <fuel type="Lighter Fluid" />
-        <sprite file="utility_lighter_on.png" />
+        <sprite file="utility/utility_lighter_on.png" />
     </properties>
     <spawn chance="1" />
 </item>
