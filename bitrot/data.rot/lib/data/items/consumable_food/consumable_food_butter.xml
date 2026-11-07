@@ -1,0 +1,11 @@
+<item name="Butter" type="consumable_food" allow_belt="false" consume_time="0.1" tip="Use to craft">
+    <properties>
+        <restore status="[food]" value="1" />
+        <restore status="[anxiety]" value="10" />
+        <load value="5" />
+        <capacity value="10" />
+        
+        <sprite file="consumable_food/consumable_food_butter.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

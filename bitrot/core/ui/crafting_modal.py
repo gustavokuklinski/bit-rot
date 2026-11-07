@@ -7,7 +7,7 @@ from core.entities.item.item import Item
 from core.data.recipe_manager import RecipeManager
 from core.ui.tabs import Tabs 
 from core.ui.dropdown import draw_context_menu
-
+from core.entities.item.item_data import ITEM_TEMPLATES
 from core.ui.crafting_know_recipes_tab import CraftingKnowRecipesTab
 from core.ui.crafting_craft_tab import CraftingCraftTab
 from core.ui.crafting_repair_tab import CraftingRepairTab
@@ -126,7 +126,7 @@ class CraftingModal(BaseModal):
             if is_left_click:
                 self._force_click = True
         
-        elif event.type == pygame.KEYDOWN and self.search_active:
+        elif event.type == pygame.KEYDOWN and (self.search_active or self.modal.get('search_active', False)):
             if event.key == pygame.K_BACKSPACE:
                 self.search_text = self.search_text[:-1]
                 self.modal['search_text'] = self.search_text
@@ -134,6 +134,7 @@ class CraftingModal(BaseModal):
                 self.search_active = False
                 self.modal['search_active'] = False
                 pygame.key.set_repeat()
+                return True
             elif event.key == pygame.K_ESCAPE:
                 self.search_active = False
                 self.modal['search_active'] = False
@@ -300,18 +301,52 @@ class CraftingModal(BaseModal):
         return track_rect, handle_rect
 
     def get_preview_image(self, name):
+        if not name:
+            return None
+
+        # 1. If name is in ITEM_TEMPLATES, create the item image
+        if name in ITEM_TEMPLATES:
+            try:
+                item = Item.create_from_name(name, silent=True)
+                if item and item.image:
+                    return item.image
+            except Exception:
+                pass
+
+        # Case-insensitive lookup in ITEM_TEMPLATES
+        name_lower = name.lower().strip()
+        for t_name in ITEM_TEMPLATES:
+            if t_name.lower().strip() == name_lower:
+                try:
+                    item = Item.create_from_name(t_name, silent=True)
+                    if item and item.image:
+                        return item.image
+                except Exception:
+                    pass
+                break
+
+        # 2. Check map tile definitions (e.g. Stove, Furnace, Campfire) without triggering item errors
+        if self.game and hasattr(self.game, 'tile_manager') and hasattr(self.game.tile_manager, 'definitions'):
+            for tile_def in self.game.tile_manager.definitions.values():
+                t_name = tile_def.get('name', '')
+                if t_name and (t_name == name or t_name.lower().strip() == name_lower):
+                    if tile_def.get('image'):
+                        return tile_def['image']
+
+            if name in self.game.tile_manager.definitions:
+                t_def = self.game.tile_manager.definitions[name]
+                if t_def.get('image'):
+                    return t_def['image']
+
+        # 3. Last-resort silent fallback
         try:
-            item = Item.create_from_name(name)
+            item = Item.create_from_name(name, silent=True)
             if item and item.image:
                 return item.image
-            # Fallback: check map tile definitions (e.g. Stove, Furnace)
-            if self.game and hasattr(self.game, 'tile_manager'):
-                for tile_def in self.game.tile_manager.definitions.values():
-                    if tile_def.get('name') == name and tile_def.get('image'):
-                        return tile_def['image']
-            return None
         except Exception:
-            return None
+            pass
+
+        return None
 
     def draw(self):
         self.tabs_manager.surface = self.surface

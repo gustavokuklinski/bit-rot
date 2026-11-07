@@ -1,0 +1,7 @@
+<recipe type="consumable_food" craft="create" output="Tuna (Cooked)" gain_xp="[cooking:1.0, intelligence:0.1]" amount="1" time="1.0">
+    <ingredient name="Fish Tuna (Raw)" destroy="true" amount="1" />
+    <ingredient name="Salt" destroy="true" amount="1" />
+    <ingredient name="Butter" destroy="true" amount="1" />
+    <ingredient name="[Cooking Pot]" destroy="false" amount="1" />
+    <ingredient name="[Campfire on, Stove]" destroy="false" amount="1" />
+</recipe>

@@ -770,7 +770,14 @@ def handle_keyboard_events(game, event, action_triggered=None):
     # --- 1. KEYBOARD-ONLY UI & CHAT HANDLING (Strictly KEYDOWN) ---
     if event.type == pygame.KEYDOWN:
 
-        for modal in game.modals:
+        # ---> FIX: Process active search input in Crafting modal FIRST before any shortcuts
+        for modal in reversed(game.modals):
+            if modal.get('type') == 'crafting':
+                inst = modal.get('instance')
+                if inst and (getattr(inst, 'search_active', False) or modal.get('search_active', False)):
+                    if inst.handle_event(event):
+                        return
+
             if modal.get('type') == 'mobile' and modal.get('active_tab') == 'VOIP' and modal.get('voip_input_active'):
                 if event.key == pygame.K_BACKSPACE:
                     modal['voip_input_text'] = modal.get('voip_input_text', '')[:-1]
@@ -831,13 +838,13 @@ def handle_keyboard_events(game, event, action_triggered=None):
                 game.player.cancel_action()
                 return
 
-        # Chat activation via 'T' key
+        # Chat activation via 'T' key (only triggers when not typing in an active text input)
         if event.key == pygame.K_t:
             game.chat_active = True
             if not any(m['type'] == 'messages' for m in game.modals):
                 toggle_messages_modal(game)
             return
-
+            
         # System & Modal Function Keys
         if event.key == pygame.K_F1:
             toggle_help_modal(game)

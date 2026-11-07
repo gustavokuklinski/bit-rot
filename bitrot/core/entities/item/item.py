@@ -408,8 +408,8 @@ class Item:
         return generate_random_item(Item)
 
     @classmethod
-    def create_from_name(cls, item_name, randomize_durability=False, force_color=None, spawn_loot=True):
-        return create_item_from_name(cls, item_name, randomize_durability, force_color, spawn_loot=spawn_loot)
+    def create_from_name(cls, item_name, randomize_durability=False, force_color=None, spawn_loot=True, silent=False):
+        return create_item_from_name(cls, item_name, randomize_durability, force_color, spawn_loot=spawn_loot, silent=silent)
 
     @staticmethod
     def cleanup_disposables(item_list, modals=None, message_func=None):

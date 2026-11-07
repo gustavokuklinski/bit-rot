@@ -4,7 +4,7 @@
         <restore status="[water]" value="4" />
         <restore status="[health]" value="4" />
         <restore status="[stamina]" value="4" />
-        <restore status="[anxiety]" value="4" />
+        <reduce status="[anxiety]" value="4" />
         <load value="1" />
         <capacity value="1" />
         

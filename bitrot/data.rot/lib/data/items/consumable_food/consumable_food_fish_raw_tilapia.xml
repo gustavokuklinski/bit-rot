@@ -9,7 +9,7 @@
         <load value="1" />
         <capacity value="1" />
         
-        <sprite file="consumable_food/consumable_food_fish.png" />
+        <sprite file="consumable_food/consumable_food_fish_raw_tilapia.png" />
     </properties>
     <spawn chance="1" />
 </item>

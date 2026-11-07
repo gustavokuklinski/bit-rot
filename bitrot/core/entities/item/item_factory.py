@@ -146,7 +146,7 @@ def generate_random_item(cls):
     chosen_name = random.choices(names, weights=normalized_chances, k=1)[0]
     return create_item_from_name(cls, chosen_name, randomize_durability=True)
 
-def create_item_from_name(cls, item_name, randomize_durability=False, force_color=None, spawn_loot=True):
+def create_item_from_name(cls, item_name, randomize_durability=False, force_color=None, spawn_loot=True, silent=False):
     if not ITEM_TEMPLATES:
         load_item_templates_data()
 
@@ -255,7 +255,21 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
             item = cls(actual_name, item_type='text', weight=0.001)
             item.text = actual_name
             return item
-        print(f"Error: No template for '{actual_name}'")
+
+        # Check if the requested name matches a known map tile (e.g. Stove, Furnace)
+        from core.messages import _game_instance
+        g = _game_instance
+        if g and hasattr(g, 'tile_manager') and hasattr(g.tile_manager, 'definitions'):
+            for t_def in g.tile_manager.definitions.values():
+                t_name = t_def.get('name', '')
+                if t_name and t_name.lower().strip() == actual_name.lower().strip():
+                    item = cls(actual_name, item_type='maptile')
+                    item.image = t_def.get('image')
+                    item.is_maptile = True
+                    return item
+
+        if not silent:
+            print(f"Error: No template for '{actual_name}'")
         return None
 
     template = ITEM_TEMPLATES[template_name]
