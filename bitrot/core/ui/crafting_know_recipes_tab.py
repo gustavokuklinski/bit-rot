@@ -1,7 +1,9 @@
 # core/ui/crafting_know_recipes_tab.py
+
 from core.ui.crafting_craft_tab import CraftingCraftTab
 from core.ui.crafting_repair_tab import CraftingRepairTab
 from core.ui.crafting_dismantle_tab import CraftingDismantleTab
+from core.ui.crafting_cooking_tab import CraftingCookingTab
 from core.data.localization import tr
 
 class CraftingKnowRecipesTab:
@@ -10,6 +12,7 @@ class CraftingKnowRecipesTab:
         self.craft_tab = CraftingCraftTab(modal)
         self.repair_tab = CraftingRepairTab(modal)
         self.dismantle_tab = CraftingDismantleTab(modal)
+        self.cooking_tab = getattr(modal, 'cooking_tab', None) or CraftingCookingTab(modal)
         
     def filter_recipes(self, recipes, search_text):
         filtered = []
@@ -46,11 +49,15 @@ class CraftingKnowRecipesTab:
         return filtered
         
     def draw_details(self, details_x, details_y, details_w, list_h, mouse_pos, click, nearby_containers, player_items, nearby_items):
-        craft_type = getattr(self.modal.selected_recipe, 'craft_type', 'create')
+        r = self.modal.selected_recipe
+        craft_type = getattr(r, 'craft_type', 'create')
         if craft_type == 'repair':
             return self.repair_tab.draw_details(details_x, details_y, details_w, list_h, mouse_pos, click, nearby_containers, player_items, nearby_items)
         elif craft_type == 'dismantle':
             return self.dismantle_tab.draw_details(details_x, details_y, details_w, list_h, mouse_pos, click, nearby_containers, player_items, nearby_items)
+        elif getattr(r, 'is_cooking', False):
+            # FIX: Use self.cooking_tab instead of self.modal.cooking_tab
+            return self.cooking_tab.draw_details(details_x, details_y, details_w, list_h, mouse_pos, click, nearby_containers, player_items, nearby_items)
         else:
             return self.craft_tab.draw_details(details_x, details_y, details_w, list_h, mouse_pos, click, nearby_containers, player_items, nearby_items)
 
@@ -60,5 +67,13 @@ class CraftingKnowRecipesTab:
             self.repair_tab.execute_craft(recipe, count=count)
         elif craft_type == 'dismantle':
             self.dismantle_tab.execute_craft(recipe, count=count)
+        elif getattr(recipe, 'is_cooking', False):
+            # FIX: Use self.cooking_tab instead of self.modal.cooking_tab
+            self.cooking_tab.execute_cook(recipe, count=count)
         else:
             self.craft_tab.execute_craft(recipe, count=count)
+
+    def handle_event(self, event, mouse_pos):
+        if getattr(self.modal.selected_recipe, 'is_cooking', False):
+            return self.cooking_tab.handle_event(event, mouse_pos)
+        return False

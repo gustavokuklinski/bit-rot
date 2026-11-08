@@ -217,6 +217,10 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                         template['properties']['reduce'] = {
                             'value': node.get('value', '0')
                         }
+
+                # Net-calculate all restore and reduce effects for this item template
+                from core.entities.item.item_factory import consolidate_effects
+                template['effects'] = consolidate_effects(template['effects'])
                     
             spawn_node = root.find('spawn')
             if spawn_node is not None:

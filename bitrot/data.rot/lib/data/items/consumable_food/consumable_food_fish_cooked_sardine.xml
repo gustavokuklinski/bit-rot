@@ -6,7 +6,7 @@
         <restore status="[stamina]" value="2" />
         <reduce status="[anxiety]" value="2" />
         <load value="1" />
-        <capacity value="10" />
+        <capacity value="1" />
         
         <sprite file="consumable_food/consumable_food_fish_cooked_sardine.png" />
     </properties>

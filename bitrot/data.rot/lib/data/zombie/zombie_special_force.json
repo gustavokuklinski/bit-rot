@@ -6,7 +6,7 @@
       "sex": "RANDOM",
       "xp": { "min": 1, "max": 15 },
       "stats": {
-        "health": { "min": 40, "max": 70 },
+        "health": { "min": 30, "max": 60 },
         "speed": { "min": 1, "max": 2 },
         "attack": { "min": 15, "max": 25 },
         "infection": { "min": 15, "max": 25 }
@@ -30,14 +30,14 @@
       "loot": [
         { "item": "Money WBRL", "chance": 1.0 },
         { "item": "Coin WBRL", "chance": 0.5 },
-        { "item": "Rot Meat", "chance": 1.0 },
+        { "item": "Rotter Meat", "chance": 1.0 },
         { "item": "Lighter off", "chance": 0.2 },
         { "item": "MPK5", "chance": 0.1 },
         { "item": "MAC10", "chance": 0.1 },
         { "item": "Large Backpack", "chance": 0.1 },
         { "item": "Knife", "chance": 0.6 },
         { "item": "Pistol 9mm", "chance": 0.5 },
-        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.5 }
+        { "item": "Kukaroach (Bit Rot publisher)", "min": 1, "max": 1, "chance": 0.5 }
       ],
       "sound": {
         "hit": "zombie_hit.ogg",

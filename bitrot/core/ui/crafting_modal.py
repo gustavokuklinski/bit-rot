@@ -10,6 +10,7 @@ from core.ui.dropdown import draw_context_menu
 from core.entities.item.item_data import ITEM_TEMPLATES
 from core.ui.crafting_know_recipes_tab import CraftingKnowRecipesTab
 from core.ui.crafting_craft_tab import CraftingCraftTab
+from core.ui.crafting_cooking_tab import CraftingCookingTab
 from core.ui.crafting_repair_tab import CraftingRepairTab
 from core.ui.crafting_dismantle_tab import CraftingDismantleTab
 from core.data.localization import tr
@@ -49,6 +50,7 @@ class CraftingModal(BaseModal):
         self.tabs_data = [
             {'label': tr('tab', "Known Recipes")},
             {'label': tr('tab', "Craft")},
+            {'label': tr('tab', "Cooking")},
             {'label': tr('tab', "Repair")},
             {'label': tr('tab', "Dismantle")}
         ]
@@ -80,15 +82,29 @@ class CraftingModal(BaseModal):
         if 'craft_count' not in self.modal:
             self.modal['craft_count'] = 1
 
+        self.craft_tab = CraftingCraftTab(self)
+        self.cooking_tab = CraftingCookingTab(self)
+        self.repair_tab = CraftingRepairTab(self)
+        self.dismantle_tab = CraftingDismantleTab(self)
+        self.know_recipes_tab = CraftingKnowRecipesTab(self)
+
         self.tab_handlers = {
-            tr('tab', "Known Recipes"): CraftingKnowRecipesTab(self),
-            tr('tab', "Craft"): CraftingCraftTab(self),
-            tr('tab', "Repair"): CraftingRepairTab(self),
-            tr('tab', "Dismantle"): CraftingDismantleTab(self)
+            tr('tab', "Known Recipes"): self.know_recipes_tab,
+            tr('tab', "Craft"): self.craft_tab,
+            tr('tab', "Cooking"): self.cooking_tab,
+            tr('tab', "Repair"): self.repair_tab,
+            tr('tab', "Dismantle"): self.dismantle_tab
         }
 
     def handle_event(self, event):
         mouse_pos = self.game._get_scaled_mouse_pos()
+
+        # Delegate events to tab handlers (e.g. seasoning search and scroll)
+        active_tab = self.modal.get('active_tab', tr('tab', "Known Recipes"))
+        tab_handler = self.tab_handlers.get(active_tab)
+        if tab_handler and hasattr(tab_handler, 'handle_event'):
+            if tab_handler.handle_event(event, mouse_pos):
+                return True
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             is_left_click = getattr(event, 'button', 1) == 1
@@ -554,7 +570,7 @@ class CraftingModal(BaseModal):
             text_rect = info_txt.get_rect(center=(details_x + details_w//2, details_y + 100))
             self.surface.blit(info_txt, text_rect)
 
-        if active_tooltip_ingredients:
+        if active_tooltip_ingredients and not self.dropdown_state.get('active', False):
             self._draw_ingredient_tooltip(active_tooltip_ingredients, mouse_pos, nearby_containers)
 
         if self.dropdown_state['active']:
@@ -630,9 +646,10 @@ class CraftingModal(BaseModal):
             self.surface.blit(s, (cx, curr_y + (line_height - s.get_height()) // 2))
             curr_y += line_height
 
-    def prioritize_locations(self, locs, preferred_id):
-        if not preferred_id: return locs
-        return sorted(locs, key=lambda loc: 0 if loc[2].id == preferred_id else 1)
+    def prioritize_locations(self, locs, preferred_id=None):
+        if not preferred_id:
+            return locs
+        return sorted(locs, key=lambda loc: 0 if (loc[2] and getattr(loc[2], 'id', None) == preferred_id) else 1)
 
     def _validate_ingredients(self, recipe, nearby_containers=None, count=1):
         from core.ui.crafting_common import container_holds_only_food_or_liquids

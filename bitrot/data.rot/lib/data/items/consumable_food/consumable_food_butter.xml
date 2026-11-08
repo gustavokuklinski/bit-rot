@@ -1,7 +1,7 @@
 <item name="Butter" type="consumable_food" allow_belt="false" consume_time="0.1" tip="Use to craft">
     <properties>
         <restore status="[food]" value="1" />
-        <restore status="[anxiety]" value="10" />
+        <restore status="[anxiety]" value="5" />
         <load value="5" />
         <capacity value="10" />
         

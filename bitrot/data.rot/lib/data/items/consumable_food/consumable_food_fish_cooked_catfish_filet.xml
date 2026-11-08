@@ -1,12 +1,12 @@
 <item name="Catfish Filet (Cooked)" type="consumable_food" allow_belt="false" consume_time="0.5" allow_use="true">
     <properties>
-        <restore status="[food]" value="3" />
-        <restore status="[water]" value="3" />
-        <restore status="[health]" value="3" />
-        <restore status="[stamina]" value="3" />
-        <reduce status="[anxiety]" value="4" />
-        <load value="4" />
-        <capacity value="4" />
+        <restore status="[food]" value="2" />
+        <restore status="[water]" value="2" />
+        <restore status="[health]" value="2" />
+        <restore status="[stamina]" value="2" />
+        <reduce status="[anxiety]" value="2" />
+        <load value="5" />
+        <capacity value="5" />
         
         <sprite file="consumable_food/consumable_food_fish_cooked_filet.png" />
     </properties>

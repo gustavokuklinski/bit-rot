@@ -10,7 +10,7 @@
       "stats": {
         "health": {
           "min": 10,
-          "max": 80
+          "max": 30
         },
         "speed": {
           "min": 1,

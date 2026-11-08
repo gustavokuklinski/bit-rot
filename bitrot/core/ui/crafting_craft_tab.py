@@ -19,8 +19,14 @@ class CraftingCraftTab:
     def filter_recipes(self, recipes, search_text):
         filtered = []
         for r in recipes:
-            if getattr(r, 'craft_type', 'create') in ('repair', 'dismantle'):
+            if getattr(r, 'craft_type', 'create') in ('repair', 'dismantle', 'cook'):
                 continue
+            # Exclude food and drink from generic Craft tab
+            if getattr(r, 'recipe_type', '') in ('consumable_food', 'consumable_drink'):
+                continue
+            if hasattr(r, 'extra_ingredients') and len(r.extra_ingredients) > 0:
+                continue
+
             if search_text:
                 st = search_text.lower()
                 matches_out = (st in r.output_name.lower()) or (st in tr('item', r.output_name).lower())

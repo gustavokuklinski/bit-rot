@@ -774,7 +774,9 @@ def handle_keyboard_events(game, event, action_triggered=None):
         for modal in reversed(game.modals):
             if modal.get('type') == 'crafting':
                 inst = modal.get('instance')
-                if inst and (getattr(inst, 'search_active', False) or modal.get('search_active', False)):
+                cooking_tab = getattr(inst, 'cooking_tab', None)
+                seasoning_active = getattr(cooking_tab, 'seasoning_search_active', False)
+                if inst and (getattr(inst, 'search_active', False) or modal.get('search_active', False) or seasoning_active):
                     if inst.handle_event(event):
                         return
 

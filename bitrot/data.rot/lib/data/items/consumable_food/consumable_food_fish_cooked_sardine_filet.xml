@@ -4,10 +4,10 @@
         <restore status="[water]" value="2" />
         <restore status="[health]" value="2" />
         <restore status="[stamina]" value="2" />
-        <reduce status="[anxiety]" value="3" />
+        <reduce status="[anxiety]" value="2" />
 
-        <load value="1" />
-        <capacity value="10" />
+        <load value="5" />
+        <capacity value="5" />
         
         <sprite file="consumable_food/consumable_food_fish_cooked_filet.png" />
     </properties>

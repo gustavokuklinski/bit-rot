@@ -27,6 +27,11 @@ def handle_mouse_up(game, event, mouse_pos):
         modal['is_dragging_scrollbar'] = False
         modal['is_dragging_map'] = False
         modal['is_scrolling_content'] = False
+        inst = modal.get('instance')
+        if inst:
+            cooking_tab = getattr(inst, 'cooking_tab', None)
+            if cooking_tab:
+                cooking_tab.is_dragging_scrollbar = False
 
     from core.draw.camera import update_messages_modal_elastic_width
     update_messages_modal_elastic_width(game)

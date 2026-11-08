@@ -1,0 +1,15 @@
+<recipe type="consumable_food" craft="create" output="Sardine Filet (Cooked)" gain_xp="[cooking:1.0, intelligence:0.1]" amount="1" time="1.0">
+    <ingredient name="Sardine Filet (Raw)" destroy="true" amount="1" />
+    <ingredient name="Salt" destroy="true" amount="1" />
+    <ingredient name="[Butter, Olive Oil]" destroy="true" amount="1" />
+    <ingredient name="[Cooking Pan]" destroy="false" amount="1" />
+    <ingredient name="[Campfire on, Stove]" destroy="false" amount="1" />
+    
+    <extra_ingredient name="Salt" destroy="true" amount="1" />
+    <extra_ingredient name="Potato" amount="2" req_level="[cooking: 1]" />
+    <extra_ingredient name="Sliced Potato" amount="2" req_level="[cooking: 1]" />
+    <extra_ingredient name="Carrot" amount="2" req_level="[cooking: 1]" />
+    <extra_ingredient name="Sliced Carrot" amount="2" req_level="[cooking: 1]" />
+    <extra_ingredient name="Red Wine Unit" amount="2" req_level="[cooking: 2]" magazine="Seasoning Cooking" />
+    <extra_ingredient name="White Wine Unit" amount="2" req_level="[cooking: 2]" magazine="Seasoning Cooking" />
+</recipe>

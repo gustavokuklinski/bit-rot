@@ -244,6 +244,21 @@ def handle_input(game):
                             modal[scroll_key] = new_offset
                             modal['scroll_offset_y'] = new_offset
 
+                elif modal.get('type') == 'crafting':
+                    s_box = modal.get('seasoning_box_rect')
+                    if s_box and s_box.collidepoint(mouse_pos):
+                        inst = modal.get('instance')
+                        cooking_tab = getattr(inst, 'cooking_tab', None)
+                        if cooking_tab:
+                            scroll_amt = event.y * 25
+                            cooking_tab.seasoning_scroll_y = max(0, min(cooking_tab.seasoning_scroll_y - scroll_amt, cooking_tab.seasoning_max_scroll))
+                    else:
+                        cur_off = modal.get('crafting_scroll_offset', 0)
+                        tot = modal.get('crafting_total_items', 0)
+                        vis = modal.get('crafting_visible_items', 14)
+                        max_s = max(0, tot - vis)
+                        modal['crafting_scroll_offset'] = max(0, min(cur_off - event.y, max_s))
+
                 elif modal.get('type') == 'text':
                     content_rect = modal.get('content_rect')
                     if content_rect and content_rect.collidepoint(mouse_pos):

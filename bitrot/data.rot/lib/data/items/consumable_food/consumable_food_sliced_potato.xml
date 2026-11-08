@@ -1,0 +1,13 @@
+<item name="Sliced Potato" type="consumable_food" allow_belt="false" consume_time="2.0" allow_use="true">
+    <properties>
+        <restore status="[food]" value="2" />
+        <restore status="[health]" value="1" />
+        <restore status="[stamina]" value="1" />
+        <reduce status="[anxiety]" value="1" />
+        <load value="1" />
+        <capacity value="10" />
+        
+        <sprite file="consumable_food/consumable_food_sliced_potato.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

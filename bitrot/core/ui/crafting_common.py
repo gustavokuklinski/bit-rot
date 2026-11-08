@@ -173,8 +173,8 @@ def calculate_max_crafts(player, game, recipe, nearby_containers=None):
 
     return max(0, min(craft_limits)) if craft_limits else 1
 
-def add_craft_results_to_player(player, game, recipe, count=1):
-    """Adds crafted results to player, automatically stacking items of the same type."""
+def add_craft_results_to_player(player, game, recipe, count=1, inherited_seasonings=None):
+    """Adds crafted results to player, supporting dynamic seasonings and auto-stacking."""
     created_items_log = []
 
     for res in recipe.results:
@@ -192,8 +192,21 @@ def add_craft_results_to_player(player, game, recipe, count=1):
         if total_units <= 0:
             continue
 
-        sample_name = random.choice(res['names'])
+        raw_sample_name = random.choice(res['names'])
+        
+        # Apply seasonings to the recipe output or wildcard container loot
+        from core.entities.item.item_factory import (
+            build_seasoned_food_name, is_wildcard_item_spec, parse_wildcard_spec, consolidate_effects
+        )
+
+        if inherited_seasonings:
+            sample_name = build_seasoned_food_name(raw_sample_name, inherited_seasonings)
+        else:
+            sample_name = raw_sample_name
+
         dummy_item = Item.create_from_name(sample_name)
+        if not dummy_item:
+            dummy_item = Item.create_from_name(raw_sample_name)
         if not dummy_item:
             continue
 
@@ -202,7 +215,6 @@ def add_craft_results_to_player(player, game, recipe, count=1):
 
         if is_stackable:
             remaining_to_give = total_units
-            # 1. Fill existing matching stacks in inventory and belt
             for inv_item in list(player.inventory) + list(player.belt):
                 if not inv_item or not inv_item.can_stack_with(dummy_item):
                     continue
@@ -216,7 +228,6 @@ def add_craft_results_to_player(player, game, recipe, count=1):
                     if remaining_to_give <= 0:
                         break
 
-            # 2. Place remaining units into new inventory slots
             while remaining_to_give > 0:
                 pack_load = min(remaining_to_give, unit_capacity)
                 new_item = Item.create_from_name(sample_name)
@@ -230,13 +241,25 @@ def add_craft_results_to_player(player, game, recipe, count=1):
                     new_item.rect.topleft = (new_item.x, new_item.y)
                     game.items_on_ground.append(new_item)
                 remaining_to_give -= pack_load
-
         else:
-            # Non-stackables: create unit by unit
             for _ in range(total_units):
                 unit_item = Item.create_from_name(sample_name)
                 if not unit_item:
                     continue
+                # Consolidate recipe-level effects if defined on the recipe
+                if getattr(recipe, 'effects', None):
+                    unit_item.effects = consolidate_effects(unit_item.effects + recipe.effects)
+
+                # Apply recipe-level effects (<restore> / <reduce>) directly to the consumable item
+                if getattr(recipe, 'effects', None):
+                    # If this is a container holding liquid/food, apply effects to the item inside
+                    if hasattr(unit_item, 'inventory') and unit_item.inventory:
+                        for inside_it in unit_item.inventory:
+                            if inside_it and (getattr(inside_it, 'liquid', False) or getattr(inside_it, 'allow_use', False)):
+                                inside_it.effects = consolidate_effects(getattr(inside_it, 'effects', []) + recipe.effects)
+                    else:
+                        unit_item.effects = consolidate_effects(getattr(unit_item, 'effects', []) + recipe.effects)
+
                 if len(player.inventory) < player.get_total_inventory_slots():
                     player.inventory.append(unit_item)
                 else:
@@ -244,8 +267,13 @@ def add_craft_results_to_player(player, game, recipe, count=1):
                     unit_item.rect.topleft = (unit_item.x, unit_item.y)
                     game.items_on_ground.append(unit_item)
 
-        log_name = getattr(recipe, 'output_name', None) or dummy_item.name
-        created_items_log.append(f"{total_units}x {tr('item', log_name)}")
+        # Log clean human-readable name instead of raw XML brackets
+        display_res_name = getattr(dummy_item, 'name', sample_name)
+        if is_wildcard_item_spec(display_res_name):
+            parsed_spec = parse_wildcard_spec(display_res_name)
+            if parsed_spec:
+                display_res_name = parsed_spec['friendly_name']
+        created_items_log.append(f"{total_units}x {tr('item', display_res_name)}")
 
     if created_items_log:
         label = tr('msg', 'Dismantled into:') if getattr(recipe, 'craft_type', 'create') == 'dismantle' else tr('msg', 'Crafted:')
@@ -276,9 +304,12 @@ def has_recipe_ingredients(player, game, recipe, include_nearby=True, count=1):
         is_destroyed = req.get('destroy', True)
         needed = req['amount'] * count if is_destroyed else req['amount']
         valid_names = req['names']
-        have = sum((it.load if it.load is not None else 1)
-                   for it in search_items
-                   if it.name in valid_names)
+        
+        have = sum(
+            (it.load if it.load is not None else 1)
+            for it in search_items
+            if any(is_craft_name_match(vn, it) for vn in valid_names)
+        )
         if have < needed:
             return False
     return True
@@ -326,6 +357,26 @@ def get_recipe_status_details(player, game, recipe, count=1):
     can_craft = is_unlocked and (len(missing_ingredients) == 0) and has_on_player
     return can_craft, is_unlocked, missing_ingredients, missing_magazine, missing_skills
 
+def is_craft_name_match(required_name, item):
+    """Checks if an item matches a required name directly or via its base seasoned food name."""
+    if not item:
+        return False
+    r_low = required_name.lower().strip()
+    i_low = item.name.lower().strip()
+    if i_low == r_low:
+        return True
+
+    base_name = getattr(item, 'base_item_name', None)
+    if base_name and base_name.lower().strip() == r_low:
+        return True
+
+    from core.entities.item.item_factory import parse_seasoned_food_name
+    parsed_base, _ = parse_seasoned_food_name(item.name)
+    if parsed_base.lower().strip() == r_low:
+        return True
+
+    return False
+
 def draw_common_ingredients_grid(modal, recipe, details_x, ing_y, details_w, mouse_pos, click, nearby_containers, player_items, nearby_items, count=1):
     """Renders ingredients grid scaled by current craft count for consumed items only. Returns (can_craft, active_tooltip_ingredients, curr_y)."""
     surface = modal.surface
@@ -340,38 +391,104 @@ def draw_common_ingredients_grid(modal, recipe, details_x, ing_y, details_w, mou
     if not player_has_at_least_one_ingredient(modal.player, modal.game, recipe):
         can_craft = False
 
+    # Fetch all item locations to detect candidate options for selection
+    all_locations = modal._get_all_item_locations(include_nearby=True, nearby_containers=nearby_containers, exclude_equipped=False)
+
     for r_idx, req in enumerate(recipe.ingredients):
         # Tools with destroy="false" do NOT scale with craft count!
         is_destroyed = req.get('destroy', True)
         needed = req['amount'] * count if is_destroyed else req['amount']
         valid_names = req['names']
 
+        # Find all actual candidate items matching this ingredient requirement
+        candidates = []
+        seen_cand_ids = set()
+        for container, key, it, ctype, path in all_locations:
+            if not it or it.id in seen_cand_ids:
+                continue
+            if any(is_craft_name_match(vn, it) for vn in valid_names):
+                qty = it.load if it.load is not None else 1
+                if qty > 0:
+                    seen_cand_ids.add(it.id)
+                    candidates.append((it, path))
+
         have = sum((item.load if item.load is not None else 1)
-                   for item in player_items if item.name in valid_names)
+                   for item in player_items if any(is_craft_name_match(vn, item) for vn in valid_names))
         if nearby_items:
             have += sum((item.load if item.load is not None else 1)
-                        for item in nearby_items if item.name in valid_names)
+                        for item in nearby_items if any(is_craft_name_match(vn, item) for vn in valid_names))
 
         color = GREEN if have >= needed else RED
         if have < needed:
             can_craft = False
 
-        primary_name = valid_names[0]
-        img = modal.ingredient_images.get(primary_name)
-        translated_name = tr('item', primary_name)
-        name_display = translated_name
+        # Determine which specific item/name to display
+        selected_id = modal.selected_ingredients.get(r_idx)
+        active_item = None
+        if selected_id:
+            active_item = next((it for it, _ in candidates if it.id == selected_id), None)
+
+        if active_item is None and candidates:
+            # Default to the first available candidate in player/nearby possession
+            active_item = candidates[0][0]
+            modal.selected_ingredients[r_idx] = active_item.id
+
+        if active_item:
+            active_name = active_item.name
+            img = active_item.image or modal.get_preview_image(active_name)
+        else:
+            active_name = valid_names[0]
+            img = modal.ingredient_images.get(active_name) or modal.get_preview_image(active_name)
+
+        name_display = tr('item', active_name)
 
         is_right_col = (r_idx % 2 == 1)
         current_x = (details_x + 10 + col_width) if is_right_col else (details_x + 10)
 
+        # Has selectable alternatives if multiple items exist or multiple valid names allowed
+        has_alternatives = (len(candidates) > 1) or (len(valid_names) > 1 and len(candidates) > 0)
+        arrow_w = 16 if has_alternatives else 0
+
         txt_str = f" {name_display}: {int(have)}/{needed}"
         text_width = font_12.render(txt_str, False, color).get_width()
-        item_width = min((35 if img else 0) + text_width + 10, col_width - 15)
+        item_width = min((35 if img else 0) + text_width + arrow_w + 12, col_width - 15)
 
         row_rect = pygame.Rect(current_x, curr_y, item_width, 32)
-        if row_rect.collidepoint(mouse_pos):
+        is_hover = row_rect.collidepoint(mouse_pos)
+
+        if is_hover:
             active_tooltip_ingredients = valid_names
             pygame.draw.rect(surface, (50, 50, 50), row_rect, border_radius=3)
+            if has_alternatives:
+                pygame.draw.rect(surface, YELLOW, row_rect, 1, border_radius=3)
+
+        # Click on ingredient row opens the dropdown selection
+        if click and is_hover and has_alternatives and not modal.dropdown_state['active']:
+            opt_labels = []
+            opt_ids = []
+            for it, p in candidates:
+                if getattr(it, 'is_maptile', False):
+                    qty_str = tr('ui', "Nearby")
+                elif hasattr(it, 'is_stackable') and it.is_stackable():
+                    qty_str = f"x{int(it.load if it.load is not None else 1)}"
+                elif getattr(it, 'durability', None) is not None:
+                    qty_str = f"Dur: {int(it.durability)}"
+                else:
+                    qty_str = "x1"
+
+                loc_str = " > ".join(p)
+                opt_labels.append(f"{tr('item', it.name)} ({qty_str}) - {loc_str}")
+                opt_ids.append(it.id)
+
+            if opt_labels:
+                modal.dropdown_state.update({
+                    'active': True,
+                    'options': opt_labels,
+                    'items': opt_ids,
+                    'req_idx': r_idx,
+                    'position': mouse_pos,
+                    'rects': []
+                })
 
         draw_x = current_x
         if img:
@@ -381,9 +498,20 @@ def draw_common_ingredients_grid(modal, recipe, details_x, ing_y, details_w, mou
 
         ing_surf = font_12.render(txt_str, False, color)
         surface.blit(ing_surf, (draw_x, curr_y + 8))
+        draw_x += ing_surf.get_width() + 4
+
+        # Draw dropdown indicator arrow 'v' when selectable alternatives exist
+        if has_alternatives:
+            arr_col = YELLOW if is_hover else (160, 160, 160)
+            arr_surf = font_12.render("v", False, arr_col)
+            surface.blit(arr_surf, (row_rect.right - 14, curr_y + 8))
 
         if is_right_col:
             curr_y += 35
+
+    # If the last ingredient was on the left column, advance past its height
+    if recipe.ingredients and (len(recipe.ingredients) % 2 != 0):
+        curr_y += 35
 
     return can_craft, active_tooltip_ingredients, curr_y
 

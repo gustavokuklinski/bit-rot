@@ -233,28 +233,52 @@ def handle_mouse_down(game, event, mouse_pos):
                 topmost_modal['drag_offset'] = (mouse_pos[0] - topmost_modal['position'][0], mouse_pos[1] - topmost_modal['position'][1])
                 return
 
-            scrollbar_rect = topmost_modal.get('scrollbar_handle_rect')
-            if scrollbar_rect and scrollbar_rect.collidepoint(mouse_pos):
-                topmost_modal['is_dragging_scrollbar'] = True
-                topmost_modal['scrollbar_drag_last_y'] = mouse_pos[1] 
-                return
-
             if topmost_modal.get('type') == 'crafting':
-                handle_rect = topmost_modal.get('crafting_handle_rect')
-                if handle_rect and handle_rect.collidepoint(mouse_pos):
+                # Bypass modal scrollbar drag if clicking anywhere in the seasonings area or search box
+                s_box = topmost_modal.get('seasoning_box_rect')
+                s_search = topmost_modal.get('seasoning_search_rect')
+                s_bar = topmost_modal.get('seasoning_bar_rect')
+                if (s_box and s_box.collidepoint(mouse_pos)) or (s_search and s_search.collidepoint(mouse_pos)) or (s_bar and s_bar.collidepoint(mouse_pos)):
+                    pass
+                else:
+                    handle_rect = topmost_modal.get('crafting_handle_rect')
+                    track_rect = topmost_modal.get('crafting_track_rect')
+                    if handle_rect and handle_rect.collidepoint(mouse_pos):
+                        topmost_modal['is_dragging_scrollbar'] = True
+                        topmost_modal['scrollbar_click_offset_y'] = mouse_pos[1] - handle_rect.y
+                        return
+                    elif track_rect and track_rect.collidepoint(mouse_pos):
+                        topmost_modal['is_dragging_scrollbar'] = True
+                        topmost_modal['scrollbar_click_offset_y'] = (handle_rect.height // 2) if handle_rect else 10
+                        return
+            else:
+                scrollbar_rect = topmost_modal.get('scrollbar_handle_rect')
+                if scrollbar_rect and scrollbar_rect.collidepoint(mouse_pos):
                     topmost_modal['is_dragging_scrollbar'] = True
-                    topmost_modal['scrollbar_click_offset_y'] = mouse_pos[1] - handle_rect.y
+                    topmost_modal['scrollbar_drag_last_y'] = mouse_pos[1] 
                     return
 
-            max_scroll = topmost_modal.get('max_scroll_offset', 0)
+            # Only enable content drag scrolling if clicking inside the left recipe list area!
             if topmost_modal.get('type') == 'crafting':
-                total = topmost_modal.get('crafting_total_items', 0)
-                visible = topmost_modal.get('crafting_visible_items', 14)
-                max_scroll = max(0, total - visible)
-            
-            if max_scroll > 0:
-                topmost_modal['is_scrolling_content'] = True
-                topmost_modal['content_drag_last_y'] = mouse_pos[1]
+                craft_list_rect = pygame.Rect(
+                    topmost_modal['position'][0] + 15,
+                    topmost_modal['position'][1] + 65,
+                    260,
+                    topmost_modal['rect'].height - 85
+                )
+                track_rect = topmost_modal.get('crafting_track_rect')
+                if craft_list_rect.collidepoint(mouse_pos) and (not track_rect or not track_rect.collidepoint(mouse_pos)):
+                    total = topmost_modal.get('crafting_total_items', 0)
+                    visible = topmost_modal.get('crafting_visible_items', 14)
+                    max_scroll = max(0, total - visible)
+                    if max_scroll > 0:
+                        topmost_modal['is_scrolling_content'] = True
+                        topmost_modal['content_drag_last_y'] = mouse_pos[1]
+            else:
+                max_scroll = topmost_modal.get('max_scroll_offset', 0)
+                if max_scroll > 0:
+                    topmost_modal['is_scrolling_content'] = True
+                    topmost_modal['content_drag_last_y'] = mouse_pos[1]
                 
             if 'instance' in topmost_modal and hasattr(topmost_modal['instance'], 'handle_event'):
                 if topmost_modal['instance'].handle_event(event): 
@@ -646,6 +670,15 @@ def handle_mouse_down(game, event, mouse_pos):
         if topmost_modal:
             topmost_modal['scroll_dy'] = 1 if event.button == 4 else -1
         if topmost_modal and topmost_modal['type'] == 'crafting':
+            s_box = topmost_modal.get('seasoning_box_rect')
+            if s_box and s_box.collidepoint(mouse_pos):
+                inst = topmost_modal.get('instance')
+                cooking_tab = getattr(inst, 'cooking_tab', None)
+                if cooking_tab:
+                    dy = -25 if event.button == 4 else 25
+                    cooking_tab.seasoning_scroll_y = max(0, min(cooking_tab.seasoning_scroll_y + dy, cooking_tab.seasoning_max_scroll))
+                    return
+
             offset = topmost_modal.get('crafting_scroll_offset', 0)
             total = topmost_modal.get('crafting_total_items', 0)
             visible = topmost_modal.get('crafting_visible_items', 14)

@@ -1,7 +1,0 @@
-<recipe type="consumable_food" craft="create" output="Meat (Cooked)" gain_xp="[cooking:1.0, intelligence:0.1]" amount="1" time="1.5">
-    <ingredient name="Meat (Raw)" destroy="true" amount="1" />
-    <ingredient name="Salt" destroy="true" amount="1" />
-    <ingredient name="Butter" destroy="true" amount="1" />
-    <ingredient name="[Cooking Pot]" destroy="false" amount="1" />
-    <ingredient name="[Campfire on, Stove]" destroy="false" amount="1" />
-</recipe>

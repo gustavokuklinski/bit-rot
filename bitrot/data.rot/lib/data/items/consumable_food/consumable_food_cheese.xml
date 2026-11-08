@@ -1,9 +1,9 @@
 <item name="Cheese" type="consumable_food" allow_belt="false" consume_time="1.2" allow_use="true">
     <properties>
-        <restore status="[food]" value="3" />
-        <restore status="[health]" value="1" />
+        <restore status="[food]" value="4" />
+        <restore status="[health]" value="2" />
         <restore status="[stamina]" value="2" />
-        <reduce status="[anxiety]" value="1" />
+        <reduce status="[anxiety]" value="2" />
         <load value="1" />
         <capacity value="5" />
         

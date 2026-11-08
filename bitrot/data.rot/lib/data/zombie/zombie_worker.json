@@ -6,7 +6,7 @@
       "sex": "RANDOM",
       "xp": { "min": 1, "max": 15 },
       "stats": {
-        "health": { "min": 20, "max": 70 },
+        "health": { "min": 20, "max": 50 },
         "speed": { "min": 1, "max": 2 },
         "attack": { "min": 5, "max": 15 },
         "infection": { "min": 2, "max": 5 }
@@ -30,12 +30,12 @@
       "loot": [
         { "item": "Money WBRL", "chance": 1.0 },
         { "item": "Coin WBRL", "chance": 0.5 },
-        { "item": "Rot Meat", "chance": 1.0 },
+        { "item": "Rotter Meat", "chance": 1.0 },
         { "item": "Screwdriver", "chance": 0.5 },
         { "item": "Lighter off", "chance": 0.2 },
         { "item": "Toolkit", "chance": 1.0 },
         { "item": "38 Revolver", "chance": 0.5 },
-        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.5 }
+        { "item": "Kukaroach (Bit Rot publisher)", "min": 1, "max": 1, "chance": 0.5 }
       ],
       "sound": {
         "hit": "zombie_hit.ogg",

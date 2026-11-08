@@ -322,7 +322,7 @@ class ModManager:
                                     tag = tree.getroot().tag.lower()
                                     if tag == 'cloth' and folder_name == 'clothes': belongs = True
                                     elif tag == 'item' and folder_name == 'items': belongs = True
-                                    elif tag == 'recipe' and folder_name == 'craft': belongs = True
+                                    elif tag == 'recipe' and folder_name in ('craft', 'cooking'): belongs = True
                                     elif tag == 'map' and folder_name in ('map', 'maps'): belongs = True
                                     elif tag in ('radio', 'radios', 'station') and folder_name in ('radio', 'radios'): belongs = True
                                     elif tag == 'vehicle' and folder_name == 'vehicle': belongs = True

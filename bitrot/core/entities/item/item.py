@@ -195,6 +195,13 @@ class Item:
         if getattr(self, 'hotbar', False):
             data['hotbar'] = self.hotbar
         
+        if getattr(self, 'seasonings', None):
+            data['seasonings'] = self.seasonings
+        if getattr(self, 'base_item_name', None):
+            data['base_item_name'] = self.base_item_name
+        if getattr(self, 'effects', None):
+            data['effects'] = self.effects
+        
         return data
 
     @staticmethod
@@ -254,6 +261,13 @@ class Item:
         
         if 'hotbar' in data:
             item.hotbar = data['hotbar']
+        
+        if 'effects' in data:
+            item.effects = data['effects']
+        if 'seasonings' in data:
+            item.seasonings = data['seasonings']
+        if 'base_item_name' in data:
+            item.base_item_name = data['base_item_name']
 
         return item
         

@@ -1,6 +1,8 @@
 <recipe type="consumable_drink" craft="create" output="[{baseItem:Cup}, {loot:[Coffee Unit:2]}]" gain_xp="[agility:0.1, maintenance:0.1]" amount="1" time="0.5">
     <ingredient name="Cup" destroy="true" amount="1" />
     <ingredient name="Coffee" destroy="true" amount="1" />
-    <ingredient name="Water Unit" destroy="true" amount="2" />
+    <ingredient name="[Water Unit, Dirty Water Unit]" destroy="true" amount="2" />
     <ingredient name="[Campfire on, Stove]" destroy="false" amount="1" />
+
+    <extra_ingredient name="Sugar" destroy="true" amount="1" />
 </recipe>

@@ -47,6 +47,85 @@ def get_tinted_sprite(base_image, item_name, color):
     TINTED_SPRITE_CACHE[cache_key] = tinted
     return tinted
 
+def parse_seasoned_food_name(name):
+    """
+    Deconstructs a seasoned name back into base item name and seasonings.
+    E.g. 'Tuna with Salt, Red Wine Unit (Cooked)' -> ('Tuna (Cooked)', ['Salt', 'Red Wine Unit'])
+    """
+    if not isinstance(name, str) or " with " not in name:
+        return name, []
+
+    prefix, remainder = name.split(" with ", 1)
+    suffix = ""
+    seasonings_part = remainder
+
+    if "(" in remainder and remainder.strip().endswith(")"):
+        s_idx = remainder.rfind("(")
+        seasonings_part = remainder[:s_idx].strip()
+        suffix = remainder[s_idx:].strip()
+
+    base_candidate = f"{prefix} {suffix}".strip() if suffix else prefix
+    seasonings = [s.strip() for s in seasonings_part.split(",") if s.strip()]
+    return base_candidate, seasonings
+
+def build_seasoned_food_name(base_name, seasonings):
+    """
+    Constructs a seasoned name preserving suffixes like (Cooked).
+    E.g. ('Tuna (Cooked)', ['Salt', 'Red Wine Unit']) -> 'Tuna with Salt, Red Wine Unit (Cooked)'
+    """
+    if not seasonings:
+        return base_name
+
+    seasoning_str = ", ".join(seasonings)
+    if "(" in base_name and base_name.strip().endswith(")"):
+        s_idx = base_name.rfind("(")
+        prefix = base_name[:s_idx].strip()
+        suffix = base_name[s_idx:].strip()
+        return f"{prefix} with {seasoning_str} {suffix}"
+    return f"{base_name} with {seasoning_str}"
+
+def consolidate_effects(effects_list):
+    """
+    Consolidates 'restore' and 'reduce' effects for matching status targets.
+    Net formula: net_value = sum(restore) - sum(reduce).
+      - If net_value > 0: produces {'type': 'restore', 'targets': [status], 'value': net_value}
+      - If net_value < 0: produces {'type': 'reduce', 'targets': [status], 'value': abs(net_value)}
+      - If net_value == 0: completely cancelled out.
+    Preserves any non-restore/reduce effects as-is.
+    """
+    net_map = {}
+    other_effects = []
+
+    for eff in (effects_list or []):
+        if not eff:
+            continue
+        eff_type = eff.get('type')
+        val = int(eff.get('value', 0))
+        targets = eff.get('targets', [])
+
+        if eff_type in ('restore', 'reduce'):
+            for t in targets:
+                t_key = t.strip().lower()
+                if not t_key:
+                    continue
+                if t_key not in net_map:
+                    net_map[t_clean := t_key] = 0
+                if eff_type == 'restore':
+                    net_map[t_key] += val
+                else:
+                    net_map[t_key] -= val
+        else:
+            other_effects.append(eff)
+
+    consolidated = []
+    for status, net_val in net_map.items():
+        if net_val > 0:
+            consolidated.append({'type': 'restore', 'targets': [status], 'value': net_val})
+        elif net_val < 0:
+            consolidated.append({'type': 'reduce', 'targets': [status], 'value': abs(net_val)})
+
+    return consolidated + other_effects
+
 def is_wildcard_item_spec(spec_str):
     """Checks if string defines a wildcard container with dynamic loot."""
     if not isinstance(spec_str, str):
@@ -56,22 +135,33 @@ def is_wildcard_item_spec(spec_str):
 def parse_wildcard_spec(spec_str):
     """
     Parses wildcard container specifications such as:
-      '[{baseItem:Cup}, {loot:[Coffee Unit:2]}]'
-      'Cup with [{baseItem:Cup}, {loot:[Coffee Unit:2]}]'
-      'Coffee Cup [{baseItem:Cup}, {loot:[Coffee Unit:2]}]'
+      '[{baseItem:Cup}, {loot:[Water Unit:2]}]'
+      '[{baseItem:Cup}, {loot:[Water Unit:2]}] with Sugar, Salt'
+      'Cup with [{baseItem:Cup}, {loot:[Water Unit:2]}]'
+      'Coffee Cup [{baseItem:Cup}, {loot:[Water Unit:2]}]'
     """
     if not isinstance(spec_str, str):
         return None
 
-    base_match = re.search(r'baseitem\s*:\s*([^},\]]+)', spec_str, re.IGNORECASE)
+    # 1. Extract any attached seasonings appended after the wildcard brackets
+    # e.g. '[{baseItem:Cup}, {loot:[Water Unit:2]}] with Sugar, Salt'
+    attached_seasonings = []
+    clean_spec = spec_str.strip()
+    bracket_idx = clean_spec.rfind(']')
+    if bracket_idx != -1 and " with " in clean_spec[bracket_idx:]:
+        remainder = clean_spec[bracket_idx:].split(" with ", 1)[1].strip()
+        attached_seasonings = [s.strip() for s in remainder.split(',') if s.strip()]
+        clean_spec = clean_spec[:bracket_idx + 1].strip()
+
+    base_match = re.search(r'baseitem\s*:\s*([^},\]]+)', clean_spec, re.IGNORECASE)
     if not base_match:
         return None
     base_item = base_match.group(1).strip()
 
     loot_items = []
-    loot_match = re.search(r'loot\s*:\s*\[([^\]]*)\]', spec_str, re.IGNORECASE)
+    loot_match = re.search(r'loot\s*:\s*\[([^\]]*)\]', clean_spec, re.IGNORECASE)
     if not loot_match:
-        loot_match = re.search(r'loot\s*:\s*([^},\]]+)', spec_str, re.IGNORECASE)
+        loot_match = re.search(r'loot\s*:\s*([^},\]]+)', clean_spec, re.IGNORECASE)
 
     if loot_match:
         raw_loot = loot_match.group(1).strip()
@@ -92,20 +182,24 @@ def parse_wildcard_spec(spec_str):
                 else:
                     loot_items.append((entry, 1))
 
-    spec_start = re.search(r'\[?\s*\{?\s*baseitem', spec_str, re.IGNORECASE)
-    prefix = spec_str[:spec_start.start()].strip() if spec_start else ""
+    spec_start = re.search(r'\[?\s*\{?\s*baseitem', clean_spec, re.IGNORECASE)
+    prefix = clean_spec[:spec_start.start()].strip() if spec_start else ""
 
     first_loot_name = loot_items[0][0] if loot_items else ""
+    if attached_seasonings and first_loot_name:
+        seasoned_loot_name = build_seasoned_food_name(first_loot_name, attached_seasonings)
+    else:
+        seasoned_loot_name = first_loot_name
 
     if prefix:
         p_low = prefix.lower()
         if p_low.endswith("with") or p_low.endswith("of") or p_low.endswith("de"):
-            friendly_name = f"{prefix} {first_loot_name}".strip()
+            friendly_name = f"{prefix} {seasoned_loot_name}".strip()
         else:
-            friendly_name = prefix
+            friendly_name = build_seasoned_food_name(prefix, attached_seasonings) if attached_seasonings else prefix
     else:
-        if first_loot_name:
-            friendly_name = f"{base_item} with {first_loot_name}"
+        if seasoned_loot_name:
+            friendly_name = f"{base_item} with {seasoned_loot_name}"
         else:
             friendly_name = base_item
 
@@ -113,7 +207,8 @@ def parse_wildcard_spec(spec_str):
         'base_item': base_item,
         'loot': loot_items,
         'prefix': prefix,
-        'friendly_name': friendly_name
+        'friendly_name': friendly_name,
+        'seasonings': attached_seasonings
     }
 
 def generate_random_item(cls):
@@ -201,6 +296,35 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
             chunk = _pick_random_world_chunk()
             actual_name = f"Dungeon Sector {chosen_layer} {chunk[0]}_{chunk[1]}"
 
+    
+    # --- DYNAMIC SEASONED / COOKED FOOD VIRTUAL ITEMS ---
+    if " with " in actual_name and "baseitem" not in actual_name.lower():
+        base_name, seasonings = parse_seasoned_food_name(actual_name)
+        base_item = create_item_from_name(
+            cls, base_name, randomize_durability=randomize_durability, 
+            force_color=force_color, spawn_loot=spawn_loot, silent=True
+        )
+        if base_item:
+            base_item.name = actual_name
+            base_item.base_item_name = base_name
+            base_item.seasonings = list(seasonings)
+
+            # Collect all raw effects from base item + each seasoning
+            import copy
+            raw_effects = copy.deepcopy(getattr(base_item, 'effects', []) or [])
+            for s_name in seasonings:
+                s_tmpl = ITEM_TEMPLATES.get(s_name)
+                if s_tmpl and s_tmpl.get('effects'):
+                    for s_eff in s_tmpl['effects']:
+                        raw_effects.append(copy.deepcopy(s_eff))
+                else:
+                    # Default seasoning boost if item has no explicit effects
+                    raw_effects.append({'type': 'restore', 'targets': ['food'], 'value': 1})
+
+            # Calculate net restore minus reduce for each affected status
+            base_item.effects = consolidate_effects(raw_effects)
+            return base_item
+
     # --- WILDCARD CONTAINER GENERATION ---
     if is_wildcard_item_spec(item_name):
         parsed = parse_wildcard_spec(item_name)
@@ -214,9 +338,16 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
                 return None
 
             container_item.inventory = []
+            attached_seasonings = parsed.get('seasonings', [])
 
             for loot_name, loot_qty in parsed['loot']:
-                loot_item = create_item_from_name(cls, loot_name, randomize_durability=False, spawn_loot=True)
+                # Attach extra_ingredients / seasonings directly to the loot item inside the container
+                if attached_seasonings:
+                    actual_loot_name = build_seasoned_food_name(loot_name, attached_seasonings)
+                else:
+                    actual_loot_name = loot_name
+
+                loot_item = create_item_from_name(cls, actual_loot_name, randomize_durability=False, spawn_loot=True)
                 if loot_item:
                     is_liq = getattr(loot_item, 'liquid', False)
                     if is_liq and getattr(container_item, 'max_liquid', None) is not None:
@@ -230,7 +361,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
                     if not is_liq and not getattr(loot_item, 'is_stackable', lambda: False)():
                         cap = container_item.capacity or 99
                         for _ in range(min(int(loot_qty) - 1, cap - len(container_item.inventory))):
-                            extra = create_item_from_name(cls, loot_name, randomize_durability=False, spawn_loot=True)
+                            extra = create_item_from_name(cls, actual_loot_name, randomize_durability=False, spawn_loot=True)
                             if extra:
                                 container_item.inventory.append(extra)
 

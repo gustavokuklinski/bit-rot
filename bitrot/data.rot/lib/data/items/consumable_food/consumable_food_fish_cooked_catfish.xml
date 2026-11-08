@@ -1,10 +1,10 @@
 <item name="Catfish (Cooked)" type="consumable_food" allow_belt="false" consume_time="1.5" allow_use="true">
     <properties>
-        <restore status="[food]" value="3" />
-        <restore status="[water]" value="3" />
-        <restore status="[health]" value="3" />
-        <restore status="[stamina]" value="3" />
-        <reduce status="[anxiety]" value="3" />
+        <restore status="[food]" value="4" />
+        <restore status="[water]" value="4" />
+        <restore status="[health]" value="4" />
+        <restore status="[stamina]" value="4" />
+        <reduce status="[anxiety]" value="4" />
         <load value="1" />
         <capacity value="1" />
         

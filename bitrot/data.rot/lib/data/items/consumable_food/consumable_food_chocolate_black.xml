@@ -1,8 +1,8 @@
 <item name="Chocolate Black" type="consumable_food" allow_belt="false" consume_time="0.2" allow_use="true">
     <properties>
-        <restore status="[food]" value="3" />
-        <restore status="[stamina]" value="5" />
-        <reduce status="[anxiety]" value="1" />
+        <restore status="[food]" value="4" />
+        <restore status="[stamina]" value="6" />
+        <reduce status="[anxiety]" value="2" />
         <load min="1" max="12" />
         <capacity value="12" />
         
