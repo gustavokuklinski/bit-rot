@@ -1,15 +1,15 @@
-<item name="Chicken (Raw)" type="consumable_food" allow_belt="false" consume_time="2.0" allow_use="true">
+<item name="Chicken Filet (Raw)" type="consumable_food" allow_belt="false" consume_time="2.0" allow_use="true">
     <properties>
-        <restore status="[food]" value="2" />
+        <restore status="[food]" value="1" />
         <restore status="[water]" value="1" />
-        <restore status="[health]" value="2" />
-        <restore status="[stamina]" value="2" />
+        <restore status="[health]" value="1" />
+        <restore status="[stamina]" value="1" />
         <restore status="[anxiety]" value="2" />
-        <restore status="[infection]" value="5" />
-        <load value="1" />
-        <capacity value="1" />
+        <restore status="[infection]" value="2" />
+        <load value="5" />
+        <capacity value="5" />
         
-        <sprite file="consumable_food/consumable_food_chicken.png" />
+        <sprite file="consumable_food/consumable_food_raw_chicken_filet.png" />
     </properties>
     <spawn chance="1" />
 </item>

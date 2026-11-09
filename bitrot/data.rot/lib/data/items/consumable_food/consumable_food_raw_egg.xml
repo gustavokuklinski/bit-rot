@@ -1,0 +1,13 @@
+<item name="Egg (Raw)" type="consumable_food" allow_belt="false" consume_time="0.1" tip="Use to cook">
+    <properties>
+        <restore status="[food]" value="2" />
+        <restore status="[stamina]" value="1" />
+        <restore status="[infection]" value="6" />
+        <restore status="[anxiety]" value="6" />
+        <load value="1" />
+        <capacity value="12" />
+        
+        <sprite file="consumable_food/consumable_food_raw_egg.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

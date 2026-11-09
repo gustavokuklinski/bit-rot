@@ -471,6 +471,6 @@ class CraftingCookingTab:
             total_time,
             cook_complete,
             cancel_on_move=True,
-            action_sound='craft.ogg',
+            action_sound='cooking.ogg',
             action_sound_subdir='craft'
         )

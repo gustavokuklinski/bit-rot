@@ -1,9 +1,9 @@
-<item name="Canned Food" type="consumable_food" allow_belt="false" consume_time="1.3" allow_use="true">
+<item name="Canned Fish" type="consumable_food" allow_belt="false" consume_time="1.3" allow_use="true">
     <properties>
-        <restore status="[food]" value="16" />
-        <restore status="[health]" value="2" />
+        <restore status="[food]" value="14" />
+        <restore status="[health]" value="4" />
         <restore status="[stamina]" value="6" />
-
+        <reduce status="[anxiety]" value="4" />
         <load value="1" />
         <capacity value="1" />
         <require type="[Can Opener]" />

@@ -1,0 +1,13 @@
+<item name="Canned Vegetables" type="consumable_food" allow_belt="false" consume_time="1.3" allow_use="true" tip="Mix of vegetables\nUse to cook">
+    <properties>
+        <restore status="[food]" value="5" />
+        <restore status="[health]" value="3" />
+        <restore status="[stamina]" value="1" />
+        <reduce status="[anxiety]" value="4" />
+        <load value="1" />
+        <capacity value="1" />
+        <require type="[Can Opener]" />
+        <sprite file="consumable_food/consumable_food_canned_food.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

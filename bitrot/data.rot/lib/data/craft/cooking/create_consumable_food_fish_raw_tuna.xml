@@ -4,7 +4,7 @@
     <ingredient name="[Cooking Pot]" destroy="false" amount="1" />
     <ingredient name="[Campfire on, Stove]" destroy="false" amount="1" />
 
-    <extra_ingredient name="Salt" destroy="true" amount="1" />
+    <extra_ingredient name="Salt" amount="1" />
     <extra_ingredient name="Potato" amount="2" req_level="[cooking: 1]" />
     <extra_ingredient name="Sliced Potato" amount="2" req_level="[cooking: 1]" />
     <extra_ingredient name="Carrot" amount="2" req_level="[cooking: 1]" />

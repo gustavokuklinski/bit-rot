@@ -5,11 +5,11 @@
         <restore status="[health]" value="2" />
         <restore status="[stamina]" value="2" />
         <restore status="[anxiety]" value="2" />
-        <restore status="[infection]" value="5" />
+        <restore status="[infection]" value="6" />
         <load value="1" />
         <capacity value="1" />
         
-        <sprite file="consumable_food/consumable_food_chicken.png" />
+        <sprite file="consumable_food/consumable_food_raw_chicken.png" />
     </properties>
     <spawn chance="1" />
 </item>

@@ -1,0 +1,9 @@
+<recipe type="consumable_food" craft="create" output="[{baseItem:Cooking Pot}, {loot:[Egg (Boiled):1]}]" gain_xp="[cooking: 0.5, intelligence:0.1]" amount="1" time="1.5">
+    <ingredient name="Cooking Pot" destroy="false" amount="1" />
+    <ingredient name="Egg (Raw)" destroy="true" amount="1" />
+    <ingredient name="[Water Unit, Dirty Water Unit]" destroy="true" amount="2" />
+    <ingredient name="[Campfire on, Stove]" destroy="false" amount="1" />
+
+    <extra_ingredient name="Salt" amount="1" />
+    <extra_ingredient name="Pepper" amount="1" />
+</recipe>
