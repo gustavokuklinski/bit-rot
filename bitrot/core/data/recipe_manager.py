@@ -194,8 +194,7 @@ class RecipeManager:
     def load_recipes():
         """Loads crafting and cooking recipes from craft/ and cooking/ directories."""
         recipe_directories = [
-            (os.path.join(DATA_PATH, 'craft'), False),
-            (os.path.join(DATA_PATH, 'cooking'), True)
+            (os.path.join(DATA_PATH, 'craft'), False)
         ]
 
         RecipeManager.RECIPES.clear()

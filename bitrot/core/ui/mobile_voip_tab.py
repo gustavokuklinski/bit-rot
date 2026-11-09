@@ -79,7 +79,7 @@ def draw_voip_tab(surface, game, modal, assets):
     pygame.draw.rect(surface, btn_color, btn_rect, border_radius=4)
     pygame.draw.rect(surface, btn_border, btn_rect, 1, border_radius=4)
 
-    btn_label = "Disconnect" if is_conn else "Connect VOIP"
+    btn_label = "Disconnect" if is_conn else "Connect Radio"
     btn_txt_surf = font_12.render(btn_label, False, WHITE)
     surface.blit(btn_txt_surf, btn_txt_surf.get_rect(center=btn_rect.center))
 
