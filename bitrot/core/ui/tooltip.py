@@ -66,12 +66,22 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
         if not RecipeManager.RECIPES:
              RecipeManager.load_recipes()
              
-        # recipes = RecipeManager.get_recipes_by_magazine(tr('item', item.name))
         recipes = RecipeManager.get_recipes_by_magazine(item.name)
         if recipes:
             lines.append(tr('tooltip', "Teaches:"))
             for r in recipes:
-                lines.append(f" - {tr('item', r.output_name)}")
+                c_type = getattr(r, 'craft_type', 'create').lower()
+                out_name = tr('item', r.output_name)
+                amt = getattr(r, 'output_amount', 1)
+                if amt > 1:
+                    out_name = f"{out_name} x{amt}"
+
+                if c_type == 'repair':
+                    lines.append(f" - [{tr('tab', 'Repair')}] {out_name}")
+                elif c_type == 'dismantle':
+                    lines.append(f" - [{tr('tab', 'Dismantle')}] {out_name}")
+                else:
+                    lines.append(f" - {out_name}")
 
     if hasattr(item, 'inventory') and item.inventory is not None:
         cap = getattr(item, 'capacity', 0) or 0

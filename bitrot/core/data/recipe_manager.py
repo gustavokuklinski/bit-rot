@@ -229,7 +229,16 @@ class RecipeManager:
 
     @staticmethod
     def get_recipes_by_magazine(magazine_name):
-        return [r for r in RecipeManager.RECIPES if r.magazine == magazine_name]
+        taught_recipes = []
+        for r in RecipeManager.RECIPES:
+            if r.magazine == magazine_name:
+                taught_recipes.append(r)
+                continue
+            for extra in getattr(r, 'extra_ingredients', []):
+                if extra.get('magazine') == magazine_name:
+                    taught_recipes.append(r)
+                    break
+        return taught_recipes
 
     @staticmethod
     def get_known_recipes(known_list):

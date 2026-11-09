@@ -120,12 +120,16 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
                 should_show_on_ground = False
 
             if is_independent_container:
-                if isinstance(obj, Corpse):
+                itype = getattr(obj, 'item_type', '')
+                # Hide Vehicles, Corpses, and Map-Tiles from the Ground item list
+                if itype == 'vehicle':
                     should_show_on_ground = False
-                elif isinstance(obj, Container):
+                elif isinstance(obj, Corpse) or getattr(obj, 'is_corpse', False):
                     should_show_on_ground = False
-                elif getattr(obj, 'item_type', '') in ('vehicle', 'cloth', 'container', 'container_disposable'):
+                elif itype == 'maptile_container' or getattr(obj, 'is_maptile', False) or isinstance(obj, Container):
                     should_show_on_ground = False
+                # Note: We purposely leave 'cloth', 'container', and 'container_disposable' as True 
+                # so they remain in the Ground tab and can be picked up.
             
             if should_show_on_ground:
                 ground_items.append(obj)

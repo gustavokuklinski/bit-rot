@@ -87,26 +87,39 @@ def load_recipe_books():
                 'recipes': []
             }
 
-    # 2. Gather magazines referenced in RecipeManager.RECIPES
-    for r in RecipeManager.RECIPES:
-        mag = getattr(r, 'magazine', None)
-        if mag:
-            if mag not in books_dict:
-                books_dict[mag] = {
-                    'name': mag,
-                    'item_obj': Item.create_from_name(mag, spawn_loot=False),
-                    'recipes': []
-                }
-            if r not in books_dict[mag]['recipes']:
-                books_dict[mag]['recipes'].append(r)
+    # 2. Gather magazines referenced in RecipeManager.RECIPES (Base and Extra Ingredients)
+        for r in RecipeManager.RECIPES:
+            mags = []
+            if getattr(r, 'magazine', None):
+                mags.append(r.magazine)
+            for extra in getattr(r, 'extra_ingredients', []):
+                if extra.get('magazine') and extra.get('magazine') not in mags:
+                    mags.append(extra.get('magazine'))
 
-    # 3. Associate recipes for any items found from step 1
-    for mag, b_data in books_dict.items():
-        if not b_data['recipes']:
-            b_data['recipes'] = [
-                r for r in RecipeManager.RECIPES
-                if r.magazine and (r.magazine == mag or r.magazine.lower() == mag.lower())
-            ]
+            for mag in mags:
+                if mag not in books_dict:
+                    books_dict[mag] = {
+                        'name': mag,
+                        'item_obj': Item.create_from_name(mag, spawn_loot=False),
+                        'recipes': []
+                    }
+                if r not in books_dict[mag]['recipes']:
+                    books_dict[mag]['recipes'].append(r)
+
+        # 3. Associate recipes for any items found from step 1
+        for mag, b_data in books_dict.items():
+            if not b_data['recipes']:
+                b_data['recipes'] = []
+                for r in RecipeManager.RECIPES:
+                    r_mags = []
+                    if getattr(r, 'magazine', None):
+                        r_mags.append(r.magazine)
+                    for extra in getattr(r, 'extra_ingredients', []):
+                        if extra.get('magazine') and extra.get('magazine') not in r_mags:
+                            r_mags.append(extra.get('magazine'))
+                    
+                    if any(m == mag or m.lower() == mag.lower() for m in r_mags):
+                        b_data['recipes'].append(r)
 
     _RECIPE_BOOKS_CACHE = sorted(list(books_dict.values()), key=lambda b: b['name'])
     return _RECIPE_BOOKS_CACHE
