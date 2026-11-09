@@ -7,7 +7,7 @@
         <load value="1" />
         <capacity value="1" />
         <require type="[Can Opener]" />
-        <sprite file="consumable_food/consumable_food_canned_food.png" />
+        <sprite file="consumable_food/consumable_food_canned_meat.png" />
     </properties>
     <spawn chance="1" />
 </item>
