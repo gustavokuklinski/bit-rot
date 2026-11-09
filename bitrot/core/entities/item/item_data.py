@@ -59,6 +59,9 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
             allow_use_str = root.attrib.get('allow_use', 'false')
             allow_use = (allow_use_str.lower() == 'true')
 
+            harvest_fertilizer_str = root.attrib.get('harvest_fertilizer', 'false')
+            harvest_fertilizer = (harvest_fertilizer_str.lower() == 'true')
+
             spawn_amount_str = root.attrib.get('spawn_amount_global', '1')
             spawn_amount_global = int(spawn_amount_str)
 
@@ -107,6 +110,7 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                 'disallow_type': disallow_type,
                 'allow_belt': allow_belt,
                 'allow_use': allow_use,
+                'harvest_fertilizer': harvest_fertilizer,
                 'consume_time': consume_time,
                 'tip': tip,
                 'safe_radius': safe_radius,
@@ -185,6 +189,30 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                 else:
                     template['place_items'] = []
                     template['place_time'] = 1.5
+                
+                # --- Parse <harvest> nodes for type="farm_seed" ---
+                h_nodes = props_node.findall('harvest')
+                if h_nodes:
+                    h_dict = {}
+                    for hn in h_nodes:
+                        if 'time' in hn.attrib:
+                            raw_t = hn.attrib['time'].strip()
+                            h_dict['raw_time'] = raw_t
+                            if ':' in raw_t:
+                                parts = raw_t.split(':')
+                                h_dict['time_hours'] = float(parts[0]) + (float(parts[1]) / 60.0)
+                            else:
+                                h_dict['time_hours'] = float(raw_t)
+                        if 'maptile_plant' in hn.attrib:
+                            h_dict['maptile_plant'] = hn.attrib['maptile_plant'].strip()
+                        if 'maptile_harvest' in hn.attrib:
+                            h_dict['maptile_harvest'] = hn.attrib['maptile_harvest'].strip()
+                        if 'item' in hn.attrib:
+                            h_dict['item'] = hn.attrib['item'].strip()
+                            h_dict['min'] = int(hn.attrib.get('min', 1))
+                            h_dict['max'] = int(hn.attrib.get('max', 1))
+                    if h_dict:
+                        template['harvest'] = h_dict
 
                 for node in props_node.findall('restore'):
                     status_str = node.get('status')

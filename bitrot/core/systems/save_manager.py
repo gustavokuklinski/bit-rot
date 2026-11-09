@@ -135,7 +135,8 @@ def save_game(game):
                 "fishing": game.player.progression.get_level('fishing'),
                 "cooking": game.player.progression.get_level('cooking'),
                 "mechanics": game.player.progression.get_level('mechanics'),
-                "weld": game.player.progression.get_level('weld')
+                "weld": game.player.progression.get_level('weld'),
+                "farming": game.player.progression.get_level('farming')
             }
             
             progression_data = game.player.progression.attributes
@@ -467,6 +468,24 @@ def save_game(game):
             for it in m_state.get('items_on_ground', []):
                 add_item_to_save(it, map_fname, l_idx)
 
+        saved_farm_crops = []
+        for map_name, m_state in game.map_states.items():
+            if 'farm_crops' in m_state:
+                for (gx, gy), c_data in m_state['farm_crops'].items():
+                    saved_farm_crops.append({
+                        'map': map_name,
+                        'gx': gx,
+                        'gy': gy,
+                        'plant_tile': c_data['plant_tile'],
+                        'harvest_tile': c_data['harvest_tile'],
+                        'item': c_data['item'],
+                        'min': c_data['min'],
+                        'max': c_data['max'],
+                        'total_hours': c_data['total_hours'],
+                        'remaining_hours': c_data['remaining_hours'],
+                        'layer': c_data.get('layer', 1)
+                    })
+
         saved_barricades = []
         for map_name, m_state in game.map_states.items():
             if 'barricades' in m_state:
@@ -524,6 +543,7 @@ def save_game(game):
             "open_modals": saved_open_modals,
             "modal_positions": game.last_modal_positions,
             "barricades": saved_barricades,
+            "farm_crops": saved_farm_crops,
             "radio_frequencies": getattr(game, 'radio_frequencies', {}),
             "current_radio_freq": getattr(game, 'current_radio_freq', 110.42),
             "explored_tiles": saved_explored_tiles

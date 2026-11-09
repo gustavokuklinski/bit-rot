@@ -30,6 +30,34 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
     if getattr(item, 'safe_radius', 0) > 0:
         lines.append(f"{tr('tooltip', 'Safe radius:')} {item.safe_radius} {tr('tooltip', 'tiles')}")
 
+    # --- Farm Seed Harvest Time Display ---
+    h_data = getattr(item, 'harvest', None)
+    if not h_data and hasattr(item, 'name'):
+        from core.entities.item.item_data import ITEM_TEMPLATES
+        tmpl = ITEM_TEMPLATES.get(item.name)
+        if tmpl:
+            h_data = tmpl.get('harvest')
+
+    if h_data:
+        raw_time = h_data.get('raw_time')
+        if not raw_time and 'time_hours' in h_data:
+            th = float(h_data['time_hours'])
+            hrs = int(th)
+            mins = int(round((th - hrs) * 60))
+            raw_time = f"{hrs}:{mins:02d}"
+        if raw_time:
+            lines.append(f"{tr('tooltip', 'Time to harvest:')} {raw_time}h")
+
+        target_crop = h_data.get('item')
+        if target_crop:
+            min_q = h_data.get('min', 1)
+            max_q = h_data.get('max', 1)
+            qty_str = f"x{min_q}-{max_q}" if min_q != max_q else f"x{min_q}"
+            lines.append(f"{tr('tooltip', 'Harvest:')} {tr('item', target_crop)} ({qty_str})")
+
+    # --- Fertilizer Item Bonus ---
+    if getattr(item, 'harvest_fertilizer', False):
+        lines.append([(f"{tr('tooltip', 'Fertilizer:')} ", (255, 215, 0)), (f"+15% {tr('tooltip', 'growth speed')}", (100, 255, 100))])
     if hasattr(item, 'require') and item.require:
         reqs = item.require if isinstance(item.require, list) else [item.require]
     

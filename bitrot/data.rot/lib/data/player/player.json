@@ -25,7 +25,8 @@
       "fishing": 0.0,
       "cooking": 0.0,
       "mechanics": 0.0,
-      "weld": 0.0
+      "weld": 0.0,
+      "farming": 0.0
     },
     "initial_loot": [
       {

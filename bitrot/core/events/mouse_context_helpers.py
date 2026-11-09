@@ -146,7 +146,21 @@ def calculate_boat_fuel_cost(game, dest_gx, dest_gy):
     return max(1, int(base_cost * discount))
 
 
-
+def find_player_fertilizer(player):
+    """Finds first fertilizer item in inventory, belt, or worn clothes."""
+    if not player:
+        return None, None, None, None
+    for i, it in enumerate(getattr(player, 'inventory', [])):
+        if it and getattr(it, 'harvest_fertilizer', False):
+            return it, 'inventory', i, None
+    for i, it in enumerate(getattr(player, 'belt', [])):
+        if it and getattr(it, 'harvest_fertilizer', False):
+            return it, 'belt', i, None
+    for slot, it in getattr(player, 'clothes', {}).items():
+        if it and getattr(it, 'harvest_fertilizer', False):
+            return it, 'gear', slot, None
+    return None, None, None, None
+    
 def is_barricade_item(it):
     if not it:
         return False

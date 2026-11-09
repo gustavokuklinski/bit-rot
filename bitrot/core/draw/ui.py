@@ -895,6 +895,32 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         game.game_screen.blit(font_12.render("!", False, (255, 255, 255)), font_12.render("!", False, (255, 255, 255)).get_rect(center=box_rect.center))
         if box_rect.collidepoint(mouse_pos): tooltip_to_draw = item['tip']
 
+    # --- 1-TILE HARVEST HOVER TOOLTIP ---
+    if not tooltip_to_draw and getattr(game, 'player', None):
+        adj_mouse = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+        world_mouse_pos = game.screen_to_world(adj_mouse)
+        m_gx = int(world_mouse_pos[0] // TILE_SIZE)
+        m_gy = int(world_mouse_pos[1] // TILE_SIZE)
+
+        p_gx = int(game.player.rect.centerx // TILE_SIZE)
+        p_gy = int(game.player.rect.centery // TILE_SIZE)
+        is_near_tile = abs(m_gx - p_gx) <= 1 and abs(m_gy - p_gy) <= 1
+
+        if is_near_tile:
+            crop = game.map_manager.get_crop(m_gx, m_gy)
+            if crop:
+                rem_h = crop.get('remaining_hours', 0.0)
+                tot_h = max(0.01, crop.get('total_hours', 1.0))
+                if rem_h <= 0:
+                    crop_item = crop.get('item', 'Crop')
+                    tip_str = f"{tr('item', crop_item)}\n{tr('ui', 'Ready to Harvest [RMB]')}"
+                else:
+                    pct = int(max(0, min(100, (1.0 - (rem_h / tot_h)) * 100)))
+                    rem_mins = int(round(rem_h * 60))
+                    crop_item = crop.get('item', 'Crop')
+                    tip_str = f"{tr('item', crop_item)}\n{tr('ui', 'Growing')}: {rem_mins}m ({pct}%)"
+                _draw_tt(game, tip_str, mouse_pos[0] + 15, mouse_pos[1] + 15, dynamic_h=dynamic_h)
+                
     # --- RENDER INTERACTION TOOLTIPS ---
     if tooltip_to_draw:
         _draw_tt(game, tooltip_to_draw, mouse_pos[0] + 15, mouse_pos[1] + 15, dynamic_h=dynamic_h)
@@ -1195,6 +1221,38 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
                 preview_rect = pygame.Rect(screen_snap_x, screen_snap_y, max(1, int(TILE_SIZE * zoom)), max(1, int(TILE_SIZE * zoom)))
                 pygame.draw.rect(game.game_screen, getattr(item, 'color', WHITE), preview_rect)
                 pygame.draw.rect(game.game_screen, (0, 255, 0) if can_place else (255, 0, 0), preview_rect, 2)
+        
+        elif getattr(game, 'item_to_plant', None):
+            pygame.mouse.set_visible(False)
+            seed = getattr(game, 'item_to_plant')['item']
+
+            p_tx = int(game.player.rect.centerx // TILE_SIZE)
+            p_ty = int(game.player.rect.centery // TILE_SIZE)
+
+            adj_mouse = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+            world_mouse_pos = game.screen_to_world(adj_mouse)
+            mouse_tx = int(world_mouse_pos[0] // TILE_SIZE)
+            mouse_ty = int(world_mouse_pos[1] // TILE_SIZE)
+
+            from core.events.mouse import is_valid_soil_tile
+            in_range = abs(mouse_tx - p_tx) <= 1 and abs(mouse_ty - p_ty) <= 1
+            is_soil = is_valid_soil_tile(game, mouse_tx, mouse_ty)
+            test_rect = pygame.Rect(mouse_tx * TILE_SIZE, mouse_ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            is_free = not any(ob.colliderect(test_rect) for ob in getattr(game, 'obstacles', []))
+            can_plant = in_range and is_soil and is_free
+
+            snap_x = mouse_tx * TILE_SIZE
+            snap_y = mouse_ty * TILE_SIZE
+            screen_snap_x = ((snap_x + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
+            screen_snap_y = ((snap_y + offset_y) * zoom)
+            grid_rect = pygame.Rect(screen_snap_x, screen_snap_y, max(1, int(TILE_SIZE * zoom)), max(1, int(TILE_SIZE * zoom)))
+
+            col = (50, 255, 50, 80) if can_plant else (255, 50, 50, 80)
+            grid_surf = pygame.Surface((grid_rect.width, grid_rect.height), pygame.SRCALPHA)
+            grid_surf.fill(col)
+            game.game_screen.blit(grid_surf, grid_rect.topleft)
+            pygame.draw.rect(game.game_screen, (col[0], col[1], col[2]), grid_rect, 2)
+
         else:
             pygame.mouse.set_visible(True)
             pygame.mouse.set_cursor(game.assets.get('aim_cursor') if (pygame.key.get_pressed()[pygame.K_LCTRL] or pygame.key.get_pressed()[pygame.K_RCTRL]) else (game.assets.get('custom_cursor') or pygame.cursors.arrow))

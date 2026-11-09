@@ -125,12 +125,12 @@
       "fishing": {
         "name": "Fishing",
         "image": "ui/fishing.png",
-        "base_xp": 300
+        "base_xp": 100
       },
       "cooking": {
         "name": "Cooking",
         "image": "ui/cooking.png",
-        "base_xp": 300
+        "base_xp": 100
       },
       "mechanics": {
         "name": "Mechanics",
@@ -141,6 +141,11 @@
         "name": "Weld",
         "image": "ui/weld.png",
         "base_xp": 300
+      },
+      "farming": {
+        "name": "Farming",
+        "image": "ui/weld.png",
+        "base_xp": 100
       }
     },
     "stats": {

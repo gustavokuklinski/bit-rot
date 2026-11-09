@@ -1,0 +1,8 @@
+<map name="farm_plant_carrot_01" type="maptile_plant" char="farm_plant_carrot_01" is_obstacle="false" destructible="true">
+    <visuals>
+        <sprite file="farm_plant_carrot_01.png" />
+    </visuals>
+    <properties>
+        <health min="10" max="10" />
+    </properties>
+</map>

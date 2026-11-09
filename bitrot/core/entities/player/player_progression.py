@@ -53,6 +53,7 @@ class PlayerProgression:
     def get_cooking(self, player): return self.get_level('cooking')
     def get_mechanics(self, player): return self.get_level('mechanics')
     def get_weld(self, player): return self.get_level('weld')
+    def get_farming(self, player): return self.get_level('farming')
     
     def get_lucky(self, player):
         base = self.get_level('lucky')

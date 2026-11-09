@@ -337,7 +337,12 @@ def handle_right_click(game, mouse_pos):
                     'petrol_' in b_char.lower() or
                     (tile and 'petrol_' in str(tile.get('name', '')).lower())
                 )
-                
+
+                is_farm_tile = (
+                    (tile and tile.get('type') in ('maptile_plant', 'maptile_harvest')) or
+                    char.startswith('farm_plant_') or char.startswith('farm_harvest_')
+                )
+
                 is_door_window = (
                     (tile and (tile.get('is_statable') or tile.get('is_window'))) or 
                     '_open' in char.lower() or 
@@ -362,7 +367,7 @@ def handle_right_click(game, mouse_pos):
                 if tile and tile.get('type') == "maptile_car":
                     is_tile_in_range = is_tile_in_range or (dist_sq <= (TILE_SIZE * 2.0) ** 2)
 
-                if is_boat or is_water or is_petrol or is_door_window or (tile and tile.get('type') == "maptile_car"):
+                if is_boat or is_water or is_petrol or is_door_window or is_farm_tile or (tile and tile.get('type') == "maptile_car"):
                     if is_tile_in_range:
                         if tile and tile.get('type') == "maptile_car":
                             vehicle = game.map_manager.get_vehicle_at(grid_x, grid_y)
@@ -397,6 +402,19 @@ def handle_right_click(game, mouse_pos):
                                 'g_char': g_char
                             }
                             click_source = 'liquid_source'
+
+                        elif is_farm_tile:
+                            crop = game.map_manager.get_crop(grid_x, grid_y)
+                            clicked_item = {
+                                'name': tile.get('name', 'Plant') if tile else 'Plant',
+                                'type': 'map_tile',
+                                'sub_type': 'farm_crop',
+                                'grid_x': grid_x,
+                                'grid_y': grid_y,
+                                'char': char,
+                                'crop': crop
+                            }
+                            click_source = 'map_tile'
 
                         elif is_door_window:
                             clicked_item = {
@@ -456,6 +474,24 @@ def handle_right_click(game, mouse_pos):
             gy = clicked_item['grid_y']
             char = clicked_item.get('char', '')
             t_def = game.map_manager.get_tile_at(gx, gy)
+
+            if clicked_item.get('sub_type') == 'farm_crop':
+                crop = game.map_manager.get_crop(gx, gy)
+                if crop:
+                    if crop.get('remaining_hours', 0) <= 0:
+                        options.append('Harvest')
+                    else:
+                        from core.events.mouse_context_helpers import find_player_fertilizer
+                        fert_item, _, _, _ = find_player_fertilizer(game.player)
+                        if fert_item:
+                            options.append('Fertilize')
+                            game.context_menu['tooltips']['Fertilize'] = (
+                                f"{tr('ui', 'Use')} {tr('item', fert_item.name)} (-15% {tr('ui', 'growth time')})"
+                            )
+                        else:
+                            display_message(tr('msg', "Not ready to harvest."))
+                            game.context_menu['active'] = False
+                            return
 
             if clicked_item.get('type') == 'maptile_teleport':
                 cur_map = game.map_manager.current_map_filename

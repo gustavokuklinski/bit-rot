@@ -540,7 +540,146 @@ class MapManager:
             if self.tile_hit_timers[pos] <= 0:
                 del self.tile_hit_timers[pos]
 
+
+    def get_crop(self, grid_x, grid_y):
+        map_name = self.current_map_filename
+        if map_name in self.game.map_states and 'farm_crops' in self.game.map_states[map_name]:
+            return self.game.map_states[map_name]['farm_crops'].get((grid_x, grid_y))
+        return None
     
+    def fertilize_crop(self, grid_x, grid_y, boost_pct=0.15):
+        crop = self.get_crop(grid_x, grid_y)
+        if not crop or crop.get('remaining_hours', 0) <= 0:
+            return False
+
+        tot_h = crop.get('total_hours', 1.0)
+        boost_hours = tot_h * boost_pct
+        crop['remaining_hours'] = max(0.0, crop['remaining_hours'] - boost_hours)
+
+        # If time reached 0, convert to harvest tile immediately
+        if crop['remaining_hours'] <= 0:
+            harvest_char = crop['harvest_tile']
+            if 0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0]):
+                cur_char = self.game.map_data[grid_y][grid_x]
+                self._replace_tile(grid_x, grid_y, cur_char, harvest_char)
+        return True
+
+    def plant_seed(self, grid_x, grid_y, seed_item):
+        h_data = getattr(seed_item, 'harvest', None)
+        if not h_data:
+            tmpl = ITEM_TEMPLATES.get(getattr(seed_item, 'name', ''))
+            if tmpl:
+                h_data = tmpl.get('harvest')
+
+        if not h_data or 'maptile_plant' not in h_data:
+            return False
+
+        plant_char = h_data.get('maptile_plant', 'farm_plant_carrot_01')
+        harvest_char = h_data.get('maptile_harvest', 'farm_harvest_carrot_01')
+        growth_hours = float(h_data.get('time_hours', 1.0))
+        target_item = h_data.get('item', 'Carrot')
+        min_qty = int(h_data.get('min', 1))
+        max_qty = int(h_data.get('max', 3))
+
+        map_name = self.current_map_filename
+        self.game.map_states.setdefault(map_name, {})
+        self.game.map_states[map_name].setdefault('farm_crops', {})
+
+        self.game.map_states[map_name]['farm_crops'][(grid_x, grid_y)] = {
+            'plant_tile': plant_char,
+            'harvest_tile': harvest_char,
+            'item': target_item,
+            'min': min_qty,
+            'max': max_qty,
+            'total_hours': growth_hours,
+            'remaining_hours': growth_hours,
+            'layer': self.game.current_layer_index
+        }
+
+        # Place the plant tile on the map's base layer
+        old_char = self.game.map_data[grid_y][grid_x]
+        self._replace_tile(grid_x, grid_y, old_char, plant_char)
+        return True
+
+    def update_crops(self, elapsed_game_hours):
+        """Advances crop growth based on in-game time and switches tile to harvest when ready."""
+        map_name = self.current_map_filename
+        if map_name not in self.game.map_states or 'farm_crops' not in self.game.map_states[map_name]:
+            return
+
+        crops = self.game.map_states[map_name]['farm_crops']
+        curr_layer = getattr(self.game, 'current_layer_index', 1)
+
+        for (gx, gy), crop in list(crops.items()):
+            if crop.get('layer', 1) != curr_layer:
+                continue
+
+            if crop['remaining_hours'] > 0:
+                crop['remaining_hours'] = max(0.0, crop['remaining_hours'] - elapsed_game_hours)
+                if crop['remaining_hours'] <= 0:
+                    # Switch tile to harvest tile
+                    harvest_char = crop['harvest_tile']
+                    if 0 <= gy < len(self.game.map_data) and 0 <= gx < len(self.game.map_data[0]):
+                        cur_char = self.game.map_data[gy][gx]
+                        self._replace_tile(gx, gy, cur_char, harvest_char)
+
+    def harvest_crop(self, grid_x, grid_y, player=None):
+        crop = self.get_crop(grid_x, grid_y)
+        if not crop:
+            return False
+
+        target_item_name = crop.get('item', 'Carrot')
+        min_q = crop.get('min', 1)
+        max_q = crop.get('max', 3)
+
+        # Farming skill bonus: higher lucky / farming yield extra crops
+        lucky_mod = 1.0
+        if player and hasattr(player, 'progression'):
+            lucky_lvl = player.progression.get_lucky(player)
+            lucky_mod += (lucky_lvl * 0.05)
+
+        base_qty = random.randint(min_q, max_q)
+        total_qty = max(1, int(round(base_qty * lucky_mod)))
+
+        # Deliver to inventory or drop at feet
+        created = 0
+        target_inv = player.inventory if player else self.game.player.inventory
+
+        for _ in range(total_qty):
+            new_it = Item.create_from_name(target_item_name)
+            if new_it:
+                if len(target_inv) < self.game.player.get_total_inventory_slots():
+                    target_inv.append(new_it)
+                    if hasattr(self.game.player, 'stack_item_in_inventory'):
+                        self.game.player.stack_item_in_inventory(new_it)
+                    created += 1
+                else:
+                    new_it.rect.center = self.game.player.rect.center
+                    new_it.x, new_it.y = new_it.rect.topleft
+                    new_it.layer = getattr(self.game, 'current_layer_index', 1)
+                    new_it.map_filename = self.current_map_filename
+                    self.game.items_on_ground.append(new_it)
+                    created += 1
+
+        # Award farming experience
+        if player and hasattr(player, 'progression'):
+            player.progression.add_xp(player, 'farming', 1.5)
+
+        display_message(f"{tr('ui', 'Harvested')} {created}x {tr('item', target_item_name)}! (+1.5 XP Farming)")
+        if hasattr(self.game, 'sound_manager'):
+            self.game.sound_manager.play_sound('grab.ogg', subdir='items', game=self.game, is_critical=True)
+
+        # Remove crop from state and clear the tile back to ' '
+        map_name = self.current_map_filename
+        self.game.map_states[map_name]['farm_crops'].pop((grid_x, grid_y), None)
+
+        if 0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0]):
+            cur_char = self.game.map_data[grid_y][grid_x]
+            self._replace_tile(grid_x, grid_y, cur_char, ' ')
+
+        return True
+
+
     def is_tile_destructible(self, grid_x, grid_y):
         """Checks if a tile can receive damage (has a barricade, destructible tag, or door/window)."""
         if not self.game.map_data or not (0 <= grid_y < len(self.game.map_data) and 0 <= grid_x < len(self.game.map_data[0])):
@@ -707,6 +846,9 @@ class MapManager:
 
         if current_hp <= 0:
             del self.game.map_states[map_name]['tile_health'][pos_key]
+            if 'farm_crops' in self.game.map_states[map_name]:
+                self.game.map_states[map_name]['farm_crops'].pop(pos_key, None)
+
             if (grid_x, grid_y) in self.shaking_tiles:
                 del self.shaking_tiles[(grid_x, grid_y)]
 

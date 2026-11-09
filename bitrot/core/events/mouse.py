@@ -18,8 +18,80 @@ from core.data.localization import tr
 from core.ui.notifications import add_notification
 from core.placement import find_free_tile
 
+def is_valid_soil_tile(game, tx, ty):
+    """Checks if tile is valid soil for planting (bg_grass or dirty)."""
+    gd = getattr(game, 'ground_data', None)
+    if not gd or not (0 <= ty < len(gd) and 0 <= tx < len(gd[0])):
+        return False
+    g_char = str(gd[ty][tx]).strip().lower()
+    t_def = game.map_manager.get_tile_at(tx, ty)
+    t_name = str(t_def.get('name', '')).lower() if t_def else ''
+
+    # Must be on grass or dirty
+    is_soil = (
+        g_char == 'bg_grass' or g_char.startswith('dirty') or
+        'grass' in t_name or 'dirty' in t_name
+    )
+    if not is_soil:
+        return False
+
+    # Must not have wall, obstruction, or existing plant on base layer
+    bd = getattr(game, 'map_data', None)
+    if bd and 0 <= ty < len(bd) and 0 <= tx < len(bd[0]):
+        b_char = str(bd[ty][tx]).strip()
+        if b_char and b_char != ' ':
+            return False
+
+    return True
+
 def handle_mouse_down(game, event, mouse_pos):
     if event.button == 1:
+
+        if getattr(game, 'item_to_plant', None):
+            adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+            world_pos = game.screen_to_world(adjusted_mouse_pos)
+            mouse_tx = int(world_pos[0]) // TILE_SIZE
+            mouse_ty = int(world_pos[1]) // TILE_SIZE
+
+            p_tx = int(game.player.rect.centerx // TILE_SIZE)
+            p_ty = int(game.player.rect.centery // TILE_SIZE)
+
+            in_range = abs(mouse_tx - p_tx) <= 1 and abs(mouse_ty - p_ty) <= 1
+            is_soil = is_valid_soil_tile(game, mouse_tx, mouse_ty)
+
+            test_rect = pygame.Rect(mouse_tx * TILE_SIZE, mouse_ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            is_free = not any(ob.colliderect(test_rect) for ob in getattr(game, 'obstacles', []))
+
+            if not in_range:
+                display_message(tr('msg', "Too far to plant seed!"))
+            elif not is_soil:
+                display_message(tr('msg', "Seeds can only be planted on grass or dirt!"))
+            elif not is_free:
+                display_message(tr('msg', "Cannot plant here, blocked by obstacle!"))
+            else:
+                plant_info = game.item_to_plant
+                seed_item = plant_info['item']
+                source = plant_info['source']
+                index = plant_info['index']
+                container = plant_info['container']
+
+                success = game.map_manager.plant_seed(mouse_tx, mouse_ty, seed_item)
+                if success:
+                    # Deduct 1 unit from stack
+                    has_load = hasattr(seed_item, 'load') and seed_item.load is not None
+                    if has_load and seed_item.load > 1:
+                        seed_item.load -= 1
+                    else:
+                        from core.events.mouse_context_actions import remove_from_source
+                        remove_from_source(game, seed_item, source, index, container)
+
+                    display_message(f"{tr('ui', 'Planted')} {tr('item', seed_item.name)}.")
+                    if hasattr(game, 'sound_manager'):
+                        game.sound_manager.play_sound('place.ogg', subdir='items', game=game, is_critical=True)
+
+            game.item_to_plant = None
+            return
+
         if getattr(game, 'item_to_place', None):
             adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
             world_pos = game.screen_to_world(adjusted_mouse_pos)
@@ -710,6 +782,10 @@ def handle_mouse_down(game, event, mouse_pos):
             return
 
     elif event.button == 3:
+        if getattr(game, 'item_to_plant', None):
+            game.item_to_plant = None
+            return
+            
         if getattr(game, 'item_to_place', None):
             game.item_to_place = None
             return

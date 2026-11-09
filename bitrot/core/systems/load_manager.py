@@ -914,6 +914,23 @@ def load_game(game, save_folder_name):
                     
         game.current_radio_freq = world_data.get('current_radio_freq', 110.42)
 
+        for c_entry in world_data.get('farm_crops', []):
+            m_name = c_entry['map']
+            if m_name not in game.map_states:
+                game.map_states[m_name] = {}
+            if 'farm_crops' not in game.map_states[m_name]:
+                game.map_states[m_name]['farm_crops'] = {}
+            game.map_states[m_name]['farm_crops'][(c_entry['gx'], c_entry['gy'])] = {
+                'plant_tile': c_entry['plant_tile'],
+                'harvest_tile': c_entry['harvest_tile'],
+                'item': c_entry['item'],
+                'min': c_entry['min'],
+                'max': c_entry['max'],
+                'total_hours': c_entry['total_hours'],
+                'remaining_hours': c_entry['remaining_hours'],
+                'layer': c_entry.get('layer', 1)
+            }
+            
         for b_entry in world_data.get('barricades', []):
             m_name = b_entry['map']
             if m_name not in game.map_states:

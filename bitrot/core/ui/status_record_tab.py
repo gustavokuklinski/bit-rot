@@ -15,7 +15,7 @@ def draw_record_tab(surface, player, modal, assets, mouse_pos):
         "strength", "fitness", "agility",
         "lucky", "melee", "ranged",
         "maintenance", "intelligence",
-        "fishing", "cooking", "mechanics", "weld"
+        "fishing", "cooking", "mechanics", "weld", "farming"
     ]
 
     start_x = modal_rect.left + 15

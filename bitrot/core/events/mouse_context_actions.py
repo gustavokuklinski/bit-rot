@@ -1829,7 +1829,79 @@ def handle_context_menu_click(game, mouse_pos):
             elif option == 'Status': toggle_status_modal(game)
             elif option == 'Inventory': toggle_inventory_modal(game)
             elif option == 'Gear': toggle_gear_modal(game)
-                    
+            
+            elif option == 'Harvest':
+                if source == 'map_tile' and isinstance(item, dict):
+                    gx = item.get('grid_x')
+                    gy = item.get('grid_y')
+                    crop = game.map_manager.get_crop(gx, gy)
+                    if crop:
+                        if crop['remaining_hours'] > 0:
+                            display_message(tr('msg', "Not ready to harvest."))
+                        else:
+                            def do_harvest():
+                                game.map_manager.harvest_crop(gx, gy, player=game.player)
+                            harvest_time = 1.0
+                            game.player.start_action(
+                                tr('ui', "Harvesting"),
+                                harvest_time,
+                                do_harvest,
+                                xp_reward=0,
+                                cancel_on_move=True,
+                                action_sound='grab.ogg',
+                                action_sound_subdir='items'
+                            )
+                clicked_on_menu = True
+
+            elif option == 'Fertilize':
+                if source == 'map_tile' and isinstance(item, dict):
+                    gx = item.get('grid_x')
+                    gy = item.get('grid_y')
+                    crop = game.map_manager.get_crop(gx, gy)
+                    if not crop or crop.get('remaining_hours', 0) <= 0:
+                        display_message(tr('msg', "Crop is already fully grown!"))
+                        game.context_menu['active'] = False
+                        return
+
+                    from core.events.mouse_context_helpers import find_player_fertilizer
+                    fert_item, f_src, f_idx, f_cont = find_player_fertilizer(game.player)
+                    if not fert_item:
+                        display_message(tr('msg', "No fertilizer found."))
+                        game.context_menu['active'] = False
+                        return
+
+                    def do_fertilize():
+                        f_it, s_type, s_idx, s_cont = find_player_fertilizer(game.player)
+                        if not f_it:
+                            display_message(tr('msg', "No fertilizer found."))
+                            return
+
+                        # Deduct 1 fertilizer unit
+                        if hasattr(f_it, 'load') and f_it.load is not None and f_it.load > 1 and f_it.is_stackable():
+                            f_it.load -= 1
+                        else:
+                            remove_from_source(game, f_it, s_type, s_idx, s_cont)
+
+                        # Advance growth by fixed 15%
+                        applied = game.map_manager.fertilize_crop(gx, gy, boost_pct=0.15)
+                        if applied:
+                            display_message(f"{tr('ui', 'Fertilized with')} {tr('item', f_it.name)} (-15% {tr('ui', 'growth time')}).")
+                            if hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound('place.ogg', subdir='items', game=game, is_critical=True)
+
+                    fertilize_time = 1.0
+                    game.player.start_action(
+                        tr('ui', "Fertilizing"),
+                        fertilize_time,
+                        do_fertilize,
+                        xp_reward=1.0,
+                        cancel_on_move=True,
+                        action_sound='place.ogg',
+                        action_sound_subdir='items'
+                    )
+                clicked_on_menu = True
+
+
             elif option in ['Open door/window', 'Close door/window']:
                 if source == 'map_tile' and isinstance(item, dict) and 'grid_x' in item and 'grid_y' in item:
                     game.map_manager.toggle_door_state(item['grid_x'], item['grid_y'])
@@ -1935,6 +2007,19 @@ def handle_context_menu_click(game, mouse_pos):
                     game.player.drop_item_stack(game, source, index, container_item, 'all')
                 clicked_on_menu = True
             
+            elif option == 'Plant':
+                if getattr(item, 'item_type', '') != 'farm_seed':
+                    game.context_menu['active'] = False
+                    return
+                game.item_to_plant = {
+                    'item': item,
+                    'source': source,
+                    'index': index,
+                    'container': container_item
+                }
+                display_message(tr('msg', "Select soil (grass/dirt) to plant the seed."))
+                clicked_on_menu = True
+
             elif option == 'Place':
                 if getattr(item, 'liquid', False):
                     display_message(tr('msg', "Cannot place liquid directly."))

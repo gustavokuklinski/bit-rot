@@ -114,6 +114,8 @@ class Item:
 
         self.place_items = place_items if place_items is not None else []
         self.place_time = place_time
+        self.harvest = kwargs.get('harvest', None)
+        self.harvest_fertilizer = kwargs.get('harvest_fertilizer', False)
         self.layer = 1
         self.map_filename = None
 
@@ -201,6 +203,10 @@ class Item:
             data['base_item_name'] = self.base_item_name
         if getattr(self, 'effects', None):
             data['effects'] = self.effects
+        if getattr(self, 'harvest', None):
+            data['harvest'] = self.harvest
+        if getattr(self, 'harvest_fertilizer', False):
+            data['harvest_fertilizer'] = self.harvest_fertilizer
         
         return data
 
@@ -266,6 +272,10 @@ class Item:
             item.effects = data['effects']
         if 'seasonings' in data:
             item.seasonings = data['seasonings']
+        if 'harvest' in data:
+            item.harvest = data['harvest']
+        if 'harvest_fertilizer' in data:
+            item.harvest_fertilizer = data['harvest_fertilizer']
         if 'base_item_name' in data:
             item.base_item_name = data['base_item_name']
 
@@ -329,7 +339,8 @@ class Item:
             itype.startswith('consumable') or
             itype in [
                 'weapon_throw', 'consumable', 'currency', 'resource', 'recipe', 
-                'reciple', 'car_fuel', 'utility', 'liquid', 'book', 'consumable_book'
+                'reciple', 'car_fuel', 'utility', 'liquid', 'book', 'consumable_book',
+                'farm_seed'
             ]
         )
         if not valid_type:

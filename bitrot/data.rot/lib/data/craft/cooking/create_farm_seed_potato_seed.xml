@@ -1,0 +1,5 @@
+<?xml version='1.0' encoding='utf-8'?>
+<recipe type="farm_seed" craft="create" output="Potato Seed" magazine="" amount="5" time="0.2">
+    <ingredient name="Sliced Potato" destroy="true" amount="1" />
+    <ingredient name="[Knife, Primitive Knife, Stone Blade]" destroy="false" amount="1" />
+</recipe>

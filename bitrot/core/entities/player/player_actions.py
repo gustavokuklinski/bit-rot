@@ -553,7 +553,11 @@ class PlayerActions:
             
             if getattr(item, 'allow_belt', False):
                 options.append('Equip')
-                
+        
+        if item_type == 'farm_seed':
+            options.append('Plant')
+            if getattr(item, 'allow_belt', False):
+                options.append('Equip')
         elif item_type == 'cloth':
             options.append('Open'); options.append('Equip')
         elif item_type in ['weapon_melee', 'weapon_ranged', 'weapon_throw', 'tool']:

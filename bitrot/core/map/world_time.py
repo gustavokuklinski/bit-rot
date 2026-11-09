@@ -131,6 +131,21 @@ class WorldTime:
         self.last_update_time = current_real_time
 
         self.game_time_ms += delta_time
+
+        # --- Advance Farm Crops Growth using In-Game Elapsed Hours ---
+        if hasattr(self.game, 'map_manager') and hasattr(self.game.map_manager, 'update_crops'):
+            # Rain decreases time by 10% (+10% rate), Fog decreases by 5% (+5% rate)
+            weather_mult = 1.0
+            cur_weather = getattr(self, 'weather', 'CLEAR')
+            if cur_weather == 'RAIN':
+                weather_mult += 0.10
+            elif cur_weather == 'FOG':
+                weather_mult += 0.05
+            elif cur_weather == 'RAIN_FOG':
+                weather_mult += 0.15
+
+            elapsed_game_hours = (delta_time / float(self.day_length_ms)) * 24.0 * weather_mult
+            self.game.map_manager.update_crops(elapsed_game_hours)
         
         if self.game.current_layer_index not in (2, 3):
             self.weather_timer -= delta_time
