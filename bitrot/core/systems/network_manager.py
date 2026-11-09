@@ -119,14 +119,14 @@ class NetworkManager:
             self.server_thread = threading.Thread(target=self._server_listen_loop, daemon=True)
             self.server_thread.start()
             
-            display_message(self.game, f"[LAN VOIP] Server listening on {self.server_ip}:{self.server_port} (Max: {self.max_peers})")
+            display_message(self.game, f"[LAN RADIO] Server listening on {self.server_ip}:{self.server_port} (Max: {self.max_peers})")
             return True
         except Exception as e:
             self.is_connected = False
             self.is_server = False
             self.status_message = "Connection failed"
             self.status_is_error = True
-            display_message(self.game, f"[LAN VOIP] Failed to open server: {e}")
+            display_message(self.game, f"[LAN RADIO] Failed to open server: {e}")
             return False
 
     def _server_listen_loop(self):
@@ -177,7 +177,7 @@ class NetworkManager:
                         
                         # Send welcome with full peer list
                         self._broadcast_peer_list()
-                        display_message(self.game, f"[LAN VOIP] Peer connected from {client_ip} ({client_freq:.2f}mhz)")
+                        display_message(self.game, f"[LAN] Peer connected from {client_ip} ({client_freq:.2f}mhz)")
                     else:
                         self._handle_incoming_packet(pkt, client_sock)
         except Exception:
@@ -252,7 +252,7 @@ class NetworkManager:
             self.client_thread = threading.Thread(target=self._client_receive_loop, daemon=True)
             self.client_thread.start()
 
-            display_message(self.game, f"[LAN VOIP] Connected to {ip}:{port} (Radio: {self.my_frequency:.2f}mhz)")
+            display_message(self.game, f"[LAN] Connected to {ip}:{port} (Radio: {self.my_frequency:.2f}mhz)")
             return True
         except Exception:
             self.is_connected = False
@@ -439,7 +439,7 @@ class NetworkManager:
                 break
 
         if not target_item:
-            display_message(self.game, f"[LAN VOIP] Item '{item_name}' not found in inventory.")
+            display_message(self.game, f"[LAN] Item '{item_name}' not found in inventory.")
             return
 
         item_dict = target_item.to_dict() if hasattr(target_item, 'to_dict') else {'name': target_item.name}
@@ -451,7 +451,7 @@ class NetworkManager:
             'item_data': item_dict
         }
         self._send_raw_packet(json.dumps(pkt) + "\n")
-        display_message(self.game, f"[LAN VOIP] Sent '{target_item.name}' across frequency {target_freq:.2f}mhz.")
+        display_message(self.game, f"[LAN] Sent '{target_item.name}' across frequency {target_freq:.2f}mhz.")
         if hasattr(self.game, 'sound_manager'):
             self.game.sound_manager.play_sound("grab.ogg", subdir="items", game=self.game, base_volume=0.5, is_critical=True)
 

@@ -148,7 +148,8 @@ class PlayerActions:
             return False
 
         if item.load is not None and item.load <= 0 and not is_infinite:
-            display_message(f"{tr('msg', 'Cannot use')} {tr('item', item.name)}{tr('msg', ', it is empty.')}")
+            if not is_auto_drink:
+                display_message(f"{tr('msg', 'Cannot use')} {tr('item', item.name)}{tr('msg', ', it is empty.')}")
             return False
             
         duration_mult = getattr(item, 'consume_time', 1.0)
@@ -178,7 +179,8 @@ class PlayerActions:
                                  consumed = False
                              else:
                                 self.health = min(self.max_health, self.health + val)
-                                display_message(f"{tr('msg', 'Used')} {tr('item', item.name)}. {tr('msg', 'Restored')} {val} {tr('msg', 'Health.')}")
+                                if not is_auto_drink:
+                                    display_message(f"{tr('msg', 'Used')} {tr('item', item.name)}. {tr('msg', 'Restored')} {val} {tr('msg', 'Health.')}")
                                 consumed = True
                                  
                         elif hasattr(self, target_stat):
@@ -191,7 +193,7 @@ class PlayerActions:
 
                                 new_val = min(stat_cap, current_val + val)
                                 setattr(self, target_stat, new_val)
-                                if target_stat != 'drugs':
+                                if target_stat != 'drugs' and not is_auto_drink:
                                     display_message(f"{tr('msg', 'Used')} {tr('item', item.name)}. {tr('msg', 'Restored')} {val} {target_stat.capitalize()}.")
                                 consumed = True
 
@@ -199,7 +201,7 @@ class PlayerActions:
                                 min_cap = 0.0
                                 new_val = max(min_cap, current_val - val)
                                 setattr(self, target_stat, new_val)
-                                if target_stat != 'drugs':
+                                if target_stat != 'drugs' and not is_auto_drink:
                                     display_message(f"{tr('msg', 'Used')} {tr('item', item.name)}. {tr('msg', 'Reduced')} {target_stat.capitalize()} {tr('msg', 'by')} {val}.")
                                 consumed = True
             

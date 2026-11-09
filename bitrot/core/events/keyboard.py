@@ -186,7 +186,7 @@ def toggle_pause(game):
 
 
 def process_chat_command(game, text):
-    """Processes debug cheat commands and LAN VOIP radio commands entered in chat."""
+    """Processes debug cheat commands and LAN radio commands entered in chat."""
     import re
     text = text.strip()
     if not (text.startswith("%rot ") or text.startswith("/rot ") or text == "%rot server"):
@@ -212,7 +212,7 @@ def process_chat_command(game, text):
         display_message(game, f"[Debug] Debug tab {status_str} in Messages modal.")
         return True
 
-    # --- LAN VOIP COMMANDS ---
+    # --- LAN COMMANDS ---
     # 1. %rot server (info report)
     if command == "server":
         if not net or not net.is_connected:
@@ -780,14 +780,14 @@ def handle_keyboard_events(game, event, action_triggered=None):
                     if inst.handle_event(event):
                         return
 
-            if modal.get('type') == 'mobile' and modal.get('active_tab') == 'VOIP' and modal.get('voip_input_active'):
+            if modal.get('type') == 'mobile' and modal.get('active_tab') == 'LAN' and modal.get('lan_input_active'):
                 if event.key == pygame.K_BACKSPACE:
-                    modal['voip_input_text'] = modal.get('voip_input_text', '')[:-1]
+                    modal['lan_input_text'] = modal.get('lan_input_text', '')[:-1]
                 elif event.key in (pygame.K_RETURN, pygame.K_ESCAPE):
-                    modal['voip_input_active'] = False
-                    modal['voip_dropdown_open'] = False
-                elif len(modal.get('voip_input_text', '')) < 26 and event.unicode.isprintable():
-                    modal['voip_input_text'] = modal.get('voip_input_text', '') + event.unicode
+                    modal['lan_input_active'] = False
+                    modal['lan_dropdown_open'] = False
+                elif len(modal.get('lan_input_text', '')) < 26 and event.unicode.isprintable():
+                    modal['lan_input_text'] = modal.get('lan_input_text', '') + event.unicode
                 return
 
             # Search typing in Messages -> Debug dropdowns

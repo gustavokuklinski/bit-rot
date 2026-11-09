@@ -10,7 +10,7 @@ FREQ_STEP = 0.01
 
 def get_all_radio_targets(game):
     """
-    Collects all active radio stations and connected LAN VOIP peers.
+    Collects all active radio stations and connected LAN peers.
     Returns: freq_info_map
     """
     if hasattr(RadioManager, 'sync_game_frequencies'):
@@ -30,7 +30,7 @@ def get_all_radio_targets(game):
                 'color': ORANGE if "Exxoil" in name else ((100, 200, 255) if "Military" in name else GREEN)
             })
 
-    # 2. Connected LAN VOIP Peers & Host Frequency
+    # 2. Connected LAN Peers & Host Frequency
     net_mgr = getattr(game, 'network_manager', None)
     if net_mgr and getattr(net_mgr, 'is_connected', False):
         my_f = round(float(getattr(net_mgr, 'my_frequency', 114.0)), 2)

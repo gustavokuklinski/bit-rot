@@ -24,9 +24,9 @@ def _get_chunk_bg(bg_type):
         return _CHUNK_BG_CACHE[cache_key]
 
     candidates = [
-        os.path.join(SPRITE_PATH, 'ui', fname),
-        os.path.join(BASE_DIR, 'data.rot', 'lib', 'sprites', 'ui', fname),
-        os.path.abspath(os.path.join('data.rot', 'lib', 'sprites', 'ui', fname)),
+        os.path.join(SPRITE_PATH, 'splash', fname),
+        os.path.join(BASE_DIR, 'data.rot', 'lib', 'sprites', 'splash', fname),
+        os.path.abspath(os.path.join('data.rot', 'lib', 'sprites', 'splash', fname)),
     ]
 
     for path in candidates:
