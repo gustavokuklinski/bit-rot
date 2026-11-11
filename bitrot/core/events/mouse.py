@@ -62,6 +62,14 @@ def handle_mouse_down(game, event, mouse_pos):
             test_rect = pygame.Rect(mouse_tx * TILE_SIZE, mouse_ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
             is_free = not any(ob.colliderect(test_rect) for ob in getattr(game, 'obstacles', []))
 
+            from core.events.mouse_context_helpers import find_player_shovel
+            shovel_item = find_player_shovel(game.player)
+
+            if not shovel_item:
+                display_message(tr('msg', "Requires a Shovel to plant seeds!"))
+                game.item_to_plant = None
+                return
+
             if not in_range:
                 display_message(tr('msg', "Too far to plant seed!"))
             elif not is_soil:

@@ -970,7 +970,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
 
         # 4. When menu is opened, position it below the mini HUD if active
         show_hud_menus = getattr(game, 'show_hud_menus', False)
-        
+         
         if show_hud_menus:
             menu_start_y = (mini_hud_bottom_y + 10) if not is_status_modal_open else 40
 
@@ -1235,11 +1235,14 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             mouse_ty = int(world_mouse_pos[1] // TILE_SIZE)
 
             from core.events.mouse import is_valid_soil_tile
+            from core.events.mouse_context_helpers import find_player_shovel
+
+            has_shovel = find_player_shovel(game.player) is not None
             in_range = abs(mouse_tx - p_tx) <= 1 and abs(mouse_ty - p_ty) <= 1
             is_soil = is_valid_soil_tile(game, mouse_tx, mouse_ty)
             test_rect = pygame.Rect(mouse_tx * TILE_SIZE, mouse_ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
             is_free = not any(ob.colliderect(test_rect) for ob in getattr(game, 'obstacles', []))
-            can_plant = in_range and is_soil and is_free
+            can_plant = in_range and is_soil and is_free and has_shovel
 
             snap_x = mouse_tx * TILE_SIZE
             snap_y = mouse_ty * TILE_SIZE

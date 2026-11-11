@@ -77,7 +77,7 @@ def _load_stat_icons():
         "cooking": SPRITE_PATH + "ui/cooking.png",
         "mechanics": SPRITE_PATH + "ui/mechanics.png",
         "weld": SPRITE_PATH + "ui/weld.png",
-        "farming": SPRITE_PATH + "ui/weld.png",
+        "farming": SPRITE_PATH + "ui/farming.png",
     }
     
     for key, path in icon_files.items():

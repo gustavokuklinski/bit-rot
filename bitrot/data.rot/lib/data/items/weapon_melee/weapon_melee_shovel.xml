@@ -1,0 +1,14 @@
+<item name="Shovel" type="weapon_melee" allow_belt="true" tip="Use to plant seeds">
+    <properties>
+        <durability min="1" max="100" />
+        
+        <damage min="10" max="25" />
+        <skill type="melee" />
+        <sprite file="weapon_melee/weapon_melee_shovel.png" />
+        <knockback value="2" />
+    </properties>
+    <spawn chance="1" />
+    <sound>
+        <swing src="axe.ogg" />
+    </sound>
+</item>

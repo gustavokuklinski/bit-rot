@@ -175,15 +175,6 @@ def run_playing(game):
                 if mod is not None:
                     radius_mult *= mod
 
-        health_ratio = max(0.1, game.player.health / game.player.max_health)
-        radius_mult *= health_ratio
-
-        # --- ALCOHOL VIEW RADIUS REDUCTION ---
-        alcohol = getattr(game.player, 'drugs', 0.0)
-        if alcohol >= 30.0:
-            alcohol_factor = max(0.20, 1.0 - ((alcohol - 30.0) * 0.01))
-            radius_mult *= alcohol_factor
-
         game.player_view_radius = max(TILE_SIZE * 2, base_radius * radius_mult)
 
     game.npc_spawn_timer += 1

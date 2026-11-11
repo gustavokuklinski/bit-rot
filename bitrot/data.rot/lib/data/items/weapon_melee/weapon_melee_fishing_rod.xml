@@ -1,4 +1,4 @@
-<item name="Fishing Rod" type="weapon_melee" allow_belt="true" tip="Use as weapon or craft resource">
+<item name="Fishing Rod" type="weapon_melee" allow_belt="true" tip="Use to fish">
     <properties>
         <durability min="1" max="100" />
         

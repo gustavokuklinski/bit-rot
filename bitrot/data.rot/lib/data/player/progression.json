@@ -144,7 +144,7 @@
       },
       "farming": {
         "name": "Farming",
-        "image": "ui/weld.png",
+        "image": "ui/farming.png",
         "base_xp": 100
       }
     },

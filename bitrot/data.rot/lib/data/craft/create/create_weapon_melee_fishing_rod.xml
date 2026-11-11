@@ -1,0 +1,5 @@
+<recipe type="weapon_melee" craft="create" output="Fishing Rod" gain_xp="[intelligence:0.1, maintenance:0.1]"  amount="1" time="1.0">
+    <ingredient name="[Tree Branch, Stick]" destroy="true" amount="1" />
+    <ingredient name="Line Twine" destroy="true" amount="2" />
+    <ingredient name="Needle" destroy="true" amount="2" />
+</recipe>

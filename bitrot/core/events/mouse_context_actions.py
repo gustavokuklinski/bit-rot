@@ -2011,6 +2011,13 @@ def handle_context_menu_click(game, mouse_pos):
                 if getattr(item, 'item_type', '') != 'farm_seed':
                     game.context_menu['active'] = False
                     return
+
+                from core.events.mouse_context_helpers import find_player_shovel
+                if not find_player_shovel(game.player):
+                    display_message(tr('msg', "Requires a Shovel to plant seeds!"))
+                    game.context_menu['active'] = False
+                    return
+
                 game.item_to_plant = {
                     'item': item,
                     'source': source,

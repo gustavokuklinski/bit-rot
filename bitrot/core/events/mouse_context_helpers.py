@@ -146,6 +146,42 @@ def calculate_boat_fuel_cost(game, dest_gx, dest_gy):
     return max(1, int(base_cost * discount))
 
 
+def find_player_shovel(player):
+    """Checks if the player is carrying a usable shovel in inventory, belt, or clothes."""
+    if not player:
+        return None
+
+    def _is_shovel(it):
+        if not it:
+            return False
+        name_lower = getattr(it, 'name', '').lower()
+        if 'shovel' in name_lower:
+            if hasattr(it, 'durability') and it.durability is not None and it.durability <= 0:
+                return False
+            return True
+        return False
+
+    # 1. Active weapon
+    if getattr(player, 'active_weapon', None) and _is_shovel(player.active_weapon):
+        return player.active_weapon
+
+    # 2. Belt
+    for it in getattr(player, 'belt', []):
+        if _is_shovel(it):
+            return it
+
+    # 3. Inventory
+    for it in getattr(player, 'inventory', []):
+        if _is_shovel(it):
+            return it
+
+    # 4. Equipped Clothes / Gear
+    for it in getattr(player, 'clothes', {}).values():
+        if _is_shovel(it):
+            return it
+
+    return None
+
 def find_player_fertilizer(player):
     """Finds first fertilizer item in inventory, belt, or worn clothes."""
     if not player:
