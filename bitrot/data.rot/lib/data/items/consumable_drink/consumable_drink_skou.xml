@@ -1,0 +1,13 @@
+<item name="Skou Beer" type="consumable_drink" allow_belt="false" consume_time="0.3" allow_use="true">
+    <properties>
+        <restore status="[water]" value="2" />
+        <reduce status="[stamina]" value="5" />
+        <reduce status="[anxiety]" value="5" />
+        <restore status="[drugs]" value="10" />
+        <load min="1" max="10" />
+        <capacity value="100" />
+        
+        <sprite file="consumable_drink/consumable_drink_skou_beer.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

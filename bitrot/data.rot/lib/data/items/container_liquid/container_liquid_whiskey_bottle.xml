@@ -3,7 +3,7 @@
         <capacity value="1" />
         <sprite file="container_liquid/container_liquid_whiskey_bottle.png" />
         
-        <max_liquid value="12" />
+        <max_liquid value="20" />
     </properties>
     <loot>
         <item name="Whiskey Unit" chance="0.9" />

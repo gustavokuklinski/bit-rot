@@ -1,4 +1,4 @@
-<item name="Catfish Filet (Raw)" type="consumable_food" allow_belt="false" consume_time="2.5" allow_use="true">
+<item name="Catfish Filet (Raw)" type="consumable_food" allow_belt="false" consume_time="2.0" allow_use="true">
     <properties>
         <restore status="[food]" value="1" />
         <restore status="[water]" value="1" />
@@ -7,7 +7,7 @@
         <restore status="[anxiety]" value="2" />
         <restore status="[infection]" value="2" />
         <load value="5" />
-        <capacity value="5" />
+        <capacity value="20" />
         
         <sprite file="consumable_food/consumable_food_fish_raw_filet.png" />
     </properties>

@@ -2,7 +2,7 @@
     <properties>
         <restore status="[food]" value="4" />
         <reduce status="[water]" value="6" />
-        <load value="50" />
+        <load min="1" max="10" />
         <capacity value="100" />
         
         <sprite file="consumable_food/consumable_food_pepper.png" />

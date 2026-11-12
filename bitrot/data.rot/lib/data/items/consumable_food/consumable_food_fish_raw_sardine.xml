@@ -1,4 +1,4 @@
-<item name="Fish Sardine (Raw)" type="consumable_food" allow_belt="false" consume_time="2.5" allow_use="true">
+<item name="Fish Sardine (Raw)" type="consumable_food" allow_belt="false" consume_time="2.0" allow_use="true">
     <properties>
         <restore status="[food]" value="1" />
         <restore status="[water]" value="1" />

@@ -1,0 +1,12 @@
+<item name="Sliced Tomato" type="consumable_food" allow_belt="false" consume_time="0.5" allow_use="true">
+    <properties>
+        <restore status="[food]" value="5" />
+        <restore status="[water]" value="8" />
+        <restore status="[health]" value="2" />
+        <restore status="[stamina]" value="1" />
+        <load min="1" max="10" />
+        <capacity value="100" />
+        <sprite file="consumable_food/consumable_food_sliced_tomato.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

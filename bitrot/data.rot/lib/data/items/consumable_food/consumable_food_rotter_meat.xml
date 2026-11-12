@@ -5,7 +5,7 @@
         <restore status="[infection]" value="80" />
         <restore status="[anxiety]" value="90" />
         <load value="1" />
-        <capacity value="5" />
+        <capacity value="10" />
         
         <sprite file="consumable_food/consumable_food_zombie_meat.png" />
     </properties>

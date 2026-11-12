@@ -3,7 +3,7 @@
         <status value="ammo" />
         
         <load min="5" max="25" />
-        <capacity value="50" />
+        <capacity value="100" />
         <sprite file="consumable_ammo/consumable_ammo_shotgun_shells.png" />
     </properties>
     <spawn chance="1" />

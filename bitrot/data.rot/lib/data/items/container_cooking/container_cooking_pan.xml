@@ -2,7 +2,7 @@
     <properties>
         <capacity value="2" />
         <sprite file="container_cooking/container_cooking_pan.png" />
-        <max_liquid value="2" />
+        <max_liquid value="5" />
     </properties>
     <spawn chance="1" />
 </item>

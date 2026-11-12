@@ -4,7 +4,7 @@
         
         <capacity value="1" />
         <sprite file="container_liquid/container_liquid_cup.png" />
-        <max_liquid value="2" />
+        <max_liquid value="5" />
     </properties>
     <loot>
         <item name="Water Unit" chance="0.1" />

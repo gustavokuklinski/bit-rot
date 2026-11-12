@@ -1,10 +1,10 @@
-<item name="Egg (Boiled)" type="consumable_food" allow_belt="false" allow_use="true" consume_time="0.1" tip="Use to cook">
+<item name="Egg (Boiled)" type="consumable_food" allow_belt="false" allow_use="true" consume_time="1.0" tip="Use to cook">
     <properties>
         <restore status="[food]" value="12" />
         <restore status="[stamina]" value="4" />
         <reduce status="[anxiety]" value="6" />
-        <load value="1" />
-        <capacity value="12" />
+        <load min="1" max="10" />
+        <capacity value="100" />
         
         <sprite file="consumable_food/consumable_food_boiled_egg.png" />
     </properties>

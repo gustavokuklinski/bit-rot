@@ -1,9 +1,9 @@
-<item name="Vaccine" type="consumable_drugs" allow_belt="true"  allow_use="true" consume_time="1.2">
+<item name="Vaccine" type="consumable_drugs" allow_belt="true"  allow_use="true" consume_time="2.0">
     <properties>
         <restore status="[health]" value="10" />
         <reduce status="[infection]" value="15" />
-        <load value="1" />
-        <capacity value="5" />
+        <load min="1" max="5" />
+        <capacity value="10" />
         
         <sprite file="consumable_drugs/consumable_drugs_vaccine.png" />
     </properties>

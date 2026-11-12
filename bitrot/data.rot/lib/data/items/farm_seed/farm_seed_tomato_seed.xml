@@ -1,0 +1,13 @@
+<item name="Tomato Seed" type="farm_seed" allow_belt="false" tip="Use to Farm">
+    <properties>
+        <harvest time="1:00" /> <!-- Time to harvest -->
+        <harvest maptile_plant="farm_plant_tomato_01" /> <!-- Map tile when plant -->
+        <harvest maptile_harvest="farm_plant_tomato_01" /> <!-- Map tile when is ready to harvest -->
+        <harvest item="Tomato" min="1" max="5" /><!-- When right click Harvest generate this item -->
+
+        <load min="1" max="6" />
+        <capacity value="100" />
+        <sprite file="farm_seed/farm_seed_potato_seed.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

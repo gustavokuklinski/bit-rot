@@ -5,7 +5,7 @@
     tip="This item is used for quest"
     spawn_amount_global="1"
     spawn_maptile="[lab_cupboard_01, house_computer, military_radio]"
-    spawn_layer="[1]">
+    spawn_layer="[3]">
     <properties>
         
         <sprite file="quest/quest_harddrive.png" />

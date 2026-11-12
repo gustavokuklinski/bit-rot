@@ -1,4 +1,4 @@
-<item name="Large Satchel" type="container" allow_belt="false">
+<item name="Large Satchel" type="container" allow_belt="false" disallow_type="[liquid]">
     <properties>
         <capacity value="10" />
         <sprite file="container_bags/container_large_satchel.png" />

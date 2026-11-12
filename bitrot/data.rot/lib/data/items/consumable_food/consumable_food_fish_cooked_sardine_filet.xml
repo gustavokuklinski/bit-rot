@@ -7,7 +7,7 @@
         <reduce status="[anxiety]" value="2" />
 
         <load value="5" />
-        <capacity value="5" />
+        <capacity value="20" />
         
         <sprite file="consumable_food/consumable_food_fish_cooked_filet.png" />
     </properties>

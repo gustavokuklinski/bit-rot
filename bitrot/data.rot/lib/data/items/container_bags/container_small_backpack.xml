@@ -1,4 +1,4 @@
-<item name="Small Backpack" type="container" allow_belt="false">
+<item name="Small Backpack" type="container" allow_belt="false" disallow_type="[liquid]">
     <properties>
         <capacity value="10" />
         

@@ -3,7 +3,7 @@
         <status value="ammo" />
         
         <load min="3" max="50" />
-        <capacity value="50" />
+        <capacity value="100" />
         <sprite file="consumable_ammo/consumable_ammo_slingshot_ammo.png" />
     </properties>
     <spawn chance="1" />

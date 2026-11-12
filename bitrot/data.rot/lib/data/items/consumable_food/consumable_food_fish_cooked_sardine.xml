@@ -1,4 +1,4 @@
-<item name="Sardine (Cooked)" type="consumable_food" allow_belt="false" consume_time="0.5" allow_use="true">
+<item name="Sardine (Cooked)" type="consumable_food" allow_belt="false" consume_time="1.0" allow_use="true">
     <properties>
         <restore status="[food]" value="2" />
         <restore status="[water]" value="2" />
@@ -6,7 +6,7 @@
         <restore status="[stamina]" value="2" />
         <reduce status="[anxiety]" value="2" />
         <load value="1" />
-        <capacity value="1" />
+        <capacity value="20" />
         
         <sprite file="consumable_food/consumable_food_fish_cooked_sardine.png" />
     </properties>

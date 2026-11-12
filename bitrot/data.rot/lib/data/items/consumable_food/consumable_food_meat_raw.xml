@@ -1,4 +1,4 @@
-<item name="Meat (Raw)" type="consumable_food" allow_belt="false" consume_time="3.0" allow_use="true">
+<item name="Meat (Raw)" type="consumable_food" allow_belt="false" consume_time="2.0" allow_use="true">
     <properties>
         <restore status="[food]" value="2" />
         <restore status="[water]" value="2" />
@@ -7,7 +7,7 @@
         <restore status="[anxiety]" value="2" />
         <restore status="[infection]" value="5" />
         <load value="1" />
-        <capacity value="1" />
+        <capacity value="10" />
         
         <sprite file="consumable_food/consumable_food_raw_meat.png" />
     </properties>

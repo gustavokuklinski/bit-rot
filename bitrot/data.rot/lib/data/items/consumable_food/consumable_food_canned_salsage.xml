@@ -1,11 +1,11 @@
-<item name="Canned Salsage" type="consumable_food" allow_belt="false" consume_time="1.3" allow_use="true" tip="Use to cook">
+<item name="Canned Salsage" type="consumable_food" allow_belt="false" consume_time="1.5" allow_use="true" tip="Use to cook">
     <properties>
         <restore status="[food]" value="8" />
         <restore status="[health]" value="2" />
         <restore status="[stamina]" value="3" />
         <reduce status="[anxiety]" value="4" />
-        <load value="1" />
-        <capacity value="1" />
+        <load min="1" max="10" />
+        <capacity value="10" />
         <require type="[Can Opener]" />
         <sprite file="consumable_food/consumable_food_canned_salsage.png" />
     </properties>

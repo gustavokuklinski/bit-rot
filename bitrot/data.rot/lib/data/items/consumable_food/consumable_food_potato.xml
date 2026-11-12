@@ -1,11 +1,11 @@
-<item name="Potato" type="consumable_food" allow_belt="false" consume_time="2.0" allow_use="true">
+<item name="Potato" type="consumable_food" allow_belt="false" consume_time="1.0" allow_use="true">
     <properties>
         <restore status="[food]" value="4" />
         <restore status="[health]" value="2" />
         <restore status="[stamina]" value="2" />
         <reduce status="[anxiety]" value="1" />
-        <load value="1" />
-        <capacity value="5" />
+        <load min="1" max="10" />
+        <capacity value="50" />
         
         <sprite file="consumable_food/consumable_food_potato.png" />
     </properties>

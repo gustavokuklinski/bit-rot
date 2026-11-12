@@ -5,7 +5,7 @@
     tip="This item is used for quest"
     spawn_amount_global="5"
     spawn_maptile="[house_computer, military_radio]"
-    spawn_layer="[1]">
+    spawn_layer="[2]">
     <properties>
         
         <sprite file="quest/quest_pendrive.png" />

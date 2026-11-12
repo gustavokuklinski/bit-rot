@@ -1,9 +1,9 @@
-<item name="Rice (Raw)" type="consumable_food" allow_belt="false" consume_time="0.1" tip="Use to cook">
+<item name="Rice (Raw)" type="consumable_food" allow_belt="false" consume_time="2.0" tip="Use to cook">
     <properties>
         <restore status="[food]" value="2" />
         <restore status="[stamina]" value="1" />
         <restore status="[anxiety]" value="6" />
-        <load value="20" />
+        <load min="1" max="10" />
         <capacity value="100" />
         
         <sprite file="consumable_food/consumable_food_raw_rice.png" />

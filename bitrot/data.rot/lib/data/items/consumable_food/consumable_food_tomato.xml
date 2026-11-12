@@ -1,0 +1,12 @@
+<item name="Tomato" type="consumable_food" allow_belt="false" consume_time="1.0" allow_use="true">
+    <properties>
+        <restore status="[food]" value="10" />
+        <restore status="[water]" value="16" />
+        <restore status="[health]" value="4" />
+        <restore status="[stamina]" value="2" />
+        <load min="1" max="10" />
+        <capacity value="100" />
+        <sprite file="consumable_food/consumable_food_tomato.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

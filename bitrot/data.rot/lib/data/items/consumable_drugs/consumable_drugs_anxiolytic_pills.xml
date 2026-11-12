@@ -1,0 +1,12 @@
+<item name="Anxiolytic Pills" type="consumable_drugs" allow_belt="true"  allow_use="true" consume_time="0.1">
+    <properties>
+        <reduce status="[anxiety]" value="15" />
+        <restore status="[drugs]" value="15" />
+
+        <load min="1" max="5" />
+        <capacity value="10" />
+        
+        <sprite file="consumable_drugs/consumable_drugs_infection_pills.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

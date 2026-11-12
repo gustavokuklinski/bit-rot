@@ -2,8 +2,8 @@
     <properties>
         <restore status="[food]" value="1" />
         <restore status="[anxiety]" value="5" />
-        <load value="5" />
-        <capacity value="10" />
+        <load min="1" max="10" />
+        <capacity value="100" />
         
         <sprite file="consumable_food/consumable_food_butter.png" />
     </properties>

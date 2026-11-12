@@ -1,6 +1,6 @@
 <item name="Cigarette" type="consumable_drugs" allow_belt="false"  allow_use="true" consume_time="0.5">
     <properties>
-        <reduce status="[anxiety]" value="20" />
+        <reduce status="[anxiety]" value="50" />
         <reduce status="[stamina]" value="5" />
         <reduce status="[water]" value="5" />
         <restore status="[drugs]" value="2" />

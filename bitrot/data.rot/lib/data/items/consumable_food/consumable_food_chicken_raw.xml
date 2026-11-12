@@ -7,7 +7,7 @@
         <restore status="[anxiety]" value="2" />
         <restore status="[infection]" value="6" />
         <load value="1" />
-        <capacity value="1" />
+        <capacity value="10" />
         
         <sprite file="consumable_food/consumable_food_raw_chicken.png" />
     </properties>
