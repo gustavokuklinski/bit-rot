@@ -83,7 +83,7 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
 
     ambient = int(game.world_time.current_ambient_light)
     light_mask_low = game.light_mask_low_cache
-    light_mask_low.fill((0, 0, 0))
+    light_mask_low.fill((10, 10, 10))
 
     light_texture = game.assets.get('light_texture')
     light_sources = []

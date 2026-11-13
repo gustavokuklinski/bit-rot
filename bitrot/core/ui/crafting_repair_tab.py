@@ -94,16 +94,25 @@ class CraftingRepairTab:
             self.modal.warning_message = error
             return
 
-        total_time = round(recipe.time_required * count, 1)
+        # Modulate repair duration by crafting_speed effect
+        mult, flat = self.modal.player.progression.get_derived_bonus('crafting_speed')
+        speed_bonus = mult + flat
+        speed_factor = max(0.1, 1.0 - speed_bonus) if speed_bonus > 0 else 1.0
+        total_time = max(0.2, round(recipe.time_required * count * speed_factor, 1))
 
         def craft_complete():
             nearby = self.modal.game.find_nearby_containers()
             check_milestone_progress(self.modal.game, 'craft_repair', 'item')
 
+            # Award XP from recipe definition or dynamically query progression.json
             if recipe.gain_xp:
                 for attr, amount in recipe.gain_xp.items():
                     if hasattr(self.modal.player.progression, 'add_xp'):
                         self.modal.player.progression.add_xp(self.modal.player, attr, amount * count)
+            else:
+                self.modal.player.progression.award_action_xp(
+                    self.modal.player, 'maintenance', 'repair', fallback=20.0 * count
+                )
 
             target_item, target_container, target_key, target_ctype = None, None, None, None
             locations = self.modal._get_all_item_locations(include_nearby=True, nearby_containers=nearby)

@@ -383,6 +383,8 @@ class CraftingCookingTab:
                 for attr, amount in recipe.gain_xp.items():
                     if hasattr(self.modal.player.progression, 'add_xp'):
                         self.modal.player.progression.add_xp(self.modal.player, attr, amount * count)
+            else:
+                self.modal.player.progression.award_action_xp(self.modal.player, 'cooking', 'success', fallback=2.0 * count)
 
             locations = self.modal._get_all_item_locations(include_nearby=True, nearby_containers=nearby)
             inherited_seasonings = []

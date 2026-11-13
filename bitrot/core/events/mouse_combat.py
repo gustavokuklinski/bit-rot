@@ -139,7 +139,7 @@ def handle_attack(game, mouse_pos):
                 
                 if weapon.durability <= 0:
                     print(f"{weapon.name} broke!")
-                    game.player.progression.add_xp(game.player, 'maintenance', 50)
+                    game.player.progression.award_action_xp(player, 'maintenance', 'break', fallback=50)
                     game.player.active_weapon = None 
                     display_message(game, f"{tr('item', weapon.name)} {tr('msg', 'is broken and unequipped.')}")
                 

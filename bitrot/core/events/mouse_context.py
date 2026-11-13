@@ -944,8 +944,6 @@ def handle_right_click(game, mouse_pos):
 
         else:
             options = game.player.get_item_context_options(clicked_item, click_source, click_container_item)
-            if getattr(clicked_item, 'item_type', None) == 'consumable_repair' and 'Use' in options:
-                options.remove('Use')
 
             if 'Send all to Inventory' in options:
                 options.remove('Send all to Inventory')

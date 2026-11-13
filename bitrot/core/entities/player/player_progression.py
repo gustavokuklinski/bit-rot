@@ -54,6 +54,7 @@ class PlayerProgression:
     def get_mechanics(self, player): return self.get_level('mechanics')
     def get_weld(self, player): return self.get_level('weld')
     def get_farming(self, player): return self.get_level('farming')
+    def get_builder(self, player): return self.get_level('builder')
     
     def get_lucky(self, player):
         base = self.get_level('lucky')
@@ -196,7 +197,16 @@ class PlayerProgression:
             self.add_xp(player, 'melee', base_xp)
             self.add_xp(player, 'strength', base_xp * 0.5)
 
-    # --- UPDATE LOOPS (Data Driven) ---
+    def get_action_xp(self, attr_id, target, fallback=0.0):
+        """Retrieves the configured action XP value from progression.json for a specific attribute target."""
+        return self.config.get_target_value(attr_id, target, default=fallback)
+
+    def award_action_xp(self, player, attr_id, target, fallback=0.0):
+        """Awards configured XP to player from progression.json, falling back to a default value if unset."""
+        amount = self.get_action_xp(attr_id, target, fallback=fallback)
+        if amount > 0:
+            self.add_xp(player, attr_id, amount)
+        return amount
 
     def update(self, player, is_moving, game):
         self.player = player
@@ -208,7 +218,8 @@ class PlayerProgression:
             attr_data['xp_to_next_level'] = self._calc_xp_req(attr_id, attr_data['level'], player=player)
 
         if is_moving and player.is_running and player.stamina > 0:
-            self.add_xp(player, 'fitness', 0.002)
+            running_xp = self.get_action_xp('fitness', 'running', fallback=0.002)
+            self.add_xp(player, 'fitness', running_xp)
 
         # --- LIVE SD CARD PROGRESSION: Interval points & Auto-Reset on removal ---
         from core.entities.item.item_helpers import update_sd_card_progression
@@ -236,7 +247,20 @@ class PlayerProgression:
         passive_gain = self.config.get_stat('anxiety', 'passive_gain', 0.001)
         base = horde_gain if nearby_zombies > 2 else passive_gain
         bonus_perc = self.get_anxiety_bonus(player)
-        player.anxiety = min(100, player.anxiety + (base * (1.0 + (bonus_perc / 100.0))))
+
+        # Drugs soothe anxiety: 0% drugs -> max 100% anxiety; 100% drugs -> max 10% anxiety
+        drugs_val = max(0.0, min(100.0, float(getattr(player, 'drugs', 0.0))))
+        drugs_ratio = drugs_val / 100.0
+        max_anxiety = 100.0 - (drugs_ratio * 90.0)
+
+        dt = getattr(game, 'dt_mult', 1.0)
+        if player.anxiety > max_anxiety:
+            relief_speed = (0.05 + (drugs_ratio * 0.15)) * dt
+            player.anxiety = max(max_anxiety, player.anxiety - relief_speed)
+        else:
+            gain_scale = max(0.05, 1.0 - (drugs_ratio * 0.90))
+            anxiety_gain = base * (1.0 + (bonus_perc / 100.0)) * gain_scale * dt
+            player.anxiety = min(max_anxiety, player.anxiety + anxiety_gain)
 
     def update_infection(self, player):
         if player.infection > 0:

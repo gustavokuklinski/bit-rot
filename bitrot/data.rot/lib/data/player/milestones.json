@@ -3,56 +3,56 @@
     {
       "type": "kill",
       "entity": "zombie",
-      "name": "First Rotter",
+      "name": "#0001 Rotter",
       "number": 1,
       "message": "First Blood!"
     },
     {
       "type": "kill",
       "entity": "zombie",
-      "name": "10th Rotter",
+      "name": "#0010 Rotter",
       "number": 10,
       "message": "0010 rotters died!"
     },
     {
       "type": "kill",
       "entity": "zombie",
-      "name": "20th Rotter",
+      "name": "#0020 Rotter",
       "number": 20,
       "message": "0020 rotters died!"
     },
     {
       "type": "kill",
       "entity": "zombie",
-      "name": "50th Rotter",
+      "name": "#0050 Rotter",
       "number": 50,
       "message": "0050 rotters died!"
     },
     {
       "type": "kill",
       "entity": "zombie",
-      "name": "100th Rotter",
+      "name": "#0100 Rotter",
       "number": 100,
       "message": "0100 rotters died!"
     },
     {
       "type": "kill",
       "entity": "zombie",
-      "name": "200th Rotter",
+      "name": "#0200 Rotter",
       "number": 200,
       "message": "0200 rotters died!"
     },
     {
       "type": "kill",
       "entity": "zombie",
-      "name": "500th Rotter",
+      "name": "#0500 Rotter",
       "number": 500,
       "message": "0500 rotters died!"
     },
     {
       "type": "kill",
       "entity": "zombie",
-      "name": "1000th Rotter",
+      "name": "#1000 Rotter",
       "number": 1000,
       "message": "1000 rotters died!"
     },

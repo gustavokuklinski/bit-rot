@@ -741,7 +741,10 @@ def execute_recipe_craft(game, recipe, player=None, count=1, preferred_item_id=N
     else:
         action_sound = 'craft.ogg'
 
-    total_time = round(recipe.time_required * count, 1)
+    mult, flat = player.progression.get_derived_bonus('crafting_speed')
+    craft_speed_bonus = mult + flat
+    speed_factor = max(0.1, 1.0 - craft_speed_bonus) if craft_speed_bonus > 0 else 1.0
+    total_time = max(0.2, round(recipe.time_required * count * speed_factor, 1))
 
     def craft_complete():
         nearby_now = game.find_nearby_containers()
@@ -757,6 +760,22 @@ def execute_recipe_craft(game, recipe, player=None, count=1, preferred_item_id=N
             for attr, amount in recipe.gain_xp.items():
                 if hasattr(player.progression, 'add_xp'):
                     player.progression.add_xp(player, attr, amount * count)
+        elif craft_type == 'repair':
+            player.progression.award_action_xp(
+                player, 'maintenance', 'repair', fallback=20.0 * count
+            )
+        elif craft_type == 'dismantle':
+            player.progression.award_action_xp(
+                player, 'maintenance', 'dismantle', fallback=1.0 * count
+            )
+        elif getattr(recipe, 'is_cooking', False) or craft_type == 'cook':
+            player.progression.award_action_xp(
+                player, 'cooking', 'success', fallback=2.0 * count
+            )
+        else:
+            player.progression.award_action_xp(
+                player, 'builder', 'success', fallback=1.0 * count
+            )
 
         total_repair_amount = 0
         target_repair_item = None

@@ -125,18 +125,8 @@ def save_game(game):
                 game.player.player_id = player_id
 
             attributes_base = {
-                "strength": game.player.progression.get_level('strength'),
-                "fitness": game.player.progression.get_level('fitness'),
-                "melee": game.player.progression.get_level('melee'),
-                "ranged": game.player.progression.get_level('ranged'),
-                "lucky": game.player.progression.get_level('lucky'),
-                "intelligence": game.player.progression.get_level('intelligence'),
-                "agility": game.player.progression.get_level('agility'),
-                "fishing": game.player.progression.get_level('fishing'),
-                "cooking": game.player.progression.get_level('cooking'),
-                "mechanics": game.player.progression.get_level('mechanics'),
-                "weld": game.player.progression.get_level('weld'),
-                "farming": game.player.progression.get_level('farming')
+                attr_id: game.player.progression.get_level(attr_id)
+                for attr_id in game.player.progression.config.attributes.keys()
             }
             
             progression_data = game.player.progression.attributes

@@ -1,4 +1,7 @@
 <map name="window_01_broke" type="maptile" char="window_01_broke"  is_obstacle="false">
+    <properties>
+        <repair items="[Metal Scrap:8, Weld:2]" gain_xp="[builder:1, maintenance: 0.5, intelligente: 0.5]" magazine="Survivor Guide Basic" time="2.0" />
+    </properties>
     <visuals>
         <sprite id="close" file="window_01_broke.png" />
     </visuals>

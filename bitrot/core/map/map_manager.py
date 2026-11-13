@@ -663,9 +663,11 @@ class MapManager:
 
         # Award farming experience
         if player and hasattr(player, 'progression'):
-            player.progression.add_xp(player, 'farming', 1.5)
+            xp_amt = player.progression.award_action_xp(player, 'farming', 'harvest', fallback=2.0)
+        else:
+            xp_amt = 2.0
 
-        display_message(f"{tr('ui', 'Harvested')} {created}x {tr('item', target_item_name)}! (+1.5 XP Farming)")
+        display_message(f"{tr('ui', 'Harvested')} {created}x {tr('item', target_item_name)}! (+{xp_amt:.1f} XP Farming)")
         if hasattr(self.game, 'sound_manager'):
             self.game.sound_manager.play_sound('grab.ogg', subdir='items', game=self.game, is_critical=True)
 

@@ -21,9 +21,19 @@ class ProgressionConfig:
         attr = self.attributes.get(attr_id)
         if not attr: return None
         for eff in attr.get('effects', []):
-            if eff['target'] == target_effect:
+            if eff.get('target') == target_effect:
                 return eff
         return None
+
+    def get_target_value(self, attr_id, target, default=0.0):
+        """Retrieves the configured static or base value for a target effect on an attribute."""
+        eff = self.get_attr_effect(attr_id, target)
+        if eff and 'value' in eff:
+            try:
+                return float(eff['value'])
+            except (ValueError, TypeError):
+                pass
+        return float(default)
 
 def load_progression_json():
     config = ProgressionConfig()

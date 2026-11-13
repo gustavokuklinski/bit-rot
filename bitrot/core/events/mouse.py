@@ -85,7 +85,6 @@ def handle_mouse_down(game, event, mouse_pos):
 
                 success = game.map_manager.plant_seed(mouse_tx, mouse_ty, seed_item)
                 if success:
-                    # Deduct 1 unit from stack
                     has_load = hasattr(seed_item, 'load') and seed_item.load is not None
                     if has_load and seed_item.load > 1:
                         seed_item.load -= 1
@@ -93,7 +92,8 @@ def handle_mouse_down(game, event, mouse_pos):
                         from core.events.mouse_context_actions import remove_from_source
                         remove_from_source(game, seed_item, source, index, container)
 
-                    display_message(f"{tr('ui', 'Planted')} {tr('item', seed_item.name)}.")
+                    xp_amt = game.player.progression.award_action_xp(game.player, 'farming', 'to_plant', fallback=1.0)
+                    display_message(f"{tr('ui', 'Planted')} {tr('item', seed_item.name)}. (+{xp_amt:.1f} XP Farming)")
                     if hasattr(game, 'sound_manager'):
                         game.sound_manager.play_sound('place.ogg', subdir='items', game=game, is_critical=True)
 

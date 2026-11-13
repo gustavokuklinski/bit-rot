@@ -11,16 +11,20 @@ _SKILL_ICON_CACHE = {}
 def draw_record_tab(surface, player, modal, assets, mouse_pos):
     modal_rect = modal['rect']
 
-    attribute_ids = [
-        "strength", "fitness", "agility",
-        "lucky", "melee", "ranged",
-        "maintenance", "intelligence",
-        "fishing", "cooking", "mechanics", "weld", "farming"
-    ]
+    configured_ids = list(player.progression.config.attributes.keys())
+    if configured_ids:
+        attribute_ids = configured_ids
+    else:
+        attribute_ids = [
+            "strength", "fitness", "agility",
+            "lucky", "melee", "ranged",
+            "maintenance", "intelligence",
+            "fishing", "cooking", "mechanics", "weld", "builder", "farming"
+        ]
 
     start_x = modal_rect.left + 15
     start_y = modal_rect.top + 75
-    line_height = 30
+    line_height = 28
     
     pending_tooltip = None
 

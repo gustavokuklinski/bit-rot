@@ -1,7 +1,6 @@
 <item name="Adrenaline" type="consumable_drugs" allow_belt="true"  allow_use="true" consume_time="2.0">
     <properties>
         <restore status="[stamina]" value="20" />
-        <reduce status="[anxiety]" value="20" />
         <reduce status="[drugs]" value="60" />
         <load min="1" max="5" />
         <capacity value="10" />

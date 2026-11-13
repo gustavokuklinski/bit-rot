@@ -37,14 +37,30 @@ def is_item_liquid(item):
 
 def get_transfer_time(player, base_time=0.8, min_time=0.2):
     """
-    Calculates dynamic action duration scaled by player Agility level (0 to 10).
-    At Agility 0: takes 0.8s.
-    At Agility 10: takes 0.2s.
+    Calculates dynamic action duration scaled by 'grab_speed' effect or Agility level.
     """
     if not player or not hasattr(player, 'progression'):
         return base_time
+    mult, flat = player.progression.get_derived_bonus('grab_speed')
+    speed_bonus = mult + flat
+    if speed_bonus > 0:
+        return max(min_time, round(base_time / (1.0 + speed_bonus), 2))
     agility = max(0, min(10, player.progression.get_level('agility')))
     duration = base_time - (agility * ((base_time - min_time) / 10.0))
+    return max(min_time, round(duration, 2))
+
+def get_open_container_time(player, base_time=1.8, min_time=0.2):
+    """
+    Calculates dynamic container opening time scaled by 'open_container' effect or Agility.
+    """
+    if not player or not hasattr(player, 'progression'):
+        return base_time
+    mult, flat = player.progression.get_derived_bonus('open_container')
+    speed_bonus = mult + flat
+    if speed_bonus > 0:
+        return max(min_time, round(base_time / (1.0 + speed_bonus), 2))
+    agility = max(0, min(10, player.progression.get_level('agility')))
+    duration = base_time - (agility * 0.16)
     return max(min_time, round(duration, 2))
 
 def get_container_liquid_capacity_units(container, liquid_item, target_item=None):

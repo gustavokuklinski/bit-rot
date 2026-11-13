@@ -78,8 +78,8 @@ def _draw_closed_container_view(surface, game, container, content_rect, mouse_po
             if getattr(core.data.config, 'ALL_VISIBLE', False) or has_app(game, 'open_container_instant'):
                 do_open_container()
             else:
-                agility = game.player.progression.get_level('agility')
-                open_time = max(0.2, 1.8 - (agility * 0.2))
+                from core.entities.item.item_helpers import get_open_container_time
+                open_time = get_open_container_time(game.player)
                 if hasattr(container, 'is_opening'):
                     container.is_opening = True
                 def cancel_open():

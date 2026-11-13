@@ -25,6 +25,18 @@
           }
         ]
       },
+      "maintenance": {
+        "name": "Maintenance",
+        "image": "ui/maintenance.png",
+        "base_xp": 150,
+        "effects": [
+          {
+            "target": "durability_save_chance",
+            "value": 2.5,
+            "type": "flat"
+          }
+        ]
+      },
       "melee": {
         "name": "Melee",
         "image": "ui/melee.png",
@@ -42,35 +54,6 @@
           }
         ]
       },
-      "ranged": {
-        "name": "Aiming",
-        "image": "ui/range.png",
-        "base_xp": 200,
-        "effects": [
-          {
-            "target": "ranged_damage",
-            "value": 0.05,
-            "type": "multiplier_add"
-          },
-          {
-            "target": "headshot_chance",
-            "value": 0.015,
-            "type": "flat"
-          }
-        ]
-      },
-      "maintenance": {
-        "name": "Maintenance",
-        "image": "ui/maintenance.png",
-        "base_xp": 150,
-        "effects": [
-          {
-            "target": "durability_save_chance",
-            "value": 2.5,
-            "type": "flat"
-          }
-        ]
-      },
       "agility": {
         "name": "Agility",
         "image": "ui/agility.png",
@@ -80,6 +63,16 @@
             "target": "stamina_consumption_reduction",
             "value": 0.01,
             "type": "flat"
+          },
+          {
+            "target": "open_container",
+            "value": 0.05,
+            "type": "multiplier_add"
+          },
+          {
+            "target": "grab_speed",
+            "value": 0.05,
+            "type": "multiplier_add"
           }
         ]
       },
@@ -122,30 +115,124 @@
           }
         ]
       },
+      "builder": {
+        "name": "Builder",
+        "image": "ui/range.png",
+        "base_xp": 200,
+        "effects": [
+          {
+            "target": "crafting_speed",
+            "value": 0.2,
+            "type": "flat"
+          },
+          {
+            "target": "xp_gain",
+            "value": 0.02,
+            "type": "multiplier_add"
+          }
+        ]
+      },
+      "ranged": {
+        "name": "Aiming",
+        "image": "ui/range.png",
+        "base_xp": 200,
+        "effects": [
+          {
+            "target": "ranged_damage",
+            "value": 0.05,
+            "type": "multiplier_add"
+          },
+          {
+            "target": "headshot_chance",
+            "value": 0.015,
+            "type": "flat"
+          }
+        ]
+      },
       "fishing": {
         "name": "Fishing",
         "image": "ui/fishing.png",
-        "base_xp": 100
+        "base_xp": 100,
+        "effects": [
+          {
+            "target": "success",
+            "value": 2.0,
+            "type": "flat"
+          },
+          {
+            "target": "fail",
+            "value": 0.1,
+            "type": "flat"
+          }
+        ]
       },
       "cooking": {
         "name": "Cooking",
         "image": "ui/cooking.png",
-        "base_xp": 100
+        "base_xp": 100,
+        "effects": [
+          {
+            "target": "success",
+            "value": 2.0,
+            "type": "flat"
+          }
+        ]
       },
       "mechanics": {
         "name": "Mechanics",
         "image": "ui/mechanics.png",
-        "base_xp": 300
+        "base_xp": 300,
+        "effects": [
+          {
+            "target": "motor",
+            "value": 2.0,
+            "type": "flat"
+          },
+          {
+            "target": "refuel",
+            "value": 0.5,
+            "type": "flat"
+          },
+          {
+            "target": "tire",
+            "value": 1.0,
+            "type": "flat"
+          },
+          {
+            "target": "battery",
+            "value": 1.0,
+            "type": "flat"
+          }
+        ]
       },
       "weld": {
         "name": "Weld",
         "image": "ui/weld.png",
-        "base_xp": 300
+        "base_xp": 300,
+        "effects": [
+          {
+            "target": "success",
+            "value": 2.0,
+            "type": "flat"
+          }
+        ]
       },
       "farming": {
         "name": "Farming",
         "image": "ui/farming.png",
-        "base_xp": 100
+        "base_xp": 100,
+        "effects": [
+          {
+            "target": "to_plant",
+            "value": 1.0,
+            "type": "flat"
+          },
+          {
+            "target": "harvest",
+            "value": 2.0,
+            "type": "flat"
+          }
+        ]
       }
     },
     "stats": {
@@ -182,6 +269,9 @@
         "passive_gain_on_rain": 0.005,
         "death_threshold": 100.0,
         "alert_threshold": 70.0
+      },
+      "drugs": {
+        "alert_threshold": 10.0
       }
     }
   }

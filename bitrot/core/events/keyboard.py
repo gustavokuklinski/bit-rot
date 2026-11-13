@@ -1151,8 +1151,8 @@ def handle_keyboard_events(game, event, action_triggered=None):
                         if getattr(core.data.config, 'ALL_VISIBLE', False) or has_app(game, 'open_container_instant'):
                             open_and_show_modal()
                         else:
-                            agility = game.player.progression.get_level('agility')
-                            open_time = max(0.2, 1.8 - (agility * 0.2))
+                            from core.entities.item.item_helpers import get_open_container_time
+                            open_time = get_open_container_time(game.player)
                             found_container.is_opening = True
                             def cancel_open():
                                 found_container.is_opening = False

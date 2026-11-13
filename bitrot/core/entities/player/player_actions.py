@@ -427,64 +427,20 @@ class PlayerActions:
                 self.known_recipes.append(item.name)
             else:
                 display_message(f"{tr('msg', 'You reviewed')} {tr('item', item.name)}.")
-            self.progression.add_xp(self, 'intelligence', 10)
+            self.progression.award_action_xp(self, 'intelligence', 'reading', fallback=10)
+
+        # Scale reading time by reading_speed effect
+        mult, flat = self.progression.get_derived_bonus('reading_speed')
+        read_speed_bonus = mult + flat
+        duration = max(0.5, round(3.0 / (1.0 + read_speed_bonus), 2)) if read_speed_bonus > 0 else 3.0
 
         self.start_action(
             f"{tr('msg', 'Reading')} {tr('item', item.name)}",
-            3.0,
+            duration,
             finish_reading,
             cancel_on_move=True,
             action_sound='read.ogg',
             action_sound_subdir='items'
-        )
-
-    def find_repair_kit(self, target_item):
-        if not target_item: return None, None, None, None
-        def is_valid_kit(it):
-            return (it and it.item_type == 'consumable_repair' and 
-                    hasattr(it, 'repair_list') and 
-                    target_item.name in it.repair_list and 
-                    it.load > 0)
-        for i, item in enumerate(self.belt):
-            if is_valid_kit(item): return item, 'belt', i, None
-        for i, item in enumerate(self.inventory):
-            if is_valid_kit(item): return item, 'inventory', i, None
-        return None, None, None, None
-
-    def repair_item(self, game, target_item):
-        if self.action_timer > 0:
-            display_message(tr('msg', "Busy..."))
-            return
-        kit, source, index, container = self.find_repair_kit(target_item)
-        if not kit:
-            display_message(f"{tr('msg', 'No repair kit found for')} {tr('item', target_item.name)}.")
-            return
-        if target_item.durability >= target_item.max_durability:
-            display_message(f"{tr('item', target_item.name)} {tr('msg', 'is already in perfect condition.')}")
-            return
-        def execute_repair():
-            restore_amount = random.randint(kit.min_restore, kit.max_restore)
-            old_dur = target_item.durability
-            target_item.durability = min(target_item.max_durability, target_item.durability + restore_amount)
-            restored = target_item.durability - old_dur
-            display_message(f"{tr('msg', 'Repaired')} {tr('item', target_item.name)} {tr('msg', 'by')} {restored:.0f} {tr('msg', 'points using')} {tr('item', kit.name)}.")
-            self.progression.add_xp(self, 'maintenance', 20)
-            kit.load -= 1
-            if kit.load <= 0:
-                inv = self._get_source_inventory(source, container)
-                if inv:
-                    if source == 'belt': self.belt[index] = None
-                    else: inv.pop(index)
-                display_message(f"{tr('item', kit.name)} {tr('msg', 'used up.')}")
-
-        self.start_action(
-            "Repairing",
-            2.0,
-            execute_repair,
-            xp_reward=10,
-            cancel_on_move=True,
-            action_sound='repair.ogg',
-            action_sound_subdir='craft'
         )
 
     def get_item_context_options(self, item, source, container_item=None):

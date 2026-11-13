@@ -25,6 +25,7 @@ from core.ui.crafting_common import (
     execute_recipe_craft, get_recipe_status_details,
     get_crafting_item_locations, prioritize_locations_for_craft
 )
+from core.entities.item.item_helpers import get_open_container_time
 
 def remove_from_source(game, target_item, source, index, container_item=None):
     if source == 'inventory':
@@ -495,14 +496,14 @@ def get_equipped_fishing_rod(player):
             return it
     return None
 
+
+
 def execute_player_fishing(game, rod, water_tile_pos=None):
-    """Handles fishing logic with 4-tile reach, curved line visual, and dynamic chance scaling."""
     player = game.player
     if not player or player.action_timer > 0:
         display_message(tr('msg', "Busy..."))
         return
 
-    # Track target coordinate for the curved fishing line renderer
     player.fishing_target_pos = water_tile_pos
 
     def on_fishing_cancel():
@@ -511,10 +512,9 @@ def execute_player_fishing(game, rod, water_tile_pos=None):
     def do_fishing():
         player.fishing_target_pos = None
 
-        # 1. Base 0.1 XP every time the player fishes
-        player.progression.add_xp(player, 'fishing', 0.1)
+        # 1. Base attempt / fail XP defined in progression.json under fishing -> fail (0.1)
+        player.progression.award_action_xp(player, 'fishing', 'fail', fallback=0.1)
 
-        # 2. Decrease Fishing Rod durability
         if hasattr(rod, 'durability') and rod.durability is not None:
             rod.durability = max(0.0, rod.durability - 1.0)
             if rod.durability <= 0.0:
@@ -522,13 +522,11 @@ def execute_player_fishing(game, rod, water_tile_pos=None):
                 if getattr(player, 'active_weapon', None) == rod:
                     player.active_weapon = None
 
-        # 3. Calculate Durability Factor (lower durability = worse odds)
         dur_factor = 1.0
         max_dur = getattr(rod, 'max_durability', None) or getattr(rod, 'durability', 100.0)
         if max_dur and max_dur > 0 and getattr(rod, 'durability', None) is not None:
             dur_factor = max(0.1, min(1.0, rod.durability / float(max_dur)))
 
-        # 4. Check Fishing Level
         fishing_level = player.progression.get_level('fishing')
 
         from core.entities.item.item_data import ITEM_TEMPLATES
@@ -554,12 +552,12 @@ def execute_player_fishing(game, rod, water_tile_pos=None):
                 caught_item_name = random.choice(resource_candidates)
                 is_fish = False
             else:
-                display_message(tr('msg', "Nothing caught this time... (+0.1 XP Fishing)"))
+                display_message(tr('msg', "Nothing caught this time..."))
                 return
         else:
             catch_chance = min(0.95, 0.45 + (fishing_level * 0.05)) * (0.4 + 0.6 * dur_factor)
             if random.random() > catch_chance:
-                display_message(tr('msg', "Nothing bit the hook... (+0.1 XP Fishing)"))
+                display_message(tr('msg', "Nothing bit the hook..."))
                 return
 
             fish_ratio = min(0.92, (0.35 + (fishing_level * 0.06)) * dur_factor)
@@ -571,27 +569,24 @@ def execute_player_fishing(game, rod, water_tile_pos=None):
                 is_fish = False
 
         if not caught_item_name:
-            display_message(tr('msg', "Nothing caught this time... (+0.1 XP Fishing)"))
+            display_message(tr('msg', "Nothing caught this time..."))
             return
 
-        # 5. Create caught item
         caught_item = Item.create_from_name(caught_item_name)
         if not caught_item:
             return
 
-        # When getting a resource, force quantity to strictly ONE (never a random stack)
         if not is_fish and hasattr(caught_item, 'load'):
             caught_item.load = 1
 
-        # 6. Add specific XP depending on what was caught
+        # Award dynamic XP from progression.json
         if is_fish:
-            player.progression.add_xp(player, 'fishing', 2.0)
-            msg_suffix = "(+2.0 XP Fishing)"
+            xp_got = player.progression.award_action_xp(player, 'fishing', 'success', fallback=2.0)
+            msg_suffix = f"(+{xp_got:.1f} XP Fishing)"
         else:
-            player.progression.add_xp(player, 'fishing', 0.5)
-            msg_suffix = "(+0.5 XP Fishing)"
+            xp_got = player.progression.award_action_xp(player, 'fishing', 'fail', fallback=0.5)
+            msg_suffix = f"(+{xp_got:.1f} XP Fishing)"
 
-        # 7. Deliver directly to player inventory or drop at feet
         if len(player.inventory) < player.get_total_inventory_slots():
             player.inventory.append(caught_item)
             if hasattr(player, 'stack_item_in_inventory'):
@@ -608,12 +603,10 @@ def execute_player_fishing(game, rod, water_tile_pos=None):
         if hasattr(game, 'sound_manager'):
             game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=player.rect.center, is_critical=True)
 
-    # Start 2.5s timed fishing action
     player.start_action(
         tr('ui', "Fishing"), 2.5, do_fishing, 
         xp_reward=0, cancel_on_move=True, on_cancel=on_fishing_cancel
     )
-
 
 
 def handle_context_menu_click(game, mouse_pos):
@@ -1403,21 +1396,17 @@ def handle_context_menu_click(game, mouse_pos):
                         if err:
                             display_message(tr('msg', err))
                         else:
-                            is_container = hasattr(item, 'inventory')
                             is_loose_fuel = (getattr(item, 'name', '') == "Fuel Unit")
-                            
                             if is_loose_fuel and hasattr(item, 'load') and item.load <= 0:
                                 remove_from_source(game, item, source, index, container_item)
                             
-                            # Award Mechanics XP for refueling
-                            game.player.progression.add_xp(game.player, 'mechanics', 0.5)
-
+                            xp_amount = game.player.progression.award_action_xp(game.player, 'mechanics', 'refuel', fallback=0.5)
                             if hasattr(game, 'sound_manager'):
                                 game.sound_manager.play_sound('repair.ogg', subdir='craft', game=game, source_pos=game.player.rect.center)
-                            display_message(f"{tr('msg', 'Added')} {int(trans)} {tr('msg', 'fuel units to vehicle.')} (+0.5 XP Mechanics)")
+                            display_message(f"{tr('msg', 'Added')} {int(trans)} {tr('msg', 'fuel units to vehicle.')} (+{xp_amount:.1f} XP Mechanics)")
 
                     transfer_time = max(0.4, float(getattr(item, 'load', 1) or 1) * 0.05)
-                    game.player.start_action(tr('ui', "Refueling"), transfer_time, do_refuel_action, xp_reward=0.5)
+                    game.player.start_action(tr('ui', "Refueling"), transfer_time, do_refuel_action, xp_reward=0)
 
                 else:
                     def do_install_action():
@@ -1432,18 +1421,16 @@ def handle_context_menu_click(game, mouse_pos):
                                     game.items_on_ground.append(old_item)
                             veh.update_stats_from_equipment()
 
-                            # Award Mechanics XP for battery, motor, and tires
-                            xp_amount = 1.0
-                            game.player.progression.add_xp(game.player, 'mechanics', xp_amount)
+                            # Look up target-specific XP: motor, battery, tire
+                            slot_target = 'motor' if target_slot == 'motor' else ('battery' if target_slot == 'battery' else ('tire' if target_slot.startswith('tire') else 'mechanics'))
+                            xp_amount = game.player.progression.award_action_xp(game.player, 'mechanics', slot_target, fallback=1.0)
 
                             if hasattr(game, 'sound_manager'):
                                 game.sound_manager.play_sound('repair.ogg', subdir='craft', game=game, source_pos=game.player.rect.center)
                             display_message(f"{tr('msg', 'Installed')} {tr('item', removed.name)} {tr('msg', 'into vehicle.')} (+{xp_amount:.1f} XP Mechanics)")
 
                     install_time = 0.5
-                    game.player.start_action(f"{tr('ui', 'Installing')} {tr('item', item.name)}", install_time, do_install_action, xp_reward=0.5)
-
-                clicked_on_menu = True
+                    game.player.start_action(f"{tr('ui', 'Installing')} {tr('item', item.name)}", install_time, do_install_action, xp_reward=0)
 
             elif option in ['Add key', 'Add fuel', 'Add motor', 'Add battery', 'Add tire to']:
                 veh_modal = next((m for m in reversed(game.modals) if m.get('type') == 'vehicle'), None)
@@ -2203,9 +2190,7 @@ def handle_context_menu_click(game, mouse_pos):
                     instant = getattr(core.data.config, 'ALL_VISIBLE', False) or has_app(game, 'open_container_instant')
 
                     if needs_loader and not instant:
-                        agility = game.player.progression.get_level('agility')
-                        open_time = max(0.2, 1.8 - (agility * 0.2))
-
+                        open_time = get_open_container_time(game.player)
                         item.is_opening = True
 
                         def cancel_open():
