@@ -29,6 +29,14 @@ def draw_world(game, surface, offset_x, offset_y, view_w, view_h):
     if map_w == 0 or map_h == 0:
         return
 
+    d_info = getattr(game, 'item_to_destroy', None)
+    p_info = getattr(game, 'item_to_pickup', None)
+    hide_map_layer = False
+    if d_info and d_info.get('target_layer') == 'ground':
+        hide_map_layer = True
+    elif p_info and p_info.get('target_layer') == 'ground':
+        hide_map_layer = True
+
     ground_data = getattr(game, 'ground_data', None)
     if not ground_data and hasattr(game, 'all_ground_layers'):
         ground_data = game.all_ground_layers.get(game.current_layer_index, [])
@@ -85,8 +93,7 @@ def draw_world(game, surface, offset_x, offset_y, view_w, view_h):
                         surface.blit(tm_defs[fallback_key]['image'], (screen_px, screen_py))
 
             # --- B. Base Layer (Walls, Objects) ---
-            # If the tile is shaking, skip here so the dedicated shaking section draws it below
-            if (x, y) not in shaking_tiles and x < len(row_base):
+            if not hide_map_layer and (x, y) not in shaking_tiles and x < len(row_base):
                 b_char = row_base[x]
                 if b_char and b_char != ' ':
                     defn = tm_defs.get(b_char)
@@ -94,7 +101,7 @@ def draw_world(game, surface, offset_x, offset_y, view_w, view_h):
                         surface.blit(defn['image'], (screen_px, screen_py))
 
             # --- C. Light Layer ---
-            if row_light and x < len(row_light):
+            if not hide_map_layer and row_light and x < len(row_light):
                 l_char = row_light[x]
                 if l_char and l_char != ' ':
                     defn = tm_defs.get(l_char)
@@ -102,65 +109,67 @@ def draw_world(game, surface, offset_x, offset_y, view_w, view_h):
                         surface.blit(defn['image'], (screen_px, screen_py))
 
     # --- 4. Draw Placed Barricades over Doors and Windows ---
-    map_name = game.map_manager.current_map_filename
-    if map_name in game.map_states and 'barricades' in game.map_states[map_name]:
-        for (gx, gy), b_data in list(game.map_states[map_name]['barricades'].items()):
-            if (gx, gy) in shaking_tiles:
-                continue
-            screen_px = int(gx * tile_size + offset_x)
-            screen_py = int(gy * tile_size + offset_y)
-            if -tile_size < screen_px < view_w and -tile_size < screen_py < view_h:
-                b_sprite = b_data.get('sprite')
-                if not b_sprite and b_data.get('item_name'):
-                    from core.entities.item.item import Item
-                    item_def = Item.create_from_name(b_data['item_name'])
-                    if item_def and item_def.image:
-                        b_data['sprite'] = item_def.image
-                        b_sprite = item_def.image
-                if b_sprite:
-                    surface.blit(b_sprite, (screen_px, screen_py))
+    if not hide_map_layer:
+        map_name = game.map_manager.current_map_filename
+        if map_name in game.map_states and 'barricades' in game.map_states[map_name]:
+            for (gx, gy), b_data in list(game.map_states[map_name]['barricades'].items()):
+                if (gx, gy) in shaking_tiles:
+                    continue
+                screen_px = int(gx * tile_size + offset_x)
+                screen_py = int(gy * tile_size + offset_y)
+                if -tile_size < screen_px < view_w and -tile_size < screen_py < view_h:
+                    b_sprite = b_data.get('sprite')
+                    if not b_sprite and b_data.get('item_name'):
+                        from core.entities.item.item import Item
+                        item_def = Item.create_from_name(b_data['item_name'])
+                        if item_def and item_def.image:
+                            b_data['sprite'] = item_def.image
+                            b_sprite = item_def.image
+                    if b_sprite:
+                        surface.blit(b_sprite, (screen_px, screen_py))
 
     # --- 5. Draw Shaking Tiles (Doors, Windows, and Barricades) ---
-    for pos, start_t in shaking_tiles.items():
-        gx, gy = pos
-        screen_px = int(gx * tile_size + offset_x)
-        screen_py = int(gy * tile_size + offset_y)
-        
-        if -tile_size < screen_px < view_w and -tile_size < screen_py < view_h:
-            b_key = game.map_data[gy][gx]
-            if b_key and b_key != ' ':
-                b_def = tm_defs.get(b_key)
-                if b_def:
-                    draw_x, draw_y = screen_px, screen_py
-                    if current_time - start_t > 0.2:
-                        tiles_to_remove.append(pos)
-                    else:
-                        draw_x += random.randint(-2, 2)
-                        draw_y += random.randint(-2, 2)
+    if not hide_map_layer:
+        for pos, start_t in shaking_tiles.items():
+            gx, gy = pos
+            screen_px = int(gx * tile_size + offset_x)
+            screen_py = int(gy * tile_size + offset_y)
+            
+            if -tile_size < screen_px < view_w and -tile_size < screen_py < view_h:
+                b_key = game.map_data[gy][gx]
+                if b_key and b_key != ' ':
+                    b_def = tm_defs.get(b_key)
+                    if b_def:
+                        draw_x, draw_y = screen_px, screen_py
+                        if current_time - start_t > 0.2:
+                            tiles_to_remove.append(pos)
+                        else:
+                            draw_x += random.randint(-2, 2)
+                            draw_y += random.randint(-2, 2)
 
-                    # Blit ground underneath to prevent ghost visual artifacts
-                    try:
-                        g_char = game.all_ground_layers[game.current_layer_index][gy][gx]
-                        g_def = tm_defs.get(g_char)
-                        if g_def:
-                            surface.blit(g_def['image'], (screen_px, screen_py))
-                    except Exception:
-                        pass
+                        # Blit ground underneath to prevent ghost visual artifacts
+                        try:
+                            g_char = game.all_ground_layers[game.current_layer_index][gy][gx]
+                            g_def = tm_defs.get(g_char)
+                            if g_def:
+                                surface.blit(g_def['image'], (screen_px, screen_py))
+                        except Exception:
+                            pass
 
-                    surface.blit(b_def['image'], (draw_x, draw_y))
+                        surface.blit(b_def['image'], (draw_x, draw_y))
 
-                    # If this tile is barricaded, draw the shaking barricade sprite on top
-                    barricade = game.map_manager.get_barricade(gx, gy)
-                    if barricade:
-                        b_sprite = barricade.get('sprite')
-                        if not b_sprite and barricade.get('item_name'):
-                            from core.entities.item.item import Item
-                            item_def = Item.create_from_name(barricade['item_name'])
-                            if item_def and item_def.image:
-                                barricade['sprite'] = item_def.image
-                                b_sprite = item_def.image
-                        if b_sprite:
-                            surface.blit(b_sprite, (draw_x, draw_y))
+                        # If this tile is barricaded, draw the shaking barricade sprite on top
+                        barricade = game.map_manager.get_barricade(gx, gy)
+                        if barricade:
+                            b_sprite = barricade.get('sprite')
+                            if not b_sprite and barricade.get('item_name'):
+                                from core.entities.item.item import Item
+                                item_def = Item.create_from_name(barricade['item_name'])
+                                if item_def and item_def.image:
+                                    barricade['sprite'] = item_def.image
+                                    b_sprite = item_def.image
+                            if b_sprite:
+                                surface.blit(b_sprite, (draw_x, draw_y))
     
     for k in tiles_to_remove:
         if k in game.map_manager.shaking_tiles:

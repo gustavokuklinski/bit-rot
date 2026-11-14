@@ -488,7 +488,11 @@ class PlayerActions:
         item_type = getattr(item, 'item_type', '')
         
         if getattr(item, 'is_maptile', False) or item_type in ('maptile', 'maptile_container'):
-            return ['Place']
+            is_on_player = (source in ('inventory', 'belt', 'gear')) or (source == 'container' and container_item and is_container_on_player(container_item, self))
+            if is_on_player:
+                return ['Place', 'Send to', 'Drop']
+            else:
+                return ['Grab', 'Send to']
         
         if item_type == 'vehicle':
              options.append("Inspect"); return options

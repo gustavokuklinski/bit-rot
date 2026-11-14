@@ -905,7 +905,20 @@ def handle_keyboard_events(game, event, action_triggered=None):
             toggle_help_modal(game)
             return
 
-        if event.key == pygame.K_F2 or event.key == pygame.K_ESCAPE:
+        if event.key == pygame.K_ESCAPE:
+            if getattr(game, 'item_to_place', None) or getattr(game, 'item_to_destroy', None) or getattr(game, 'item_to_pickup', None) or getattr(game, 'item_to_plant', None):
+                game.item_to_place = None
+                game.item_to_destroy = None
+                game.item_to_pickup = None
+                game.item_to_plant = None
+                return
+            if getattr(game, 'context_menu', {}).get('active', False):
+                game.context_menu['active'] = False
+                return
+            toggle_pause(game)
+            return
+
+        if event.key == pygame.K_F2:
             toggle_pause(game)
             return
 
@@ -942,6 +955,19 @@ def handle_keyboard_events(game, event, action_triggered=None):
             return
 
         if event.key == pygame.K_TAB:
+            if getattr(game, 'item_to_destroy', None) or getattr(game, 'item_to_pickup', None):
+                mode_dict = game.item_to_destroy if getattr(game, 'item_to_destroy', None) else game.item_to_pickup
+                cur_layer = mode_dict.get('target_layer', 'map')
+                cycle = ['ground', 'map', 'roof']
+                next_layer = cycle[(cycle.index(cur_layer) + 1) % len(cycle)] if cur_layer in cycle else 'map'
+                mode_dict['target_layer'] = next_layer
+                layer_lbl = {'roof': 'Roof [R]', 'map': 'Map [M]', 'ground': 'Ground [G]'}.get(next_layer, next_layer.capitalize())
+                mode_name = tr('ui', 'Destroy') if getattr(game, 'item_to_destroy', None) else tr('ui', 'Pickup')
+                display_message(game, f"{mode_name} {tr('ui', 'layer:')} {layer_lbl}")
+                if hasattr(game, 'sound_manager'):
+                    game.sound_manager.play_ui_hover()
+                return
+
             toggle_default_ui(game)
             return
 
@@ -1011,7 +1037,20 @@ def handle_keyboard_events(game, event, action_triggered=None):
         elif action_triggered == 'toggle_gear': toggle_gear_modal(game)
         elif action_triggered == 'toggle_nearby': toggle_nearby_modal(game)
         elif action_triggered == 'toggle_slots': toggle_slots_modal(game)
-        elif action_triggered == 'toggle_modals': toggle_default_ui(game)
+        elif action_triggered == 'toggle_modals':
+            if getattr(game, 'item_to_destroy', None) or getattr(game, 'item_to_pickup', None):
+                mode_dict = game.item_to_destroy if getattr(game, 'item_to_destroy', None) else game.item_to_pickup
+                cur_layer = mode_dict.get('target_layer', 'map')
+                cycle = ['ground', 'map', 'roof']
+                next_layer = cycle[(cycle.index(cur_layer) + 1) % len(cycle)] if cur_layer in cycle else 'map'
+                mode_dict['target_layer'] = next_layer
+                layer_lbl = {'roof': 'Roof [R]', 'map': 'Map [M]', 'ground': 'Ground [G]'}.get(next_layer, next_layer.capitalize())
+                mode_name = tr('ui', 'Destroy') if getattr(game, 'item_to_destroy', None) else tr('ui', 'Pickup')
+                display_message(game, f"{mode_name} {tr('ui', 'layer:')} {layer_lbl}")
+                if hasattr(game, 'sound_manager'):
+                    game.sound_manager.play_ui_hover()
+                return
+            toggle_default_ui(game)
         elif action_triggered == 'toggle_messages':
             # Only F10 / action toggles messages; never let 'M' trigger it
             if not (event.type == pygame.KEYDOWN and event.key == pygame.K_m):

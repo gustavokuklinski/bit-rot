@@ -1183,12 +1183,6 @@ def handle_right_click(game, mouse_pos):
         else:
             game.context_menu['options'] = new_options
         
-        if getattr(clicked_item, 'is_maptile', False) or getattr(clicked_item, 'item_type', '') in ('maptile', 'maptile_container'):
-            game.context_menu['options'] = ['Place']
-            game.context_menu['rects'] = []
-            game.context_menu['action_map'] = []
-            return
-
         game.context_menu['rects'] = []
         game.context_menu['action_map'] = []
         return

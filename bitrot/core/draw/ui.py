@@ -57,7 +57,12 @@ def is_item_allowed_in_slot(item, slot_type, index_or_name, target_obj=None):
     if not item:
         return False
 
-    if getattr(item, 'is_maptile', False) or getattr(item, 'item_type', '') in ('maptile', 'maptile_container'):
+    is_maptile = getattr(item, 'is_maptile', False) or getattr(item, 'item_type', '') in ('maptile', 'maptile_container')
+    if is_maptile:
+        if slot_type == 'inventory':
+            return True
+        if slot_type == 'container' and target_obj and (getattr(target_obj, 'item_type', '') == 'maptile_container' or getattr(target_obj, 'is_maptile', False)):
+            return True
         return False
 
     is_liquid = bool(getattr(item, 'liquid', False))
@@ -1212,10 +1217,24 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
                     has_m = bool(getattr(game, 'map_data', None) and 0 <= ty < len(game.map_data) and 0 <= tx < len(game.map_data[0]) and game.map_data[ty][tx] != ' ')
                     has_g = bool(getattr(game, 'ground_data', None) and 0 <= ty < len(game.ground_data) and 0 <= tx < len(game.ground_data[0]) and game.ground_data[ty][tx] != ' ')
 
+                    place_loc = getattr(item, 'map_location', '_map')
+                    focus_layer = 'roof' if place_loc == '_roof' else ('ground' if place_loc == '_ground' else 'map')
+
                     tags = []
-                    if has_r: tags.append(('R', (255, 215, 0)))    # Gold for Roof
-                    if has_m: tags.append(('M', (220, 220, 220)))  # Light gray for Map
-                    if has_g: tags.append(('G', (100, 220, 100)))  # Light green for Ground
+                    if has_r:
+                        tags.append(('[R]' if focus_layer == 'roof' else 'R', (255, 215, 0)))
+                    elif focus_layer == 'roof':
+                        tags.append(('[R]', (120, 100, 50)))
+
+                    if has_m:
+                        tags.append(('[M]' if focus_layer == 'map' else 'M', (220, 220, 220)))
+                    elif focus_layer == 'map':
+                        tags.append(('[M]', (100, 100, 100)))
+
+                    if has_g:
+                        tags.append(('[G]' if focus_layer == 'ground' else 'G', (100, 220, 100)))
+                    elif focus_layer == 'ground':
+                        tags.append(('[G]', (50, 100, 50)))
 
                     if tags:
                         total_tw = sum(font_14.size(ch)[0] for ch, _ in tags) + (len(tags) - 1)
@@ -1291,8 +1310,17 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
                     has_r = bool(getattr(game, 'roof_data', None) and 0 <= ty < len(game.roof_data) and 0 <= tx < len(game.roof_data[0]) and game.roof_data[ty][tx] != ' ')
                     has_m = bool(getattr(game, 'map_data', None) and 0 <= ty < len(game.map_data) and 0 <= tx < len(game.map_data[0]) and game.map_data[ty][tx] != ' ')
                     tags = []
-                    if has_r: tags.append(('R', (255, 215, 0)))
-                    if has_m: tags.append(('M', (220, 220, 220)))
+                    if has_r:
+                        tags.append(('[R]' if target_layer == 'roof' else 'R', (255, 215, 0)))
+                    elif target_layer == 'roof':
+                        tags.append(('[R]', (120, 100, 50)))
+
+                    if has_m:
+                        tags.append(('[M]' if target_layer == 'map' else 'M', (220, 220, 220)))
+                    elif target_layer == 'map':
+                        tags.append(('[M]', (100, 100, 100)))
+
+                    
 
                     if tags:
                         total_tw = sum(font_14.size(ch)[0] for ch, _ in tags) + (len(tags) - 1)
@@ -1364,9 +1392,20 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
                     has_g = bool(getattr(game, 'ground_data', None) and 0 <= ty < len(game.ground_data) and 0 <= tx < len(game.ground_data[0]) and game.ground_data[ty][tx] != ' ')
 
                     tags = []
-                    if has_r: tags.append(('R', (255, 215, 0)))
-                    if has_m: tags.append(('M', (220, 220, 220)))
-                    if has_g: tags.append(('G', (100, 220, 100)))
+                    if has_r:
+                        tags.append(('[R]' if target_layer == 'roof' else 'R', (255, 215, 0)))
+                    elif target_layer == 'roof':
+                        tags.append(('[R]', (120, 100, 50)))
+
+                    if has_m:
+                        tags.append(('[M]' if target_layer == 'map' else 'M', (220, 220, 220)))
+                    elif target_layer == 'map':
+                        tags.append(('[M]', (100, 100, 100)))
+
+                    if has_g:
+                        tags.append(('[G]' if target_layer == 'ground' else 'G', (100, 220, 100)))
+                    elif target_layer == 'ground':
+                        tags.append(('[G]', (50, 100, 50)))
 
                     if tags:
                         total_tw = sum(font_14.size(ch)[0] for ch, _ in tags) + (len(tags) - 1)

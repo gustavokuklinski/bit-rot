@@ -158,6 +158,9 @@ def handle_mouse_down(game, event, mouse_pos):
                         if hasattr(game, 'sound_manager'):
                             game.sound_manager.play_sound('place.ogg', subdir='items', game=game, is_critical=True)
                         display_message(f"{tr('msg', 'Placed')} {tr('item', item.name)}.")
+                        if hasattr(game.player, 'progression'):
+                            game.player.progression.award_action_xp(game.player, 'builder', 'place', fallback=1.0)
+                            game.player.progression.award_action_xp(game.player, 'maintenance', 'place', fallback=1.0)
                         game.item_to_place = None
                         return
 
@@ -213,7 +216,9 @@ def handle_mouse_down(game, event, mouse_pos):
                             if hasattr(game, 'sound_manager'):
                                 game.sound_manager.play_sound('place.ogg', subdir='items', game=game, is_critical=True)
                             display_message(f"{tr('msg', 'Placed')} {tr('item', item.name)}.")
-
+                            if hasattr(game.player, 'progression'):
+                                game.player.progression.award_action_xp(game.player, 'builder', 'place', fallback=1.0)
+                                game.player.progression.award_action_xp(game.player, 'maintenance', 'place', fallback=1.0)
                 game.item_to_place = None
                 return
 
@@ -314,6 +319,9 @@ def handle_mouse_down(game, event, mouse_pos):
                         'radius': 4,
                         'type': 'hit_puff'
                     })
+                if hasattr(game.player, 'progression'):
+                    game.player.progression.award_action_xp(game.player, 'builder', 'destroy', fallback=1.0)
+                    game.player.progression.award_action_xp(game.player, 'maintenance', 'destroy', fallback=1.0)
 
             # 1. Destroy Roof
             if target_layer == 'roof':
@@ -426,6 +434,10 @@ def handle_mouse_down(game, event, mouse_pos):
                         'radius': 4,
                         'type': 'hit_puff'
                     })
+                    
+                if hasattr(game.player, 'progression'):
+                    game.player.progression.award_action_xp(game.player, 'builder', 'pickup', fallback=1.0)
+                    game.player.progression.award_action_xp(game.player, 'maintenance', 'pickup', fallback=1.0)
 
             def _give_maptile_item(tile_char, layer_type):
                 t_def = game.tile_manager.definitions.get(tile_char, {}) if hasattr(game, 'tile_manager') else {}

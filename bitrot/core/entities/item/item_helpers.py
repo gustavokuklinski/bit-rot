@@ -206,6 +206,11 @@ def can_container_accept_item(container, item):
         if check_recursive_containment(item, container):
             return False
 
+    is_item_maptile = getattr(item, 'is_maptile', False) or getattr(item, 'item_type', '') in ('maptile', 'maptile_container')
+    is_cont_maptile = getattr(container, 'item_type', '') == 'maptile_container' or getattr(container, 'is_maptile', False)
+    if is_item_maptile and not is_cont_maptile:
+        return False
+
     item_types = get_item_types(item)
 
     # 1. Disallow Check (Blacklist)

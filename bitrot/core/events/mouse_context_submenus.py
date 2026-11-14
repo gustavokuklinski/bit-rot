@@ -238,6 +238,36 @@ def build_send_to_submenu(clicked_item, click_source, click_container_item, game
     # Loose liquids must spill when sent to raw inventory
     is_liquid = is_item_liquid(clicked_item)
 
+    is_maptile = getattr(clicked_item, 'is_maptile', False) or getattr(clicked_item, 'item_type', '') in ('maptile', 'maptile_container')
+
+    if is_maptile:
+        if click_source != 'inventory':
+            sub_opts.append('Inventory')
+            display_map['Inventory'] = tr('ui', 'Inventory')
+            tooltip_map['Inventory'] = f"{tr('ui', 'Send to')} {tr('ui', 'Inventory')}"
+
+        for nearby_obj in game.find_nearby_containers():
+            if getattr(nearby_obj, 'item_type', '') == 'maptile_container' or getattr(nearby_obj, 'is_maptile', False):
+                if hasattr(nearby_obj, 'inventory') and nearby_obj.inventory is not None:
+                    is_closed = not getattr(nearby_obj, 'is_opened', False)
+                    if not is_closed and nearby_obj is not click_container_item:
+                        c_cap = getattr(nearby_obj, 'capacity', 0) or 0
+                        if c_cap > 0 and len(nearby_obj.inventory) < c_cap:
+                            c_key = str(getattr(nearby_obj, 'id', id(nearby_obj)))
+                            sub_opts.append(c_key)
+                            c_name = getattr(nearby_obj, 'name', tr('ui', 'Container'))
+                            display_map[c_key] = f"{c_name} ({len(nearby_obj.inventory)}/{c_cap})"
+                            tooltip_map[c_key] = f"{tr('ui', 'Location:')} {tr('ui', 'Nearby')} > {c_name}"
+
+        if sub_opts:
+            return {
+                'label': 'Send to',
+                'sub': sub_opts,
+                'display_names': display_map,
+                'tooltips': tooltip_map
+            }
+        return None
+
     if click_source == 'vehicle_equipment':
         # Vehicle parts can ONLY be sent to inventory. Never directly to Ground.
         sub_opts = ['Inventory']

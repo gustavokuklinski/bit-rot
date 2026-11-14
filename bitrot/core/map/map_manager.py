@@ -949,6 +949,10 @@ class MapManager:
                 display_message(f"{tr('tile', tile_name)} {tr('msg', 'destroyed!')}")
 
             self._replace_tile(grid_x, grid_y, char, target_char)
+            if is_player and getattr(self.game, 'player', None):
+                if hasattr(self.game.player, 'progression'):
+                    self.game.player.progression.award_action_xp(self.game.player, 'builder', 'destroy', fallback=1.0)
+                    self.game.player.progression.award_action_xp(self.game.player, 'maintenance', 'destroy', fallback=1.0)
         return True
 
     def _replace_tile(self, grid_x, grid_y, old_char, new_char):

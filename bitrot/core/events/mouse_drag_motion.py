@@ -132,10 +132,6 @@ def handle_left_click_drag_candidate(game, mouse_pos):
     if not topmost_modal:
         return
 
-    hovered_target = find_item_at_pos(game, mouse_pos)
-    if hovered_target and (getattr(hovered_target, 'is_maptile', False) or getattr(hovered_target, 'item_type', '') in ('maptile', 'maptile_container')):
-        return
-
     modal = topmost_modal
     if modal['type'] == 'vehicle' and modal.get('active_tab') == 'Mechanics':
         if 'equipment_rects' in modal:
@@ -377,10 +373,7 @@ def handle_mouse_motion(game, event, mouse_pos):
 
     if game.drag_candidate and not game.is_dragging:
         item_to_drag, origin_tuple = game.drag_candidate
-        if getattr(item_to_drag, 'is_maptile', False) or getattr(item_to_drag, 'item_type', '') in ('maptile', 'maptile_container'):
-            game.drag_candidate = None
-            return
-            
+        
         dist = math.hypot(mouse_pos[0] - game.drag_start_pos[0], mouse_pos[1] - game.drag_start_pos[1])
         if dist > game.DRAG_THRESHOLD:
             game.is_dragging = True

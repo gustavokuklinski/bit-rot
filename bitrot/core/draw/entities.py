@@ -50,7 +50,14 @@ def draw_entities(game, surface, offset_x, offset_y, view_w, view_h, screen_rect
 
     curr_layer = getattr(game, 'current_layer_index', 1)
 
+    d_info = getattr(game, 'item_to_destroy', None)
+    p_info = getattr(game, 'item_to_pickup', None)
+    hide_map_layer = bool((d_info and d_info.get('target_layer') == 'ground') or 
+                          (p_info and p_info.get('target_layer') == 'ground'))
+
     for container in game.visible_containers:
+        if hide_map_layer and (getattr(container, 'item_type', '') == 'maptile_container' or getattr(container, 'is_maptile', False)):
+            continue
         if getattr(container, 'layer', 1) != curr_layer:
             if not (getattr(container, 'item_type', '') == 'vehicle' and curr_layer == 1):
                 continue

@@ -50,7 +50,31 @@ def draw_world_effects(game, surface, offset_x, offset_y, view_w, view_h):
 
     roof_hide_radius = 4 if is_under_roof else 1
 
-    if getattr(game, 'roof_data', None):
+    d_info = getattr(game, 'item_to_destroy', None)
+    p_info = getattr(game, 'item_to_pickup', None)
+    place_info = getattr(game, 'item_to_place', None)
+
+    hide_roofs = False
+    show_all_roofs = False
+
+    if d_info:
+        t_layer = d_info.get('target_layer', 'map')
+        if t_layer in ('map', 'ground'):
+            hide_roofs = True
+        elif t_layer == 'roof':
+            show_all_roofs = True
+    elif p_info:
+        t_layer = p_info.get('target_layer', 'map')
+        if t_layer in ('map', 'ground'):
+            hide_roofs = True
+        elif t_layer == 'roof':
+            show_all_roofs = True
+    elif place_info:
+        item = place_info.get('item')
+        if getattr(item, 'is_maptile', False) and getattr(item, 'map_location', '_map') == '_roof':
+            show_all_roofs = True
+
+    if getattr(game, 'roof_data', None) and not hide_roofs:
         chunk_size = getattr(game, 'CHUNK_SIZE', 128)
         map_h = len(game.map_data) if hasattr(game, 'map_data') and game.map_data else 0
         map_w = len(game.map_data[0]) if map_h > 0 else 0
@@ -72,9 +96,21 @@ def draw_world_effects(game, surface, offset_x, offset_y, view_w, view_h):
         for gy in range(min_grid_y, max_grid_y):
             for gx in range(min_grid_x, max_grid_x):
                 r_key = game.roof_data[gy][gx]
-                if r_key and r_key != ' ' and not (hide_min_tx <= gx <= hide_max_tx and hide_min_ty <= gy <= hide_max_ty):
-                    r_def = tm.definitions.get(r_key)
-                    if r_def: surface.blit(r_def['image'], (int(gx * TILE_SIZE + offset_x), int(gy * TILE_SIZE + offset_y)))
+                if r_key and r_key != ' ':
+                    if show_all_roofs or not (hide_min_tx <= gx <= hide_max_tx and hide_min_ty <= gy <= hide_max_ty):
+                        r_def = tm.definitions.get(r_key)
+                        if r_def:
+                            img = r_def['image']
+                            if show_all_roofs and gx == player_tile_x and gy == player_tile_y:
+                                if not hasattr(game, '_roof_player_tile_cache'):
+                                    game._roof_player_tile_cache = {}
+                                cache_k = (r_key, id(img))
+                                if cache_k not in game._roof_player_tile_cache:
+                                    t_img = img.copy()
+                                    t_img.fill((255, 255, 255, 140), special_flags=pygame.BLEND_RGBA_MULT)
+                                    game._roof_player_tile_cache[cache_k] = t_img
+                                img = game._roof_player_tile_cache[cache_k]
+                            surface.blit(img, (int(gx * TILE_SIZE + offset_x), int(gy * TILE_SIZE + offset_y)))
 
     SPLASH_COLOR = (139, 0, 0)
     current_time_ms = pygame.time.get_ticks()
