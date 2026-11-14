@@ -34,6 +34,21 @@
             "target": "durability_save_chance",
             "value": 2.5,
             "type": "flat"
+          },
+          {
+            "target": "place",
+            "value": 0.2,
+            "type": "flat"
+          },
+          {
+            "target": "destroy",
+            "value": 0.1,
+            "type": "flat"
+          },
+          {
+            "target": "pickup",
+            "value": 0.2,
+            "type": "flat"
           }
         ]
       },
@@ -112,6 +127,21 @@
             "target": "durability_save_chance",
             "value": 1.0,
             "type": "flat"
+          },
+          {
+            "target": "place",
+            "value": 0.1,
+            "type": "flat"
+          },
+          {
+            "target": "destroy",
+            "value": 0.1,
+            "type": "flat"
+          },
+          {
+            "target": "pickup",
+            "value": 0.1,
+            "type": "flat"
           }
         ]
       },
@@ -129,6 +159,21 @@
             "target": "xp_gain",
             "value": 0.02,
             "type": "multiplier_add"
+          },
+          {
+            "target": "place",
+            "value": 0.5,
+            "type": "flat"
+          },
+          {
+            "target": "destroy",
+            "value": 0.1,
+            "type": "flat"
+          },
+          {
+            "target": "pickup",
+            "value": 0.2,
+            "type": "flat"
           }
         ]
       },

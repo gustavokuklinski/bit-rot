@@ -160,6 +160,7 @@ def handle_mouse_down(game, event, mouse_pos):
                         display_message(f"{tr('msg', 'Placed')} {tr('item', item.name)}.")
                         if hasattr(game.player, 'progression'):
                             game.player.progression.award_action_xp(game.player, 'builder', 'place', fallback=1.0)
+                            game.player.progression.award_action_xp(game.player, 'intelligence', 'place', fallback=1.0)
                             game.player.progression.award_action_xp(game.player, 'maintenance', 'place', fallback=1.0)
                         game.item_to_place = None
                         return
@@ -218,6 +219,7 @@ def handle_mouse_down(game, event, mouse_pos):
                             display_message(f"{tr('msg', 'Placed')} {tr('item', item.name)}.")
                             if hasattr(game.player, 'progression'):
                                 game.player.progression.award_action_xp(game.player, 'builder', 'place', fallback=1.0)
+                                game.player.progression.award_action_xp(game.player, 'intelligence', 'place', fallback=1.0)
                                 game.player.progression.award_action_xp(game.player, 'maintenance', 'place', fallback=1.0)
                 game.item_to_place = None
                 return
@@ -321,6 +323,7 @@ def handle_mouse_down(game, event, mouse_pos):
                     })
                 if hasattr(game.player, 'progression'):
                     game.player.progression.award_action_xp(game.player, 'builder', 'destroy', fallback=1.0)
+                    game.player.progression.award_action_xp(game.player, 'intelligence', 'destroy', fallback=1.0)
                     game.player.progression.award_action_xp(game.player, 'maintenance', 'destroy', fallback=1.0)
 
             # 1. Destroy Roof
@@ -434,9 +437,10 @@ def handle_mouse_down(game, event, mouse_pos):
                         'radius': 4,
                         'type': 'hit_puff'
                     })
-                    
+
                 if hasattr(game.player, 'progression'):
                     game.player.progression.award_action_xp(game.player, 'builder', 'pickup', fallback=1.0)
+                    game.player.progression.award_action_xp(game.player, 'intelligence', 'pickup', fallback=1.0)
                     game.player.progression.award_action_xp(game.player, 'maintenance', 'pickup', fallback=1.0)
 
             def _give_maptile_item(tile_char, layer_type):
