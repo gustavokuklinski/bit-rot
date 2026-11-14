@@ -2184,6 +2184,20 @@ def handle_context_menu_click(game, mouse_pos):
                         display_message(tr('msg', "You slept for 8 hours and feel refreshed."))
                 clicked_on_menu = True
 
+            elif option == 'Destroy':
+                target_layer = target_sub_slot or 'map'
+                game.item_to_place = None
+                game.item_to_destroy = {
+                    'item': item,
+                    'source': source,
+                    'index': index,
+                    'container': container_item,
+                    'target_layer': target_layer  # 'roof', 'map', or 'ground'
+                }
+                layer_lbl = {'roof': 'Roof (R)', 'map': 'Map (M)', 'ground': 'Ground (G)'}.get(target_layer, target_layer.capitalize())
+                display_message(f"{tr('ui', 'Select tile to destroy on')} {layer_lbl}.")
+                clicked_on_menu = True
+
             elif option == 'Write':
                 if getattr(item, 'item_type', '') != 'text' or not getattr(item, 'can_write', False):
                     display_message(tr('msg', "Cannot write on this item."))

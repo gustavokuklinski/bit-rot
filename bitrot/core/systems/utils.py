@@ -49,6 +49,9 @@ def teleport_player_to_chunk(game, dest_gx, dest_gy, dest_layer=1):
         clean_vehicles = [v for v in game.map_manager.vehicles if v != getattr(game.player, 'vehicle', None)]
         game.map_states[current_map]['vehicles'] = clean_vehicles
 
+    if hasattr(game, 'map_manager') and hasattr(game.map_manager, 'save_map_to_file'):
+        game.map_manager.save_map_to_file(game.map_manager.map_folder)
+
     new_map = f"map_L{dest_layer}_{dest_gx}_{dest_gy}_map.csv"
 
     # Generate chunk on demand if needed

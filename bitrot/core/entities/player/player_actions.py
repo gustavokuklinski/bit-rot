@@ -141,7 +141,7 @@ class PlayerActions:
 
         from core.entities.item.item_helpers import is_infinite_liquid_source
         is_infinite = container_item and is_infinite_liquid_source(container_item) and getattr(item, 'liquid', False)
-        
+
         if is_infinite:
             item.load = getattr(item, 'capacity', 100) or 100
 
@@ -487,6 +487,9 @@ class PlayerActions:
         options = []
         item_type = getattr(item, 'item_type', '')
         
+        if getattr(item, 'is_maptile', False) or item_type in ('maptile', 'maptile_container'):
+            return ['Place']
+        
         if item_type == 'vehicle':
              options.append("Inspect"); return options
         if isinstance(item, Corpse):
@@ -562,6 +565,7 @@ class PlayerActions:
             options.append('Equip')
             if item_type == 'weapon_ranged': options.append('Reload')
             if item_type == 'weapon_ranged' and getattr(item, 'load', None) is not None and getattr(item, 'load', 0) > 0: options.append('Get bullets')
+            if getattr(item, 'destroy_tile', False): options.append('Destroy')
         elif item_type in ['container', 'container_disposable']:
             options.append('Open')
             options.append('Equip')

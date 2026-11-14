@@ -21,7 +21,8 @@ class CraftingCraftTab:
         for r in recipes:
             if getattr(r, 'craft_type', 'create') in ('repair', 'dismantle', 'cook'):
                 continue
-            # Exclude food and drink from generic Craft tab
+            if getattr(r, 'is_building', False) or getattr(r, 'recipe_type', '') in ('maptile', 'maptile_container') or str(getattr(r, 'recipe_type', '')).startswith('maptile') or getattr(r, 'map_location', None) is not None:
+                continue
             if getattr(r, 'recipe_type', '') in ('consumable_food', 'consumable_drink'):
                 continue
             if hasattr(r, 'extra_ingredients') and len(r.extra_ingredients) > 0:

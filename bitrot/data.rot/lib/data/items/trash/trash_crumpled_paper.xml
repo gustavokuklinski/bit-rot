@@ -1,0 +1,6 @@
+<item name="Crumpled Paper" type="trash" allow_belt="false" tip="Use to craft">
+    <properties>
+        <sprite file="trash/trash_eraser.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

@@ -1108,11 +1108,26 @@ def handle_right_click(game, mouse_pos):
                     new_options.append(install_sub)
                 continue
 
-            if opt == 'Equip':
-                equip_sub = build_equip_submenu(clicked_item, click_source, game)
-                if equip_sub:
-                    new_options.append(equip_sub)
-                continue
+            if opt == 'Destroy' or (opt == 'Equip' and getattr(clicked_item, 'destroy_tile', False)):
+                if getattr(clicked_item, 'destroy_tile', False):
+                    destroy_sub = {
+                        'label': 'Destroy',
+                        'sub': ['roof', 'map', 'ground'],
+                        'display_names': {
+                            'roof': 'Roof (R)',
+                            'map': 'Map (M)',
+                            'ground': 'Ground (G)'
+                        },
+                        'tooltips': {
+                            'roof': tr('tooltip', "Destroy roof tile"),
+                            'map': tr('tooltip', "Destroy map / object tile"),
+                            'ground': tr('tooltip', "Destroy ground tile")
+                        }
+                    }
+                    if not any(isinstance(o, dict) and o.get('label') == 'Destroy' for o in new_options):
+                        new_options.append(destroy_sub)
+                if opt == 'Destroy':
+                    continue
 
             elif opt == 'Send to':
                 send_sub = build_send_to_submenu(clicked_item, click_source, click_container_item, game)
@@ -1138,7 +1153,7 @@ def handle_right_click(game, mouse_pos):
                 'Read', 'Write', 'Drink', 'Use', 'Eat', 'Turn on', 'Turn off', 
                 'Toggle Light', 'Crafts', 'Travel to', 'Open door/window', 
                 'Close door/window', 'Barricate', 'Unbarricade',
-                'Add Alias', 'Erase Alias', 'Sleep'
+                'Add Alias', 'Erase Alias', 'Sleep', 'Destroy'
             ]
             filtered_options = []
             for o in new_options:
@@ -1148,6 +1163,12 @@ def handle_right_click(game, mouse_pos):
             game.context_menu['options'] = filtered_options
         else:
             game.context_menu['options'] = new_options
+        
+        if getattr(clicked_item, 'is_maptile', False) or getattr(clicked_item, 'item_type', '') in ('maptile', 'maptile_container'):
+            game.context_menu['options'] = ['Place']
+            game.context_menu['rects'] = []
+            game.context_menu['action_map'] = []
+            return
 
         game.context_menu['rects'] = []
         game.context_menu['action_map'] = []

@@ -57,6 +57,9 @@ def is_item_allowed_in_slot(item, slot_type, index_or_name, target_obj=None):
     if not item:
         return False
 
+    if getattr(item, 'is_maptile', False) or getattr(item, 'item_type', '') in ('maptile', 'maptile_container'):
+        return False
+
     is_liquid = bool(getattr(item, 'liquid', False))
 
     if slot_type == 'belt':
@@ -1228,6 +1231,153 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
                 pygame.draw.rect(game.game_screen, getattr(item, 'color', WHITE), preview_rect)
                 pygame.draw.rect(game.game_screen, (0, 255, 0) if can_place else (255, 0, 0), preview_rect, 2)
         
+        elif getattr(game, 'item_to_place', None):
+            pygame.mouse.set_visible(False)
+            item = getattr(game, 'item_to_place')['item']
+            
+            p_tx = int(game.player.rect.centerx // TILE_SIZE)
+            p_ty = int(game.player.rect.centery // TILE_SIZE)
+            
+            adj_mouse = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+            world_mouse_pos = game.screen_to_world(adj_mouse)
+            mouse_tx = int(world_mouse_pos[0] // TILE_SIZE)
+            mouse_ty = int(world_mouse_pos[1] // TILE_SIZE)
+
+            # Draw Highlight bounding box with R, M, G indicators
+            for dx in range(-1, 2):
+                for dy in range(-1, 2):
+                    tx = p_tx + dx
+                    ty = p_ty + dy
+                    
+                    test_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                    is_free = not any(ob.colliderect(test_rect) for ob in game.obstacles)
+                    
+                    screen_x = ((tx * TILE_SIZE + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
+                    screen_y = ((ty * TILE_SIZE + offset_y) * zoom)
+                    grid_rect = pygame.Rect(screen_x, screen_y, max(1, int(TILE_SIZE * zoom)), max(1, int(TILE_SIZE * zoom)))
+                    
+                    color = (50, 255, 50, 60) if is_free else (255, 50, 50, 60)
+                    grid_surf = pygame.Surface((grid_rect.width, grid_rect.height), pygame.SRCALPHA)
+                    grid_surf.fill(color)
+                    game.game_screen.blit(grid_surf, grid_rect.topleft)
+                    pygame.draw.rect(game.game_screen, (color[0], color[1], color[2]), grid_rect, 1)
+
+                    # Show R, M, G indicators inside the placement square
+                    has_r = bool(getattr(game, 'roof_data', None) and 0 <= ty < len(game.roof_data) and 0 <= tx < len(game.roof_data[0]) and game.roof_data[ty][tx] != ' ')
+                    has_m = bool(getattr(game, 'map_data', None) and 0 <= ty < len(game.map_data) and 0 <= tx < len(game.map_data[0]) and game.map_data[ty][tx] != ' ')
+                    has_g = bool(getattr(game, 'ground_data', None) and 0 <= ty < len(game.ground_data) and 0 <= tx < len(game.ground_data[0]) and game.ground_data[ty][tx] != ' ')
+
+                    tags = []
+                    if has_r: tags.append(('R', (255, 215, 0)))    # Gold for Roof
+                    if has_m: tags.append(('M', (220, 220, 220)))  # Light gray for Map
+                    if has_g: tags.append(('G', (100, 220, 100)))  # Light green for Ground
+
+                    if tags:
+                        total_tw = sum(font_14.size(ch)[0] for ch, _ in tags) + (len(tags) - 1)
+                        cur_tx = grid_rect.centerx - (total_tw // 2)
+                        cur_ty = grid_rect.centery - (font_14.get_height() // 2)
+                        for ch, col in tags:
+                            ts = font_14.render(ch, False, col)
+                            game.game_screen.blit(ts, (cur_tx, cur_ty))
+                            cur_tx += ts.get_width() + 1
+
+            snap_x = mouse_tx * TILE_SIZE
+            snap_y = mouse_ty * TILE_SIZE
+            in_range = abs(mouse_tx - p_tx) <= 1 and abs(mouse_ty - p_ty) <= 1
+
+            is_maptile = getattr(item, 'is_maptile', False) or getattr(item, 'item_type', '') in ('maptile', 'maptile_container')
+            map_loc = getattr(item, 'map_location', '_map')
+
+            if is_maptile and map_loc == '_roof':
+                has_roof = False
+                if getattr(game, 'roof_data', None) and 0 <= mouse_ty < len(game.roof_data) and 0 <= mouse_tx < len(game.roof_data[0]):
+                    has_roof = (game.roof_data[mouse_ty][mouse_tx] != ' ')
+                can_place = in_range and not has_roof
+            else:
+                from core.systems.utils import is_door_or_window_tile
+                is_door_win = is_door_or_window_tile(game, mouse_tx, mouse_ty)
+                test_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
+                is_free = not any(ob.colliderect(test_rect) for ob in game.obstacles) and not is_door_win
+                on_player = test_rect.colliderect(game.player.rect)
+                can_place = in_range and is_free and not on_player
+
+        elif getattr(game, 'item_to_destroy', None):
+            pygame.mouse.set_visible(False)
+            d_info = getattr(game, 'item_to_destroy')
+            target_layer = d_info.get('target_layer', 'map')
+
+            p_tx = int(game.player.rect.centerx // TILE_SIZE)
+            p_ty = int(game.player.rect.centery // TILE_SIZE)
+
+            adj_mouse = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+            world_mouse_pos = game.screen_to_world(adj_mouse)
+            mouse_tx = int(world_mouse_pos[0] // TILE_SIZE)
+            mouse_ty = int(world_mouse_pos[1] // TILE_SIZE)
+
+            # Draw 3x3 destruction range grid with layer indicators
+            for dx in range(-1, 2):
+                for dy in range(-1, 2):
+                    tx = p_tx + dx
+                    ty = p_ty + dy
+
+                    screen_x = ((tx * TILE_SIZE + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
+                    screen_y = ((ty * TILE_SIZE + offset_y) * zoom)
+                    grid_rect = pygame.Rect(screen_x, screen_y, max(1, int(TILE_SIZE * zoom)), max(1, int(TILE_SIZE * zoom)))
+
+                    grid_surf = pygame.Surface((grid_rect.width, grid_rect.height), pygame.SRCALPHA)
+                    grid_surf.fill((200, 50, 50, 40))
+                    game.game_screen.blit(grid_surf, grid_rect.topleft)
+                    pygame.draw.rect(game.game_screen, (200, 50, 50), grid_rect, 1)
+
+                    has_r = bool(getattr(game, 'roof_data', None) and 0 <= ty < len(game.roof_data) and 0 <= tx < len(game.roof_data[0]) and game.roof_data[ty][tx] != ' ')
+                    has_m = bool(getattr(game, 'map_data', None) and 0 <= ty < len(game.map_data) and 0 <= tx < len(game.map_data[0]) and game.map_data[ty][tx] != ' ')
+                    has_g = bool(getattr(game, 'ground_data', None) and 0 <= ty < len(game.ground_data) and 0 <= tx < len(game.ground_data[0]) and game.ground_data[ty][tx] != ' ')
+
+                    tags = []
+                    if has_r: tags.append(('R', (255, 215, 0)))
+                    if has_m: tags.append(('M', (220, 220, 220)))
+                    if has_g: tags.append(('G', (100, 220, 100)))
+
+                    if tags:
+                        total_tw = sum(font_14.size(ch)[0] for ch, _ in tags) + (len(tags) - 1)
+                        cur_tx = grid_rect.centerx - (total_tw // 2)
+                        cur_ty = grid_rect.centery - (font_14.get_height() // 2)
+                        for ch, col in tags:
+                            ts = font_14.render(ch, False, col)
+                            game.game_screen.blit(ts, (cur_tx, cur_ty))
+                            cur_tx += ts.get_width() + 1
+
+            # Hovered target validation
+            in_range = abs(mouse_tx - p_tx) <= 1 and abs(mouse_ty - p_ty) <= 1
+            snap_x = mouse_tx * TILE_SIZE
+            snap_y = mouse_ty * TILE_SIZE
+
+            has_target_tile = False
+            can_destroy = False
+
+            if target_layer == 'roof':
+                has_target_tile = bool(getattr(game, 'roof_data', None) and 0 <= mouse_ty < len(game.roof_data) and 0 <= mouse_tx < len(game.roof_data[0]) and game.roof_data[mouse_ty][mouse_tx] != ' ')
+                can_destroy = in_range and has_target_tile
+            elif target_layer == 'ground':
+                has_target_tile = bool(getattr(game, 'ground_data', None) and 0 <= mouse_ty < len(game.ground_data) and 0 <= mouse_tx < len(game.ground_data[0]) and game.ground_data[mouse_ty][mouse_tx] != ' ')
+                can_destroy = in_range and has_target_tile
+            else:  # 'map'
+                has_target_tile = bool(getattr(game, 'map_data', None) and 0 <= mouse_ty < len(game.map_data) and 0 <= mouse_tx < len(game.map_data[0]) and game.map_data[mouse_ty][mouse_tx] != ' ')
+                tile_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
+                cont = next((c for c in getattr(game, 'containers', []) if hasattr(c, 'rect') and c.rect.colliderect(tile_rect)), None)
+                is_empty_or_no_cont = (cont is None) or (not hasattr(cont, 'inventory')) or (len(cont.inventory) == 0)
+                can_destroy = in_range and has_target_tile and is_empty_or_no_cont
+
+            screen_snap_x = ((snap_x + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
+            screen_snap_y = ((snap_y + offset_y) * zoom)
+            hover_rect = pygame.Rect(screen_snap_x, screen_snap_y, max(1, int(TILE_SIZE * zoom)), max(1, int(TILE_SIZE * zoom)))
+
+            h_col = (255, 30, 30, 90) if can_destroy else (120, 120, 120, 60)
+            h_surf = pygame.Surface((hover_rect.width, hover_rect.height), pygame.SRCALPHA)
+            h_surf.fill(h_col)
+            game.game_screen.blit(h_surf, hover_rect.topleft)
+            pygame.draw.rect(game.game_screen, (255, 40, 40) if can_destroy else (140, 140, 140), hover_rect, 2)
+
         elif getattr(game, 'item_to_plant', None):
             pygame.mouse.set_visible(False)
             seed = getattr(game, 'item_to_plant')['item']
@@ -1270,4 +1420,5 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         fps_surf = font_14.render(f"FPS: {int(game.clock.get_fps())} | Build: {getattr(core.data.config, 'GAME_VERSION', 'Unknown')}", False, (255, 255, 255))
         game.game_screen.blit(fps_surf, fps_surf.get_rect(bottomright=(game.game_screen.get_width() - 5, game.game_screen.get_height() - 5)))
 
+    
     draw_notifications(game.game_screen, game)

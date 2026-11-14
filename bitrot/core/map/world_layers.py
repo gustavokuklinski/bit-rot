@@ -262,6 +262,8 @@ def load_all_map_layers(base_map_filename, master_width=None, master_height=None
         if roof_data:
             roof_data = resize_map_layer(roof_data, target_width, target_height, fill_value=' ') 
             all_roof_layers[i] = roof_data
+        else:
+            all_roof_layers[i] = resize_map_layer([], target_width, target_height, fill_value=' ')
         if light_data:
             light_data = resize_map_layer(light_data, target_width, target_height, fill_value=' ')
             all_light_layers[i] = light_data

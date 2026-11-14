@@ -1,4 +1,4 @@
-<recipe type="maptile" craft="create" output="roof_wooden_01_front_01" map_location="_roof" gain_xp="[agility:0.1, maintenance:0.1]" amount="1" time="0.5">
+<recipe type="maptile" craft="create" output="Wooden Roof Tile" map_location="_roof" gain_xp="[agility:0.1, maintenance:0.1]" amount="1" time="0.5">
     <ingredient name="Plank" destroy="true" amount="6" />
     <ingredient name="Nails" destroy="true" amount="12" />
     <ingredient name="[Hammer, Primitive Hammer]" destroy="false" amount="1" />

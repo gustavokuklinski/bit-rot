@@ -39,6 +39,10 @@ def load_map(game, map_filename):
     game.all_map_layers.clear()
     game.all_ground_layers.clear()
     game.all_spawn_layers.clear()
+    if hasattr(game, 'all_roof_layers'):
+        game.all_roof_layers.clear()
+    if hasattr(game, 'all_light_layers'):
+        game.all_light_layers.clear()
     game.layer_items.clear()
     game.layer_zombies.clear()
 

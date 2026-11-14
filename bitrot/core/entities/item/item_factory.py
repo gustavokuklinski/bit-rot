@@ -391,12 +391,19 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
         from core.messages import _game_instance
         g = _game_instance
         if g and hasattr(g, 'tile_manager') and hasattr(g.tile_manager, 'definitions'):
-            for t_def in g.tile_manager.definitions.values():
+            for char_key, t_def in g.tile_manager.definitions.items():
                 t_name = t_def.get('name', '')
-                if t_name and t_name.lower().strip() == actual_name.lower().strip():
-                    item = cls(actual_name, item_type='maptile')
+                if (t_name and t_name.lower().strip() == actual_name.lower().strip()) or (char_key.lower().strip() == actual_name.lower().strip()):
+                    t_type = t_def.get('type')
+                    itype = 'maptile_container' if t_type == 'maptile_container' else 'maptile'
+                    item = cls(actual_name, item_type=itype)
                     item.image = t_def.get('image')
                     item.is_maptile = True
+                    item.tile_char = char_key
+                    item.tile_def = t_def
+                    if itype == 'maptile_container':
+                        item.capacity = t_def.get('capacity', 20)
+                        item.inventory = []
                     return item
 
         if not silent:
@@ -562,6 +569,8 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
     can_write = template.get('can_write', False)
     text_length = template.get('text_length', 0)
 
+    destroy_tile = template.get('destroy_tile', False)
+    
     new_item = cls(
         actual_name, template['type'], durability=durability, load=load, 
         capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, 
@@ -582,7 +591,8 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
         allow_type=allow_type, disallow_type=disallow_type,
         allow_use=allow_use, hotbar=hotbar,
         harvest=harvest_data, harvest_fertilizer=harvest_fertilizer,
-        can_write=can_write, text_length=text_length
+        can_write=can_write, text_length=text_length,
+        destroy_tile=destroy_tile
     )
 
     # Use shared cache instead of item.image.copy()

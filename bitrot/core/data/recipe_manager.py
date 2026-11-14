@@ -8,7 +8,8 @@ from core.systems.mod_manager import mod_manager
 class Recipe:
     def __init__(self, output_name, magazine, time_required, ingredients, output_amount=1, 
                  craft_type="create", req_level=None, gain_xp=None, results=None,
-                 extra_ingredients=None, recipe_type="", is_cooking=False, effects=None):
+                 extra_ingredients=None, recipe_type="", is_cooking=False, effects=None,
+                 map_location=None, is_building=False):
         self.output_name = output_name
         self.magazine = magazine
         self.time_required = float(time_required)
@@ -22,6 +23,8 @@ class Recipe:
         self.recipe_type = recipe_type
         self.is_cooking = is_cooking
         self.effects = effects if effects else []
+        self.map_location = map_location
+        self.is_building = is_building
 
 class RecipeManager:
     RECIPES = []
@@ -58,14 +61,14 @@ class RecipeManager:
         return [raw_clean]
 
     @staticmethod
-    def _process_recipe_node(recipe_node, is_cooking_dir=False):
-        """Helper to parse a single <recipe> node and add it to the list."""
+    def _process_recipe_node(recipe_node, is_cooking_dir=False, is_building_dir=False, file_path=""):
         raw_output_name = recipe_node.get('output')
         magazine = recipe_node.get('magazine')
         time_required = recipe_node.get('time', '1.0')
         output_amount = recipe_node.get('amount', '1')
         craft_type = recipe_node.get('craft', 'create')
         recipe_type = recipe_node.get('type', '')
+        map_location = recipe_node.get('map_location', None)
 
         req_level_str = recipe_node.get('req_level', '')
         gain_xp_str = recipe_node.get('gain_xp', '')
@@ -175,11 +178,20 @@ class RecipeManager:
             len(extra_ingredients) > 0
         )
 
+        is_building = (
+            is_building_dir or
+            'building' in file_path.replace('\\', '/').split('/') or
+            recipe_type in ('maptile', 'maptile_container') or
+            str(recipe_type).startswith('maptile') or
+            map_location in ('_map', '_roof', '_ground')
+        )
+
         recipe = Recipe(
             display_name, magazine, time_required, ingredients, output_amount, 
             craft_type, req_level, gain_xp, results,
             extra_ingredients=extra_ingredients, recipe_type=recipe_type,
-            is_cooking=is_cooking, effects=recipe_effects
+            is_cooking=is_cooking, effects=recipe_effects,
+            map_location=map_location, is_building=is_building
         )
         
         if parsed_wildcard:
@@ -192,35 +204,45 @@ class RecipeManager:
 
     @staticmethod
     def load_recipes():
-        """Loads crafting and cooking recipes from craft/ and cooking/ directories."""
+        """Loads crafting, cooking, and building recipes."""
+        building_folder = os.path.join(DATA_PATH, 'craft', 'building')
+        if not os.path.exists(building_folder):
+            try:
+                os.makedirs(building_folder, exist_ok=True)
+            except OSError:
+                pass
+
         recipe_directories = [
-            (os.path.join(DATA_PATH, 'craft'), False)
+            (os.path.join(DATA_PATH, 'craft'), False, False),
+            (building_folder, False, True)
         ]
 
         RecipeManager.RECIPES.clear()
+        parsed_files = set()
 
-        for folder_path, is_cooking_dir in recipe_directories:
+        for folder_path, is_cooking_dir, is_building_dir in recipe_directories:
             if not os.path.exists(folder_path):
-                if is_cooking_dir:
-                    try:
-                        os.makedirs(folder_path, exist_ok=True)
-                    except OSError:
-                        pass
                 continue
 
             for root_dir, _, full_paths in mod_manager.vfs_walk(folder_path):
                 for file_path in full_paths:
                     if not file_path.endswith('.xml'):
                         continue
+                    norm_path = os.path.normpath(file_path)
+                    if norm_path in parsed_files:
+                        continue
+                    parsed_files.add(norm_path)
+
+                    is_b = is_building_dir or ('building' in norm_path.replace('\\', '/').split('/'))
                     try:
                         tree = ET.parse(file_path)
                         root = tree.getroot()
 
                         if root.tag == 'recipe':
-                            RecipeManager._process_recipe_node(root, is_cooking_dir=is_cooking_dir)
+                            RecipeManager._process_recipe_node(root, is_cooking_dir=is_cooking_dir, is_building_dir=is_b, file_path=norm_path)
                         else:
                             for recipe_node in root.findall('.//recipe'):
-                                RecipeManager._process_recipe_node(recipe_node, is_cooking_dir=is_cooking_dir)
+                                RecipeManager._process_recipe_node(recipe_node, is_cooking_dir=is_cooking_dir, is_building_dir=is_b, file_path=norm_path)
                     except Exception as e:
                         print(f"Error loading recipe file {file_path}: {e}")
         

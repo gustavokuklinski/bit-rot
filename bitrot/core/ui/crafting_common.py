@@ -245,20 +245,31 @@ def add_craft_results_to_player(player, game, recipe, count=1, inherited_seasoni
             for _ in range(total_units):
                 unit_item = Item.create_from_name(sample_name)
                 if not unit_item:
-                    continue
-                # Consolidate recipe-level effects if defined on the recipe
-                if getattr(recipe, 'effects', None):
-                    unit_item.effects = consolidate_effects(unit_item.effects + recipe.effects)
+                    t_type = getattr(recipe, 'recipe_type', 'maptile') or 'maptile'
+                    unit_item = Item(sample_name, item_type=t_type)
 
-                # Apply recipe-level effects (<restore> / <reduce>) directly to the consumable item
+                if getattr(recipe, 'is_building', False) or getattr(recipe, 'map_location', None):
+                    unit_item.is_maptile = True
+                    unit_item.map_location = getattr(recipe, 'map_location', '_map')
+                    unit_item.tile_char = getattr(recipe, 'output_name', sample_name)
+                    
+                    if game and hasattr(game, 'tile_manager') and hasattr(game.tile_manager, 'definitions'):
+                        for ck, td in game.tile_manager.definitions.items():
+                            if ck.lower() == sample_name.lower() or td.get('name', '').lower() == sample_name.lower():
+                                unit_item.tile_char = ck
+                                unit_item.tile_def = td
+                                if not unit_item.image:
+                                    unit_item.image = td.get('image')
+                                if td.get('type') == 'maptile_container' or unit_item.item_type == 'maptile_container':
+                                    unit_item.item_type = 'maptile_container'
+                                    unit_item.capacity = td.get('capacity', 20)
+                                break
+
+                    if unit_item.item_type == 'maptile_container':
+                        unit_item.inventory = []  # Spawn empty
+
                 if getattr(recipe, 'effects', None):
-                    # If this is a container holding liquid/food, apply effects to the item inside
-                    if hasattr(unit_item, 'inventory') and unit_item.inventory:
-                        for inside_it in unit_item.inventory:
-                            if inside_it and (getattr(inside_it, 'liquid', False) or getattr(inside_it, 'allow_use', False)):
-                                inside_it.effects = consolidate_effects(getattr(inside_it, 'effects', []) + recipe.effects)
-                    else:
-                        unit_item.effects = consolidate_effects(getattr(unit_item, 'effects', []) + recipe.effects)
+                    unit_item.effects = consolidate_effects(getattr(unit_item, 'effects', []) + recipe.effects)
 
                 if len(player.inventory) < player.get_total_inventory_slots():
                     player.inventory.append(unit_item)
@@ -734,7 +745,9 @@ def execute_recipe_craft(game, recipe, player=None, count=1, preferred_item_id=N
                     return
 
     craft_type = getattr(recipe, 'craft_type', 'create').lower()
-    if craft_type == 'dismantle':
+    if getattr(recipe, 'is_building', False):
+        action_sound = 'place.ogg'
+    elif craft_type == 'dismantle':
         action_sound = 'dismantle.ogg'
     elif craft_type == 'repair':
         action_sound = 'repair.ogg'

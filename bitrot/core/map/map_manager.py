@@ -320,9 +320,11 @@ class MapManager:
     def save_map_to_file(self, save_dir):
         """Saves the current state of map layers to CSV files in the save directory."""
         if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
+            os.makedirs(save_dir, exist_ok=True)
         
         def write_layer(layout, filename):
+            if not layout:
+                return
             path = os.path.join(save_dir, filename)
             try:
                 with open(path, 'w', newline='') as f:
@@ -331,6 +333,19 @@ class MapManager:
                 print(f"Saved map layer to {path}")
             except Exception as e:
                 print(f"Error saving map layer {filename}: {e}")
+
+        # Synchronize active runtime layers into storage before writing
+        curr_l = getattr(self.game, 'current_layer_index', 1)
+        if hasattr(self.game, 'map_data') and self.game.map_data:
+            self.game.all_map_layers[curr_l] = self.game.map_data
+        if hasattr(self.game, 'ground_data') and self.game.ground_data:
+            self.game.all_ground_layers[curr_l] = self.game.ground_data
+        if hasattr(self.game, 'spawn_data') and self.game.spawn_data:
+            self.game.all_spawn_layers[curr_l] = self.game.spawn_data
+        if hasattr(self.game, 'roof_data') and self.game.roof_data:
+            self.game.all_roof_layers[curr_l] = self.game.roof_data
+        if hasattr(self.game, 'light_data') and self.game.light_data:
+            self.game.all_light_layers[curr_l] = self.game.light_data
 
         # Extract base prefix to save using chunk nomenclature
         current_name = self.current_map_filename
@@ -344,6 +359,15 @@ class MapManager:
                 else:
                     filename = f'map_L{layer_idx}_world_map.csv'
                 write_layer(layout, filename)
+
+        if hasattr(self.game, 'all_ground_layers'):
+            for layer_idx, layout in self.game.all_ground_layers.items():
+                if chunk_match:
+                    gx, gy = chunk_match.groups()
+                    filename = f'map_L{layer_idx}_{gx}_{gy}_ground.csv'
+                else:
+                    filename = f'map_L{layer_idx}_world_ground.csv'
+                write_layer(layout, filename)
         
         if hasattr(self.game, 'all_spawn_layers'):
             for layer_idx, layout in self.game.all_spawn_layers.items():
@@ -352,6 +376,24 @@ class MapManager:
                     filename = f'map_L{layer_idx}_{gx}_{gy}_spawn.csv'
                 else:
                     filename = f'map_L{layer_idx}_world_spawn.csv'
+                write_layer(layout, filename)
+
+        if hasattr(self.game, 'all_roof_layers'):
+            for layer_idx, layout in self.game.all_roof_layers.items():
+                if chunk_match:
+                    gx, gy = chunk_match.groups()
+                    filename = f'map_L{layer_idx}_{gx}_{gy}_roof.csv'
+                else:
+                    filename = f'map_L{layer_idx}_world_roof.csv'
+                write_layer(layout, filename)
+
+        if hasattr(self.game, 'all_light_layers'):
+            for layer_idx, layout in self.game.all_light_layers.items():
+                if chunk_match:
+                    gx, gy = chunk_match.groups()
+                    filename = f'map_L{layer_idx}_{gx}_{gy}_light.csv'
+                else:
+                    filename = f'map_L{layer_idx}_world_light.csv'
                 write_layer(layout, filename)
 
     def toggle_door_state(self, grid_x, grid_y):

@@ -108,6 +108,9 @@ def perform_chunk_transition(game, dir_x, dir_y, new_map, layer):
     chunk_width_px = getattr(game, 'map_width_pixels', game.CHUNK_SIZE * TILE_SIZE)
     chunk_height_px = getattr(game, 'map_height_pixels', game.CHUNK_SIZE * TILE_SIZE)
 
+    if hasattr(game, 'map_manager') and hasattr(game.map_manager, 'save_map_to_file'):
+        game.map_manager.save_map_to_file(game.map_manager.map_folder)
+
     game.map_states.setdefault(current_map, {})
     chasing_zombies = [z for z in game.zombies if getattr(z, 'state', '') == 'chasing']
     game.map_states[current_map]['zombies'] = [z for z in game.zombies if z not in chasing_zombies]

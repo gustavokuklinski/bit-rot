@@ -13,6 +13,8 @@ from core.ui.crafting_craft_tab import CraftingCraftTab
 from core.ui.crafting_cooking_tab import CraftingCookingTab
 from core.ui.crafting_repair_tab import CraftingRepairTab
 from core.ui.crafting_dismantle_tab import CraftingDismantleTab
+from core.ui.crafting_build_tab import CraftingBuildTab
+
 from core.data.localization import tr
 
 class CraftingModal(BaseModal):
@@ -52,7 +54,8 @@ class CraftingModal(BaseModal):
             {'label': tr('tab', "Craft")},
             {'label': tr('tab', "Cooking")},
             {'label': tr('tab', "Repair")},
-            {'label': tr('tab', "Dismantle")}
+            {'label': tr('tab', "Dismantle")},
+            {'label': tr('tab', "Build")}
         ]
         self.tabs_manager = Tabs(surface, self.modal, self.tabs_data, assets)
         
@@ -87,13 +90,15 @@ class CraftingModal(BaseModal):
         self.repair_tab = CraftingRepairTab(self)
         self.dismantle_tab = CraftingDismantleTab(self)
         self.know_recipes_tab = CraftingKnowRecipesTab(self)
+        self.build_tab = CraftingBuildTab(self)
 
         self.tab_handlers = {
             tr('tab', "Known Recipes"): self.know_recipes_tab,
             tr('tab', "Craft"): self.craft_tab,
             tr('tab', "Cooking"): self.cooking_tab,
             tr('tab', "Repair"): self.repair_tab,
-            tr('tab', "Dismantle"): self.dismantle_tab
+            tr('tab', "Dismantle"): self.dismantle_tab,
+            tr('tab', "Build"): self.build_tab
         }
 
     def handle_event(self, event):

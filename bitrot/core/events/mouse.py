@@ -115,6 +115,109 @@ def handle_mouse_down(game, event, mouse_pos):
             
             in_range = abs(mouse_tx - p_tx) <= 1 and abs(mouse_ty - p_ty) <= 1
             
+            item_data = game.item_to_place
+            item = item_data['item']
+            source = item_data['source']
+            index = item_data['index']
+            container_item = item_data['container']
+
+            is_maptile = getattr(item, 'is_maptile', False) or getattr(item, 'item_type', '') in ('maptile', 'maptile_container')
+
+            if is_maptile:
+                if not in_range:
+                    display_message(tr('msg', "Too far away to place tile!"))
+                    game.item_to_place = None
+                    return
+
+                map_loc = getattr(item, 'map_location', '_map')
+                tile_char = getattr(item, 'tile_char', None) or item.name
+
+                if hasattr(game, 'tile_manager') and hasattr(game.tile_manager, 'definitions'):
+                    for ck, td in game.tile_manager.definitions.items():
+                        if ck.lower() == item.name.lower() or td.get('name', '').lower() == item.name.lower():
+                            tile_char = ck
+                            break
+
+                tile_def = game.tile_manager.definitions.get(tile_char, {}) if hasattr(game, 'tile_manager') else {}
+
+                # 1. Place Roof Tile
+                if map_loc == '_roof':
+                    if hasattr(game, 'roof_data') and 0 <= mouse_ty < len(game.roof_data) and 0 <= mouse_tx < len(game.roof_data[0]):
+                        if game.roof_data[mouse_ty][mouse_tx] != ' ':
+                            display_message(tr('msg', "There is already a roof here!"))
+                            return
+
+                        game.roof_data[mouse_ty][mouse_tx] = tile_char
+                        if hasattr(game, 'all_roof_layers') and game.current_layer_index in game.all_roof_layers:
+                            if 0 <= mouse_ty < len(game.all_roof_layers[game.current_layer_index]) and 0 <= mouse_tx < len(game.all_roof_layers[game.current_layer_index][0]):
+                                game.all_roof_layers[game.current_layer_index][mouse_ty][mouse_tx] = tile_char
+
+                        game.map_manager.invalidate_chunk(mouse_tx, mouse_ty)
+                        from core.events.mouse_context_actions import remove_from_source
+                        remove_from_source(game, item, source, index, container_item)
+                        if hasattr(game, 'sound_manager'):
+                            game.sound_manager.play_sound('place.ogg', subdir='items', game=game, is_critical=True)
+                        display_message(f"{tr('msg', 'Placed')} {tr('item', item.name)}.")
+                        game.item_to_place = None
+                        return
+
+                # 2. Place Base Map Tile / Container
+                else:
+                    test_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
+                    from core.systems.utils import is_door_or_window_tile
+                    is_door_win = is_door_or_window_tile(game, mouse_tx, mouse_ty)
+                    is_free = not any(ob.colliderect(test_rect) for ob in getattr(game, 'obstacles', [])) and not is_door_win
+                    on_player = test_rect.colliderect(game.player.rect)
+
+                    if on_player:
+                        display_message(tr('msg', "Cannot place building tile on yourself!"))
+                    elif is_door_win:
+                        display_message(tr('msg', "Cannot place item in a doorway or window!"))
+                    elif not is_free:
+                        display_message(tr('msg', "Cannot place item here, blocked by obstacle!"))
+                    else:
+                        if 0 <= mouse_ty < len(game.map_data) and 0 <= mouse_tx < len(game.map_data[0]):
+                            game.map_data[mouse_ty][mouse_tx] = tile_char
+                            if hasattr(game, 'all_map_layers') and game.current_layer_index in game.all_map_layers:
+                                if 0 <= mouse_ty < len(game.all_map_layers[game.current_layer_index]) and 0 <= mouse_tx < len(game.all_map_layers[game.current_layer_index][0]):
+                                    game.all_map_layers[game.current_layer_index][mouse_ty][mouse_tx] = tile_char
+
+                            if tile_def.get('is_obstacle', False):
+                                if test_rect not in game.obstacles:
+                                    game.obstacles.append(test_rect)
+
+                            is_container = (
+                                getattr(item, 'item_type', '') == 'maptile_container' or 
+                                tile_def.get('type') == 'maptile_container'
+                            )
+                            if is_container:
+                                from core.entities.item.item import Container
+                                cap = getattr(item, 'capacity', None) or tile_def.get('capacity', 20)
+                                container = Container(name=tile_def.get('name', item.name), items=[], capacity=cap)
+                                container.rect = test_rect
+                                container.image = tile_def.get('image', item.image)
+                                container.is_maptile = True
+                                container.item_type = 'maptile_container'
+                                container.is_opened = True
+                                container.allow_liquid = tile_def.get('allow_liquid', False)
+                                container.tile_def = tile_def
+                                container.layer = getattr(game, 'current_layer_index', 1)
+                                container.map_filename = getattr(game.map_manager, 'current_map_filename', '')
+                                game.containers.append(container)
+                                if hasattr(game, 'spatial_manager'):
+                                    game.spatial_manager.rebuild_container_grid()
+
+                            game.map_manager.invalidate_chunk(mouse_tx, mouse_ty)
+                            from core.events.mouse_context_actions import remove_from_source
+                            remove_from_source(game, item, source, index, container_item)
+                            if hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound('place.ogg', subdir='items', game=game, is_critical=True)
+                            display_message(f"{tr('msg', 'Placed')} {tr('item', item.name)}.")
+
+                game.item_to_place = None
+                return
+
+            # Normal non-maptile item placement fallback (unchanged)
             if in_range:
                 from core.systems.utils import is_door_or_window_tile
                 test_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
@@ -169,6 +272,118 @@ def handle_mouse_down(game, event, mouse_pos):
                 
             game.item_to_place = None
             return
+
+        if getattr(game, 'item_to_destroy', None):
+            adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+            world_pos = game.screen_to_world(adjusted_mouse_pos)
+
+            mouse_tx = int(world_pos[0]) // TILE_SIZE
+            mouse_ty = int(world_pos[1]) // TILE_SIZE
+            p_tx = int(game.player.rect.centerx // TILE_SIZE)
+            p_ty = int(game.player.rect.centery // TILE_SIZE)
+
+            snap_x = mouse_tx * TILE_SIZE
+            snap_y = mouse_ty * TILE_SIZE
+            in_range = abs(mouse_tx - p_tx) <= 1 and abs(mouse_ty - p_ty) <= 1
+
+            if not in_range:
+                display_message(tr('msg', "Too far away to destroy tile!"))
+                return
+
+            d_info = game.item_to_destroy
+            target_layer = d_info.get('target_layer', 'map')
+            tool_item = d_info.get('item')
+            curr_layer = getattr(game, 'current_layer_index', 1)
+
+            def _damage_tool_and_fx():
+                if tool_item and hasattr(tool_item, 'durability') and tool_item.durability is not None:
+                    tool_item.durability = max(0, tool_item.durability - 1)
+                    if tool_item.durability <= 0:
+                        if getattr(game.player, 'active_weapon', None) == tool_item:
+                            game.player.active_weapon = None
+                        display_message(f"{tr('item', tool_item.name)} {tr('msg', 'broke!')}")
+                        game.item_to_destroy = None
+
+                if hasattr(game, 'sound_manager'):
+                    game.sound_manager.play_sound('place.ogg', subdir='items', game=game, is_critical=True)
+                if hasattr(game, 'splashes'):
+                    game.splashes.append({
+                        'pos': (snap_x + TILE_SIZE // 2, snap_y + TILE_SIZE // 2),
+                        'time': pygame.time.get_ticks(),
+                        'duration': 300,
+                        'radius': 4,
+                        'type': 'hit_puff'
+                    })
+
+            # 1. Destroy Roof
+            if target_layer == 'roof':
+                if hasattr(game, 'roof_data') and 0 <= mouse_ty < len(game.roof_data) and 0 <= mouse_tx < len(game.roof_data[0]):
+                    if game.roof_data[mouse_ty][mouse_tx] == ' ':
+                        display_message(tr('msg', "No roof tile here to destroy."))
+                        return
+
+                    game.roof_data[mouse_ty][mouse_tx] = ' '
+                    if hasattr(game, 'all_roof_layers') and curr_layer in game.all_roof_layers:
+                        if 0 <= mouse_ty < len(game.all_roof_layers[curr_layer]) and 0 <= mouse_tx < len(game.all_roof_layers[curr_layer][0]):
+                            game.all_roof_layers[curr_layer][mouse_ty][mouse_tx] = ' '
+
+                    game.map_manager.invalidate_chunk(mouse_tx, mouse_ty)
+                    _damage_tool_and_fx()
+                    display_message(tr('msg', "Roof tile destroyed."))
+                    return
+
+            # 2. Destroy Ground
+            elif target_layer == 'ground':
+                if hasattr(game, 'ground_data') and 0 <= mouse_ty < len(game.ground_data) and 0 <= mouse_tx < len(game.ground_data[0]):
+                    if game.ground_data[mouse_ty][mouse_tx] == ' ':
+                        display_message(tr('msg', "No ground tile here to destroy."))
+                        return
+
+                    game.ground_data[mouse_ty][mouse_tx] = ' '
+                    if hasattr(game, 'all_ground_layers') and curr_layer in game.all_ground_layers:
+                        if 0 <= mouse_ty < len(game.all_ground_layers[curr_layer]) and 0 <= mouse_tx < len(game.all_ground_layers[curr_layer][0]):
+                            game.all_ground_layers[curr_layer][mouse_ty][mouse_tx] = ' '
+
+                    game.map_manager.invalidate_chunk(mouse_tx, mouse_ty)
+                    _damage_tool_and_fx()
+                    display_message(tr('msg', "Ground tile destroyed."))
+                    return
+
+            # 3. Destroy Base Map Tile / Container
+            else:
+                if hasattr(game, 'map_data') and 0 <= mouse_ty < len(game.map_data) and 0 <= mouse_tx < len(game.map_data[0]):
+                    if game.map_data[mouse_ty][mouse_tx] == ' ':
+                        display_message(tr('msg', "No map tile here to destroy."))
+                        return
+
+                    tile_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
+
+                    # Only allow destroying container if it is completely empty
+                    cont = next((c for c in getattr(game, 'containers', []) if hasattr(c, 'rect') and c.rect.colliderect(tile_rect)), None)
+                    if cont:
+                        if hasattr(cont, 'inventory') and len(cont.inventory) > 0:
+                            display_message(tr('msg', "Cannot destroy: Container is not empty!"))
+                            return
+                        if cont in game.containers:
+                            game.containers.remove(cont)
+                        game.modals = [m for m in game.modals if m.get('item') != cont]
+                        if hasattr(game, 'spatial_manager'):
+                            game.spatial_manager.rebuild_container_grid()
+
+                    game.obstacles = [ob for ob in game.obstacles if ob != tile_rect]
+                    game.map_data[mouse_ty][mouse_tx] = ' '
+                    if hasattr(game, 'all_map_layers') and curr_layer in game.all_map_layers:
+                        if 0 <= mouse_ty < len(game.all_map_layers[curr_layer]) and 0 <= mouse_tx < len(game.all_map_layers[curr_layer][0]):
+                            game.all_map_layers[curr_layer][mouse_ty][mouse_tx] = ' '
+
+                    if hasattr(game.map_manager, 'remove_barricade'):
+                        game.map_manager.remove_barricade(mouse_tx, mouse_ty)
+
+                    game.map_manager.invalidate_chunk(mouse_tx, mouse_ty)
+                    _damage_tool_and_fx()
+                    display_message(tr('msg', "Map tile destroyed."))
+                    return
+
 
         if game.context_menu['active']:
             menu_clicked = False
@@ -899,6 +1114,10 @@ def handle_mouse_down(game, event, mouse_pos):
             return
 
     elif event.button == 3:
+        if getattr(game, 'item_to_destroy', None):
+            game.item_to_destroy = None
+            return
+            
         if getattr(game, 'item_to_plant', None):
             game.item_to_plant = None
             return

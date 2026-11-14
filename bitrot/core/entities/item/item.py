@@ -14,9 +14,10 @@ SPRITE_CACHE = {}
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, allow_belt=False, tip=None, consume_time=1.0, safe_radius=0, max_liquid=None, map_value=None, barricade_health=0, remove_items=None, remove_time=1.5, place_items=None, place_time=1.5, ammo_drop_capsule=None, allow_type=None, disallow_type=None, allow_use=False, hotbar=False, can_write=False, text_length=0, is_written=False, **kwargs):        
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, allow_belt=False, tip=None, consume_time=1.0, safe_radius=0, max_liquid=None, map_value=None, barricade_health=0, remove_items=None, remove_time=1.5, place_items=None, place_time=1.5, ammo_drop_capsule=None, allow_type=None, disallow_type=None, allow_use=False, hotbar=False, can_write=False, text_length=0, is_written=False, map_location=None, tile_char=None, is_maptile=False,destroy_tile=False, **kwargs):        
         self.name = name
         self.item_type = item_type
+        self.destroy_tile = bool(destroy_tile)
         self.id = str(uuid.uuid4())
         self.durability = durability
         self.load = load
@@ -73,6 +74,10 @@ class Item:
 
         is_liq = (self.item_type in ('liquid', 'car_fuel')) or (self.name == 'Fuel Unit') or bool(liquid)
         self.liquid = is_liq
+
+        self.map_location = map_location
+        self.tile_char = tile_char
+        self.is_maptile = is_maptile or (item_type in ('maptile', 'maptile_container'))
 
         # Format allow_type and disallow_type lists
         if isinstance(allow_type, str):
@@ -217,6 +222,16 @@ class Item:
         if getattr(self, 'alias', None):
             data['alias'] = self.alias
         
+        if getattr(self, 'is_maptile', False):
+            data['is_maptile'] = True
+        if getattr(self, 'map_location', None):
+            data['map_location'] = self.map_location
+        if getattr(self, 'tile_char', None):
+            data['tile_char'] = self.tile_char
+        
+        if getattr(self, 'destroy_tile', False):
+            data['destroy_tile'] = True
+        
         return data
 
     @staticmethod
@@ -294,6 +309,16 @@ class Item:
             item.base_item_name = data['base_item_name']
         if 'alias' in data:
             item.alias = data['alias']
+        
+        if data.get('is_maptile'):
+            item.is_maptile = True
+        if 'map_location' in data:
+            item.map_location = data['map_location']
+        if 'tile_char' in data:
+            item.tile_char = data['tile_char']
+
+        if 'destroy_tile' in data:
+            item.destroy_tile = bool(data['destroy_tile'])
 
         return item
         
