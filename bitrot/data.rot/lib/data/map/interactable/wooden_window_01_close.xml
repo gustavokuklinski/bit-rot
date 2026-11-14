@@ -7,4 +7,8 @@
         <sprite id="close" file="wooden_window_01_close.png" />
     </visuals>
     <sound src="window_close.ogg" />
+    <drop>
+        <item item="Plank" chance="0.1" min="1" max="1" />
+        <item item="Nails" chance="0.1" min="1" max="1" />
+    </drop>
 </map>

@@ -128,9 +128,18 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                 
                 text_node = props_node.find('text')
                 if text_node is not None:
-                    template['text'] = "\n".join(line.strip() for line in text_node.text.strip().split('\n'))
+                    raw_text = (text_node.text or '').strip()
+                    template['text'] = "\n".join(line.strip() for line in raw_text.split('\n')) if raw_text else ""
+                    template['can_write'] = (text_node.get('write', 'false').lower() == 'true')
+                    raw_len = text_node.get('lenght') or text_node.get('length')
+                    try:
+                        template['text_length'] = int(raw_len) if raw_len is not None else (128 if template['can_write'] else 0)
+                    except (ValueError, TypeError):
+                        template['text_length'] = 128 if template['can_write'] else 0
                 else:
                     template['text'] = None
+                    template['can_write'] = False
+                    template['text_length'] = 0
 
                 template['effects'] = []
 

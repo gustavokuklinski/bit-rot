@@ -1,0 +1,8 @@
+<item name="Sheet of paper" type="text" tip="Use to write">
+    <properties>
+        <sprite file="text/text_sheet_of_paper.png" />
+        <text write="true" lenght="128">
+        </text>
+    </properties>
+    <spawn chance="0" />
+</item>

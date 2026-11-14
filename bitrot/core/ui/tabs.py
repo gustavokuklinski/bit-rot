@@ -91,12 +91,31 @@ class Tabs:
         # Store calculated rects for click detection
         self.modal['tab_rects'] = self.tab_rects
         
-        # 4. Check for Tab Hovers and construct the tooltip
-        if game and mouse_pos and self.modal.get('is_active', True):
+        # 4. Check for Tab Hovers, construct the tooltip, and play hover sound
+        hovered_tab_id = None
+        is_top_at_cursor = True
+        if game and mouse_pos and hasattr(game, 'modals'):
+            if getattr(game, 'context_menu', {}).get('active', False):
+                is_top_at_cursor = False
+            else:
+                for m in reversed(game.modals):
+                    if m.get('rect') and m['rect'].collidepoint(mouse_pos):
+                        is_top_at_cursor = (m is self.modal)
+                        break
+
+        if game and mouse_pos and is_top_at_cursor:
             for i, tab in enumerate(self.tabs_data):
                 if self.tab_rects[i].collidepoint(mouse_pos):
-                    game.hovered_tab_tooltip = self._get_tab_tooltip(tab)
+                    if self.modal.get('is_active', True):
+                        game.hovered_tab_tooltip = self._get_tab_tooltip(tab)
+                    hovered_tab_id = (i, tab.get('label'))
                     break
+
+        if game:
+            if hovered_tab_id is not None and hovered_tab_id != self.modal.get('_last_hovered_tab_id'):
+                if hasattr(game, 'sound_manager'):
+                    game.sound_manager.play_ui_hover()
+            self.modal['_last_hovered_tab_id'] = hovered_tab_id
 
     def _draw_single_tab(self, tab, rect, is_active, is_drag_target=False):
         if is_active: 

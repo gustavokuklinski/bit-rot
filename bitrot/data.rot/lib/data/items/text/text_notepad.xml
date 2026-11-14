@@ -1,0 +1,8 @@
+<item name="Notepad" type="text" tip="Use to write">
+    <properties>
+        <sprite file="text/text_notepad.png" />
+        <text write="true" lenght="2048">
+        </text>
+    </properties>
+    <spawn chance="0" />
+</item>

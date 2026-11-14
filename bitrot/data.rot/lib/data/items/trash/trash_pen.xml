@@ -1,0 +1,6 @@
+<item name="Pen" type="trash" allow_belt="false" tip="Use to write">
+    <properties>
+        <sprite file="trash/trash_pen.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

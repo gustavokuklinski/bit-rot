@@ -81,6 +81,22 @@ def get_container_liquid_capacity_units(container, liquid_item, target_item=None
 
     return int(math.floor(avail_vol))
 
+    
+def player_has_any_item(player, item_names):
+    """Recursively checks if the player carries any item matching item_names."""
+    if not player:
+        return False
+    targets = {n.strip().lower() for n in item_names}
+    predicate = lambda it: getattr(it, 'name', '').strip().lower() in targets
+
+    if find_item_recursive(getattr(player, 'inventory', []), predicate)[0]:
+        return True
+    if find_item_recursive(getattr(player, 'belt', []), predicate)[0]:
+        return True
+    if hasattr(player, 'clothes') and player.clothes:
+        if find_item_recursive(list(player.clothes.values()), predicate)[0]:
+            return True
+    return False
 
 def is_valid_send_to_container(obj):
     """

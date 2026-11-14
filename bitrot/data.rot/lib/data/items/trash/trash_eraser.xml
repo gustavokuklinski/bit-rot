@@ -1,0 +1,6 @@
+<item name="Eraser" type="trash" allow_belt="false" tip="Use to erase pen or pencil">
+    <properties>
+        <sprite file="trash/trash_eraser.png" />
+    </properties>
+    <spawn chance="1" />
+</item>

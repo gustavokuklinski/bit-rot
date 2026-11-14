@@ -78,6 +78,13 @@ def handle_movement(game):
         return
 
     for modal in game.modals:
+        if (modal.get('type') == 'alias_prompt' and modal.get('input_active', True)) or \
+           (modal.get('type') == 'write_text' and modal.get('input_active', False)):
+            game.player.vx = 0
+            game.player.vy = 0
+            game.player.is_running = False
+            return
+            
         if 'instance' in modal:
             if getattr(modal['instance'], 'search_active', False):
                 game.player.vx = 0
@@ -270,6 +277,15 @@ def handle_input(game):
                         new_offset = current_offset - scroll_amount 
 
                         modal['scroll_offset_y'] = max(0, min(new_offset, max_scroll_offset))
+                        
+                elif modal.get('type') == 'write_text':
+                    input_rect = modal.get('input_rect')
+                    if input_rect and input_rect.collidepoint(mouse_pos):
+                        max_scroll_offset = modal.get('max_scroll_offset', 0)
+                        current_offset = modal.get('scroll_offset_y', 0)
+                        line_height = font_12.get_height() + 4
+                        scroll_amount = event.y * line_height * 2
+                        modal['scroll_offset_y'] = max(0, min(current_offset - scroll_amount, max_scroll_offset))
 
                 elif modal.get('type') == 'npc_dialog' and modal.get('active_tab_index') == 2 and modal.get('trade_type_dd_open'):
                     dd_pop = modal.get('trade_type_dd_popup_rect')

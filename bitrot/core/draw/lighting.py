@@ -2,7 +2,6 @@
 
 import pygame
 import math
-import re
 from core.data.config import TILE_SIZE
 
 def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
@@ -35,15 +34,6 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
     expected_size = map_w * map_h
     curr_map = getattr(game.map_manager, 'current_map_filename', 'unknown')
 
-    # Detect if currently on the surface Lobby Chunk (L1 only)
-    is_lobby_surface = False
-    match = re.search(r'map_L(\d+)_(\d+)_(\d+)_map\.csv', curr_map)
-    if match and getattr(game, 'generator', None) and hasattr(game.generator, 'lobby_chunk'):
-        layer_idx = int(match.group(1))
-        cgx, cgy = int(match.group(2)), int(match.group(3))
-        if (cgx, cgy) == game.generator.lobby_chunk and layer_idx == 1:
-            is_lobby_surface = True
-
     # 2. Tile-Based Fog of War with Cross-Layer Persistence
     if not hasattr(game, 'explored_tiles_dict'):
         game.explored_tiles_dict = {}
@@ -64,26 +54,22 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
             game.explored_tiles = bytearray(expected_size)
             game.explored_map_name = curr_map
 
-            if is_lobby_surface:
-                for i in range(expected_size):
-                    game.explored_tiles[i] = 1
-            else:
-                ground_data = getattr(game, 'ground_data', [])
-                base_data = getattr(game, 'map_data', [])
-                for ty in range(map_h):
-                    row_idx = ty * map_w
-                    for tx in range(map_w):
-                        g_char = ground_data[ty][tx] if ty < len(ground_data) and tx < len(ground_data[ty]) else ''
-                        b_char = base_data[ty][tx] if ty < len(base_data) and tx < len(base_data[ty]) else ''
-                        if (g_char and ('water_' in g_char or 'petrol_' in g_char)) or \
-                           (b_char and ('water_' in b_char or 'petrol_' in b_char)):
-                            game.explored_tiles[row_idx + tx] = 1
+            ground_data = getattr(game, 'ground_data', [])
+            base_data = getattr(game, 'map_data', [])
+            for ty in range(map_h):
+                row_idx = ty * map_w
+                for tx in range(map_w):
+                    g_char = ground_data[ty][tx] if ty < len(ground_data) and tx < len(ground_data[ty]) else ''
+                    b_char = base_data[ty][tx] if ty < len(base_data) and tx < len(base_data[ty]) else ''
+                    if (g_char and ('water_' in g_char or 'petrol_' in g_char)) or \
+                       (b_char and ('water_' in b_char or 'petrol_' in b_char)):
+                        game.explored_tiles[row_idx + tx] = 1
 
             game.explored_tiles_dict[curr_map] = game.explored_tiles
 
     ambient = int(game.world_time.current_ambient_light)
     light_mask_low = game.light_mask_low_cache
-    light_mask_low.fill((10, 10, 10))
+    light_mask_low.fill((0, 0, 0))
 
     light_texture = game.assets.get('light_texture')
     light_sources = []

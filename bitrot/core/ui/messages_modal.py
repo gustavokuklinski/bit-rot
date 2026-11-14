@@ -41,6 +41,14 @@ def draw_messages_modal(surface, game, modal, assets):
     modal['tab_rects'] = []
     modal['tabs_data'] = []
 
+    is_top_at_cursor = not getattr(game, 'context_menu', {}).get('active', False)
+    if is_top_at_cursor and hasattr(game, 'modals'):
+        for m in reversed(game.modals):
+            if m.get('rect') and m['rect'].collidepoint(mouse_pos):
+                is_top_at_cursor = (m is modal)
+                break
+
+    hovered_tab_id = None
     cur_x = base_modal.modal_x + 5
     for t_key in tab_keys:
         if t_key == 'Radio':
@@ -55,7 +63,9 @@ def draw_messages_modal(surface, game, modal, assets):
         modal['tabs_data'].append({'label': t_key, 'display': disp_label, 'rect': t_rect})
 
         is_act = (modal['active_tab'] == t_key)
-        is_hov = t_rect.collidepoint(mouse_pos)
+        is_hov = t_rect.collidepoint(mouse_pos) and is_top_at_cursor
+        if is_hov:
+            hovered_tab_id = t_key
 
         bg = (55, 55, 55) if is_act else ((40, 40, 40) if is_hov else (25, 25, 25))
         pygame.draw.rect(surface, bg, t_rect, border_radius=3)
@@ -65,6 +75,11 @@ def draw_messages_modal(surface, game, modal, assets):
         t_surf = font_12.render(disp_label, False, txt_col)
         surface.blit(t_surf, t_surf.get_rect(center=t_rect.center))
         cur_x += btn_w + 4
+
+    if hovered_tab_id is not None and hovered_tab_id != modal.get('_last_hovered_tab_id'):
+        if hasattr(game, 'sound_manager'):
+            game.sound_manager.play_ui_hover()
+    modal['_last_hovered_tab_id'] = hovered_tab_id
 
     # Content Area Position
     content_y_start = tab_y + tab_bar_h + 4

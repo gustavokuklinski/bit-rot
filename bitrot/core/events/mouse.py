@@ -216,6 +216,117 @@ def handle_mouse_down(game, event, mouse_pos):
                 break
         
         if topmost_modal:
+            if topmost_modal.get('type') == 'write_text':
+                close_rect = topmost_modal.get('close_button_rect')
+                input_rect = topmost_modal.get('input_rect')
+                save_rect = topmost_modal.get('save_btn_rect')
+                edit_rect = topmost_modal.get('edit_btn_rect')
+                cancel_rect = topmost_modal.get('cancel_btn_rect')
+                target_item = topmost_modal.get('item')
+
+                if (close_rect and close_rect.collidepoint(mouse_pos)) or (cancel_rect and cancel_rect.collidepoint(mouse_pos)):
+                    if hasattr(game, 'sound_manager'):
+                        game.sound_manager.play_ui_hover()
+                    if topmost_modal in game.modals:
+                        game.modals.remove(topmost_modal)
+                    pygame.key.set_repeat()
+                    return
+
+                modal_header_rect = pygame.Rect(topmost_modal['position'][0], topmost_modal['position'][1], topmost_modal['rect'].width, 35)
+                if modal_header_rect.collidepoint(mouse_pos):
+                    topmost_modal['is_dragging'] = True
+                    topmost_modal['drag_offset'] = (mouse_pos[0] - topmost_modal['position'][0], mouse_pos[1] - topmost_modal['position'][1])
+                    return
+
+                if save_rect and save_rect.collidepoint(mouse_pos):
+                    if topmost_modal.get('is_editing', False) and getattr(target_item, 'can_write', False):
+                        from core.entities.item.item_helpers import player_has_any_item
+                        max_len = getattr(target_item, 'text_length', 128) or 128
+                        new_text = topmost_modal.get('input_text', '')[:max_len]
+                        if new_text.strip() and not player_has_any_item(game.player, ('Pen', 'Pencil')):
+                            display_message(tr('msg', "Must have a: Pen, Pencil"))
+                            return
+                        target_item.text = new_text
+                        target_item.original_text = new_text
+                        target_item.is_written = bool(new_text.strip())
+                        if new_text.strip():
+                            display_message(game, tr('msg', "Text saved."))
+                            if hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound(
+                                    'write.ogg', subdir='ui', game=game,
+                                    source_pos=None, base_volume=0.5, is_critical=True
+                                )
+                        if topmost_modal in game.modals:
+                            game.modals.remove(topmost_modal)
+                        pygame.key.set_repeat()
+                    return
+
+                if edit_rect and edit_rect.collidepoint(mouse_pos):
+                    if not getattr(target_item, 'can_write', False):
+                        display_message(tr('msg', "This item cannot be edited."))
+                        return
+                    if not topmost_modal.get('is_editing', False):
+                        from core.entities.item.item_helpers import player_has_any_item
+                        if not player_has_any_item(game.player, ('Eraser',)):
+                            display_message(tr('msg', "Must have a: Eraser"))
+                            return
+                        if hasattr(game, 'sound_manager'):
+                            game.sound_manager.play_sound(
+                                'eraser.ogg', subdir='ui', game=game,
+                                source_pos=None, base_volume=0.5, is_critical=True
+                            )
+                        topmost_modal['is_editing'] = True
+                        topmost_modal['input_active'] = True
+                        pygame.key.set_repeat(400, 40)
+                    return
+
+                if input_rect and input_rect.collidepoint(mouse_pos) and topmost_modal.get('is_editing', False):
+                    topmost_modal['input_active'] = True
+                    pygame.key.set_repeat(400, 40)
+                else:
+                    topmost_modal['input_active'] = False
+                    pygame.key.set_repeat()
+                return
+
+            if topmost_modal.get('type') == 'alias_prompt':
+                close_rect = topmost_modal.get('close_button_rect')
+                input_rect = topmost_modal.get('input_rect')
+                save_rect = topmost_modal.get('save_btn_rect')
+                cancel_rect = topmost_modal.get('cancel_btn_rect')
+
+                if (close_rect and close_rect.collidepoint(mouse_pos)) or (cancel_rect and cancel_rect.collidepoint(mouse_pos)):
+                    if hasattr(game, 'sound_manager'):
+                        game.sound_manager.play_ui_hover()
+                    if topmost_modal in game.modals:
+                        game.modals.remove(topmost_modal)
+                    pygame.key.set_repeat()
+                    return
+
+                if save_rect and save_rect.collidepoint(mouse_pos):
+                    cleaned = topmost_modal.get('input_text', '').strip()[:32]
+                    target_item = topmost_modal.get('item')
+                    if target_item:
+                        target_item.alias = cleaned if cleaned else None
+                        if cleaned:
+                            display_message(game, f"{tr('msg', 'Alias added:')} {cleaned}")
+                            if hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound(
+                                    'write.ogg', subdir='ui', game=game,
+                                    source_pos=None, base_volume=0.5, is_critical=True
+                                )
+                    if topmost_modal in game.modals:
+                        game.modals.remove(topmost_modal)
+                    pygame.key.set_repeat()
+                    return
+
+                if input_rect and input_rect.collidepoint(mouse_pos):
+                    topmost_modal['input_active'] = True
+                    pygame.key.set_repeat(400, 40)
+                else:
+                    topmost_modal['input_active'] = False
+                    pygame.key.set_repeat()
+                return
+
             # PRIORITY 0: Check NPC Trade Type dropdown popup clicks FIRST
             if topmost_modal.get('type') == 'npc_dialog' and topmost_modal.get('trade_type_dd_open'):
                 dd_pop = topmost_modal.get('trade_type_dd_popup_rect')
@@ -373,8 +484,6 @@ def handle_mouse_down(game, event, mouse_pos):
                              
                         if i < len(tabs_data):
                             topmost_modal['active_tab'] = tabs_data[i]['label']
-                            if hasattr(game, 'sound_manager'):
-                                game.sound_manager.play_ui_hover()
                             return
 
             # Messages Modal: Debug tab interaction delegation
@@ -779,7 +888,7 @@ def handle_mouse_down(game, event, mouse_pos):
                 topmost_modal['trade_dd_scroll'] = max(0, min(cur_s + dy, max_s))
                 return
 
-        if topmost_modal and topmost_modal['type'] in ['text', 'help', 'slots', 'npc_dialog']:
+        if topmost_modal and topmost_modal['type'] in ['text', 'help', 'slots', 'npc_dialog', 'write_text']:
             offset = topmost_modal.get('scroll_offset_y', 0)
             max_scroll = topmost_modal.get('max_scroll_offset', 0)
             

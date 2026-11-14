@@ -24,6 +24,8 @@ from core.ui.crafting_modal import CraftingModal
 from core.ui.mobile_map_tab import draw_big_map_modal
 from core.ui.npc_dialog_modal import draw_npc_dialog_modal
 from core.ui.slots_modal import draw_slots_modal
+from core.ui.alias_modal import draw_alias_modal
+from core.ui.write_modal import draw_write_modal
 from core.systems.utils import get_player_facing_tile, get_targeted_interactable, find_nearby_containers
 from core.data.localization import tr
 from core.ui.helpers.keybinds import keybind_manager
@@ -1056,6 +1058,10 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
         elif modal['type'] == 'help': 
             _, close_button = draw_help_modal(game.game_screen, game, modal, game.assets)
             if close_button: game.modal_buttons.extend(close_button)
+        elif modal['type'] == 'alias_prompt':
+            game.modal_buttons.extend(draw_alias_modal(game.game_screen, game, modal, game.assets, mouse_pos))
+        elif modal['type'] == 'write_text':
+            game.modal_buttons.extend(draw_write_modal(game.game_screen, game, modal, game.assets, mouse_pos))
         elif modal['type'] == 'crafting':
             if 'instance' not in modal: modal['instance'] = CraftingModal(game.game_screen, modal, game.assets, game)
             modal['instance'].surface = game.game_screen

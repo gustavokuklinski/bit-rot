@@ -1601,6 +1601,50 @@ def handle_context_menu_click(game, mouse_pos):
                             display_message(f"{tr('msg', 'Need:')} {', '.join(req_tools)}")
                 clicked_on_menu = True
 
+            elif option == 'Add Alias':
+                from core.entities.item.item_helpers import player_has_any_item
+                if not player_has_any_item(game.player, ('Pen', 'Pencil')):
+                    display_message(tr('msg', "Must have a: Pen, Pencil"))
+                    game.context_menu['active'] = False
+                    return
+
+                game.chat_active = False
+                modal_w, modal_h = 340, 145
+                pos_x = (GAME_WIDTH - modal_w) // 2
+                pos_y = (GAME_HEIGHT - modal_h) // 2
+
+                game.modals = [m for m in game.modals if m.get('type') != 'alias_prompt']
+                new_alias_modal = {
+                    'id': uuid.uuid4(),
+                    'type': 'alias_prompt',
+                    'item': item,
+                    'position': (pos_x, pos_y),
+                    'rect': pygame.Rect(pos_x, pos_y, modal_w, modal_h),
+                    'is_dragging': False,
+                    'drag_offset': (0, 0),
+                    'input_text': getattr(item, 'alias', '') or '',
+                    'input_active': True
+                }
+                game.modals.append(new_alias_modal)
+                pygame.key.set_repeat(400, 40)
+                clicked_on_menu = True
+
+            elif option == 'Erase Alias':
+                from core.entities.item.item_helpers import player_has_any_item
+                if not player_has_any_item(game.player, ('Eraser',)):
+                    display_message(tr('msg', "Must have a: Eraser"))
+                    game.context_menu['active'] = False
+                    return
+
+                item.alias = None
+                if hasattr(game, 'sound_manager'):
+                    game.sound_manager.play_sound(
+                        'eraser.ogg', subdir='ui', game=game,
+                        source_pos=None, base_volume=0.5, is_critical=True
+                    )
+                display_message(tr('msg', "Alias erased."))
+                clicked_on_menu = True
+
             elif option == 'Repair Door/Window':
                 if source == 'map_tile' and isinstance(item, dict):
                     gx = item['grid_x']
@@ -2065,6 +2109,48 @@ def handle_context_menu_click(game, mouse_pos):
                         game.modals.append(new_text_modal)
                 else:
                     game.player.read_recipe_book(item)
+                clicked_on_menu = True
+
+            elif option == 'Write':
+                if getattr(item, 'item_type', '') != 'text' or not getattr(item, 'can_write', False):
+                    display_message(tr('msg', "Cannot write on this item."))
+                    game.context_menu['active'] = False
+                    return
+
+                from core.entities.item.item_helpers import player_has_any_item
+                if not player_has_any_item(game.player, ('Pen', 'Pencil')):
+                    display_message(tr('msg', "Must have a: Pen, Pencil"))
+                    game.context_menu['active'] = False
+                    return
+
+                game.chat_active = False
+                modal_w, modal_h = 400, 260
+                pos_x = (GAME_WIDTH - modal_w) // 2
+                pos_y = (GAME_HEIGHT - modal_h) // 2
+
+                existing_text = getattr(item, 'text', '') or ''
+                already_written = getattr(item, 'is_written', False) or bool(existing_text.strip())
+                start_editing = not already_written
+
+                game.modals = [m for m in game.modals if m.get('type') != 'write_text']
+                new_write_modal = {
+                    'id': uuid.uuid4(),
+                    'type': 'write_text',
+                    'item': item,
+                    'position': (pos_x, pos_y),
+                    'rect': pygame.Rect(pos_x, pos_y, modal_w, modal_h),
+                    'is_dragging': False,
+                    'drag_offset': (0, 0),
+                    'input_text': existing_text,
+                    'is_editing': start_editing,
+                    'input_active': start_editing,
+                    'scroll_offset_y': 0
+                }
+                game.modals.append(new_write_modal)
+                if start_editing:
+                    pygame.key.set_repeat(400, 40)
+                else:
+                    pygame.key.set_repeat()
                 clicked_on_menu = True
 
             elif option == 'Use':

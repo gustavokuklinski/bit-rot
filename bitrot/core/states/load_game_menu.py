@@ -7,24 +7,25 @@ def run_load_game_menu(game):
     
     # --- BUTTON HOVER SOUND TRACKER ---
     load_menu_buttons = [
-        clickable_rects.get('load_button'),
-        clickable_rects.get('delete_button'),
-        clickable_rects.get('back_button')
+        ('btn_load', clickable_rects.get('load_button')),
+        ('btn_delete', clickable_rects.get('delete_button')),
+        ('btn_back', clickable_rects.get('back_button'))
     ]
-    for _, _, row_rect in clickable_rects.get('save_items', []):
-        load_menu_buttons.append(row_rect)
+    list_area = clickable_rects.get('list_area')
+    for _, filename, row_rect in clickable_rects.get('save_items', []):
+        hit_rect = row_rect.clip(list_area) if list_area else row_rect
+        load_menu_buttons.append((('save', filename), hit_rect))
 
-    load_menu_buttons = [b for b in load_menu_buttons if b is not None]
-    hovered_idx = None
-    for idx, b_rect in enumerate(load_menu_buttons):
-        if b_rect.collidepoint(mouse_pos):
-            hovered_idx = idx
+    hovered_id = None
+    for btn_id, b_rect in load_menu_buttons:
+        if b_rect is not None and b_rect.collidepoint(mouse_pos):
+            hovered_id = btn_id
             break
 
-    if hovered_idx is not None and hovered_idx != getattr(game, '_load_menu_hovered_btn_idx', None):
+    if hovered_id is not None and hovered_id != getattr(game, '_load_menu_hovered_btn_idx', None):
         if hasattr(game, 'sound_manager'):
             game.sound_manager.play_ui_hover()
-    game._load_menu_hovered_btn_idx = hovered_idx
+    game._load_menu_hovered_btn_idx = hovered_id
     # -----------------------------------
 
     if 'is_dragging_scrollbar' not in game.load_game_state:

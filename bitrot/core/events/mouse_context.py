@@ -19,7 +19,8 @@ from core.data.localization import tr
 from core.entities.item.item_data import ITEM_TEMPLATES
 from core.ui.crafting_common import is_recipe_relevant_to_item
 from core.entities.item.item_helpers import (
-    is_infinite_liquid_source, is_container_on_player, is_valid_send_to_container, item_allows_belt, is_container_closed_or_locked
+    is_infinite_liquid_source, is_container_on_player, is_valid_send_to_container, 
+    item_allows_belt, is_container_closed_or_locked, player_has_any_item
 )
 from core.events.mouse_context_helpers import (
     get_fuel_icon, is_fuel_item, get_player_fuel_units,
@@ -449,6 +450,7 @@ def handle_right_click(game, mouse_pos):
         
         if 'tooltips' not in game.context_menu:
             game.context_menu['tooltips'] = {}
+        game.context_menu['colors'] = {}
 
         options = []
 
@@ -957,6 +959,9 @@ def handle_right_click(game, mouse_pos):
                 options = [o for o in options if o != 'Equip']
 
             if is_player_item:
+                if getattr(clicked_item, 'item_type', '') == 'text' and getattr(clicked_item, 'can_write', False):
+                    if 'Write' not in options:
+                        options.append('Write')
                 if 'Place' not in options: options.append('Place')
                 if 'Send to' not in options and click_source != 'vehicle_equipment':
                     options.append('Send to')
@@ -1013,6 +1018,40 @@ def handle_right_click(game, mouse_pos):
                         options.append('Grab')
                 options.append('Send to')
 
+        is_valid_alias_target = (
+            is_player_item
+            and click_source not in (
+                'map_tile', 'light_source', 'player_self',
+                'vehicle_equipment', 'vehicle_slot', 'npc',
+                'liquid_source', 'container_map'
+            )
+            and not isinstance(clicked_item, dict)
+            and not isinstance(clicked_item, Corpse)
+            and not getattr(clicked_item, 'is_corpse', False)
+            and not getattr(clicked_item, 'is_maptile', False)
+            and getattr(clicked_item, 'item_type', '') not in ('vehicle', 'maptile', 'maptile_container', 'maptile_teleport', 'liquid', 'car_fuel')
+            and not getattr(clicked_item, 'liquid', False)
+        )
+
+        if 'Write' in options:
+            if not player_has_any_item(game.player, ('Pen', 'Pencil')):
+                game.context_menu['tooltips']['Write'] = "Must have a: Pen, Pencil"
+                game.context_menu['colors']['Write'] = GRAY
+                
+        if is_valid_alias_target:
+            if getattr(clicked_item, 'alias', None):
+                if 'Erase Alias' not in options:
+                    options.append('Erase Alias')
+                if not player_has_any_item(game.player, ('Eraser',)):
+                    game.context_menu['tooltips']['Erase Alias'] = "Must have a: Eraser"
+                    game.context_menu['colors']['Erase Alias'] = GRAY
+            else:
+                if 'Add Alias' not in options:
+                    options.append('Add Alias')
+                if not player_has_any_item(game.player, ('Pen', 'Pencil')):
+                    game.context_menu['tooltips']['Add Alias'] = "Must have a: Pen, Pencil"
+                    game.context_menu['colors']['Add Alias'] = GRAY
+
         new_options = []
         for opt in options:
             if isinstance(opt, dict):
@@ -1059,9 +1098,10 @@ def handle_right_click(game, mouse_pos):
 
         if game.game_state == 'PAUSED':
             forbidden_opts = [
-                'Read', 'Drink', 'Use', 'Eat', 'Turn on', 'Turn off', 
+                'Read', 'Write', 'Drink', 'Use', 'Eat', 'Turn on', 'Turn off', 
                 'Toggle Light', 'Crafts', 'Travel to', 'Open door/window', 
-                'Close door/window', 'Barricate', 'Unbarricade'
+                'Close door/window', 'Barricate', 'Unbarricade',
+                'Add Alias', 'Erase Alias'
             ]
             filtered_options = []
             for o in new_options:

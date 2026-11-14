@@ -14,7 +14,7 @@ SPRITE_CACHE = {}
 
 class Item:
     """Base class for all in-game items."""
-    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, allow_belt=False, tip=None, consume_time=1.0, safe_radius=0, max_liquid=None, map_value=None, barricade_health=0, remove_items=None, remove_time=1.5, place_items=None, place_time=1.5, ammo_drop_capsule=None, allow_type=None, disallow_type=None, allow_use=False, hotbar=False, **kwargs):
+    def __init__(self, name, item_type, durability=None, load=None, capacity=None, color=WHITE, ammo_type=None, pellets=1, spread_angle=0, sprite_file=None, min_damage=None, max_damage=None, min_restore=None, max_restore=None, slot=None, defence=None, speed=None, state=None, min_light=None, max_light=None, fuel_type=None, text=None, attribute_modifiers=None, min_reduce=None, max_reduce=None, sounds=None, status_effect=None, effects=None, repair_list=None, knockback=None, machine_gun=False, firing_second=0.0, allow_sleep=False, key_id=None, firing_distance=None, disposable=False, liquid=False, allow_liquid=False, require=None, allow_belt=False, tip=None, consume_time=1.0, safe_radius=0, max_liquid=None, map_value=None, barricade_health=0, remove_items=None, remove_time=1.5, place_items=None, place_time=1.5, ammo_drop_capsule=None, allow_type=None, disallow_type=None, allow_use=False, hotbar=False, can_write=False, text_length=0, is_written=False, **kwargs):        
         self.name = name
         self.item_type = item_type
         self.id = str(uuid.uuid4())
@@ -54,6 +54,9 @@ class Item:
 
         self.text = text
         self.original_text = text
+        self.can_write = bool(can_write)
+        self.text_length = int(text_length) if text_length else 0
+        self.is_written = bool(is_written)
         self.attribute_modifiers = attribute_modifiers if attribute_modifiers is not None else {} 
         self.sounds = sounds if sounds is not None else {}
 
@@ -116,6 +119,7 @@ class Item:
         self.place_time = place_time
         self.harvest = kwargs.get('harvest', None)
         self.harvest_fertilizer = kwargs.get('harvest_fertilizer', False)
+        self.alias = kwargs.get('alias', None)
         self.layer = 1
         self.map_filename = None
 
@@ -182,6 +186,9 @@ class Item:
         if self.text is not None:
             data['text'] = getattr(self, 'original_text', self.text)
 
+        if getattr(self, 'is_written', False):
+            data['is_written'] = True
+
         if getattr(self, 'tip', None) is not None:
             data['tip'] = self.tip
 
@@ -207,6 +214,8 @@ class Item:
             data['harvest'] = self.harvest
         if getattr(self, 'harvest_fertilizer', False):
             data['harvest_fertilizer'] = self.harvest_fertilizer
+        if getattr(self, 'alias', None):
+            data['alias'] = self.alias
         
         return data
 
@@ -233,6 +242,11 @@ class Item:
         if 'text' in data: 
             item.text = data['text']
             item.original_text = data['text']
+
+        if 'is_written' in data:
+            item.is_written = bool(data['is_written'])
+        elif item.can_write and item.text and str(item.text).strip():
+            item.is_written = True
         
         if 'max_liquid' in data:
             item.max_liquid = data['max_liquid']
@@ -278,6 +292,8 @@ class Item:
             item.harvest_fertilizer = data['harvest_fertilizer']
         if 'base_item_name' in data:
             item.base_item_name = data['base_item_name']
+        if 'alias' in data:
+            item.alias = data['alias']
 
         return item
         
@@ -361,7 +377,8 @@ class Item:
         type_matches = (self.item_type == other_item.item_type) or (self.liquid and getattr(other_item, 'liquid', False))
         return (self.name == other_item.name and 
                 type_matches and
-                self.durability is None)
+                self.durability is None and
+                getattr(self, 'alias', None) == getattr(other_item, 'alias', None))
 
     @property
     def current_damage_range(self):

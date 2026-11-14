@@ -62,10 +62,11 @@ def draw_context_menu(surface, menu_state, mouse_pos):
                 if main_tooltip:
                     active_tooltip = (tr('msg', main_tooltip), mouse_pos)
             
-        text_color = WHITE
+        base_color = menu_state.get('colors', {}).get(options[i], WHITE) if isinstance(options[i], str) else WHITE
+        text_color = base_color
         if is_hovered:
             pygame.draw.rect(surface, GRAY_80, option_rect)
-            text_color = YELLOW
+            text_color = YELLOW if base_color == WHITE else (220, 220, 160)
             
         text_surf = font_12.render(label, False, text_color)
         surface.blit(text_surf, (option_rect.x + padding, option_rect.y + (item_height - text_surf.get_height()) // 2))
@@ -250,7 +251,7 @@ def draw_context_menu(surface, menu_state, mouse_pos):
             line_color = WHITE
             if "Type:" in line:
                 line_color = (180, 180, 180)       # Sub-header style (soft gray)
-            elif "Missing" in line or "Ingredients:" in line or "Requires" in line:
+            elif "Missing" in line or "Ingredients:" in line or "Requires" in line or "Must have" in line:
                 line_color = (255, 130, 130)       # Section headers (soft red)
             elif line.startswith("- "):
                 line_color = (220, 220, 220)       # List items (light gray)  

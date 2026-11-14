@@ -854,7 +854,8 @@ def load_game(game, save_folder_name):
                 'messages': (MESSAGES_MODAL_WIDTH, MESSAGES_MODAL_HEIGHT),
                 'slots': (SLOTS_MODAL_WIDTH, SLOTS_MODAL_HEIGHT),
                 'container': (CONTAINER_MODAL_WIDTH, CONTAINER_MODAL_HEIGHT),
-                'help': (HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT)
+                'help': (HELP_MODAL_WIDTH, HELP_MODAL_HEIGHT),
+                'alias_prompt': (340, 145)
             }
 
             for m_data in saved_open_modals:

@@ -473,6 +473,8 @@ class PlayerActions:
                 options.append('Open')
             else:
                 options.append('Read')
+                if getattr(item, 'can_write', False):
+                    options.append('Write')
             if hasattr(item, 'is_stackable') and item.is_stackable():
                 options.append('Drop one')
                 if getattr(item, 'load', 0) > 1: options.append('Drop all')

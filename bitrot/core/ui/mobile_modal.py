@@ -38,8 +38,9 @@ def draw_mobile_modal(surface, game, modal, assets):
     base_modal.draw_base()
     close_button = base_modal.get_buttons()
 
+    mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
     tabs = Tabs(surface, modal, tabs_data, assets)
-    tabs.draw()
+    tabs.draw(game, mouse_pos)
 
     if modal['active_tab'] == 'Clock':
         draw_clock_tab(surface, game, modal, assets)

@@ -252,6 +252,18 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
         for extra_line in tip_lines[1:]:
             lines.append([("", (255, 255, 0)), (extra_line.strip(), WHITE)])
 
+    if getattr(item, 'alias', None):
+        alias_text = str(item.alias).strip()
+        if alias_text:
+            words = alias_text.split()
+            chunked_lines = [' '.join(words[i:i + 8]) for i in range(0, len(words), 8)]
+            if not chunked_lines:
+                chunked_lines = [alias_text]
+
+            lines.append([(f"{tr('tooltip', 'Alias:')} ", (255, 255, 0)), (chunked_lines[0], WHITE)])
+            for extra_line in chunked_lines[1:]:
+                lines.append(extra_line)
+                
     rendered_lines = []
     for line in lines:
         # --- Handle Durability Bar ---

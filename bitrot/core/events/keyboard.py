@@ -772,6 +772,59 @@ def handle_keyboard_events(game, event, action_triggered=None):
 
         # ---> FIX: Process active search input in Crafting modal FIRST before any shortcuts
         for modal in reversed(game.modals):
+            if modal.get('type') == 'write_text':
+                if event.key == pygame.K_ESCAPE:
+                    if modal in game.modals:
+                        game.modals.remove(modal)
+                    pygame.key.set_repeat()
+                    return
+
+                if modal.get('is_editing', False) and modal.get('input_active', False):
+                    target_item = modal.get('item')
+                    if not getattr(target_item, 'can_write', False):
+                        return
+                    max_len = getattr(target_item, 'text_length', 128) or 128
+                    cur_text = modal.get('input_text', '')
+
+                    if event.key == pygame.K_BACKSPACE:
+                        modal['input_text'] = cur_text[:-1]
+                        modal['_scroll_to_bottom'] = True
+                    elif event.key == pygame.K_RETURN:
+                        if len(cur_text) < max_len:
+                            modal['input_text'] = cur_text + '\n'
+                            modal['_scroll_to_bottom'] = True
+                    elif len(cur_text) < max_len and getattr(event, 'unicode', '') and event.unicode.isprintable():
+                        modal['input_text'] = cur_text + event.unicode
+                        modal['_scroll_to_bottom'] = True
+                    return
+
+            if modal.get('type') == 'alias_prompt' and modal.get('input_active', True):
+                cur_text = modal.get('input_text', '')
+                if event.key == pygame.K_BACKSPACE:
+                    modal['input_text'] = cur_text[:-1]
+                elif event.key == pygame.K_RETURN:
+                    cleaned = cur_text.strip()[:32]
+                    target_item = modal.get('item')
+                    if target_item:
+                        target_item.alias = cleaned if cleaned else None
+                        if cleaned:
+                            display_message(game, f"{tr('msg', 'Alias added:')} {cleaned}")
+                            if hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound(
+                                    'write.ogg', subdir='ui', game=game,
+                                    source_pos=None, base_volume=0.5, is_critical=True
+                                )
+                    if modal in game.modals:
+                        game.modals.remove(modal)
+                    pygame.key.set_repeat()
+                elif event.key == pygame.K_ESCAPE:
+                    if modal in game.modals:
+                        game.modals.remove(modal)
+                    pygame.key.set_repeat()
+                elif len(cur_text) < 32 and getattr(event, 'unicode', '') and event.unicode.isprintable():
+                    modal['input_text'] = cur_text + event.unicode
+                return
+
             if modal.get('type') == 'crafting':
                 inst = modal.get('instance')
                 cooking_tab = getattr(inst, 'cooking_tab', None)
