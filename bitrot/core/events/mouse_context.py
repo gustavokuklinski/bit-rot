@@ -1129,6 +1129,25 @@ def handle_right_click(game, mouse_pos):
                 if opt == 'Destroy':
                     continue
 
+            if opt == 'Pickup' or (opt == 'Equip' and getattr(clicked_item, 'pickup_maptile', False)):
+                if getattr(clicked_item, 'pickup_maptile', False):
+                    pickup_sub = {
+                        'label': 'Pickup',
+                        'sub': ['roof', 'map'],
+                        'display_names': {
+                            'roof': 'Roof (R)',
+                            'map': 'Map (M)'
+                        },
+                        'tooltips': {
+                            'roof': tr('tooltip', "Pickup roof tile"),
+                            'map': tr('tooltip', "Pickup map / object tile")
+                        }
+                    }
+                    if not any(isinstance(o, dict) and o.get('label') == 'Pickup' for o in new_options):
+                        new_options.append(pickup_sub)
+                if opt == 'Pickup':
+                    continue
+
             elif opt == 'Send to':
                 send_sub = build_send_to_submenu(clicked_item, click_source, click_container_item, game)
                 if send_sub:
@@ -1153,7 +1172,7 @@ def handle_right_click(game, mouse_pos):
                 'Read', 'Write', 'Drink', 'Use', 'Eat', 'Turn on', 'Turn off', 
                 'Toggle Light', 'Crafts', 'Travel to', 'Open door/window', 
                 'Close door/window', 'Barricate', 'Unbarricade',
-                'Add Alias', 'Erase Alias', 'Sleep', 'Destroy'
+                'Add Alias', 'Erase Alias', 'Sleep', 'Destroy', 'Pickup'
             ]
             filtered_options = []
             for o in new_options:

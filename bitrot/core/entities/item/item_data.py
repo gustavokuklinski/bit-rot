@@ -108,6 +108,15 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                     if d_node is not None:
                         destroy_tile = d_node.get('value', 'true').lower() in ('true', '1')
 
+            pickup_tile_str = root.attrib.get('pickup_maptile') or root.attrib.get('pickup_tile') or 'false'
+            pickup_maptile = (pickup_tile_str.lower() in ('true', '1'))
+            if not pickup_maptile:
+                props_node = root.find('properties')
+                if props_node is not None:
+                    p_node = props_node.find('pickup_maptile') or props_node.find('pickup_tile')
+                    if p_node is not None:
+                        pickup_maptile = p_node.get('value', 'true').lower() in ('true', '1')
+
             template = {
                 'type': ttype, 
                 'properties': {}, 
@@ -120,6 +129,7 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
                 'allow_belt': allow_belt,
                 'allow_use': allow_use,
                 'destroy_tile': destroy_tile,
+                'pickup_maptile': pickup_maptile,
                 'harvest_fertilizer': harvest_fertilizer,
                 'consume_time': consume_time,
                 'tip': tip,

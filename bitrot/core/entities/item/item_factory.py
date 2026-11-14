@@ -571,6 +571,8 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
 
     destroy_tile = template.get('destroy_tile', False)
     
+    pickup_maptile = template.get('pickup_maptile', False)
+
     new_item = cls(
         actual_name, template['type'], durability=durability, load=load, 
         capacity=capacity, color=color, ammo_type=ammo_type, pellets=pellets, 
@@ -592,7 +594,7 @@ def create_item_from_name(cls, item_name, randomize_durability=False, force_colo
         allow_use=allow_use, hotbar=hotbar,
         harvest=harvest_data, harvest_fertilizer=harvest_fertilizer,
         can_write=can_write, text_length=text_length,
-        destroy_tile=destroy_tile
+        destroy_tile=destroy_tile, pickup_maptile=pickup_maptile
     )
 
     # Use shared cache instead of item.image.copy()

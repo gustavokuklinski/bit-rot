@@ -385,6 +385,174 @@ def handle_mouse_down(game, event, mouse_pos):
                     return
 
 
+        if getattr(game, 'item_to_pickup', None):
+            adjusted_mouse_pos = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+            world_pos = game.screen_to_world(adjusted_mouse_pos)
+
+            mouse_tx = int(world_pos[0]) // TILE_SIZE
+            mouse_ty = int(world_pos[1]) // TILE_SIZE
+            p_tx = int(game.player.rect.centerx // TILE_SIZE)
+            p_ty = int(game.player.rect.centery // TILE_SIZE)
+
+            snap_x = mouse_tx * TILE_SIZE
+            snap_y = mouse_ty * TILE_SIZE
+            in_range = abs(mouse_tx - p_tx) <= 1 and abs(mouse_ty - p_ty) <= 1
+
+            if not in_range:
+                display_message(tr('msg', "Too far away to pickup tile!"))
+                return
+
+            p_info = game.item_to_pickup
+            target_layer = p_info.get('target_layer', 'map')
+            tool_item = p_info.get('item')
+            curr_layer = getattr(game, 'current_layer_index', 1)
+
+            def _damage_pickup_tool_and_fx():
+                if tool_item and hasattr(tool_item, 'durability') and tool_item.durability is not None:
+                    tool_item.durability = max(0, tool_item.durability - 1)
+                    if tool_item.durability <= 0:
+                        if getattr(game.player, 'active_weapon', None) == tool_item:
+                            game.player.active_weapon = None
+                        display_message(f"{tr('item', tool_item.name)} {tr('msg', 'broke!')}")
+                        game.item_to_pickup = None
+
+                if hasattr(game, 'sound_manager'):
+                    game.sound_manager.play_sound('place.ogg', subdir='items', game=game, is_critical=True)
+                if hasattr(game, 'splashes'):
+                    game.splashes.append({
+                        'pos': (snap_x + TILE_SIZE // 2, snap_y + TILE_SIZE // 2),
+                        'time': pygame.time.get_ticks(),
+                        'duration': 300,
+                        'radius': 4,
+                        'type': 'hit_puff'
+                    })
+
+            def _give_maptile_item(tile_char, layer_type):
+                t_def = game.tile_manager.definitions.get(tile_char, {}) if hasattr(game, 'tile_manager') else {}
+                item_name = t_def.get('name', tile_char) if t_def else tile_char
+
+                picked_item = Item.create_from_name(item_name)
+                t_type = t_def.get('type') if t_def else 'maptile'
+                itype = 'maptile_container' if t_type == 'maptile_container' else 'maptile'
+
+                if not picked_item:
+                    picked_item = Item(item_name, item_type=itype)
+
+                picked_item.is_maptile = True
+                picked_item.tile_char = tile_char
+                picked_item.tile_def = t_def
+                picked_item.map_location = '_roof' if layer_type == 'roof' else ('_ground' if layer_type == 'ground' else '_map')
+                if not getattr(picked_item, 'image', None) and t_def.get('image'):
+                    picked_item.image = t_def['image']
+
+                if itype == 'maptile_container':
+                    picked_item.item_type = 'maptile_container'
+                    picked_item.capacity = t_def.get('capacity', 20)
+                    picked_item.inventory = []
+
+                if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                    game.player.inventory.append(picked_item)
+                    if hasattr(game.player, 'stack_item_in_inventory'):
+                        game.player.stack_item_in_inventory(picked_item)
+                else:
+                    picked_item.rect.center = game.player.rect.center
+                    picked_item.x, picked_item.y = picked_item.rect.topleft
+                    picked_item.layer = curr_layer
+                    picked_item.map_filename = getattr(game.map_manager, 'current_map_filename', '')
+                    game.items_on_ground.append(picked_item)
+                    display_message(tr('msg', "Inventory full. Dropped item on ground."))
+
+                display_message(f"{tr('msg', 'Picked up')} {tr('item', picked_item.name)}.")
+
+            # 1. Pickup Roof
+            if target_layer == 'roof':
+                if hasattr(game, 'roof_data') and 0 <= mouse_ty < len(game.roof_data) and 0 <= mouse_tx < len(game.roof_data[0]):
+                    tile_char = game.roof_data[mouse_ty][mouse_tx]
+                    if not tile_char or tile_char == ' ':
+                        display_message(tr('msg', "No roof tile here to pickup."))
+                        return
+
+                    game.roof_data[mouse_ty][mouse_tx] = ' '
+                    if hasattr(game, 'all_roof_layers') and curr_layer in game.all_roof_layers:
+                        if 0 <= mouse_ty < len(game.all_roof_layers[curr_layer]) and 0 <= mouse_tx < len(game.all_roof_layers[curr_layer][0]):
+                            game.all_roof_layers[curr_layer][mouse_ty][mouse_tx] = ' '
+
+                    game.map_manager.invalidate_chunk(mouse_tx, mouse_ty)
+                    _give_maptile_item(tile_char, 'roof')
+                    _damage_pickup_tool_and_fx()
+                    return
+
+            # 2. Pickup Base Map Tile / Container
+            elif target_layer == 'map':
+                if hasattr(game, 'map_data') and 0 <= mouse_ty < len(game.map_data) and 0 <= mouse_tx < len(game.map_data[0]):
+                    tile_char = game.map_data[mouse_ty][mouse_tx]
+                    if not tile_char or tile_char == ' ':
+                        display_message(tr('msg', "No map tile here to pickup."))
+                        return
+
+                    tile_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
+
+                    # Only allow picking up container if it is completely empty
+                    cont = next((c for c in getattr(game, 'containers', []) if hasattr(c, 'rect') and c.rect.colliderect(tile_rect)), None)
+                    if cont:
+                        if hasattr(cont, 'inventory') and len(cont.inventory) > 0:
+                            display_message(tr('msg', "Cannot pickup: Container is not empty!"))
+                            return
+                        if cont in game.containers:
+                            game.containers.remove(cont)
+                        game.modals = [m for m in game.modals if m.get('item') != cont]
+                        if hasattr(game, 'spatial_manager'):
+                            game.spatial_manager.rebuild_container_grid()
+
+                    game.obstacles = [ob for ob in game.obstacles if ob != tile_rect]
+                    game.map_data[mouse_ty][mouse_tx] = ' '
+                    if hasattr(game, 'all_map_layers') and curr_layer in game.all_map_layers:
+                        if 0 <= mouse_ty < len(game.all_map_layers[curr_layer]) and 0 <= mouse_tx < len(game.all_map_layers[curr_layer][0]):
+                            game.all_map_layers[curr_layer][mouse_ty][mouse_tx] = ' '
+
+                    if hasattr(game.map_manager, 'remove_barricade'):
+                        game.map_manager.remove_barricade(mouse_tx, mouse_ty)
+
+                    game.map_manager.invalidate_chunk(mouse_tx, mouse_ty)
+                    _give_maptile_item(tile_char, 'map')
+                    _damage_pickup_tool_and_fx()
+                    return
+            else:
+                
+                if hasattr(game, 'map_data') and 0 <= mouse_ty < len(game.map_data) and 0 <= mouse_tx < len(game.map_data[0]):
+                    tile_char = game.map_data[mouse_ty][mouse_tx]
+                    if not tile_char or tile_char == ' ':
+                        display_message(tr('msg', "No map tile here to pickup."))
+                        return
+
+                    tile_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
+
+                    # Only allow picking up container if it is completely empty
+                    cont = next((c for c in getattr(game, 'containers', []) if hasattr(c, 'rect') and c.rect.colliderect(tile_rect)), None)
+                    if cont:
+                        if hasattr(cont, 'inventory') and len(cont.inventory) > 0:
+                            display_message(tr('msg', "Cannot pickup: Container is not empty!"))
+                            return
+                        if cont in game.containers:
+                            game.containers.remove(cont)
+                        game.modals = [m for m in game.modals if m.get('item') != cont]
+                        if hasattr(game, 'spatial_manager'):
+                            game.spatial_manager.rebuild_container_grid()
+
+                    game.obstacles = [ob for ob in game.obstacles if ob != tile_rect]
+                    game.map_data[mouse_ty][mouse_tx] = ' '
+                    if hasattr(game, 'all_map_layers') and curr_layer in game.all_map_layers:
+                        if 0 <= mouse_ty < len(game.all_map_layers[curr_layer]) and 0 <= mouse_tx < len(game.all_map_layers[curr_layer][0]):
+                            game.all_map_layers[curr_layer][mouse_ty][mouse_tx] = ' '
+
+                    if hasattr(game.map_manager, 'remove_barricade'):
+                        game.map_manager.remove_barricade(mouse_tx, mouse_ty)
+
+                    game.map_manager.invalidate_chunk(mouse_tx, mouse_ty)
+                    _give_maptile_item(tile_char, 'map')
+                    _damage_pickup_tool_and_fx()
+                    return
+
         if game.context_menu['active']:
             menu_clicked = False
             for rect in game.context_menu.get('rects', []):
@@ -1117,7 +1285,11 @@ def handle_mouse_down(game, event, mouse_pos):
         if getattr(game, 'item_to_destroy', None):
             game.item_to_destroy = None
             return
-            
+        
+        if getattr(game, 'item_to_pickup', None):
+            game.item_to_pickup = None
+            return
+
         if getattr(game, 'item_to_plant', None):
             game.item_to_plant = None
             return

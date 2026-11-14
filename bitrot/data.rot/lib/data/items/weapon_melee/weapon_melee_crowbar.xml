@@ -1,4 +1,4 @@
-<item name="Crowbar" type="weapon_melee" allow_belt="true">
+<item name="Crowbar" type="weapon_melee" allow_belt="true" pickup_maptile="true">
     <properties>
         <durability min="60" max="100" />
         

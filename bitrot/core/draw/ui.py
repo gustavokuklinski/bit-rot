@@ -1188,61 +1188,6 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
             mouse_tx = int(world_mouse_pos[0] // TILE_SIZE)
             mouse_ty = int(world_mouse_pos[1] // TILE_SIZE)
 
-            # [FIX] Draw Highlight bounding box
-            for dx in range(-1, 2):
-                for dy in range(-1, 2):
-                    tx = p_tx + dx
-                    ty = p_ty + dy
-                    
-                    test_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                    is_free = not any(ob.colliderect(test_rect) for ob in game.obstacles)
-                    
-                    screen_x = ((tx * TILE_SIZE + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
-                    screen_y = ((ty * TILE_SIZE + offset_y) * zoom)
-                    grid_rect = pygame.Rect(screen_x, screen_y, max(1, int(TILE_SIZE * zoom)), max(1, int(TILE_SIZE * zoom)))
-                    
-                    color = (50, 255, 50, 60) if is_free else (255, 50, 50, 60)
-                    grid_surf = pygame.Surface((grid_rect.width, grid_rect.height), pygame.SRCALPHA)
-                    grid_surf.fill(color)
-                    game.game_screen.blit(grid_surf, grid_rect.topleft)
-                    pygame.draw.rect(game.game_screen, (color[0], color[1], color[2]), grid_rect, 1)
-            
-            snap_x = mouse_tx * TILE_SIZE
-            snap_y = mouse_ty * TILE_SIZE
-            in_range = abs(mouse_tx - p_tx) <= 1 and abs(mouse_ty - p_ty) <= 1
-            
-            from core.systems.utils import is_door_or_window_tile
-            is_door_win = is_door_or_window_tile(game, mouse_tx, mouse_ty)
-            test_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
-            is_free = not any(ob.colliderect(test_rect) for ob in game.obstacles) and not is_door_win
-            can_place = in_range and is_free
-            
-            screen_snap_x = ((snap_x + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
-            screen_snap_y = ((snap_y + offset_y) * zoom)
-            
-            if getattr(item, 'image', None):
-                preview_img = pygame.transform.scale(item.image, (max(1, int(TILE_SIZE * zoom)), max(1, int(TILE_SIZE * zoom))))
-                game.game_screen.blit(preview_img, (screen_snap_x, screen_snap_y))
-                tint = pygame.Surface((preview_img.get_width(), preview_img.get_height()), pygame.SRCALPHA)
-                tint.fill((0, 255, 0, 80) if can_place else (255, 0, 0, 80))
-                game.game_screen.blit(tint, (screen_snap_x, screen_snap_y))
-            else:
-                preview_rect = pygame.Rect(screen_snap_x, screen_snap_y, max(1, int(TILE_SIZE * zoom)), max(1, int(TILE_SIZE * zoom)))
-                pygame.draw.rect(game.game_screen, getattr(item, 'color', WHITE), preview_rect)
-                pygame.draw.rect(game.game_screen, (0, 255, 0) if can_place else (255, 0, 0), preview_rect, 2)
-        
-        elif getattr(game, 'item_to_place', None):
-            pygame.mouse.set_visible(False)
-            item = getattr(game, 'item_to_place')['item']
-            
-            p_tx = int(game.player.rect.centerx // TILE_SIZE)
-            p_ty = int(game.player.rect.centery // TILE_SIZE)
-            
-            adj_mouse = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
-            world_mouse_pos = game.screen_to_world(adj_mouse)
-            mouse_tx = int(world_mouse_pos[0] // TILE_SIZE)
-            mouse_ty = int(world_mouse_pos[1] // TILE_SIZE)
-
             # Draw Highlight bounding box with R, M, G indicators
             for dx in range(-1, 2):
                 for dy in range(-1, 2):
@@ -1300,6 +1245,91 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
                 is_free = not any(ob.colliderect(test_rect) for ob in game.obstacles) and not is_door_win
                 on_player = test_rect.colliderect(game.player.rect)
                 can_place = in_range and is_free and not on_player
+
+            screen_snap_x = ((snap_x + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
+            screen_snap_y = ((snap_y + offset_y) * zoom)
+
+            if getattr(item, 'image', None):
+                preview_img = pygame.transform.scale(item.image, (max(1, int(TILE_SIZE * zoom)), max(1, int(TILE_SIZE * zoom))))
+                game.game_screen.blit(preview_img, (screen_snap_x, screen_snap_y))
+                tint = pygame.Surface((preview_img.get_width(), preview_img.get_height()), pygame.SRCALPHA)
+                tint.fill((0, 255, 0, 80) if can_place else (255, 0, 0, 80))
+                game.game_screen.blit(tint, (screen_snap_x, screen_snap_y))
+            else:
+                preview_rect = pygame.Rect(screen_snap_x, screen_snap_y, max(1, int(TILE_SIZE * zoom)), max(1, int(TILE_SIZE * zoom)))
+                pygame.draw.rect(game.game_screen, getattr(item, 'color', WHITE), preview_rect)
+                pygame.draw.rect(game.game_screen, (0, 255, 0) if can_place else (255, 0, 0), preview_rect, 2)
+
+        elif getattr(game, 'item_to_pickup', None):
+            pygame.mouse.set_visible(False)
+            p_info = getattr(game, 'item_to_pickup')
+            target_layer = p_info.get('target_layer', 'map')
+
+            p_tx = int(game.player.rect.centerx // TILE_SIZE)
+            p_ty = int(game.player.rect.centery // TILE_SIZE)
+
+            adj_mouse = (mouse_pos[0] - game.viewport_left_offset, mouse_pos[1])
+            world_mouse_pos = game.screen_to_world(adj_mouse)
+            mouse_tx = int(world_mouse_pos[0] // TILE_SIZE)
+            mouse_ty = int(world_mouse_pos[1] // TILE_SIZE)
+
+            # Draw 3x3 pickup range grid with layer indicators
+            for dx in range(-1, 2):
+                for dy in range(-1, 2):
+                    tx = p_tx + dx
+                    ty = p_ty + dy
+
+                    screen_x = ((tx * TILE_SIZE + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
+                    screen_y = ((ty * TILE_SIZE + offset_y) * zoom)
+                    grid_rect = pygame.Rect(screen_x, screen_y, max(1, int(TILE_SIZE * zoom)), max(1, int(TILE_SIZE * zoom)))
+
+                    grid_surf = pygame.Surface((grid_rect.width, grid_rect.height), pygame.SRCALPHA)
+                    grid_surf.fill((50, 150, 220, 40))
+                    game.game_screen.blit(grid_surf, grid_rect.topleft)
+                    pygame.draw.rect(game.game_screen, (50, 150, 220), grid_rect, 1)
+
+                    has_r = bool(getattr(game, 'roof_data', None) and 0 <= ty < len(game.roof_data) and 0 <= tx < len(game.roof_data[0]) and game.roof_data[ty][tx] != ' ')
+                    has_m = bool(getattr(game, 'map_data', None) and 0 <= ty < len(game.map_data) and 0 <= tx < len(game.map_data[0]) and game.map_data[ty][tx] != ' ')
+                    tags = []
+                    if has_r: tags.append(('R', (255, 215, 0)))
+                    if has_m: tags.append(('M', (220, 220, 220)))
+
+                    if tags:
+                        total_tw = sum(font_14.size(ch)[0] for ch, _ in tags) + (len(tags) - 1)
+                        cur_tx = grid_rect.centerx - (total_tw // 2)
+                        cur_ty = grid_rect.centery - (font_14.get_height() // 2)
+                        for ch, col in tags:
+                            ts = font_14.render(ch, False, col)
+                            game.game_screen.blit(ts, (cur_tx, cur_ty))
+                            cur_tx += ts.get_width() + 1
+
+            # Hovered target validation
+            in_range = abs(mouse_tx - p_tx) <= 1 and abs(mouse_ty - p_ty) <= 1
+            snap_x = mouse_tx * TILE_SIZE
+            snap_y = mouse_ty * TILE_SIZE
+
+            has_target_tile = False
+            can_pickup = False
+
+            if target_layer == 'roof':
+                has_target_tile = bool(getattr(game, 'roof_data', None) and 0 <= mouse_ty < len(game.roof_data) and 0 <= mouse_tx < len(game.roof_data[0]) and game.roof_data[mouse_ty][mouse_tx] != ' ')
+                can_pickup = in_range and has_target_tile
+            elif target_layer == 'map':
+                has_target_tile = bool(getattr(game, 'map_data', None) and 0 <= mouse_ty < len(game.map_data) and 0 <= mouse_tx < len(game.map_data[0]) and game.map_data[mouse_ty][mouse_tx] != ' ')
+                tile_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
+                cont = next((c for c in getattr(game, 'containers', []) if hasattr(c, 'rect') and c.rect.colliderect(tile_rect)), None)
+                is_empty_or_no_cont = (cont is None) or (not hasattr(cont, 'inventory')) or (len(cont.inventory) == 0)
+                can_pickup = in_range and has_target_tile and is_empty_or_no_cont
+
+            screen_snap_x = ((snap_x + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
+            screen_snap_y = ((snap_y + offset_y) * zoom)
+            hover_rect = pygame.Rect(screen_snap_x, screen_snap_y, max(1, int(TILE_SIZE * zoom)), max(1, int(TILE_SIZE * zoom)))
+
+            h_col = (50, 205, 50, 90) if can_pickup else (120, 120, 120, 60)
+            h_surf = pygame.Surface((hover_rect.width, hover_rect.height), pygame.SRCALPHA)
+            h_surf.fill(h_col)
+            game.game_screen.blit(h_surf, hover_rect.topleft)
+            pygame.draw.rect(game.game_screen, (50, 255, 50) if can_pickup else (140, 140, 140), hover_rect, 2)
 
         elif getattr(game, 'item_to_destroy', None):
             pygame.mouse.set_visible(False)
