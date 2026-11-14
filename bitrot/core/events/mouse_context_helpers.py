@@ -145,6 +145,20 @@ def calculate_boat_fuel_cost(game, dest_gx, dest_gy):
     discount = getattr(game, 'boat_fuel_discount', 1.0)
     return max(1, int(base_cost * discount))
 
+def find_player_sleeping_pills(player):
+    """Finds the first usable Sleeping Pills item in player's belt, inventory, or gear."""
+    if not player:
+        return None, None, -1, None
+    for i, it in enumerate(getattr(player, 'belt', [])):
+        if it and "sleeping pills" in getattr(it, 'name', '').lower() and (getattr(it, 'load', 1) or 1) > 0:
+            return it, 'belt', i, None
+    for i, it in enumerate(getattr(player, 'inventory', [])):
+        if it and "sleeping pills" in getattr(it, 'name', '').lower() and (getattr(it, 'load', 1) or 1) > 0:
+            return it, 'inventory', i, None
+    for slot, it in getattr(player, 'clothes', {}).items():
+        if it and "sleeping pills" in getattr(it, 'name', '').lower() and (getattr(it, 'load', 1) or 1) > 0:
+            return it, 'gear', slot, None
+    return None, None, -1, None
 
 def find_player_shovel(player):
     """Checks if the player is carrying a usable shovel in inventory, belt, or clothes."""

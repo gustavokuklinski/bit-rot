@@ -2,6 +2,7 @@ import uuid
 import math
 import pygame
 import random
+import time
 import core.data.config
 from core.data.config import *
 from core.entities.item.item import Item
@@ -2109,6 +2110,78 @@ def handle_context_menu_click(game, mouse_pos):
                         game.modals.append(new_text_modal)
                 else:
                     game.player.read_recipe_book(item)
+                clicked_on_menu = True
+
+            elif option == 'Sleep':
+                if source == 'map_tile' and isinstance(item, dict) and item.get('sub_type') == 'sleep_tile':
+                    p_gx = int(game.player.rect.centerx // TILE_SIZE)
+                    p_gy = int(game.player.rect.centery // TILE_SIZE)
+                    gx = item.get('grid_x', p_gx)
+                    gy = item.get('grid_y', p_gy)
+                    dist = math.hypot(gx - p_gx, gy - p_gy)
+                    if dist > 2.0:
+                        display_message(tr('msg', "Too far away to sleep."))
+                        game.context_menu['active'] = False
+                        return
+
+                    wt = getattr(game, 'world_time', None)
+                    can_sleep = False
+                    if wt and hasattr(wt, 'is_sleep_time'):
+                        can_sleep = wt.is_sleep_time()
+                    elif wt and hasattr(wt, 'game_time_ms') and hasattr(wt, 'day_length_ms') and wt.day_length_ms:
+                        exact_hour = (wt.game_time_ms / wt.day_length_ms) * 24.0
+                        can_sleep = (22.0 <= exact_hour < 24.0)
+
+                    from core.events.mouse_context_helpers import find_player_sleeping_pills
+                    pill_it, pill_src, pill_idx, pill_cont = find_player_sleeping_pills(game.player)
+
+                    if not can_sleep and not pill_it:
+                        display_message(tr('msg', "Only can sleep between: 22:00 and 00:00"))
+                        game.context_menu['active'] = False
+                        return
+
+                    if game.player.action_timer > 0:
+                        display_message(tr('msg', "Busy..."))
+                        game.context_menu['active'] = False
+                        return
+
+                    use_pills = (not can_sleep and pill_it is not None)
+
+                    if use_pills:
+                        p_it, p_src, p_idx, p_cont = find_player_sleeping_pills(game.player)
+                        if p_it:
+                            if hasattr(p_it, 'load') and p_it.load is not None and p_it.load > 1 and getattr(p_it, 'is_stackable', lambda: False)():
+                                p_it.load -= 1
+                            else:
+                                remove_from_source(game, p_it, p_src, p_idx, p_cont)
+
+                        if wt and hasattr(wt, 'advance_time'):
+                            wt.advance_time(8.0)
+
+                        # Wake up with 50% stats and full health
+                        game.player.health = game.player.max_health
+                        game.player.stamina = game.player.max_stamina * 0.5
+                        game.player.drugs = 50.0
+                        game.player.anxiety = 50.0
+                        game.player.water = 50.0
+                        game.player.food = 50.0
+                        game.player.last_decay_time = time.time()
+
+                        display_message(f"{tr('msg', 'Used')} {tr('item', 'Sleeping Pills')}. {tr('msg', 'You fell asleep for 8 hours.')}")
+                    else:
+                        if wt and hasattr(wt, 'advance_time'):
+                            wt.advance_time(8.0)
+
+                        # Reset status: Health, Stamina, Anxiety, Drugs, Food, Water
+                        game.player.health = game.player.max_health
+                        game.player.stamina = game.player.max_stamina
+                        game.player.anxiety = 0.0
+                        game.player.drugs = 0.0
+                        game.player.food = 100.0
+                        game.player.water = 100.0
+                        game.player.last_decay_time = time.time()
+
+                        display_message(tr('msg', "You slept for 8 hours and feel refreshed."))
                 clicked_on_menu = True
 
             elif option == 'Write':

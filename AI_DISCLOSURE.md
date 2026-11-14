@@ -10,6 +10,7 @@ In the spirit of transparency and open-source collaboration, this document outli
 ## AI Models Used
 The following Large Language Models (LLMs) were utilized during the development lifecycle:
 
+- **Gemini 4 Hydrogen**
 - **Gemma4 31B IT**
 - **Gemini Pro Latest**
 - **Gemini 3.8 Flash**

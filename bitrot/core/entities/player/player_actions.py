@@ -141,9 +141,49 @@ class PlayerActions:
 
         from core.entities.item.item_helpers import is_infinite_liquid_source
         is_infinite = container_item and is_infinite_liquid_source(container_item) and getattr(item, 'liquid', False)
+        
         if is_infinite:
             item.load = getattr(item, 'capacity', 100) or 100
-        
+
+        # Custom handler for Sleeping Pills item
+        if "sleeping pills" in getattr(item, 'name', '').lower():
+            target_game = game or getattr(self, 'game', None) or getattr(core.messages, '_game_instance', None)
+
+            import time
+            if hasattr(item, 'load') and item.load is not None:
+                item.load -= 1
+                if item.load <= 0 and not is_infinite:
+                    if source_type == 'belt':
+                        self.belt[item_index] = None
+                    elif source_type == 'inventory':
+                        if item_index < len(self.inventory) and self.inventory[item_index] == item:
+                            self.inventory.pop(item_index)
+                        elif item in self.inventory:
+                            self.inventory.remove(item)
+                    elif source_type == 'gear':
+                        self.clothes[item_index] = None
+                    elif (source_type in ('container', 'nearby', 'container_map')) and container_item:
+                        if hasattr(container_item, 'inventory'):
+                            if item_index is not None and 0 <= item_index < len(container_item.inventory) and container_item.inventory[item_index] == item:
+                                container_item.inventory.pop(item_index)
+                            elif item in container_item.inventory:
+                                container_item.inventory.remove(item)
+
+            if target_game and hasattr(target_game, 'world_time') and target_game.world_time:
+                target_game.world_time.advance_time(8.0)
+
+            # 50% Drugs, 50% Anxiety, 50% Water, 50% Food, 50% Stamina and full health
+            self.health = self.max_health
+            self.stamina = self.max_stamina * 0.5
+            self.drugs = 50.0
+            self.anxiety = 50.0
+            self.water = 50.0
+            self.food = 50.0
+            self.last_decay_time = time.time()
+
+            display_message(f"{tr('msg', 'Used')} {tr('item', item.name)}. {tr('msg', 'You fell asleep for 8 hours.')}")
+            return True
+
         if not (item.item_type.startswith('consumable') or item.item_type == 'liquid' or getattr(item, 'allow_use', False)):
             return False
 

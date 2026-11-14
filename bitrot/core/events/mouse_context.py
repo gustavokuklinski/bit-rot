@@ -354,6 +354,8 @@ def handle_right_click(game, mouse_pos):
                     (tile and tile.get('name') and ('door' in tile['name'].lower() or 'window' in tile['name'].lower()))
                 )
 
+                is_sleep_tile = bool(tile and (tile.get('allow_sleep') or str(tile.get('allow_sleep', '')).lower() in ('true', '1')))
+
                 p_grid_x = int(game.player.rect.centerx // TILE_SIZE)
                 p_grid_y = int(game.player.rect.centery // TILE_SIZE)
                 is_adjacent_tile = (abs(grid_x - p_grid_x) <= 1 and abs(grid_y - p_grid_y) <= 1)
@@ -368,9 +370,25 @@ def handle_right_click(game, mouse_pos):
                 if tile and tile.get('type') == "maptile_car":
                     is_tile_in_range = is_tile_in_range or (dist_sq <= (TILE_SIZE * 2.0) ** 2)
 
-                if is_boat or is_water or is_petrol or is_door_window or is_farm_tile or (tile and tile.get('type') == "maptile_car"):
+                if is_boat or is_water or is_petrol or is_door_window or is_farm_tile or is_sleep_tile or (tile and tile.get('type') == "maptile_car"):
                     if is_tile_in_range:
                         if tile and tile.get('type') == "maptile_car":
+                            vehicle = game.map_manager.get_vehicle_at(grid_x, grid_y)
+                            if vehicle:
+                                clicked_item = vehicle
+                                click_source = 'container_map'
+                                click_index = 0
+                        elif is_sleep_tile:
+                            clicked_item = {
+                                'name': tile.get('name', 'Bed'),
+                                'type': 'map_tile',
+                                'sub_type': 'sleep_tile',
+                                'grid_x': grid_x,
+                                'grid_y': grid_y,
+                                'tile_def': tile,
+                                'char': char
+                            }
+                            click_source = 'map_tile'
                             vehicle = game.map_manager.get_vehicle_at(grid_x, grid_y)
                             if vehicle:
                                 clicked_item = vehicle
@@ -476,6 +494,25 @@ def handle_right_click(game, mouse_pos):
             gy = clicked_item['grid_y']
             char = clicked_item.get('char', '')
             t_def = game.map_manager.get_tile_at(gx, gy)
+
+            if clicked_item.get('sub_type') == 'sleep_tile':
+                options.append('Sleep')
+                sleep_tt = tr('tooltip', "Only can sleep between: 22:00 and 00:00")
+                game.context_menu['tooltips']['Sleep'] = sleep_tt
+
+                wt = getattr(game, 'world_time', None)
+                can_sleep = False
+                if wt and hasattr(wt, 'is_sleep_time'):
+                    can_sleep = wt.is_sleep_time()
+                elif wt and hasattr(wt, 'game_time_ms') and hasattr(wt, 'day_length_ms') and wt.day_length_ms:
+                    exact_hour = (wt.game_time_ms / wt.day_length_ms) * 24.0
+                    can_sleep = (22.0 <= exact_hour < 24.0)
+
+                from core.events.mouse_context_helpers import find_player_sleeping_pills
+                has_pills = (find_player_sleeping_pills(game.player)[0] is not None)
+
+                if not can_sleep and not has_pills:
+                    game.context_menu['colors']['Sleep'] = GRAY
 
             if clicked_item.get('sub_type') == 'farm_crop':
                 crop = game.map_manager.get_crop(gx, gy)
@@ -1101,7 +1138,7 @@ def handle_right_click(game, mouse_pos):
                 'Read', 'Write', 'Drink', 'Use', 'Eat', 'Turn on', 'Turn off', 
                 'Toggle Light', 'Crafts', 'Travel to', 'Open door/window', 
                 'Close door/window', 'Barricate', 'Unbarricade',
-                'Add Alias', 'Erase Alias'
+                'Add Alias', 'Erase Alias', 'Sleep'
             ]
             filtered_options = []
             for o in new_options:

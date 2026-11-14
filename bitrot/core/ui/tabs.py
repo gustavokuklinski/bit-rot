@@ -68,31 +68,7 @@ class Tabs:
             self.tab_rects.append(tab_rect)
             current_x += tab_width
 
-        # 2. Draw Inactive Tabs
-        for i, tab in enumerate(self.tabs_data):
-            if tab['label'] != current_active_label:
-                # Check for drag highlight
-                is_drag_target = False
-                if game and game.dragged_item and mouse_pos and self.tab_rects[i].collidepoint(mouse_pos):
-                    is_drag_target = True
-                
-                self._draw_single_tab(tab, self.tab_rects[i], is_active=False, is_drag_target=is_drag_target)
-
-        # 3. Draw Active Tab (Last, so it stays on top)
-        for i, tab in enumerate(self.tabs_data):
-            if tab['label'] == current_active_label:
-                # Check for drag highlight (even active tabs can be drop targets)
-                is_drag_target = False
-                if game and game.dragged_item and mouse_pos and self.tab_rects[i].collidepoint(mouse_pos):
-                    is_drag_target = True
-
-                self._draw_single_tab(tab, self.tab_rects[i], is_active=True, is_drag_target=is_drag_target)
-
-        # Store calculated rects for click detection
-        self.modal['tab_rects'] = self.tab_rects
-        
-        # 4. Check for Tab Hovers, construct the tooltip, and play hover sound
-        hovered_tab_id = None
+        # Check if cursor is over this modal and modal is topmost
         is_top_at_cursor = True
         if game and mouse_pos and hasattr(game, 'modals'):
             if getattr(game, 'context_menu', {}).get('active', False):
@@ -103,6 +79,27 @@ class Tabs:
                         is_top_at_cursor = (m is self.modal)
                         break
 
+        # 2. Draw Inactive Tabs
+        for i, tab in enumerate(self.tabs_data):
+            if tab['label'] != current_active_label:
+                rect = self.tab_rects[i]
+                is_hovered = bool(game and mouse_pos and is_top_at_cursor and rect.collidepoint(mouse_pos))
+                is_drag_target = bool(game and game.dragged_item and mouse_pos and rect.collidepoint(mouse_pos))
+                self._draw_single_tab(tab, rect, is_active=False, is_hovered=is_hovered, is_drag_target=is_drag_target)
+
+        # 3. Draw Active Tab (Last, so it stays on top)
+        for i, tab in enumerate(self.tabs_data):
+            if tab['label'] == current_active_label:
+                rect = self.tab_rects[i]
+                is_hovered = bool(game and mouse_pos and is_top_at_cursor and rect.collidepoint(mouse_pos))
+                is_drag_target = bool(game and game.dragged_item and mouse_pos and rect.collidepoint(mouse_pos))
+                self._draw_single_tab(tab, rect, is_active=True, is_hovered=is_hovered, is_drag_target=is_drag_target)
+
+        # Store calculated rects for click detection
+        self.modal['tab_rects'] = self.tab_rects
+        
+        # 4. Check for Tab Hovers, construct tooltip, and play hover sound
+        hovered_tab_id = None
         if game and mouse_pos and is_top_at_cursor:
             for i, tab in enumerate(self.tabs_data):
                 if self.tab_rects[i].collidepoint(mouse_pos):
@@ -117,17 +114,23 @@ class Tabs:
                     game.sound_manager.play_ui_hover()
             self.modal['_last_hovered_tab_id'] = hovered_tab_id
 
-    def _draw_single_tab(self, tab, rect, is_active, is_drag_target=False):
+    def _draw_single_tab(self, tab, rect, is_active, is_hovered=False, is_drag_target=False):
         if is_active: 
-            pygame.draw.rect(self.surface, GRAY_60, rect) # Active color
+            bg_color = (68, 68, 68) if is_hovered else GRAY_60  # Active color
+        elif is_hovered or is_drag_target:
+            bg_color = (48, 48, 48)  # Hover highlight color
         else:
-            pygame.draw.rect(self.surface, DARK_GRAY, rect) # Inactive color
+            bg_color = DARK_GRAY  # Inactive color
+
+        pygame.draw.rect(self.surface, bg_color, rect)
         
         # Draw Border
         if is_drag_target:
-             pygame.draw.rect(self.surface, YELLOW, rect, 2) # Highlight
+            pygame.draw.rect(self.surface, YELLOW, rect, 2)  # Highlight
+        elif is_hovered and not is_active:
+            pygame.draw.rect(self.surface, (200, 200, 200), rect, 1)  # Subtle border highlight
         else:
-             pygame.draw.rect(self.surface, WHITE, rect, 1) # Normal Border
+            pygame.draw.rect(self.surface, WHITE, rect, 1)  # Normal Border
 
         # Draw icon or fallback text
         if tab.get('icon'): 
@@ -141,7 +144,8 @@ class Tabs:
                 display_text = tr('ui', raw_label)
             if display_text == raw_label:
                 display_text = tr('item', raw_label)
-            text = font_12.render(display_text, False, WHITE)
+            text_color = YELLOW if (is_hovered and not is_active) else WHITE
+            text = font_12.render(display_text, False, text_color)
             text_rect = text.get_rect(center=rect.center)
             self.surface.blit(text, text_rect)
 

@@ -63,13 +63,14 @@ def draw_messages_modal(surface, game, modal, assets):
         modal['tabs_data'].append({'label': t_key, 'display': disp_label, 'rect': t_rect})
 
         is_act = (modal['active_tab'] == t_key)
-        is_hov = t_rect.collidepoint(mouse_pos) and is_top_at_cursor
+        is_hov = t_rect.collidepoint(mouse_pos)
         if is_hov:
             hovered_tab_id = t_key
 
-        bg = (55, 55, 55) if is_act else ((40, 40, 40) if is_hov else (25, 25, 25))
+        bg = (68, 68, 68) if (is_act and is_hov) else ((55, 55, 55) if is_act else ((48, 48, 48) if is_hov else (25, 25, 25)))
+        border_col = YELLOW if is_act else (WHITE if is_hov else GRAY_60)
         pygame.draw.rect(surface, bg, t_rect, border_radius=3)
-        pygame.draw.rect(surface, YELLOW if is_act else GRAY_60, t_rect, 1, border_radius=3)
+        pygame.draw.rect(surface, border_col, t_rect, 1, border_radius=3)
 
         txt_col = YELLOW if is_act else (WHITE if is_hov else (170, 170, 170))
         t_surf = font_12.render(disp_label, False, txt_col)

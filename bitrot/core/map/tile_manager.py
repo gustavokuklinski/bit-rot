@@ -49,6 +49,7 @@ class TileManager:
                         is_stair = root.get('is_stair', 'false').lower() == 'true'
                         is_visible = root.get('is_visible', 'false').lower() == 'true'
                         target_layer = int(root.get('target_layer', '0'))
+                        allow_sleep = root.get('allow_sleep', 'false').lower() in ('true', '1')
 
                         sprite_node = root.find('visuals/sprite')
                         sprite_file = sprite_node.get('file') if sprite_node is not None else None
@@ -83,6 +84,7 @@ class TileManager:
                                     'light_radius': int(root.get('light_radius', '0')),
                                     'is_stair': is_stair,
                                     'target_layer': target_layer,
+                                    'allow_sleep': allow_sleep,
                                 }
 
                                 # Parse Explicit Health

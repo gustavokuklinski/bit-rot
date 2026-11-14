@@ -383,7 +383,7 @@ class CraftingModal(BaseModal):
             click = False
 
         list_x = self.modal_x + self.padding
-        self.tabs_manager.draw()
+        self.tabs_manager.draw(self.game, mouse_pos)
         
         tab_area_height = 35 
         search_y = self.modal_y + self.header_h + tab_area_height + 5 

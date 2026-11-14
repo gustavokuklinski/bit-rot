@@ -249,6 +249,82 @@ class WorldTime:
 
         self._process_radio_broadcasts()
 
+    def is_sleep_time(self):
+        """Returns True if the time is between 22:00 and 00:00 (midnight)."""
+        if not self.day_length_ms:
+            return False
+        exact_hour = (self.game_time_ms / self.day_length_ms) * 24.0
+        return 22.0 <= exact_hour < 24.0
+
+    def advance_time(self, hours=8.0):
+        """Fast-forwards game time by specified hours, updating crops, day counts, and lighting."""
+        ms_per_hour = self.day_length_ms / 24.0
+        advance_ms = hours * ms_per_hour
+        self.game_time_ms += advance_ms
+
+        while self.game_time_ms >= self.day_length_ms:
+            self.game_time_ms -= self.day_length_ms
+            self.day_count += 1
+            check_milestone_progress(self.game, 'days', 'world_day')
+            display_message(self.game, f"{tr('msg', 'The horde grows stronger... (Day')} {self.day_count})")
+
+        exact_hour = (self.game_time_ms / self.day_length_ms) * 24.0
+        self.current_hour = int(exact_hour)
+
+        # Advance crop growth
+        if hasattr(self.game, 'map_manager') and hasattr(self.game.map_manager, 'update_crops'):
+            self.game.map_manager.update_crops(hours)
+
+        # Advance weather timer safely
+        if hasattr(self, 'weather_timer'):
+            self.weather_timer = max(30000, self.weather_timer - int(advance_ms))
+
+        self.last_update_time = pygame.time.get_ticks()
+
+        # Recalculate daylight and darkness state
+        if getattr(self.game, 'current_layer_index', 1) in (2, 3):
+            self.state = "NIGHT"
+            self.current_ambient_light = self.night_ambient
+            self.game.player_view_radius = self.night_radius
+        else:
+            fade = 0.0
+            new_state = "NIGHT"
+
+            if self.sunrise_hour <= exact_hour < (self.sunrise_hour + self.transition_duration_hours):
+                new_state = "TRANSITION_TO_DAY"
+                progress = (exact_hour - self.sunrise_hour) / self.transition_duration_hours
+                fade = self.ease_in_out(progress)
+            elif (self.sunrise_hour + self.transition_duration_hours) <= exact_hour < self.sunset_hour:
+                new_state = "DAY"
+                fade = 1.0
+            elif self.sunset_hour <= exact_hour < (self.sunset_hour + self.transition_duration_hours):
+                new_state = "TRANSITION_TO_NIGHT"
+                progress = (exact_hour - self.sunset_hour) / self.transition_duration_hours
+                fade = 1.0 - self.ease_in_out(progress)
+            else:
+                new_state = "NIGHT"
+                fade = 0.0
+
+            self.state = new_state
+            self.game.player_view_radius = self.lerp(self.night_radius, self.day_radius, fade)
+            self.current_ambient_light = self.lerp(self.night_ambient, self.day_ambient, fade)
+
+            if hasattr(self.game, 'sound_manager'):
+                if self.state in ["DAY", "TRANSITION_TO_DAY"]:
+                    if self.night_channel:
+                        self.night_channel.fadeout(1000)
+                        self.night_channel = None
+                    if not self.day_channel:
+                        self.day_channel = self.game.sound_manager.play_sound("day.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=1000)
+                elif self.state in ["NIGHT", "TRANSITION_TO_NIGHT"]:
+                    if self.day_channel:
+                        self.day_channel.fadeout(1000)
+                        self.day_channel = None
+                    if not self.night_channel:
+                        self.night_channel = self.game.sound_manager.play_sound("night.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=1000)
+
+        self._last_state = self.state
+
     def _process_radio_broadcasts(self):
         if not hasattr(self.game, 'radio_frequencies'):
             return
