@@ -1,9 +1,9 @@
 bg,bg,bg,bg,bg,bg,dirty_01,dirty_01,dirty_01
-bg,bg,bg,bg,bg,bg,bg,dirty_right_01,dirty_01
+bg,bg,bg,bg,garden_dirty_1,bg,bg,dirty_right_01,dirty_01
 bg,bg,bg,bg,bg,bg,bg,dirty_01,dirty_01
 bg,bg,bg,bg,bg,house_floor_01,bg,bg,dirty_01
-bg,bg,bg,bg,bg,bg,bg,bg,dirty_01
-bg,bg,bg,bg,house_floor_01,wooden_wall_01,bg,bg,dirty_01
+bg,garden_dirty_1,bg,bg,bg,bg,bg,bg,dirty_01
+bg,bg,bg,garden_dirty_1,house_floor_01,wooden_wall_01,bg,bg,dirty_01
 bg,bg,bg,bg,bg,bg,dirty_01,dirty_01,dirty_01
-bg,bg,bg,bg,bg,bg,dirty_01,dirty_01,dirty_01
+bg,bg,garden_dirty_1,bg,bg,bg,dirty_01,dirty_01,dirty_01
 bg,bg,bg,bg,bg,bg,dirty_01,dirty_01,dirty_01

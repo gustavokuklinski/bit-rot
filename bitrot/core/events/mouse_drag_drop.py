@@ -1317,6 +1317,9 @@ def handle_mouse_up(game, event, mouse_pos):
                         
                         if game.dragged_item not in game.items_on_ground:
                             game.items_on_ground.append(game.dragged_item)
+
+                        # Close any open container view for this dropped item
+                        game.modals = [m for m in game.modals if m.get('item') != game.dragged_item]
                         dropped_successfully = True
 
                         if game and hasattr(game, 'sound_manager'):

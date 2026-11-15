@@ -1,6 +1,6 @@
 <map name="Sink" type="maptile_container" char="house_shink" is_obstacle="true" allow_liquid="true" is_visible="true" is_opened="true">
     <visuals>
-        <sprite file="house_shink.png" />
+        <sprite file="container/house_shink.png" />
     </visuals>
     <capacity value="1" />
     <loot>

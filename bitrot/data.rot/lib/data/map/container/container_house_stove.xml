@@ -1,6 +1,6 @@
 <map name="Stove" type="maptile_container" char="house_stove" is_obstacle="true" is_visible="true">
     <visuals>
-        <sprite file="house_stove.png" />
+        <sprite file="container/house_stove.png" />
     </visuals>
     <capacity value="10" />
     <loot>

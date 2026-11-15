@@ -1,5 +1,5 @@
 <map name="asphalt_01" type="maptile" char="asphalt_01" is_obstacle="false">
     <visuals>
-        <sprite file="asphalt_01.png" />
+        <sprite file="asphalt/asphalt_01.png" />
     </visuals>
 </map>

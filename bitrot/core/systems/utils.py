@@ -580,7 +580,11 @@ def get_targeted_interactable(game):
         
         is_valid = False
         item_type = getattr(obj, 'item_type', '')
-        if item_type in ['container', 'maptile_container', 'corpse']:
+        if item_type == 'maptile_container':
+            # Do not allow opening a maptile_container if it was dropped on the ground
+            if obj in getattr(game, 'containers', []) and obj not in getattr(game, 'items_on_ground', []):
+                is_valid = True
+        elif item_type in ['container', 'corpse']:
             is_valid = True
         elif type(obj).__name__ == 'Corpse':
             is_valid = True

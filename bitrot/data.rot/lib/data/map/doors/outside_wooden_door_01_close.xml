@@ -1,0 +1,10 @@
+<map name="Wooden Door Outside" type="maptile" char="outside_wooden_door_01_close" state="close" is_obstacle="true" destructible="true">
+    <properties>
+        <health min="110" max="110" />
+        <repair items="[Metal Scrap:4, Weld:1]" gain_xp="[builder:1, maintenance: 0.5, intelligente: 0.5]" magazine="Survivor Guide Basic" time="1.5" />
+    </properties>
+    <visuals>
+        <sprite id="close" file="doors/outside_wooden_door_01_close.png" />
+    </visuals>
+    <sound src="door_close.ogg" />
+</map>

@@ -1,0 +1,18 @@
+{
+    "radio": {
+        "name": "[BNews]",
+        "frequency": "random",
+        "stream_config": [
+            "12:00",
+            "15:00",
+            "18:00",
+            "21:00",
+            "00:00"
+        ],
+        "streams": [
+            "[STATIC]...[NEWS] The archipelogo is large, an operation like this would cost more them save. Rosskrild and Silva are beting a lot on their resources. Also Exxoil and Gethulius on their paralell r-pox research. [STATIC]",
+            "[STATIC]...[NEWS] Vaccines are getting inefective during long time exposure to r-pox. Patients are starting to get infected fast. [STATIC]"
+
+        ]
+    }
+}

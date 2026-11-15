@@ -1,6 +1,6 @@
 {
     "radio": {
-        "name": "[Exxoil] EXL-36",
+        "name": "[EXL-36]",
         "frequency": "random",
         "stream_config": [
             "12:00",
@@ -13,7 +13,9 @@
             "[STATIC]...Keep strong survivors! We will rebuild...[STATIC]",
             "[STATIC]...EXL-36 still operating... We hear you...[STATIC]",
             "[STATIC]...Ration your food and stay indoors. The horde is moving...[STATIC]",
-            "[STATIC]...Avoid the horde, stay quiet. May God be with us...[STATIC]"
+            "[STATIC]...Avoid the horde, stay quiet. May God be with us...[STATIC]",
+            "[STATIC]...RioFM World news just said GTH-42 is locked out, anyone can hear?...[STATIC]",
+            "[STATIC]...Heard they send a boat to try rescue survivors at GTH-42. If anyone can hear, go to the port!...[STATIC]"
         ]
     }
 }

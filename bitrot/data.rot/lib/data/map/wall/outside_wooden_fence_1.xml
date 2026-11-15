@@ -1,0 +1,5 @@
+<map name="Wooden Fence Tall" type="maptile" char="outside_wooden_fence_1" is_obstacle="true">
+    <visuals>
+        <sprite id="close" file="wall/outside_wooden_fence_1.png" />
+    </visuals>
+</map>

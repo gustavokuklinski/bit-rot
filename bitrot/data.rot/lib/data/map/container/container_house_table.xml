@@ -1,6 +1,6 @@
 <map name="Table" type="maptile_container" char="house_table" is_obstacle="true" is_visible="true" is_opened="true">
     <visuals>
-        <sprite file="house_table.png" />
+        <sprite file="container/house_table.png" />
     </visuals>
     <capacity value="10" />
     <loot>

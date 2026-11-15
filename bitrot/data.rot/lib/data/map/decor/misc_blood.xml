@@ -1,5 +1,5 @@
 <map name="misc_blood" type="maptile" char="misc_blood" is_obstacle="false" is_visible="true">
     <visuals>
-        <sprite file="misc_blood.png" />
+        <sprite file="decor/misc_blood.png" />
     </visuals>
 </map>

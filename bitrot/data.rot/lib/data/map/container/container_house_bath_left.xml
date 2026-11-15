@@ -1,6 +1,6 @@
 <map name="Bath" type="maptile_container" char="house_bath" is_obstacle="true" allow_liquid="true" is_visible="true" is_opened="true">
     <visuals>
-        <sprite file="house_bath.png" />
+        <sprite file="container/house_bath.png" />
     </visuals>
     <capacity value="1" />
     <loot>

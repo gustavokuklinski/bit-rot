@@ -1,6 +1,6 @@
 <map name="Military Radio" type="maptile_container" char="military_radio" is_obstacle="true" is_visible="true">
     <visuals>
-        <sprite file="military_radio.png" />
+        <sprite file="container/military_radio.png" />
     </visuals>
     <capacity value="10" />
     <loot>

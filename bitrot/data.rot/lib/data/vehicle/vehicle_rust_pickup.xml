@@ -1,0 +1,36 @@
+<vehicle name="car_rust_pickup" type="car" is_obstacle="true" spawn_weight="50">
+    <capacity value="10" />
+    <car>
+        <max_speed value="5" />
+        <key value="Car Key Rust Pickup" />
+        <fuel value="1.0" />
+        <motor value="1.0" />
+        <battery value="1.0" />
+        <tire_front_left value="Car tire" />
+        <tire_front_right value="Car tire" />
+        <tire_back_left value="Car tire" />
+        <tire_back_right value="Car tire" />
+        <lights min="5" max="50" radius="8" />
+    </car>
+    <loot>
+        <item item="Car Key Pickup" chance="0.1" />
+        <item item="Fuel Canister" chance="0.1" />
+        <item item="Car Battery" chance="0.1" />
+        <item item="Toolkit" chance="0.5" />
+        <item item="Car Tire" chance="0.3" />
+        <item item="Kukaroach (Bit Rot publisher)" chance="0.1" />
+    </loot>
+    <visuals>
+        <sprite id="top" file="car_rust_pickup_top.png" />
+        <sprite id="down" file="car_rust_pickup_down.png" />
+        <sprite id="left" file="car_rust_pickup_left.png" />
+        <sprite id="right" file="car_rust_pickup_right.png" />
+    </visuals>
+    <sound>
+        <idle src="vehicle_idle.ogg" />
+        <on src="vehicle_on.ogg" />
+        <off src="vehicle_on.ogg" />
+        <fail src="vehicle_fail.ogg" />
+        <moving src="vehicle_moving.ogg" />
+    </sound>
+</vehicle>

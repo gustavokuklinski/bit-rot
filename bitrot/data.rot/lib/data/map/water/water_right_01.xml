@@ -1,5 +1,5 @@
 <map name="water_right_01" type="maptile" char="water_right_01" is_obstacle="true" is_visible="true">
     <visuals>
-        <sprite id="close" file="water_right_01.png" />
+        <sprite id="close" file="water/water_right_01.png" />
     </visuals>
 </map>

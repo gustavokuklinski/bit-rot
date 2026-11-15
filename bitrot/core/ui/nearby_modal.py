@@ -109,8 +109,12 @@ def draw_nearby_modal(surface, game, modal, assets, mouse_pos):
                     # Only treat as a container if it has real capacity (>0) and is not a hotbar item
                     if (getattr(obj, 'capacity', 0) or 0) > 0 and not getattr(obj, 'hotbar', False):
                         is_independent_container = True
-                elif getattr(obj, 'item_type', '') in ['container', 'container_disposable', 'vehicle', 'maptile_container']:
+                elif getattr(obj, 'item_type', '') in ['container', 'container_disposable', 'vehicle']:
                     is_independent_container = True
+                elif getattr(obj, 'item_type', '') == 'maptile_container':
+                    # Only an openable container tab if placed as a map container, NOT if dropped as a loose item
+                    if obj in getattr(game, 'containers', []) and obj not in getattr(game, 'items_on_ground', []):
+                        is_independent_container = True
             
             if is_independent_container:
                 nearby_containers.append(obj)

@@ -1,6 +1,6 @@
 <map name="Market shelf" type="maptile_container" char="store_sale_02" is_obstacle="true">
     <visuals>
-        <sprite file="store_sale_02.png" />
+        <sprite file="container/store_sale_02.png" />
     </visuals>
     <capacity value="15" />
     <loot>

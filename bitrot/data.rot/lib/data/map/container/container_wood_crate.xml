@@ -1,6 +1,6 @@
 <map name="Wood Crate" type="maptile_container" char="crate" is_obstacle="true">
     <visuals>
-        <sprite file="crate.png" />
+        <sprite file="container/crate.png" />
     </visuals>
     <capacity value="10" />
     <loot>

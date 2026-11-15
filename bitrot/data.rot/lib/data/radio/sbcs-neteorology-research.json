@@ -1,12 +1,12 @@
 {
     "radio": {
-        "name": "[SBCS] Meteorology Research",
+        "name": "[SBCS]",
         "frequency": "random",
         "stream_config": [
             "weather"
         ],
         "streams": [
-            "[STATIC]...This is the SBCS...Tropical, raining forming, expected at: {rain_time}...[COF]...[STATIC]"
+            "[STATIC]...This is the SBCS Weather Sattelite...Tropical, raining forming, expected at: {rain_time}...[COF]...[STATIC]"
         ]
     }
 }

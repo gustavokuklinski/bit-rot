@@ -1,0 +1,5 @@
+<map name="Wooden Fence Short" type="maptile" char="outside_wooden_fence_2" is_obstacle="true" is_visible="true">
+    <visuals>
+        <sprite file="wall/outside_wooden_fence_2.png" />
+    </visuals>
+</map>

@@ -1,6 +1,6 @@
 <map name="Barrel" type="maptile_container" char="misc_barrel" is_obstacle="true" allow_liquid="true" infinite_liquid="false" is_visible="true">
     <visuals>
-        <sprite file="misc_barrel.png" />
+        <sprite file="container/misc_barrel.png" />
     </visuals>
     <capacity value="1" />
     <loot>

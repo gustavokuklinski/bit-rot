@@ -1,6 +1,6 @@
 {
     "radio": {
-        "name": "[RioFM] World News",
+        "name": "[RioFM]",
         "frequency": "random",
         "stream_config": [
             "08:00",
@@ -12,7 +12,16 @@
             "[STATIC]...Patient zero is still unstable. Please, we need a containment team immediately! [COF][COF]...[STATIC]",
             "[STATIC]...To any surviving medical staff: report to the East Wing for reorganization...[STATIC]",
             "[STATIC]...The infection rate is climbing. We can't keep them out of the ward much longer... [NOISE][SCREAMING]...[STATIC]",
-            "[STATIC]...Is anyone receiving this? We have three wounded civilians. Please respond...[STATIC]"
+            "[STATIC]...Is anyone receiving this? We have three wounded civilians. Please respond...[STATIC]",
+            "[STATIC]...Looks like United States is falling! Europe is total black...[STATIC]",
+            "[STATIC]...Heard on cons that Next Petrol is contaminated...[STATIC]",
+            "[STATIC]...The Army is getting control of Rio, keep fighting! Roger...[STATIC]",
+            "[STATIC]...Goverment are creating an operation to get high level person from GTH-42 [STATIC]",
+            "[STATIC]...Next Petrol Archipelogo is now quarentined Nobody get in to the island until further orders...[STATIC]",
+            "[STATIC]...[Priest voice] 'Only god can save the souls of who remains at the island'...[STATIC]",
+            "[STATIC]...[MUSIC] [BAND] [VOICE] 'Não tenho mais o tempo que passou' [BAND] [MUSIC]...[STATIC]",
+            "[STATIC]...[MUSIC] EXL-36 island radio from Exxoil reported they send a rescue boat to GHT-42 [STATIC]",
+            "[STATIC]...[BNews] The archipelogo is large, an operation like this would cost more them save. Rosskrild and Silva are beting a lot on their resources. Also Exxoil and Gethulius on their paralell r-pox research. [STATIC]"
         ]
     }
 }

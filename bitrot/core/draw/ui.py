@@ -871,6 +871,9 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
 
     for obj in find_nearby_containers(game):
         if getattr(obj, 'item_type', '') != 'vehicle' and (getattr(obj, 'item_type', '') in ['container', 'maptile_container', 'corpse'] or type(obj).__name__ == 'Corpse') and screen_rect.colliderect(obj.rect):
+            # Dropped maptile_containers cannot be opened as containers
+            if getattr(obj, 'item_type', '') == 'maptile_container' and obj in getattr(game, 'items_on_ground', []):
+                continue
             tip_text = get_tooltip_tr('inspect_container', "Open [{key}]").replace('{key}', get_key_name('interact'))
             interactables.append({'rect': obj.rect, 'tip': tip_text})
 
@@ -1319,8 +1322,6 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
                         tags.append(('[M]' if target_layer == 'map' else 'M', (220, 220, 220)))
                     elif target_layer == 'map':
                         tags.append(('[M]', (100, 100, 100)))
-
-                    
 
                     if tags:
                         total_tw = sum(font_14.size(ch)[0] for ch, _ in tags) + (len(tags) - 1)

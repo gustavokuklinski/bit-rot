@@ -1,5 +1,5 @@
 <map name="factory_industrial_pipe_right" type="maptile" char="factory_industrial_pipe_right" is_obstacle="true" is_visible="true">
     <visuals>
-        <sprite file="factory_industrial_pipe_right.png" />
+        <sprite file="decor/factory_industrial_pipe_right.png" />
     </visuals>
 </map>

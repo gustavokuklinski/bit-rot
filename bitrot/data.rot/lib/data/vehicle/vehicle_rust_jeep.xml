@@ -1,0 +1,32 @@
+<vehicle name="car_rust_jeep" type="car" is_obstacle="true"  spawn_weight="40">
+    <capacity value="10" />
+    <car>
+        <max_speed value="7" />
+        <key value="Car Key Rust Jeep" />
+        <fuel value="0.1" />
+        <motor value="0.3" />
+        <battery value="0.5" />
+        <tire_front_left value="Car tire" />
+        <tire_front_right value="Car tire" />
+        <tire_back_left value="Car tire" />
+        <tire_back_right value="Car tire" />
+        <lights min="5" max="20" radius="5" />
+    </car>
+    <loot>
+        <item item="Fuel Canister" chance="0.1" />
+        <item item="Kukaroach (Bit Rot publisher)" chance="0.3" />
+    </loot>
+    <visuals>
+        <sprite id="top" file="car_rust_jeep_top.png" />
+        <sprite id="down" file="car_rust_jeep_down.png" />
+        <sprite id="left" file="car_rust_jeep_left.png" />
+        <sprite id="right" file="car_rust_jeep_right.png" />
+    </visuals>
+    <sound>
+        <idle src="vehicle_idle.ogg" />
+        <on src="vehicle_on.ogg" />
+        <off src="vehicle_on.ogg" />
+        <fail src="vehicle_fail.ogg" />
+        <moving src="vehicle_moving.ogg" />
+    </sound>
+</vehicle>

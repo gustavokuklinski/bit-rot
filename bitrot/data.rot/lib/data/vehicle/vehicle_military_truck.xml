@@ -1,0 +1,46 @@
+<?xml version='1.0' encoding='utf-8'?>
+<vehicle name="car_military_truck" type="car" is_obstacle="true" spawn_weight="5">
+    <capacity value="20" />
+    <car>
+        <max_speed value="10" />
+        <key value="Car Key Military Truck" />
+        <fuel value="0.1" />
+        <motor value="0.1" />
+        <battery value="0.1" />
+        <tire_front_left value="Car tire" />
+        <tire_front_right value="Car tire" />
+        <tire_back_left value="Car tire" />
+        <tire_back_right value="Car tire" />
+        <lights min="15" max="60" radius="12" />
+    </car>
+    <loot>
+        <item item="Fuel Canister" min="1" max="1" chance="0.6" />
+        <item item="Fuel Canister" min="1" max="1" chance="0.6" />
+        <item item="Fuel Canister" min="1" max="1" chance="0.6" />
+        <item item="Pistol 9mm" min="1" max="1" chance="0.6" />
+        <item item="Ammo Canister 9mm" min="1" max="1" chance="0.6" />
+        <item item="M4A1" min="1" max="1" chance="0.6" />
+        <item item="Ammo Canister 556" min="1" max="1" chance="0.6" />
+        <item item="Car Battery" min="1" max="1" chance="0.1" />
+        <item item="Motor Repair Kit" min="1" max="1" chance="0.1" />
+        <item item="Toolkit" min="1" max="1" chance="0.3" />
+        <item item="Survivor Kit" min="1" max="1" chance="0.2" />
+        <item item="Medical Kit" min="1" max="1" chance="0.2" />
+        <item item="Car Tire" min="1" max="1" chance="0.3" />
+        <item item="Car Key Military Truck" min="1" max="1" chance="0.1" />
+        <item item="Kukaroach (Bit Rot publisher)" min="1" max="1" chance="0.1" />
+    </loot>
+    <visuals>
+        <sprite id="top" file="car_military_truck_top.png" />
+        <sprite id="down" file="car_military_truck_down.png" />
+        <sprite id="left" file="car_military_truck_left.png" />
+        <sprite id="right" file="car_military_truck_right.png" />
+    </visuals>
+    <sound>
+        <idle src="vehicle_idle.ogg" />
+        <on src="vehicle_on.ogg" />
+        <off src="vehicle_on.ogg" />
+        <fail src="vehicle_fail.ogg" />
+        <moving src="vehicle_moving.ogg" />
+    </sound>
+</vehicle>

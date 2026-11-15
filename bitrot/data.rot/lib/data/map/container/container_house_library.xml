@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <map name="Library" type="maptile_container" char="house_library" is_obstacle="true">
     <visuals>
-        <sprite file="house_library.png" />
+        <sprite file="container/house_library.png" />
     </visuals>
     <capacity value="15" />
     <loot>

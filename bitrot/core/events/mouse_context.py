@@ -881,8 +881,9 @@ def handle_right_click(game, mouse_pos):
             is_container = isinstance(clicked_item, Corpse) or getattr(clicked_item, 'item_type', '') in ('container', 'container_disposable', 'maptile_container') or hasattr(clicked_item, 'inventory')
 
             if is_container:
-                # Containers on ground only allow Open (never Use)
+                # Containers on ground only allow Open
                 options.append('Open')
+                options.append('Grab')
             else:
                 if getattr(clicked_item, 'allow_use', False):
                     options.append('Use')
@@ -911,9 +912,9 @@ def handle_right_click(game, mouse_pos):
                 options.append('Send to')
 
         elif click_source == 'container_map':
-            # Containers in the world ONLY show Open (Use is for items inside)
+            # Containers in the world only show Open (Use belongs to items inside)
             options = ['Open']
-        
+
         elif click_source == 'container':
             options = []
             # Items inside the container show Use if allow_use is set

@@ -1,5 +1,0 @@
-<map name="Wooden Wall" type="maptile" char="wooden_wall_01" is_obstacle="true">
-    <visuals>
-        <sprite id="close" file="wooden_wall_01.png" />
-    </visuals>
-</map>

@@ -1,6 +1,6 @@
 <map name="Exxoil Fuel Pump" type="maptile_container" char="misc_oil_pump_01" is_obstacle="true" allow_liquid="true" is_visible="true" is_opened="true">
     <visuals>
-        <sprite file="misc_oil_pump_01.png" />
+        <sprite file="container/misc_oil_pump_01.png" />
     </visuals>
     <capacity value="2" />
     <loot>

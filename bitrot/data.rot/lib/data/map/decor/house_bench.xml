@@ -1,5 +1,0 @@
-<map name="house_bench" type="maptile" char="house_bench" is_obstacle="false" allow_sleep="true">
-    <visuals>
-        <sprite file="house_bench.png" />
-    </visuals>
-</map>

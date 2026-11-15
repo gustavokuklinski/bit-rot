@@ -1,6 +1,6 @@
 <map name="Gethulius Fuel Pump" type="maptile_container" char="misc_oil_pump_02" is_obstacle="true" allow_liquid="true" is_visible="true" is_opened="true">
     <visuals>
-        <sprite file="misc_oil_pump_02.png" />
+        <sprite file="container/misc_oil_pump_02.png" />
     </visuals>
     <capacity value="2" />
     <loot>

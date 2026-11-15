@@ -1,0 +1,12 @@
+<map name="garden_tree_16" type="maptile" char="garden_tree_16" is_obstacle="true" destructible="true">
+    <visuals>
+        <sprite file="trees/garden_tree_16.png" />
+    </visuals>
+    <properties>
+        <health min="50" max="250" />
+    </properties>
+    <drop>
+        <item item="Log" chance="1.0" />
+    </drop>
+    <sound src="chop_tree.ogg" />
+</map>

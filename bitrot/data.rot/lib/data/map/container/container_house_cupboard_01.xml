@@ -1,6 +1,6 @@
 <map name="Cupboard" type="maptile_container" char="house_cupboard_01" is_obstacle="true" is_visible="true">
     <visuals>
-        <sprite file="house_cupboard_01.png" />
+        <sprite file="container/house_cupboard_01.png" />
     </visuals>
     <capacity value="10" />
     <loot>

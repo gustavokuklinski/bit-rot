@@ -1,6 +1,6 @@
 <map name="Military Crate" type="maptile_container" char="military_crate" is_obstacle="true" is_visible="true">
     <visuals>
-        <sprite file="military_crate.png" />
+        <sprite file="container/military_crate.png" />
     </visuals>
     <capacity value="15" />
     <loot>

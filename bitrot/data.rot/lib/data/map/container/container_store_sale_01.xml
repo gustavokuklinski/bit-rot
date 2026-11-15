@@ -1,6 +1,6 @@
 <map name="Market Fridge" type="maptile_container" char="store_sale_01" is_obstacle="true">
     <visuals>
-        <sprite file="store_sale_01.png" />
+        <sprite file="container/store_sale_01.png" />
     </visuals>
     <capacity value="10" />
     <loot>

@@ -1,6 +1,6 @@
 <map name="Laboratory Cupboard" type="maptile_container" char="lab_cupboard_01" is_obstacle="true" is_visible="true">
     <visuals>
-        <sprite file="lab_cupboard_01.png" />
+        <sprite file="container/lab_cupboard_01.png" />
     </visuals>
     <capacity value="10" />
     <loot>

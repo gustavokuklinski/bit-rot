@@ -55,6 +55,7 @@ class TileManager:
                         sprite_file = sprite_node.get('file') if sprite_node is not None else None
                         
                         if char and sprite_file:
+
                             image_path = mod_manager.get_override_path(os.path.join(self.asset_folder, sprite_file))
                             if not os.path.exists(image_path):
                                 rel_sub = os.path.relpath(root_dir, self.tile_folder)
@@ -63,6 +64,7 @@ class TileManager:
                                     image_path = alt_path
 
                             try:
+                                
                                 image = pygame.image.load(image_path).convert_alpha()
                                 image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
                                 mask = pygame.mask.from_surface(image, 127)
