@@ -1028,12 +1028,14 @@ def handle_context_menu_click(game, mouse_pos):
                                 game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
                             display_message(f"{tr('msg', 'Sent')} {tr('item', removed.name)} {tr('msg', 'to inventory.')}")
 
-                    transfer_time = get_transfer_time(game.player)
-                    if is_external:
-                        action_label = f"{tr('ui', 'Removing')} {tr('item', item.name)}" if source == 'vehicle_equipment' else tr('msg', "Looting")
+                    if is_external and source == 'vehicle_equipment':
+                        transfer_time = get_transfer_time(game.player)
+                        action_label = f"{tr('ui', 'Removing')} {tr('item', item.name)}"
                         game.player.start_action(action_label, transfer_time, do_send_inv, xp_reward=0.5)
                     else:
                         do_send_inv()
+                        if is_external and hasattr(game.player, 'progression'):
+                            game.player.progression.add_xp(game.player, 'agility', 0.5)
 
                 elif target_dest == 'Ground':
                     if source == 'vehicle_equipment':
@@ -1093,11 +1095,9 @@ def handle_context_menu_click(game, mouse_pos):
                                     game.sound_manager.play_sound('equip_belt.ogg', subdir='items', game=game, source_pos=game.player.rect.center, is_critical=True)
                                 display_message(f"{tr('msg', 'Sent')} {tr('item', removed.name)} {tr('msg', 'to belt slot')} {empty_idx+1}.")
 
-                        transfer_time = get_transfer_time(game.player)
-                        if is_external:
-                            game.player.start_action(tr('msg', "Looting"), transfer_time, do_send_belt, xp_reward=0.5)
-                        else:
-                            do_send_belt()
+                        do_send_belt()
+                        if is_external and hasattr(game.player, 'progression'):
+                            game.player.progression.add_xp(game.player, 'agility', 0.5)
                     else:
                         display_message(tr('msg', "Belt is full."))
 
@@ -1256,11 +1256,9 @@ def handle_context_menu_click(game, mouse_pos):
                                 game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center)
                             display_message(f"{tr('msg', 'Sent to')} {target_container.name}.")
 
-                        transfer_time = get_transfer_time(game.player)
-                        if is_external:
-                            game.player.start_action(f"Transferring to {target_container.name}", transfer_time, do_send_cont, xp_reward=0.5)
-                        else:
-                            do_send_cont()
+                        do_send_cont()
+                        if is_external and hasattr(game.player, 'progression'):
+                            game.player.progression.add_xp(game.player, 'agility', 0.5)
 
                 clicked_on_menu = True
             
@@ -2571,11 +2569,9 @@ def handle_context_menu_click(game, mouse_pos):
                         or (source == 'container' and (not container_item or not is_container_on_player(container_item, game.player)))
                     )
 
-                    if is_external_grab:
-                        grab_time = get_transfer_time(game.player)
-                        game.player.start_action(tr('msg', "Looting"), grab_time, do_grab, xp_reward=0.5)
-                    else:
-                        do_grab()
+                    do_grab()
+                    if is_external_grab and hasattr(game.player, 'progression'):
+                        game.player.progression.add_xp(game.player, 'agility', 0.5)
                 else:
                     display_message(tr('msg', "Inventory is full."))
 

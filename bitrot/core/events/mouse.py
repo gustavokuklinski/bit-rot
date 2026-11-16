@@ -508,8 +508,14 @@ def handle_mouse_down(game, event, mouse_pos):
 
                     tile_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
 
-                    # Only allow picking up container if it is completely empty
+                    # Only allow picking up container if it is opened and completely empty
                     cont = next((c for c in getattr(game, 'containers', []) if hasattr(c, 'rect') and c.rect.colliderect(tile_rect)), None)
+                    t_def = game.tile_manager.definitions.get(tile_char, {}) if hasattr(game, 'tile_manager') else {}
+                    is_maptile_cont = (cont and getattr(cont, 'item_type', '') == 'maptile_container') or (t_def.get('type') == 'maptile_container')
+                    if is_maptile_cont:
+                        if not cont or not getattr(cont, 'is_opened', False):
+                            display_message(tr('msg', "Open first to pickup"))
+                            return
                     if cont:
                         if hasattr(cont, 'inventory') and len(cont.inventory) > 0:
                             display_message(tr('msg', "Cannot pickup: Container is not empty!"))
@@ -543,8 +549,14 @@ def handle_mouse_down(game, event, mouse_pos):
 
                     tile_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
 
-                    # Only allow picking up container if it is completely empty
+                    # Only allow picking up container if it is opened and completely empty
                     cont = next((c for c in getattr(game, 'containers', []) if hasattr(c, 'rect') and c.rect.colliderect(tile_rect)), None)
+                    t_def = game.tile_manager.definitions.get(tile_char, {}) if hasattr(game, 'tile_manager') else {}
+                    is_maptile_cont = (cont and getattr(cont, 'item_type', '') == 'maptile_container') or (t_def.get('type') == 'maptile_container')
+                    if is_maptile_cont:
+                        if not cont or not getattr(cont, 'is_opened', False):
+                            display_message(tr('msg', "Open first to pickup"))
+                            return
                     if cont:
                         if hasattr(cont, 'inventory') and len(cont.inventory) > 0:
                             display_message(tr('msg', "Cannot pickup: Container is not empty!"))

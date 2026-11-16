@@ -175,24 +175,22 @@ def handle_mouse_up(game, event, mouse_pos):
                             if item_ref not in game.items_on_ground:
                                 game.items_on_ground.append(item_ref)
 
-                            def do_belt_loot():
-                                _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
-                                
+                            _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
+                            if game.player.belt[i_target] is None:
+                                game.player.belt[i_target] = item_ref
+                                item_ref.in_belt = True
+                            elif game.player.belt[i_target].can_stack_with(item_ref):
+                                avail = game.player.belt[i_target].capacity - game.player.belt[i_target].load
+                                trans = min(avail, item_ref.load)
+                                game.player.belt[i_target].load += trans
+                                item_ref.load -= trans
 
-                                if game.player.belt[i_target] is None:
-                                    game.player.belt[i_target] = item_ref
-                                    item_ref.in_belt = True
-                                elif game.player.belt[i_target].can_stack_with(item_ref):
-                                    avail = game.player.belt[i_target].capacity - game.player.belt[i_target].load
-                                    trans = min(avail, item_ref.load)
-                                    game.player.belt[i_target].load += trans
-                                    item_ref.load -= trans
-                                
-                                if game and hasattr(game, 'sound_manager'):
-                                    game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
+                            if game and hasattr(game, 'sound_manager'):
+                                game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
 
-                            transfer_time = get_transfer_time(game.player)
-                            game.player.start_action(tr('msg', "Looting"), transfer_time, do_belt_loot, xp_reward=0.5)
+                            if hasattr(game.player, 'progression'):
+                                game.player.progression.add_xp(game.player, 'agility', 0.5)
+
                             game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                             return
                         else:
@@ -339,20 +337,19 @@ def handle_mouse_up(game, event, mouse_pos):
                                         if item_ref not in game.items_on_ground:
                                             game.items_on_ground.append(item_ref)
 
-                                        def do_tab_loot():
-                                            trans, rem, ok = add_item_to_container_inventory(
-                                                target_container, item_ref, target_index=-1, is_stack=(stack_it is not None)
-                                            )
-                                            if ok:
-                                                _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
-                                                if rem > 0 and not is_infinite_liquid_source(container_obj):
-                                                    return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
-                                            
-                                            else:
+                                        trans, rem, ok = add_item_to_container_inventory(
+                                            target_container, item_ref, target_index=-1, is_stack=(stack_it is not None)
+                                        )
+                                        if ok:
+                                            _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
+                                            if rem > 0 and not is_infinite_liquid_source(container_obj):
                                                 return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
-                                    
-                                        transfer_time = get_transfer_time(game.player)
-                                        game.player.start_action(tr('msg', "Looting"), transfer_time, do_tab_loot, xp_reward=0.5)
+                                        else:
+                                            return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
+
+                                        if hasattr(game.player, 'progression'):
+                                            game.player.progression.add_xp(game.player, 'agility', 0.5)
+
                                         game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                         return
                                     else:
@@ -389,15 +386,15 @@ def handle_mouse_up(game, event, mouse_pos):
                                         if item_ref not in game.items_on_ground:
                                             game.items_on_ground.append(item_ref)
 
-                                        def do_tab_inv_loot():
-                                            _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
-                                            target_list.append(item_ref)
-                                        
+                                        _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
+                                        target_list.append(item_ref)
+
                                         if game and hasattr(game, 'sound_manager'):
                                             game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
-                         
-                                        transfer_time = get_transfer_time(game.player)
-                                        game.player.start_action(tr('msg', "Looting"), transfer_time, do_tab_inv_loot, xp_reward=0.5)
+
+                                        if hasattr(game.player, 'progression'):
+                                            game.player.progression.add_xp(game.player, 'agility', 0.5)
+
                                         game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                         return
                                     else:
@@ -444,17 +441,17 @@ def handle_mouse_up(game, event, mouse_pos):
                                             if item_ref not in game.items_on_ground:
                                                 game.items_on_ground.append(item_ref)
 
-                                            def do_inv_stack():
-                                                _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
-                                                avail = item_in_slot.capacity - item_in_slot.load
-                                                trans = min(avail, item_ref.load)
-                                                item_in_slot.load += trans
-                                                item_ref.load -= trans
-                                                if game and hasattr(game, 'sound_manager'):
-                                                    game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
+                                            _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
+                                            avail = item_in_slot.capacity - item_in_slot.load
+                                            trans = min(avail, item_ref.load)
+                                            item_in_slot.load += trans
+                                            item_ref.load -= trans
+                                            if game and hasattr(game, 'sound_manager'):
+                                                game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
 
-                                            transfer_time = get_transfer_time(game.player)
-                                            game.player.start_action(tr('msg', "Looting"), transfer_time, do_inv_stack, xp_reward=0.5)
+                                            if hasattr(game.player, 'progression'):
+                                                game.player.progression.add_xp(game.player, 'agility', 0.5)
+
                                             game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                             return
                                         else:
@@ -486,15 +483,14 @@ def handle_mouse_up(game, event, mouse_pos):
                                         if item_ref not in game.items_on_ground:
                                             game.items_on_ground.append(item_ref)
 
-                                        def do_inv_loot():
-                                            _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
-                                          
-                                            game.player.inventory.insert(target_index, item_ref)
-                                            if game and hasattr(game, 'sound_manager'):
-                                                game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
-                                        
-                                        transfer_time = get_transfer_time(game.player)
-                                        game.player.start_action(tr('msg', "Looting"), transfer_time, do_inv_loot, xp_reward=0.5)
+                                        _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
+                                        game.player.inventory.insert(target_index, item_ref)
+                                        if game and hasattr(game, 'sound_manager'):
+                                            game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
+
+                                        if hasattr(game.player, 'progression'):
+                                            game.player.progression.add_xp(game.player, 'agility', 0.5)
+
                                         game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                         return
 
@@ -513,14 +509,14 @@ def handle_mouse_up(game, event, mouse_pos):
                                         if item_ref not in game.items_on_ground:
                                             game.items_on_ground.append(item_ref)
 
-                                        def do_inv_append():
-                                            _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
-                                            game.player.inventory.append(item_ref)
-                                            if game and hasattr(game, 'sound_manager'):
-                                                game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
+                                        _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
+                                        game.player.inventory.append(item_ref)
+                                        if game and hasattr(game, 'sound_manager'):
+                                            game.sound_manager.play_sound('grab.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
 
-                                        transfer_time = get_transfer_time(game.player)
-                                        game.player.start_action(tr('msg', "Looting"), transfer_time, do_inv_append, xp_reward=0.5)
+                                        if hasattr(game.player, 'progression'):
+                                            game.player.progression.add_xp(game.player, 'agility', 0.5)
+
                                         game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                         return
 
@@ -597,20 +593,19 @@ def handle_mouse_up(game, event, mouse_pos):
                                     if item_ref not in game.items_on_ground:
                                         game.items_on_ground.append(item_ref)
 
-                                    def do_container_loot():
-                                        trans, rem, ok = add_item_to_container_inventory(
-                                            container, item_ref, target_index=target_index, is_stack=is_stack
-                                        )
-                                        if ok:
-                                            _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
-                                            if rem > 0 and not is_infinite_liquid_source(container_obj):
-                                                return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
-                                       
-                                        else:
+                                    trans, rem, ok = add_item_to_container_inventory(
+                                        container, item_ref, target_index=target_index, is_stack=is_stack
+                                    )
+                                    if ok:
+                                        _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
+                                        if rem > 0 and not is_infinite_liquid_source(container_obj):
                                             return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
-                                    
-                                    transfer_time = get_transfer_time(game.player)
-                                    game.player.start_action(tr('msg', "Looting"), transfer_time, do_container_loot, xp_reward=0.5)
+                                    else:
+                                        return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
+
+                                    if hasattr(game.player, 'progression'):
+                                        game.player.progression.add_xp(game.player, 'agility', 0.5)
+
                                     game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                     return
 
@@ -703,20 +698,19 @@ def handle_mouse_up(game, event, mouse_pos):
                                     if item_ref not in game.items_on_ground:
                                         game.items_on_ground.append(item_ref)
 
-                                    def do_slots_container_loot():
-                                        trans, rem, ok = add_item_to_container_inventory(
-                                            target_container, item_ref, target_index=target_index, is_stack=is_stack
-                                        )
-                                        if ok:
-                                            _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
-                                            if rem > 0 and not is_infinite_liquid_source(container_obj):
-                                                return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
-                                    
-                                        else:
+                                    trans, rem, ok = add_item_to_container_inventory(
+                                        target_container, item_ref, target_index=target_index, is_stack=is_stack
+                                    )
+                                    if ok:
+                                        _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
+                                        if rem > 0 and not is_infinite_liquid_source(container_obj):
                                             return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
-                                    
-                                    transfer_time = get_transfer_time(game.player)
-                                    game.player.start_action(tr('msg', "Looting"), transfer_time, do_slots_container_loot, xp_reward=0.5)
+                                    else:
+                                        return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
+
+                                    if hasattr(game.player, 'progression'):
+                                        game.player.progression.add_xp(game.player, 'agility', 0.5)
+
                                     game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                     return
                             
@@ -798,16 +792,15 @@ def handle_mouse_up(game, event, mouse_pos):
                                             if item_ref not in game.items_on_ground:
                                                 game.items_on_ground.append(item_ref)
 
-                                            def do_gear_equip():
-                                                _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
-                                                game.player.clothes[slot_name] = item_ref
+                                            _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
+                                            game.player.clothes[slot_name] = item_ref
 
-                                                if game and hasattr(game, 'sound_manager'):
-                                                    game.sound_manager.play_sound('equip_gear.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
+                                            if game and hasattr(game, 'sound_manager'):
+                                                game.sound_manager.play_sound('equip_gear.ogg', subdir='items', game=game, source_pos=game.player.rect.center, base_volume=0.5, pitch_variance=0.1, is_critical=True)
 
-                                            transfer_time = get_transfer_time(game.player)
-                                            game.player.start_action("Equipping", transfer_time, do_gear_equip, xp_reward=0.5)
-                                            
+                                            if hasattr(game.player, 'progression'):
+                                                game.player.progression.add_xp(game.player, 'agility', 0.5)
+
                                             game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                             return
 
@@ -910,20 +903,19 @@ def handle_mouse_up(game, event, mouse_pos):
                                     if item_ref not in game.items_on_ground:
                                         game.items_on_ground.append(item_ref)
 
-                                    def do_gear_container_loot():
-                                        trans, rem, ok = add_item_to_container_inventory(
-                                            container, item_ref, target_index=target_index, is_stack=is_stack
-                                        )
-                                        if ok:
-                                            _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
-                                            if rem > 0 and not is_infinite_liquid_source(container_obj):
-                                                return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
-                                  
-                                        else:
+                                    trans, rem, ok = add_item_to_container_inventory(
+                                        container, item_ref, target_index=target_index, is_stack=is_stack
+                                    )
+                                    if ok:
+                                        _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
+                                        if rem > 0 and not is_infinite_liquid_source(container_obj):
                                             return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
-                                    
-                                    transfer_time = get_transfer_time(game.player)
-                                    game.player.start_action(tr('msg', "Looting"), transfer_time, do_gear_container_loot, xp_reward=0.5)
+                                    else:
+                                        return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
+
+                                    if hasattr(game.player, 'progression'):
+                                        game.player.progression.add_xp(game.player, 'agility', 0.5)
+
                                     game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
                                     return
                             
@@ -1126,48 +1118,7 @@ def handle_mouse_up(game, event, mouse_pos):
                             dropped_successfully = False
                             break
 
-                    use_loader = not is_external_source
-                    action_name = tr('msg', "Storing")
-
-                    if use_loader:
-                        can_action = False
-                        if is_stack:
-                            can_action = True
-                        elif target_index != -1 and target_index < len(container.inventory):
-                            display_message(f"{tr('msg', 'Cannot swap items while')} {tr('msg', action_name.lower())}.")
-                            dropped_successfully = False
-                            break
-                        elif len(container.inventory) < (container.capacity or 0):
-                            can_action = True
-                        else:
-                            display_message(tr('msg', "Container is full."))
-                            dropped_successfully = False
-                            break
-
-                        if can_action:
-                            item_ref = game.dragged_item
-                            item_ref.rect.center = game.player.rect.center
-                            if item_ref not in game.items_on_ground:
-                                game.items_on_ground.append(item_ref)
-
-                            def do_timed_action():
-                                trans, rem, ok = add_item_to_container_inventory(
-                                    container, item_ref, target_index=target_index, is_stack=is_stack
-                                )
-                                if ok:
-                                    if item_ref in game.items_on_ground:
-                                        game.items_on_ground.remove(item_ref)
-                                    _remove_from_ground_and_sync(game, item_ref, type_orig, container_obj)
-                                    if rem > 0 and not is_infinite_liquid_source(container_obj):
-                                        return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
-                              
-                                else:
-                                    return_remainder_to_origin(game, item_ref, type_orig, i_orig, container_obj)
-                            
-                            transfer_time = get_transfer_time(game.player)
-                            game.player.start_action(action_name, transfer_time, do_timed_action, xp_reward=0.5)
-                            game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
-                            return
+                    
 
                     if is_stack:
                         trans, rem, ok = add_item_to_container_inventory(
@@ -1199,7 +1150,10 @@ def handle_mouse_up(game, event, mouse_pos):
                     else:
                         display_message(f"{tr('item', container.name)} {tr('msg', 'is full.')}")
                     
-                    if dropped_successfully: break
+                    if dropped_successfully:
+                        if hasattr(game.player, 'progression'):
+                            game.player.progression.add_xp(game.player, 'agility', 0.5)
+                        break
 
             if dropped_successfully:
                 game.is_dragging = False; game.dragged_item = None; game.drag_origin = None; game.drag_candidate = None
