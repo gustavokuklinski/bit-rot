@@ -294,11 +294,11 @@ def _draw_tt(game, tip, x, y, center_align=False, dynamic_h=GAME_HEIGHT):
         if not hasattr(game, 'vehicle_icons'):
             game.vehicle_icons = {}
             icon_paths = {
-                'fuel': SPRITE_PATH + '/items/car_fuel_unit.png',
-                'motor': SPRITE_PATH + '/items/car_motor.png',
-                'power': SPRITE_PATH + '/items/car_battery.png',
-                'tires': SPRITE_PATH + '/items/car_tire.png',
-                'key': SPRITE_PATH + '/items/car_key_pickup.png'
+                'fuel': SPRITE_PATH + '/items/car_fuel/car_fuel_unit.png',
+                'motor': SPRITE_PATH + '/items/car_motor/car_motor.png',
+                'power': SPRITE_PATH + '/items/car_battery/car_battery.png',
+                'tires': SPRITE_PATH + '/items/car_tire/car_tire.png',
+                'key': SPRITE_PATH + '/items/car_key/car_key_pickup.png'
             }
             for k, path in icon_paths.items():
                 try: game.vehicle_icons[k] = pygame.transform.scale(pygame.image.load(path).convert_alpha(), (16, 16))

@@ -343,20 +343,40 @@ def player_has_mobile(player):
     if hasattr(player, 'clothes') and search_inv(list(player.clothes.values())): return True
     return False
 
+def get_player_mobile(player):
+    """Finds the first carried Mobile phone item on the player (inventory, belt, or clothes)."""
+    if not player:
+        return None
+
+    def search_inv(inventory):
+        if not inventory: return None
+        for item in inventory:
+            if item:
+                if getattr(item, 'item_type', '') == 'mobile' or 'Mobile' in getattr(item, 'name', ''):
+                    return item
+                if hasattr(item, 'inventory') and item.inventory:
+                    found = search_inv(item.inventory)
+                    if found:
+                        return found
+        return None
+
+    for container in (getattr(player, 'inventory', []), getattr(player, 'belt', []), list(getattr(player, 'clothes', {}).values())):
+        found = search_inv(container)
+        if found:
+            return found
+    return None
+
 def get_active_sd_cards(player_or_game):
-    """Returns all SD Card items currently active in Mobile Apps."""
+    """Returns all SD Card items currently active in the carried Mobile phone item."""
     if not player_or_game:
         return []
 
     game = None
     player = None
 
-    if hasattr(player_or_game, 'app_slots'):
+    if hasattr(player_or_game, 'progression'):
         player = player_or_game
         game = getattr(player, 'game', None)
-    elif hasattr(player_or_game, 'app_state'):
-        game = player_or_game
-        player = getattr(game, 'player', None)
     elif hasattr(player_or_game, 'player'):
         game = player_or_game
         player = game.player
@@ -368,11 +388,15 @@ def get_active_sd_cards(player_or_game):
     if not player and game:
         player = getattr(game, 'player', None)
 
-    if not player or not player_has_mobile(player):
+    if not player:
         return []
 
-    slots_source = getattr(player, 'app_slots', None)
-    if not slots_source and game:
+    mobile = get_player_mobile(player)
+    if not mobile:
+        return []
+
+    slots_source = getattr(mobile, 'app_slots', None)
+    if slots_source is None and game:
         slots_source = getattr(game, 'app_state', {}).get('slots', [])
 
     active_cards = []

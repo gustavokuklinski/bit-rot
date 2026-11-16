@@ -31,8 +31,26 @@ def draw_mobile_modal(surface, game, modal, assets):
     ]
     modal['tabs_data'] = tabs_data
 
+    mobile_item = modal.get('item')
+    if not mobile_item and getattr(game, 'player', None):
+        from core.entities.item.item_helpers import get_player_mobile
+        mobile_item = get_player_mobile(game.player)
+        modal['item'] = mobile_item
+
+    if mobile_item:
+        if not hasattr(mobile_item, 'app_slots') or mobile_item.app_slots is None:
+            mobile_item.app_slots = [None] * 5
+        while len(mobile_item.app_slots) < 5:
+            mobile_item.app_slots.append(None)
+        game.app_state = {'slots': mobile_item.app_slots}
+        if hasattr(mobile_item, 'mobile_active_tab') and mobile_item.mobile_active_tab in {t['label'] for t in tabs_data} and 'active_tab' not in modal:
+            modal['active_tab'] = mobile_item.mobile_active_tab
+
     if 'active_tab' not in modal or modal['active_tab'] not in {t['label'] for t in tabs_data}:
         modal['active_tab'] = 'Clock'
+
+    if mobile_item:
+        mobile_item.mobile_active_tab = modal['active_tab']
 
     base_modal = BaseModal(surface, modal, assets, title)
     base_modal.draw_base()

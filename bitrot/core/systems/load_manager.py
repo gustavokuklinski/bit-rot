@@ -446,7 +446,9 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     game.player_name = player_data.get('name', "Player")
     game.player = Player(player_data=player_data)
     game.player.game = game
-    game.app_state = {'slots': game.player.app_slots}
+    from core.entities.item.item_helpers import get_player_mobile
+    player_mobile = get_player_mobile(game.player)
+    game.app_state = {'slots': player_mobile.app_slots if player_mobile else [None] * 5}
     
     game.zoom_level = core.data.config.START_ZOOM
     
@@ -820,18 +822,20 @@ def load_game(game, save_folder_name):
         game.player.completed_milestones = list(player_data.get('completed_milestones', []))
         game.player.milestone_progress = dict(player_data.get('milestone_progress', {}))
 
-        # Restore player Mobile SD Card slots
-        raw_app_slots = player_data.get('app_slots', [None] * 5)
-        game.player.app_slots = []
-        for s in raw_app_slots[:5]:
-            if s:
-                game.player.app_slots.append(deserialize_item(s) if isinstance(s, (dict, str)) else s)
-            else:
-                game.player.app_slots.append(None)
-        while len(game.player.app_slots) < 5:
-            game.player.app_slots.append(None)
-
-        game.app_state = {'slots': game.player.app_slots}
+        # Synchronize carried Mobile item state (with fallback for legacy player saves)
+        from core.entities.item.item_helpers import get_player_mobile
+        player_mobile = get_player_mobile(game.player)
+        if player_mobile:
+            if not hasattr(player_mobile, 'app_slots') or player_mobile.app_slots is None:
+                player_mobile.app_slots = [None] * 5
+            legacy_slots = player_data.get('app_slots')
+            if legacy_slots and not any(player_mobile.app_slots):
+                for idx, s in enumerate(legacy_slots[:5]):
+                    if s:
+                        player_mobile.app_slots[idx] = deserialize_item(s) if isinstance(s, (dict, str)) else s
+            game.app_state = {'slots': player_mobile.app_slots}
+        else:
+            game.app_state = {'slots': [None] * 5}
 
         # Check world state file (world.jsonl takes priority over world.json)
         world_state_path = os.path.join(save_path, "world.jsonl")

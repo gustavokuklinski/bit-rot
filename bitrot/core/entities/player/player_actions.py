@@ -419,6 +419,18 @@ class PlayerActions:
         new_item.layer = getattr(item, 'layer', getattr(self, 'layer', 1))
         new_item.map_filename = getattr(item, 'map_filename', None)
 
+        # Transfer SD cards and mobile state to the toggled mobile item instance
+        if hasattr(item, 'app_slots') and item.app_slots is not None:
+            new_item.app_slots = list(item.app_slots)
+        if hasattr(item, 'radio_freq'):
+            new_item.radio_freq = item.radio_freq
+        if hasattr(item, 'selected_map_name'):
+            new_item.selected_map_name = item.selected_map_name
+        if hasattr(item, 'lan_input_text'):
+            new_item.lan_input_text = item.lan_input_text
+        if hasattr(item, 'mobile_active_tab'):
+            new_item.mobile_active_tab = item.mobile_active_tab
+
         if getattr(item, 'item_type', '') == 'mobile' or 'Mobile' in getattr(item, 'name', ''):
             target_game = getattr(self, 'game', None) or getattr(core.messages, '_game_instance', None)
             if target_game and hasattr(target_game, 'modals'):

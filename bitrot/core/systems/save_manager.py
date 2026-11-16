@@ -132,9 +132,6 @@ def save_game(game):
             progression_data = game.player.progression.attributes
             is_player_alive = not getattr(game.player, 'is_dead', False) and game.player.health > 0
 
-            # Collect active SD Card slots directly from the player
-            player_app_slots = getattr(game.player, 'app_slots', getattr(game, 'app_state', {}).get('slots', [None] * 5))
-
             player_data = {
                 "player_id": player_id,
                 "name": game.player.name,
@@ -168,8 +165,7 @@ def save_game(game):
                 "dialog_history": list(getattr(game.player, 'dialog_history', [])),
                 "special_dialogs": list(getattr(game.player, 'special_dialogs', [])),
                 "completed_milestones": list(getattr(game.player, 'completed_milestones', [])),
-                "milestone_progress": dict(getattr(game.player, 'milestone_progress', {})),
-                "app_slots": [serialize_item(i) for i in player_app_slots[:5]]
+                "milestone_progress": dict(getattr(game.player, 'milestone_progress', {}))
             }
 
             player_file_path = os.path.join(player_dir, f"{player_id}.json")

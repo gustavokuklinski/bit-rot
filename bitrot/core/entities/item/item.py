@@ -80,6 +80,24 @@ class Item:
         self.tile_char = tile_char
         self.is_maptile = is_maptile or (item_type in ('maptile', 'maptile_container'))
 
+        # Initialize app_slots for mobile items
+        raw_slots = kwargs.get('app_slots')
+        if raw_slots is not None:
+            self.app_slots = list(raw_slots)
+            while len(self.app_slots) < 5:
+                self.app_slots.append(None)
+            self.app_slots = self.app_slots[:5]
+        elif self.item_type == 'mobile' or 'mobile' in self.name.lower():
+            self.app_slots = [None] * 5
+        else:
+            self.app_slots = None
+
+        self.radio_freq = kwargs.get('radio_freq', None)
+        self.selected_map_name = kwargs.get('selected_map_name', None)
+        self.lan_input_text = kwargs.get('lan_input_text', None)
+        self.mobile_active_tab = kwargs.get('mobile_active_tab', None)
+
+
         # Format allow_type and disallow_type lists
         if isinstance(allow_type, str):
             self.allow_type = [t.strip().lower() for t in allow_type.replace('[', '').replace(']', '').split(',') if t.strip()]
@@ -235,6 +253,17 @@ class Item:
         
         if getattr(self, 'pickup_maptile', False):
             data['pickup_maptile'] = True
+
+        if getattr(self, 'app_slots', None) is not None:
+            data['app_slots'] = [i.to_dict() if hasattr(i, 'to_dict') else i for i in self.app_slots[:5]]
+        if getattr(self, 'radio_freq', None) is not None:
+            data['radio_freq'] = self.radio_freq
+        if getattr(self, 'selected_map_name', None) is not None:
+            data['selected_map_name'] = self.selected_map_name
+        if getattr(self, 'lan_input_text', None) is not None:
+            data['lan_input_text'] = self.lan_input_text
+        if getattr(self, 'mobile_active_tab', None) is not None:
+            data['mobile_active_tab'] = self.mobile_active_tab
         
         return data
 
@@ -326,6 +355,29 @@ class Item:
         
         if 'pickup_maptile' in data:
             item.pickup_maptile = bool(data['pickup_maptile'])
+
+        if 'app_slots' in data and data['app_slots'] is not None:
+            item.app_slots = []
+            for s_data in data['app_slots'][:5]:
+                if s_data:
+                    nested_sd = Item.from_dict(s_data) if isinstance(s_data, dict) else Item.create_from_name(s_data)
+                    item.app_slots.append(nested_sd)
+                else:
+                    item.app_slots.append(None)
+            while len(item.app_slots) < 5:
+                item.app_slots.append(None)
+        elif getattr(item, 'item_type', '') == 'mobile' or 'mobile' in getattr(item, 'name', '').lower():
+            if not hasattr(item, 'app_slots') or item.app_slots is None:
+                item.app_slots = [None] * 5
+
+        if 'radio_freq' in data:
+            item.radio_freq = data['radio_freq']
+        if 'selected_map_name' in data:
+            item.selected_map_name = data['selected_map_name']
+        if 'lan_input_text' in data:
+            item.lan_input_text = data['lan_input_text']
+        if 'mobile_active_tab' in data:
+            item.mobile_active_tab = data['mobile_active_tab']
 
         return item
         

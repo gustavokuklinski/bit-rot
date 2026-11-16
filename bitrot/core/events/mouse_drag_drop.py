@@ -963,10 +963,25 @@ def handle_mouse_up(game, event, mouse_pos):
                                     item_type = tmpl.get('type')
                             
                             if item_type == 'sd_card':
-                                slots = getattr(game, 'app_state', {}).get('slots', [])
+                                mobile_item = modal.get('item')
+                                if not mobile_item and getattr(game, 'player', None):
+                                    from core.entities.item.item_helpers import get_player_mobile
+                                    mobile_item = get_player_mobile(game.player)
+                                    modal['item'] = mobile_item
+
+                                if mobile_item:
+                                    if not hasattr(mobile_item, 'app_slots') or mobile_item.app_slots is None:
+                                        mobile_item.app_slots = [None] * 5
+                                    while len(mobile_item.app_slots) < 5:
+                                        mobile_item.app_slots.append(None)
+                                    slots = mobile_item.app_slots
+                                else:
+                                    slots = getattr(game, 'app_state', {}).get('slots', [None] * 5)
+
                                 old_item = slots[i]
                                 slots[i] = dragged
-                                
+                                game.app_state = {'slots': slots}
+
                                 if old_item:
                                     game.dragged_item = old_item
                                     dropped_successfully = False
@@ -1297,7 +1312,15 @@ def handle_mouse_up(game, event, mouse_pos):
                         game.player.belt[i_orig] = game.dragged_item
                         game.dragged_item.in_belt = True
                     elif type_orig == 'app':
-                        game.app_state['slots'][i_orig] = game.dragged_item
+                        mobile_obj = container_info[0] if container_info else None
+                        if not mobile_obj and getattr(game, 'player', None):
+                            from core.entities.item.item_helpers import get_player_mobile
+                            mobile_obj = get_player_mobile(game.player)
+                        if mobile_obj and hasattr(mobile_obj, 'app_slots') and 0 <= i_orig < len(mobile_obj.app_slots):
+                            mobile_obj.app_slots[i_orig] = game.dragged_item
+                            game.app_state = {'slots': mobile_obj.app_slots}
+                        elif hasattr(game, 'app_state') and 'slots' in game.app_state and 0 <= i_orig < len(game.app_state['slots']):
+                            game.app_state['slots'][i_orig] = game.dragged_item
                     elif type_orig == 'gear':
                         slot_name = i_orig 
                         game.player.clothes[slot_name] = game.dragged_item

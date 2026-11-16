@@ -159,10 +159,16 @@ def handle_left_click_drag_candidate(game, mouse_pos):
         for slot_data in modal.get('app_slot_rects', []):
             if slot_data['rect'].collidepoint(mouse_pos):
                 i = slot_data['index']
-                slots = getattr(game, 'app_state', {}).get('slots', [])
-                item = slots[i]
+                mobile_item = modal.get('item')
+                if not mobile_item and getattr(game, 'player', None):
+                    from core.entities.item.item_helpers import get_player_mobile
+                    mobile_item = get_player_mobile(game.player)
+                slots = getattr(mobile_item, 'app_slots', None) if mobile_item else None
+                if slots is None:
+                    slots = getattr(game, 'app_state', {}).get('slots', [])
+                item = slots[i] if (slots and i < len(slots)) else None
                 if item:
-                    game.drag_candidate = (item, (i, 'app'))
+                    game.drag_candidate = (item, (i, 'app', mobile_item))
                     game.drag_start_pos = mouse_pos
                     game.drag_offset = (mouse_pos[0] - slot_data['rect'].x, mouse_pos[1] - slot_data['rect'].y)
                     return
@@ -458,7 +464,12 @@ def handle_mouse_motion(game, event, mouse_pos):
                                 game.dragged_item = new_item
                                 display_message(tr('msg', f"{item_to_drag.name.split(' ')[0]} extinguished when picked up."))
                 elif type_orig == 'app':
-                    game.app_state['slots'][i_orig] = None
+                    mobile_obj = container_info[0] if container_info else None
+                    if mobile_obj and hasattr(mobile_obj, 'app_slots') and 0 <= i_orig < len(mobile_obj.app_slots):
+                        mobile_obj.app_slots[i_orig] = None
+                        game.app_state = {'slots': mobile_obj.app_slots}
+                    elif hasattr(game, 'app_state') and 'slots' in game.app_state and 0 <= i_orig < len(game.app_state['slots']):
+                        game.app_state['slots'][i_orig] = None
                        
                 elif type_orig == 'vehicle_equipment':
                     vehicle = container_info[0]
