@@ -1326,7 +1326,10 @@ def run_player_setup(game):
                         state['current_tab'] = 'World'
                     elif state['current_tab'] == 'World':
                         delete_pending_world_save(game, state)
-                        state['current_tab'] = 'SelectWorld'
+                        if state.get('chosen_mode') == 'sandbox':
+                            game.game_state = 'MENU'
+                        else:
+                            state['current_tab'] = 'SelectWorld'
                     else:
                         state['current_tab'] = 'SelectCharacter'
                     continue

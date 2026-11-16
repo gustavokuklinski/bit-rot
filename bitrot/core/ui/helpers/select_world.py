@@ -244,7 +244,7 @@ def draw_select_world_screen(game, state, mouse_pos):
     start_x = center_x - (total_w // 2)
     card_y = sub_rect.bottom + S(16)
 
-    clickable_rects = {'cards': [], 'back_button': None, 'sandbox_button': None}
+    clickable_rects = {'cards': [], 'back_button': None}
 
     for i, mode in enumerate(WORLD_MODES):
         cx = start_x + i * (card_w + spacing)
@@ -374,12 +374,9 @@ def draw_select_world_screen(game, state, mouse_pos):
     # --- 4. BOTTOM BAR: BACK & SANDBOX ---
     btn_w = S(200)
     btn_h = S(42)
-    gap = S(20)
-    total_bottom_w = (btn_w * 2) + gap
-    start_bottom_x = center_x - (total_bottom_w // 2)
     bottom_y = cb_y + box_size + S(16)
 
-    back_rect = pygame.Rect(start_bottom_x, bottom_y, btn_w, btn_h)
+    back_rect = pygame.Rect(center_x - (btn_w // 2), bottom_y, btn_w, btn_h)
     is_back_hover = back_rect.collidepoint(mouse_pos)
     back_bg = (80, 80, 80) if is_back_hover else (60, 60, 60)
     pygame.draw.rect(game.game_screen, back_bg, back_rect, border_radius=S(6))
@@ -387,15 +384,7 @@ def draw_select_world_screen(game, state, mouse_pos):
     game.game_screen.blit(back_txt, back_txt.get_rect(center=back_rect.center))
     clickable_rects['back_button'] = back_rect
 
-    sandbox_rect = pygame.Rect(back_rect.right + gap, bottom_y, btn_w, btn_h)
-    is_sandbox_hover = sandbox_rect.collidepoint(mouse_pos)
-    sandbox_bg = (80, 80, 80) if is_sandbox_hover else (60, 60, 60)
-    pygame.draw.rect(game.game_screen, sandbox_bg, sandbox_rect, border_radius=S(6))
-    sandbox_txt = font_16.render(tr('ui', "Sandbox"), False, WHITE)
-    game.game_screen.blit(sandbox_txt, sandbox_txt.get_rect(center=sandbox_rect.center))
-    clickable_rects['sandbox_button'] = sandbox_rect
-
-    all_world_buttons = [back_rect, sandbox_rect, cb1_click_rect, cb2_click_rect, cb3_click_rect]
+    all_world_buttons = [back_rect, cb1_click_rect, cb2_click_rect, cb3_click_rect]
     for _, b_rect in clickable_rects.get('cards', []):
         all_world_buttons.append(b_rect)
 
@@ -450,49 +439,6 @@ def handle_select_world_events(game, state, event, mouse_pos, clickable_rects):
             game.game_state = 'MENU'
             return
             
-        if clickable_rects.get('sandbox_button') and clickable_rects['sandbox_button'].collidepoint(mouse_pos):
-            state['chosen_mode'] = 'sandbox'
-            state['current_tab'] = 'World'
-            path = core.data.config.get_world_config_path('sandbox')
-            world_data = load_config_data(path)
-
-            if 'game' not in world_data:
-                world_data['game'] = {}
-            world_data['game']['all_visible'] = {
-                'value': bool(state.get('all_visible', False)),
-                'name': 'All containers are opened',
-                'default': False
-            }
-            world_data['game']['infinite_liquid'] = {
-                'value': bool(state.get('infinite_liquid', True)),
-                'name': 'Liquids are infinite',
-                'default': True
-            }
-            world_data['game']['permadeath'] = {
-                'value': bool(state.get('permadeath', False)),
-                'name': 'Delete save when die',
-                'default': False
-            }
-
-            # Generate fresh seed for Sandbox
-            if not state.get('world_seed'):
-                state['world_seed'] = "".join(str(random.randint(0, 9)) for _ in range(12))
-
-            if 'map' not in world_data:
-                world_data['map'] = {}
-            if 'seed' not in world_data['map']:
-                world_data['map']['seed'] = {'name': 'World seed', 'default': ''}
-            world_data['map']['seed']['value'] = str(state['world_seed'])
-
-            state['world_data'] = world_data
-
-            if not hasattr(game, 'world_setup_state'):
-                game.world_setup_state = {}
-            game.world_setup_state['world_data'] = world_data
-            game.world_setup_state['chosen_mode'] = 'sandbox'
-            game.world_setup_state['world_seed'] = state['world_seed']
-            return
-
         for mode, rect in clickable_rects.get('cards', []):
             if rect.collidepoint(mouse_pos):
                 _apply_build_and_proceed(game, state, mode['id'], mode.get('filename'))

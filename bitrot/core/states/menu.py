@@ -1,5 +1,6 @@
 # In core/states/menu.py
 
+import random
 import os
 import glob
 import pygame
@@ -9,7 +10,8 @@ from core.data.config import get_writable_dir
 from core.ui.helpers.main_menu import draw_menu
 from core.ui.helpers.keybinds import keybinds_ui
 from core.ui.helpers.preferences import preferences_ui
-from core.ui.helpers.help_menu import help_ui  # <-- Import the new Help UI
+from core.ui.helpers.help_menu import help_ui
+from core.ui.helpers.trait_config_loader import load_config_data
 
 def run_menu(game):
     if hasattr(game, 'discord_rpc'):
@@ -21,7 +23,7 @@ def run_menu(game):
     saves = sorted(glob.glob(os.path.join(save_dir, "save_*"))) if os.path.exists(save_dir) else []
     has_save = len(saves) > 0
 
-    start_btn, load_btn, settings_btn, quit_btn, flag_rects, help_rect, controls_rect = draw_menu(game.game_screen, mouse_pos, has_save)
+    start_btn, sandbox_btn, load_btn, settings_btn, quit_btn, flag_rects, help_rect, controls_rect = draw_menu(game.game_screen, mouse_pos, has_save)
 
     is_sub_menu_open = (
         getattr(keybinds_ui, 'active', False) or 
@@ -30,7 +32,7 @@ def run_menu(game):
     )
 
     if not is_sub_menu_open:
-        menu_buttons = [b for b in [start_btn, load_btn if has_save else None, settings_btn, quit_btn, help_rect, controls_rect] if b is not None]
+        menu_buttons = [b for b in [start_btn, sandbox_btn, load_btn if has_save else None, settings_btn, quit_btn, help_rect, controls_rect] if b is not None]
         for flag in flag_rects:
             menu_buttons.append(flag['rect'])
 
@@ -113,6 +115,28 @@ def run_menu(game):
                 game.game_state = 'PLAYER_SETUP'
                 game.player_setup_state['current_tab'] = 'SelectWorld'
                 
+            elif sandbox_btn.collidepoint(mouse_pos):
+                if hasattr(game, 'sound_manager'):
+                    game.sound_manager.play_ui_hover()
+                game.player_setup_state = {}
+                game.world_setup_state = {}
+                game.game_state = 'PLAYER_SETUP'
+                game.player_setup_state['chosen_mode'] = 'sandbox'
+                game.world_setup_state['chosen_mode'] = 'sandbox'
+
+                path = core.data.config.get_world_config_path('sandbox')
+                world_data = load_config_data(path)
+                game.world_setup_state['world_data'] = world_data
+                game.player_setup_state['world_data'] = world_data
+                game.world_setup_state['world_preset_name'] = 'sandbox'
+                game.world_setup_state['selected_config_preset'] = 'sandbox'
+                game.player_setup_state['selected_config_preset'] = 'sandbox'
+
+                seed_str = "".join(str(random.randint(0, 9)) for _ in range(12))
+                game.world_setup_state['world_seed'] = seed_str
+                game.player_setup_state['world_seed'] = seed_str
+                game.player_setup_state['current_tab'] = 'World'
+
             elif has_save and load_btn.collidepoint(mouse_pos):
                 if hasattr(game, 'sound_manager'):
                     game.sound_manager.play_ui_hover()

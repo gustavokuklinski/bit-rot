@@ -565,7 +565,7 @@ def draw_select_character_screen(game, state, mouse_pos):
 
     # --- ELEMENT SIZES & VERTICAL CENTERING ---
     title_text = font_16.render(tr('ui', "CHOOSE YOUR CHARACTER"), False, WHITE)
-    sub_text = font_12.render(tr('ui', "Select your origin or customize your survivor"), False, (160, 160, 160))
+    sub_text = font_12.render(tr('ui', "Select your origin to begin your journey"), False, (160, 160, 160))
 
     id_bar_h = S(28)
     card_w = S(270)
@@ -645,7 +645,6 @@ def draw_select_character_screen(game, state, mouse_pos):
         'cards': [],
         'back_button': None,
         'random_button': None,
-        'custom_button': None,
         'prev_arrow': None,
         'next_arrow': None,
         'name_input': name_box,
@@ -805,10 +804,9 @@ def draw_select_character_screen(game, state, mouse_pos):
     # --- 5. BOTTOM BAR: BACK, RANDOM, AND CUSTOM CHARACTER ---
     back_w = S(160)
     rand_w = S(180)
-    custom_w = S(230)
     gap = S(20)
 
-    total_bottom_w = back_w + rand_w + custom_w + (gap * 2)
+    total_bottom_w = back_w + rand_w + gap
     start_bottom_x = center_x - (total_bottom_w // 2)
     bottom_y = card_y + card_h + S(20)
 
@@ -827,18 +825,9 @@ def draw_select_character_screen(game, state, mouse_pos):
     rand_txt = font_16.render(tr('ui', "Random"), False, WHITE)
     game.game_screen.blit(rand_txt, rand_txt.get_rect(center=rand_rect.center))
     clickable_rects['random_button'] = rand_rect
-
-    # 3. Custom Character Button (opens full player builder)
-    custom_btn_rect = pygame.Rect(rand_rect.right + gap, bottom_y, custom_w, btn_h)
-    is_custom_hover = custom_btn_rect.collidepoint(mouse_pos)
-    custom_bg = (80, 80, 80) if is_custom_hover else (60, 60, 60)
-    pygame.draw.rect(game.game_screen, custom_bg, custom_btn_rect, border_radius=S(6))
-    custom_txt = font_16.render(tr('ui', "Custom Build"), False, WHITE)
-    game.game_screen.blit(custom_txt, custom_txt.get_rect(center=custom_btn_rect.center))
-    clickable_rects['custom_button'] = custom_btn_rect
     
     # --- BUTTON HOVER SOUND TRACKER ---
-    all_char_buttons = [back_rect, rand_rect, custom_btn_rect, dice_btn, male_rect, female_rect, prev_arrow_rect, next_arrow_rect]
+    all_char_buttons = [back_rect, rand_rect, dice_btn, male_rect, female_rect, prev_arrow_rect, next_arrow_rect]
     for _, b_rect in clickable_rects.get('cards', []):
         all_char_buttons.append(b_rect)
 
@@ -983,10 +972,6 @@ def handle_select_character_events(game, state, event, mouse_pos, clickable_rect
             state['player_name'] = fake.name_male() if new_sex == 'Male' else fake.name_female()
             return
 
-        # Custom Character Button (opens full player builder)
-        if clickable_rects.get('custom_button') and clickable_rects['custom_button'].collidepoint(mouse_pos):
-            state['current_tab'] = 'Player'
-            return
 
         # Class Cards Click (Start Game directly with selected preset)
         for c_def, rect in clickable_rects.get('cards', []):

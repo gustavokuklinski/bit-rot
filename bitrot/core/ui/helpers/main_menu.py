@@ -130,10 +130,14 @@ def draw_menu(screen, mouse_pos, has_save=False):
     load_rect = pygame.Rect(center_x - btn_width // 2, start_y, btn_width, btn_height)
     draw_btn(screen, load_rect, tr('ui', "Load Game"), mouse_pos, enabled=has_save)
 
-    start_rect = pygame.Rect(center_x - btn_width // 2, load_rect.bottom + spacing, btn_width, btn_height)
-    draw_btn(screen, start_rect, tr('ui', "New Game"), mouse_pos)
-
     split_width = (btn_width - spacing) // 2
+
+    start_rect = pygame.Rect(center_x - btn_width // 2, load_rect.bottom + spacing, split_width, btn_height)
+    sandbox_rect = pygame.Rect(start_rect.right + spacing, load_rect.bottom + spacing, split_width, btn_height)
+
+    draw_btn(screen, start_rect, tr('ui', "New Game"), mouse_pos)
+    draw_btn(screen, sandbox_rect, tr('ui', "Sandbox"), mouse_pos)
+
     settings_rect = pygame.Rect(center_x - btn_width // 2, start_rect.bottom + spacing, split_width, btn_height)
     quit_rect = pygame.Rect(settings_rect.right + spacing, start_rect.bottom + spacing, split_width, btn_height)
 
@@ -230,4 +234,4 @@ def draw_menu(screen, mouse_pos, has_save=False):
         pygame.draw.rect(screen, WHITE, bg_rect, 1)
         screen.blit(tooltip_text, tooltip_rect)
 
-    return start_rect, load_rect, settings_rect, quit_rect, flag_rects, help_rect, controls_rect
+    return start_rect, sandbox_rect, load_rect, settings_rect, quit_rect, flag_rects, help_rect, controls_rect
