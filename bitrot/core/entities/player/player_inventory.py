@@ -457,29 +457,42 @@ class PlayerInventory:
     def stack_item_in_inventory(self, item_to_stack):
         if not item_to_stack.is_stackable(): return 
         
+        if getattr(item_to_stack, 'load', None) is None:
+            item_to_stack.load = 1
+        if getattr(item_to_stack, 'capacity', None) is None:
+            item_to_stack.capacity = 50 if (getattr(item_to_stack, 'is_maptile', False) and getattr(item_to_stack, 'item_type', '') != 'maptile_container') else 100
+
         for item in self.inventory:
-            if item is item_to_stack: continue # Fix: Prevent stacking with itself
+            if item is item_to_stack: continue
             if item.can_stack_with(item_to_stack):
-                available_space = item.capacity - item.load
+                item_cap = item.capacity if (item.capacity is not None and item.capacity > 0) else (50 if getattr(item, 'is_maptile', False) else 100)
+                item_load = item.load if item.load is not None else 1
+                available_space = max(0, item_cap - item_load)
                 transfer = min(available_space, item_to_stack.load)
-                item.load += transfer
-                item_to_stack.load -= transfer
-                if item_to_stack.load <= 0:
-                    if item_to_stack in self.inventory:
-                        self.inventory.remove(item_to_stack) # Safely clean up the 0-load ghost item!
-                    return 
-                    
+                if transfer > 0:
+                    item.load = item_load + transfer
+                    item.capacity = item_cap
+                    item_to_stack.load -= transfer
+                    if item_to_stack.load <= 0:
+                        if item_to_stack in self.inventory:
+                            self.inventory.remove(item_to_stack)
+                        return
+
         for item in self.belt:
-            if item is item_to_stack: continue # Fix: Prevent stacking with itself
+            if item is item_to_stack: continue
             if item and item.can_stack_with(item_to_stack):
-                available_space = item.capacity - item.load
+                item_cap = item.capacity if (item.capacity is not None and item.capacity > 0) else (50 if getattr(item, 'is_maptile', False) else 100)
+                item_load = item.load if item.load is not None else 1
+                available_space = max(0, item_cap - item_load)
                 transfer = min(available_space, item_to_stack.load)
-                item.load += transfer
-                item_to_stack.load -= transfer
-                if item_to_stack.load <= 0:
-                    if item_to_stack in self.inventory:
-                        self.inventory.remove(item_to_stack) # Safely clean up the 0-load ghost item!
-                    return 
+                if transfer > 0:
+                    item.load = item_load + transfer
+                    item.capacity = item_cap
+                    item_to_stack.load -= transfer
+                    if item_to_stack.load <= 0:
+                        if item_to_stack in self.inventory:
+                            self.inventory.remove(item_to_stack)
+                        return
 
     def find_water_to_auto_drink(self):
         WATER_ITEM_NAME = 'Water Unit'

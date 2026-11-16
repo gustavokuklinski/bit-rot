@@ -502,8 +502,12 @@ class PlayerActions:
         if getattr(item, 'is_maptile', False) or item_type in ('maptile', 'maptile_container'):
             is_on_player = (source in ('inventory', 'belt', 'gear')) or (source == 'container' and container_item and is_container_on_player(container_item, self))
             if is_on_player:
+                if item_type != 'maptile_container' and hasattr(item, 'load') and getattr(item, 'load', 0) > 1:
+                    return ['Place', 'Send to', 'Drop one', 'Drop all']
                 return ['Place', 'Send to', 'Drop']
             else:
+                if item_type != 'maptile_container' and hasattr(item, 'load') and getattr(item, 'load', 0) > 1:
+                    return ['Grab One', 'Grab Half', 'Grab All', 'Send to']
                 return ['Grab', 'Send to']
         
         if item_type == 'vehicle':

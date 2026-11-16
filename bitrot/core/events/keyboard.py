@@ -956,13 +956,14 @@ def handle_keyboard_events(game, event, action_triggered=None):
 
         if event.key == pygame.K_TAB:
             if getattr(game, 'item_to_destroy', None) or getattr(game, 'item_to_pickup', None):
-                mode_dict = game.item_to_destroy if getattr(game, 'item_to_destroy', None) else game.item_to_pickup
+                is_destroy = getattr(game, 'item_to_destroy', None) is not None
+                mode_dict = game.item_to_destroy if is_destroy else game.item_to_pickup
                 cur_layer = mode_dict.get('target_layer', 'map')
-                cycle = ['ground', 'map', 'roof']
-                next_layer = cycle[(cycle.index(cur_layer) + 1) % len(cycle)] if cur_layer in cycle else 'map'
+                cycle = ['ground', 'map', 'roof'] if is_destroy else ['map', 'roof']
+                next_layer = cycle[(cycle.index(cur_layer) + 1) % len(cycle)] if cur_layer in cycle else ('map' if not is_destroy else 'ground')
                 mode_dict['target_layer'] = next_layer
                 layer_lbl = {'roof': 'Roof [R]', 'map': 'Map [M]', 'ground': 'Ground [G]'}.get(next_layer, next_layer.capitalize())
-                mode_name = tr('ui', 'Destroy') if getattr(game, 'item_to_destroy', None) else tr('ui', 'Pickup')
+                mode_name = tr('ui', 'Destroy') if is_destroy else tr('ui', 'Pickup')
                 display_message(game, f"{mode_name} {tr('ui', 'layer:')} {layer_lbl}")
                 if hasattr(game, 'sound_manager'):
                     game.sound_manager.play_ui_hover()
@@ -1039,13 +1040,14 @@ def handle_keyboard_events(game, event, action_triggered=None):
         elif action_triggered == 'toggle_slots': toggle_slots_modal(game)
         elif action_triggered == 'toggle_modals':
             if getattr(game, 'item_to_destroy', None) or getattr(game, 'item_to_pickup', None):
-                mode_dict = game.item_to_destroy if getattr(game, 'item_to_destroy', None) else game.item_to_pickup
+                is_destroy = getattr(game, 'item_to_destroy', None) is not None
+                mode_dict = game.item_to_destroy if is_destroy else game.item_to_pickup
                 cur_layer = mode_dict.get('target_layer', 'map')
-                cycle = ['ground', 'map', 'roof']
-                next_layer = cycle[(cycle.index(cur_layer) + 1) % len(cycle)] if cur_layer in cycle else 'map'
+                cycle = ['ground', 'map', 'roof'] if is_destroy else ['map', 'roof']
+                next_layer = cycle[(cycle.index(cur_layer) + 1) % len(cycle)] if cur_layer in cycle else ('map' if not is_destroy else 'ground')
                 mode_dict['target_layer'] = next_layer
                 layer_lbl = {'roof': 'Roof [R]', 'map': 'Map [M]', 'ground': 'Ground [G]'}.get(next_layer, next_layer.capitalize())
-                mode_name = tr('ui', 'Destroy') if getattr(game, 'item_to_destroy', None) else tr('ui', 'Pickup')
+                mode_name = tr('ui', 'Destroy') if is_destroy else tr('ui', 'Pickup')
                 display_message(game, f"{mode_name} {tr('ui', 'layer:')} {layer_lbl}")
                 if hasattr(game, 'sound_manager'):
                     game.sound_manager.play_ui_hover()

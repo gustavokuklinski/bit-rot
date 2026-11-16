@@ -153,8 +153,11 @@ def handle_mouse_down(game, event, mouse_pos):
                                 game.all_roof_layers[game.current_layer_index][mouse_ty][mouse_tx] = tile_char
 
                         game.map_manager.invalidate_chunk(mouse_tx, mouse_ty)
-                        from core.events.mouse_context_actions import remove_from_source
-                        remove_from_source(game, item, source, index, container_item)
+                        if hasattr(item, 'load') and item.load is not None and item.load > 1:
+                            item.load -= 1
+                        else:
+                            from core.events.mouse_context_actions import remove_from_source
+                            remove_from_source(game, item, source, index, container_item)
                         if hasattr(game, 'sound_manager'):
                             game.sound_manager.play_sound('place.ogg', subdir='items', game=game, is_critical=True)
                         display_message(f"{tr('msg', 'Placed')} {tr('item', item.name)}.")
@@ -212,8 +215,11 @@ def handle_mouse_down(game, event, mouse_pos):
                                     game.spatial_manager.rebuild_container_grid()
 
                             game.map_manager.invalidate_chunk(mouse_tx, mouse_ty)
-                            from core.events.mouse_context_actions import remove_from_source
-                            remove_from_source(game, item, source, index, container_item)
+                            if hasattr(item, 'load') and item.load is not None and item.load > 1:
+                                item.load -= 1
+                            else:
+                                from core.events.mouse_context_actions import remove_from_source
+                                remove_from_source(game, item, source, index, container_item)
                             if hasattr(game, 'sound_manager'):
                                 game.sound_manager.play_sound('place.ogg', subdir='items', game=game, is_critical=True)
                             display_message(f"{tr('msg', 'Placed')} {tr('item', item.name)}.")
@@ -465,18 +471,23 @@ def handle_mouse_down(game, event, mouse_pos):
                     picked_item.item_type = 'maptile_container'
                     picked_item.capacity = t_def.get('capacity', 20)
                     picked_item.inventory = []
-
-                if len(game.player.inventory) < game.player.get_total_inventory_slots():
-                    game.player.inventory.append(picked_item)
-                    if hasattr(game.player, 'stack_item_in_inventory'):
-                        game.player.stack_item_in_inventory(picked_item)
                 else:
-                    picked_item.rect.center = game.player.rect.center
-                    picked_item.x, picked_item.y = picked_item.rect.topleft
-                    picked_item.layer = curr_layer
-                    picked_item.map_filename = getattr(game.map_manager, 'current_map_filename', '')
-                    game.items_on_ground.append(picked_item)
-                    display_message(tr('msg', "Inventory full. Dropped item on ground."))
+                    picked_item.capacity = 50
+                    picked_item.load = 1
+
+                if itype != 'maptile_container' and hasattr(game.player, 'stack_item_in_inventory'):
+                    game.player.stack_item_in_inventory(picked_item)
+
+                if getattr(picked_item, 'load', 1) > 0:
+                    if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                        game.player.inventory.append(picked_item)
+                    else:
+                        picked_item.rect.center = game.player.rect.center
+                        picked_item.x, picked_item.y = picked_item.rect.topleft
+                        picked_item.layer = curr_layer
+                        picked_item.map_filename = getattr(game.map_manager, 'current_map_filename', '')
+                        game.items_on_ground.append(picked_item)
+                        display_message(tr('msg', "Inventory full. Dropped item on ground."))
 
                 display_message(f"{tr('msg', 'Picked up')} {tr('item', picked_item.name)}.")
 

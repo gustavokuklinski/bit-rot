@@ -80,6 +80,12 @@ class Item:
         self.tile_char = tile_char
         self.is_maptile = is_maptile or (item_type in ('maptile', 'maptile_container'))
 
+        if self.is_maptile and self.item_type != 'maptile_container':
+            if self.capacity is None:
+                self.capacity = 50
+            if self.load is None and self.durability is None:
+                self.load = 1
+
         # Initialize app_slots for mobile items
         raw_slots = kwargs.get('app_slots')
         if raw_slots is not None:
@@ -350,6 +356,12 @@ class Item:
         if 'tile_char' in data:
             item.tile_char = data['tile_char']
 
+        if item.is_maptile and item.item_type != 'maptile_container':
+            if item.capacity is None:
+                item.capacity = 50
+            if item.load is None and item.durability is None:
+                item.load = 1
+
         if 'destroy_tile' in data:
             item.destroy_tile = bool(data['destroy_tile'])
         
@@ -434,13 +446,15 @@ class Item:
     def is_stackable(self):
         if self.durability is not None:
             return False
+        if getattr(self, 'is_maptile', False) and getattr(self, 'item_type', '') != 'maptile_container':
+            return True
         itype = getattr(self, 'item_type', '') or ''
         valid_type = (
             itype.startswith('consumable') or
             itype in [
                 'weapon_throw', 'consumable', 'currency', 'resource', 'recipe', 
                 'reciple', 'car_fuel', 'utility', 'liquid', 'book', 'consumable_book',
-                'farm_seed'
+                'farm_seed', 'maptile'
             ]
         )
         if not valid_type:
@@ -459,6 +473,9 @@ class Item:
         if not self.is_stackable() or not other_item.is_stackable():
             return False
         type_matches = (self.item_type == other_item.item_type) or (self.liquid and getattr(other_item, 'liquid', False))
+        if getattr(self, 'is_maptile', False) and getattr(other_item, 'is_maptile', False):
+            if getattr(self, 'item_type', '') != 'maptile_container' and getattr(other_item, 'item_type', '') != 'maptile_container':
+                type_matches = True
         return (self.name == other_item.name and 
                 type_matches and
                 self.durability is None and
