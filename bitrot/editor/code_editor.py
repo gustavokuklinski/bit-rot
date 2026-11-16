@@ -41,7 +41,8 @@ JSON_PATTERN = re.compile(
     r'(?P<bool>\b(true|false|null)\b)|'
     r'(?P<num>-?\b\d+(\.\d+)?([eE][+-]?\d+)?\b)|'
     r'(?P<punct>[\[\]\{\},:])|'
-    r'(?P<misc>[^\s\[\]\{\},:]+)'
+    r'(?P<space>\s+)|'
+    r'(?P<misc>.)'
 )
 
 XML_PATTERN = re.compile(
@@ -216,7 +217,7 @@ class CodeTextArea(UITextArea):
             elif self.file_type == 'json':
                 for match in JSON_PATTERN.finditer(l_text):
                     kind = match.lastgroup
-                    val = match.group()
+                    val = match.group().replace('\t', '    ')
                     color = getattr(CodeTheme, f"JSON_{kind.upper()}", CodeTheme.TEXT)
                     ts = self.font.render(val, True, color)
                     surface.blit(ts, (cur_x, y_pos))
@@ -475,7 +476,7 @@ class CodeEditor:
         if path not in self.open_files:
             try:
                 with open(path, 'r', encoding='utf-8') as f:
-                    content = f.read()
+                    content = f.read().replace('\t', '    ')
                 self.open_files.append(path)
                 self.file_data[path] = {
                     "content": content,
@@ -633,7 +634,7 @@ class CodeEditor:
                     selected_folder = folder_dd.text or self.current_root
                     name = name_box.text.strip()
                     if name:
-                        if not name.endswith(('.xml', '.md')):
+                        if not name.endswith(('.xml', '.md', '.json')):
                             name += ".xml"
                         path = os.path.join(selected_folder, name)
                         if not os.path.exists(path):

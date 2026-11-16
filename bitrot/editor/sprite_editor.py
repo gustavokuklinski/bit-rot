@@ -126,8 +126,6 @@ class SpriteEditor:
         self.tool_paste_btn = pygame.Rect(self.sidebar_w + 704, y_offset + 6, 70, 30)
 
         self.refresh_file_list()
-        if self.files and self.active_category in self.categories:
-            self.open_tab_sprite(os.path.join(self.categories[self.active_category], self.files[0]))
 
     def _resolve_categories(self):
         """Discovers existing sprite categories. In a Mod, ONLY scans mod sprite folders."""
@@ -631,6 +629,8 @@ class SpriteEditor:
         # Canvas Interactions
         canvas_rect = pygame.Rect(self.sidebar_w, self.y_offset + self.toolbar_h + self.tab_bar_h, self.width - self.sidebar_w - self.palette_panel_w, self.height - self.y_offset - self.toolbar_h - self.tab_bar_h)
         if event.type == pygame.MOUSEBUTTONDOWN and canvas_rect.collidepoint(event.pos):
+            if not self.get_current_tab():
+                return False
             scale = self.zoom_levels[self.zoom_idx]
             px = int((event.pos[0] - self.pan_x) // scale)
             py = int((event.pos[1] - self.pan_y) // scale)

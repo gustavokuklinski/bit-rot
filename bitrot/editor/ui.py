@@ -801,6 +801,12 @@ class UITextArea:
                 self.cursor_pos += 1
                 self._update_lines()
                 self._push_history()
+            elif event.key == pygame.K_TAB:
+                self.delete_selection()
+                self.text = self.text[:self.cursor_pos] + "    " + self.text[self.cursor_pos:]
+                self.cursor_pos += 4
+                self._update_lines()
+                self._push_history()
             else:
                 if event.unicode and event.unicode.isprintable():
                     self.delete_selection()
@@ -1785,7 +1791,7 @@ class Sidebar:
                                 self.selected_building = None
                                 return True
                             elif event.button == 3:
-                                cm_w, cm_h = 160, 3 * self.context_item_h + 8
+                                cm_w, cm_h = 160, 2 * self.context_item_h + 8
                                 
                                 # Query the current real window resolution dynamically
                                 cur_surf = pygame.display.get_surface()
@@ -1800,7 +1806,6 @@ class Sidebar:
                                     "tab": self.active_tab,
                                     "rect": pygame.Rect(cm_x, cm_y, cm_w, cm_h),
                                     "options": [
-                                        {"label": "Edit Entity", "action": "edit_entity"},
                                         {"label": "Edit Sprite", "action": "edit_sprite"},
                                         {"label": "Edit Code", "action": "edit_code"},
                                     ]

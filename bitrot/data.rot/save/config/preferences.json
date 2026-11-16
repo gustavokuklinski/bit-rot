@@ -2,11 +2,11 @@
   "preferences": {
     "mods": {
       "enabled": [
-        "BitRot_Vanilla",
+        "BitRot_Extras",
         "language_pt_br"
       ],
       "order": [
-        "BitRot_Vanilla",
+        "BitRot_Extras",
         "language_pt_br"
       ]
     },

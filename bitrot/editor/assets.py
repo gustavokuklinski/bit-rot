@@ -21,12 +21,22 @@ def load_sprite_images(path):
     if not os.path.exists(path):
         return sprites
              
-    for filename in os.listdir(path):
-        if filename.endswith(".png"):
-            name = os.path.splitext(filename)[0]
-            image = pygame.image.load(os.path.join(path, filename)).convert_alpha()
-            image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
-            sprites[name] = image
+    for root_dir, dirs, files in os.walk(path):
+        for filename in files:
+            if filename.lower().endswith(".png"):
+                full_path = os.path.join(root_dir, filename)
+                try:
+                    image = pygame.image.load(full_path).convert_alpha()
+                    image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
+                except Exception:
+                    continue
+                name = os.path.splitext(filename)[0]
+                sprites[name] = image
+                rel_path = os.path.relpath(full_path, path).replace('\\', '/')
+                rel_stem = os.path.splitext(rel_path)[0]
+                sprites[rel_stem] = image
+                sprites[rel_path] = image
+                sprites[filename] = image
     return sprites
 
 def load_editor_icons(path):
@@ -83,6 +93,9 @@ def load_items_from_xml(xml_dir, sprite_dir):
         return items
         
     for root_dir, dirs, files in os.walk(xml_dir):
+        rel_sub = os.path.relpath(root_dir, xml_dir).replace('\\', '/')
+        if rel_sub == '.':
+            rel_sub = ''
         for filename in sorted(files):
             if filename.endswith(".xml"):
                 try:
@@ -94,18 +107,27 @@ def load_items_from_xml(xml_dir, sprite_dir):
                         name = root.attrib['name']
                         sprite_node = root.find(".//sprite")
                         
-                        sprite_key = None
+                        img = None
                         if sprite_node is not None and 'file' in sprite_node.attrib:
-                            sprite_file = sprite_node.attrib['file']
-                            sprite_key = os.path.splitext(os.path.basename(sprite_file))[0]
-                        else:
-                            sprite_key = os.path.splitext(filename)[0]
+                            sprite_file = sprite_node.attrib['file'].replace('\\', '/')
+                            sprite_base = os.path.splitext(os.path.basename(sprite_file))[0]
+                            sprite_stem = os.path.splitext(sprite_file)[0]
+                            sub_sprite_key = f"{rel_sub}/{sprite_base}" if rel_sub else sprite_base
+                            sub_sprite_stem = f"{rel_sub}/{sprite_stem}" if rel_sub else sprite_stem
+                            for k in [sprite_file, sprite_stem, sprite_base, sub_sprite_key, sub_sprite_stem]:
+                                if k in sprites:
+                                    img = sprites[k]
+                                    break
+
+                        if not img:
+                            stem = os.path.splitext(filename)[0]
+                            sub_stem = f"{rel_sub}/{stem}" if rel_sub else stem
+                            for k in [stem, sub_stem, f"{stem}.png", f"{sub_stem}.png"]:
+                                if k in sprites:
+                                    img = sprites[k]
+                                    break
                             
-                        if sprite_key and sprite_key in sprites:
-                            items[name] = sprites[sprite_key]
-                        else:
-                            items[name] = create_placeholder(name)
-                                         
+                        items[name] = img if img else create_placeholder(name)
                 except Exception:
                     pass
                     

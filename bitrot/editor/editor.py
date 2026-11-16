@@ -21,14 +21,9 @@ from editor.ui import (
 import xml.etree.ElementTree as ET
 
 from editor.file_tree import FileTree
-from editor.dialog_editor import DialogEditor
-from editor.crafts import CraftEditor
 from editor.code_editor import CodeEditor
-from editor.entity_editor import EntityEditor
 from editor.sprite_editor import SpriteEditor
 import editor.config as editor_config
-from editor.player_editor import PlayerEditor
-from editor.world_editor import WorldEditor
 
 pygame.init()
 pygame.font.init()
@@ -44,8 +39,8 @@ def get_installed_mods():
     return mods
 
 def resolve_allowed_modes(mod_name):
-    """Maps editor_config list to MenuBar tab titles. Vanilla enables all 8 tabs."""
-    all_modes = ["Map", "NPC", "Player", "World", "Craft", "Entity", "Code", "Art"]
+    """Maps editor_config list to MenuBar tab titles. Retains only Map, Code, Art."""
+    all_modes = ["Map", "Code", "Art"]
     if not mod_name or mod_name == "Vanilla":
         return all_modes
 
@@ -56,11 +51,6 @@ def resolve_allowed_modes(mod_name):
     raw_config = [str(c).lower().strip() for c in desc.get("editor_config", [])]
     mode_map = {
         "map": "Map", "building": "Map", "buildings": "Map",
-        "npc": "NPC", "dialog": "NPC", "npc dialog": "NPC", "dialogs": "NPC",
-        "player": "Player",
-        "world": "World", "builds": "World",
-        "craft": "Craft", "crafts": "Craft",
-        "entity": "Entity", "entities": "Entity",
         "code": "Code",
         "art": "Art", "sprite": "Art", "sprites": "Art"
     }
@@ -104,6 +94,9 @@ def resolve_item_metadata(name, tab_type="Items"):
 
     if os.path.exists(item_dir):
         for root_d, dirs, files in os.walk(item_dir):
+            rel_sub = os.path.relpath(root_d, item_dir).replace('\\', '/')
+            if rel_sub == '.':
+                rel_sub = ''
             for f in files:
                 p = os.path.join(root_d, f)
                 stem = os.path.splitext(f)[0].lower()
@@ -114,14 +107,26 @@ def resolve_item_metadata(name, tab_type="Items"):
                             sp_node = root.find(".//sprite")
                             sp_file = sp_node.attrib.get('file', f"{stem}.png") if sp_node is not None else f"{stem}.png"
                             if not sp_file.lower().endswith('.png'): sp_file += '.png'
-                            return {"category": "Items", "xml_filename": f, "xml_path": p, "sprite_path": os.path.join(s_item_dir, sp_file)}
+                            candidate_paths = [
+                                os.path.join(s_item_dir, rel_sub, sp_file) if rel_sub else os.path.join(s_item_dir, sp_file),
+                                os.path.join(s_item_dir, sp_file)
+                            ]
+                            for c_path in candidate_paths:
+                                if os.path.exists(c_path):
+                                    return {"category": "Items", "xml_filename": f, "xml_path": p, "sprite_path": c_path}
+                            for s_root, _, s_files in os.walk(s_item_dir):
+                                if os.path.basename(sp_file) in s_files:
+                                    return {"category": "Items", "xml_filename": f, "xml_path": p, "sprite_path": os.path.join(s_root, os.path.basename(sp_file))}
+                            target_p = os.path.join(s_item_dir, rel_sub, sp_file) if rel_sub else os.path.join(s_item_dir, sp_file)
+                            return {"category": "Items", "xml_filename": f, "xml_path": p, "sprite_path": target_p}
                     except Exception: pass
                 elif f.endswith('.json'):
                     try:
                         with open(p, 'r', encoding='utf-8') as jf:
                             jd = json.load(jf)
                         if stem in name_alts or any(stem in k.lower() for k in jd.keys()):
-                            return {"category": "Items", "xml_filename": f, "xml_path": p, "sprite_path": os.path.join(s_item_dir, f"{stem}.png")}
+                            candidate = os.path.join(s_item_dir, rel_sub, f"{stem}.png") if rel_sub else os.path.join(s_item_dir, f"{stem}.png")
+                            return {"category": "Items", "xml_filename": f, "xml_path": p, "sprite_path": candidate}
                     except Exception: pass
 
     target_dir = os.path.join(active_root, 'data', 'map' if tab_type == "Tiles" else 'items')
@@ -215,11 +220,6 @@ def editor():
     toolbar = Toolbar(FILE_TREE_WIDTH, TAB_BAR_HEIGHT, current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH, TOOLBAR_HEIGHT, FONT)
     sidebar = Sidebar(current_screen_width - SIDEBAR_WIDTH, TAB_BAR_HEIGHT, map_tiles, item_tiles, FONT)
 
-    dialog_editor = DialogEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT, item_tiles)
-    player_editor = PlayerEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT, item_tiles)
-    world_editor = WorldEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT)
-    craft_editor = CraftEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT, item_tiles)
-    entity_editor = EntityEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT, all_sprites_dict)
     code_editor = CodeEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT)
     sprite_editor = SpriteEditor(TAB_BAR_HEIGHT, current_screen_width, current_screen_height, FONT)
 
@@ -274,17 +274,10 @@ def editor():
         building_file_tree.root_dir = b_dir
         building_file_tree.refresh()
 
-        dialog_editor.refresh_files()
-        player_editor.refresh_files()
-        world_editor.refresh_files()
-        craft_editor.craft_dir = os.path.join(active_root, 'data', 'craft')
-        craft_editor.load_xmls()
-
         code_editor.file_tree.root_dir = os.path.join(active_root, 'data')
         code_editor.file_tree.refresh()
 
         sprite_editor.reload_for_mod(mod_sprites)
-        entity_editor.reload_for_mod(all_sprites_dict)
 
     RULER_W = 28
     RULER_H = 18
@@ -388,9 +381,6 @@ def editor():
                 sidebar.resize(current_screen_width - SIDEBAR_WIDTH, TAB_BAR_HEIGHT, current_screen_height)
                 building_file_tree.resize(current_screen_height - TAB_BAR_HEIGHT)
                 toolbar.resize(current_screen_width - FILE_TREE_WIDTH - SIDEBAR_WIDTH)
-                dialog_editor.resize(current_screen_width, current_screen_height)
-                craft_editor.resize(current_screen_width, current_screen_height)
-                entity_editor.resize(current_screen_width, current_screen_height)
                 code_editor.resize(current_screen_width, current_screen_height)
                 sprite_editor.resize(current_screen_width, current_screen_height)
 
@@ -410,47 +400,7 @@ def editor():
                 editor_mode = menu_action
                 continue
 
-            if editor_mode == "NPC":
-                res = dialog_editor.handle_event(event)
-                if isinstance(res, dict) and res.get("action") == "open_in_code":
-                    code_editor.open_file(res["path"])
-                    editor_mode = "Code"
-                    menu_bar.active_mode = "Code"
-                continue
-            elif editor_mode == "Player":
-                res = player_editor.handle_event(event)
-                if isinstance(res, dict) and res.get("action") == "open_in_code":
-                    code_editor.open_file(res["path"])
-                    editor_mode = "Code"
-                    menu_bar.active_mode = "Code"
-                continue
-            elif editor_mode == "World":
-                res = world_editor.handle_event(event)
-                if isinstance(res, dict) and res.get("action") == "open_in_code":
-                    code_editor.open_file(res["path"])
-                    editor_mode = "Code"
-                    menu_bar.active_mode = "Code"
-                continue
-            elif editor_mode == "Craft":
-                res = craft_editor.handle_event(event)
-                if isinstance(res, dict) and res.get("action") == "open_in_code":
-                    code_editor.open_file(res["path"])
-                    editor_mode = "Code"
-                    menu_bar.active_mode = "Code"
-                continue
-            elif editor_mode == "Entity":
-                res = entity_editor.handle_event(event)
-                if isinstance(res, dict):
-                    if res.get("action") == "open_in_code":
-                        code_editor.open_file(res["path"])
-                        editor_mode = "Code"
-                        menu_bar.active_mode = "Code"
-                    elif res.get("action") == "open_in_art":
-                        sprite_editor.open_tab_sprite(res["path"])
-                        editor_mode = "Art"
-                        menu_bar.active_mode = "Art"
-                continue
-            elif editor_mode == "Code":
+            if editor_mode == "Code":
                 code_editor.handle_event(event)
                 continue
             elif editor_mode == "Art":
@@ -727,12 +677,7 @@ def editor():
 
         screen.fill(UITheme.BG)
         
-        if editor_mode == "NPC": dialog_editor.draw(screen)
-        elif editor_mode == "Player": player_editor.draw(screen)
-        elif editor_mode == "World": world_editor.draw(screen)
-        elif editor_mode == "Craft": craft_editor.draw(screen)
-        elif editor_mode == "Entity": entity_editor.draw(screen)
-        elif editor_mode == "Code": code_editor.draw(screen)
+        if editor_mode == "Code": code_editor.draw(screen)
         elif editor_mode == "Art": sprite_editor.draw(screen)
         else:
             surface_clip = screen.get_clip()
