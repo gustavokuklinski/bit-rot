@@ -122,7 +122,7 @@ def run_playing(game):
             n.walk_anim_angle = 0
             n.is_dormant = True
 
-    MAX_ACTIVE_NPCS = 8
+    MAX_ACTIVE_NPCS = 40
     if len(game.active_npcs) > MAX_ACTIVE_NPCS:
         game.active_npcs = game.active_npcs[:MAX_ACTIVE_NPCS]
 
@@ -185,7 +185,7 @@ def run_playing(game):
     player_pos = game.player.rect.center if game.player else None
     NPC_UPDATE_RADIUS_SQ = (NPC_DETECTION_RADIUS + 300) ** 2
     npcs_updated = 0
-    MAX_NPCS_PER_FRAME = 8
+    MAX_NPCS_PER_FRAME = 40
     
     for npc in game.active_npcs:
         if getattr(npc, 'is_dormant', False):

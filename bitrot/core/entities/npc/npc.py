@@ -329,442 +329,173 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         self.last_grid_pos = (int(self.rect.centerx // TILE_SIZE), int(self.rect.centery // TILE_SIZE))
 
-    def update(self, game):
-        obstacles = game.obstacles
-        if self.is_dead: return 
-        resolve_stuck_in_obstacle(self, obstacles, game)
-
-        # Friendly NPCs cannot be pushed or knocked back
-        if getattr(self, 'is_friendly', False):
-            self.knockback_timer = 0
-            self.knockback_velocity = [0.0, 0.0]
-
-        multiplier = 1.0
-        
-        speed_mult = 1.0
-        gx = self.rect.centerx // TILE_SIZE
-        gy = self.rect.centery // TILE_SIZE
-        if hasattr(game, 'map_manager') and getattr(self, 'layer', 1) == 1:
-            tile_def = game.map_manager.get_tile_at(gx, gy)
-            if tile_def:
-                name = tile_def.get('name', '').lower()
-                if 'window' in name or tile_def.get('is_window'):
-                    speed_mult = 0.35
-
-        effective_speed = self.speed * multiplier * game.dt_mult * speed_mult
-        current_time = pygame.time.get_ticks()
-        
-        current_grid_pos = (int(self.rect.centerx // TILE_SIZE), int(self.rect.centery // TILE_SIZE))
-        
-        if hasattr(self, 'last_grid_pos') and current_grid_pos != self.last_grid_pos:
-            self.last_grid_pos = current_grid_pos
-
-        if self.knockback_timer > 0:
-            VELOCITY_MULTIPLIER = 0.25
-            kb_x, kb_y = self.knockback_velocity
-            self.x += kb_x * VELOCITY_MULTIPLIER
-            self.rect.x = int(self.x)
-            for obstacle in obstacles:
-                if self.rect.colliderect(obstacle):
-                    self.x -= kb_x * VELOCITY_MULTIPLIER; self.rect.x = int(self.x); break
-            self.y += kb_y * VELOCITY_MULTIPLIER
-            self.rect.y = int(self.y)
-            for obstacle in obstacles:
-                if self.rect.colliderect(obstacle):
-                    self.y -= kb_y * VELOCITY_MULTIPLIER; self.rect.y = int(self.y); break
-            self.rect.topleft = (int(self.x), int(self.y))
-            dt = game.dt_ms * multiplier
-            self.knockback_timer -= dt
-
-            decay_factor = math.pow(0.9, game.dt_mult * multiplier)
-            self.knockback_velocity[0] *= decay_factor
-            self.knockback_velocity[1] *= decay_factor
+    def attack(self, target_entity, game):
+        if getattr(self, 'is_dead', False) or getattr(self, 'health', 0) <= 0:
+            return
+        if getattr(target_entity, 'is_dead', False) or getattr(target_entity, 'health', 1) <= 0:
             return
 
-        if self.aggro_timer > 0:
-            self.aggro_timer -= game.dt_ms
-            if self.aggro_timer <= 0:
-                self.current_attacker = None
+        # Friendly NPCs or zombies or animals are not attacked by hostile NPCs
+        if hasattr(game, 'npcs') and target_entity in game.npcs and getattr(target_entity, 'is_friendly', False):
+            return
+        if getattr(target_entity, 'type', '') == 'animal' or type(target_entity).__name__ == 'Animal':
+            return
+        if isinstance(target_entity, Zombie) and getattr(target_entity, 'type', '') != 'animal':
+            return
 
-        my_layer = getattr(self, 'layer', 1)
-        entities_to_check = [e for e in game.npcs if e != self and not e.is_dead and getattr(e, 'layer', 1) == my_layer]
-        if game.player and not game.player.is_dead and getattr(game, 'current_layer_index', 1) == my_layer:
-            entities_to_check.append(game.player)
-        
-
-        target_entity = None
-        target_pos = None
-        
-        
-
-        weapon = getattr(self, 'equipped_weapon', None)
-        # 5-tile radius default for NPCs
-        search_range = getattr(core.data.config, 'NPC_DETECTION_RADIUS', 5 * TILE_SIZE)
-
-        if not self.is_friendly and game.player:
-            if getattr(game.player, 'is_aiming', False):
-                search_range *= 0.5
-            elif getattr(game.player, 'is_running', False):
-                search_range *= 1.5
-
-        is_ranged_weapon = weapon and weapon.item_type == 'weapon_ranged'
-        if is_ranged_weapon:
-            search_range = search_range * 1.5
-
-        # Store for debug visualization
-        self.current_detection_range = search_range
-
-        attacker = getattr(self, 'current_attacker', None)
-        is_aggroed = self.aggro_timer > 0
-
-        potential_targets = []
-
-        if self.is_friendly:
-            # FNPCs defend against hostile NPCs if necessary
-            if attacker == game.player and game.player and not game.player.is_dead:
-                potential_targets.append(game.player)
-            
-        else:
-            # HNPCs IGNORE FNPCs, Zombies, and Animals (they only fight players)
-            if game.player and not game.player.is_dead:
-                potential_targets.append(game.player)
-            
-
-        min_dist_to_target = float('inf')
-
-        for entity in potential_targets:
-            if self.is_static:
-                continue
-
-            dist = math.hypot(entity.rect.centerx - self.rect.centerx, entity.rect.centery - self.rect.centery)
-            if dist <= search_range and dist < min_dist_to_target:
-                if self.has_line_of_sight(entity.rect, game, current_time):
-                    min_dist_to_target = dist
-                    target_entity = entity
-                    self.state = 'chasing'
-                    if entity == game.player and not self.is_friendly:
-                        self.alert_nearby_zombies(game, search_range)
-
-        if is_aggroed:
-            if attacker and not attacker.is_dead:
-                target_entity = attacker
-                self.state = 'chasing'
-            elif game.player and not game.player.is_dead:
-                target_entity = game.player
-                self.state = 'chasing'
-
-        if target_entity:
-            target_pos = target_entity.rect.center
-            dx_target = target_pos[0] - self.rect.centerx
-            dy_target = target_pos[1] - self.rect.centery
-            self.aim_angle = math.degrees(math.atan2(-dy_target, dx_target))
-            self.idle_timer = 0
-        else:
-            self.aim_angle = self.angle
-            target_pos = None
-            self.state = 'idle'
-
-        self.dx, self.dy = 0, 0
-        
-        if target_pos:
-            dist_to_dest = math.hypot(target_pos[0] - self.rect.centerx, target_pos[1] - self.rect.centery)
-            move_threshold = (TILE_SIZE * 8) if is_ranged_weapon else (TILE_SIZE * 0.8)
-            
-            if dist_to_dest > move_threshold:
-                has_los = self.has_line_of_sight(pygame.Rect(target_pos[0]-2, target_pos[1]-2, 4, 4), game, current_time)
-
-                if not has_los or self.stuck_timer > 0:
-                    if current_time - self.last_path_calc_time > 1000 or not self.path or (self.state == 'chasing' and current_time - self.last_path_calc_time > 500):
-                         new_path = self._get_path_astar(self.rect.center, target_pos, game)
-                         if new_path:
-                             self.path = new_path
-                             self.last_path_calc_time = current_time
-                    
-                    if self.path:
-                        next_node = self.path[0]
-                        dx_path = next_node[0] - self.rect.centerx
-                        dy_path = next_node[1] - self.rect.centery
-                        dist_path = math.hypot(dx_path, dy_path)
-                        
-                        node_tile = (next_node[0] // TILE_SIZE, next_node[1] // TILE_SIZE)
-                        my_tile = (self.rect.centerx // TILE_SIZE, self.rect.centery // TILE_SIZE)
-                        if dist_path < TILE_SIZE * 0.75 or (node_tile == my_tile):
-                            self.path.pop(0)
-                            if self.path:
-                                next_node = self.path[0]
-                                dx_path = next_node[0] - self.rect.centerx
-                                dy_path = next_node[1] - self.rect.centery
-                                dist_path = math.hypot(dx_path, dy_path)
-                        
-                        if dist_path > 0:
-                            scale = effective_speed / dist_path
-                            self.dx = dx_path * scale
-                            self.dy = dy_path * scale
-                    else:
-                        scale = effective_speed / dist_to_dest
-                        self.dx = (target_pos[0] - self.rect.centerx) * scale
-                        self.dy = (target_pos[1] - self.rect.centery) * scale
-                else:
-                    self.path = []
-                    scale = effective_speed / dist_to_dest
-                    self.dx = (target_pos[0] - self.rect.centerx) * scale
-                    self.dy = (target_pos[1] - self.rect.centery) * scale
-                    
-                self.angle = math.degrees(math.atan2(-self.dy, self.dx))
-            
-            elif self.state == 'chasing':
-                shuffle_speed = effective_speed * 0.3
-                offset_x = math.sin(current_time * 0.002) * shuffle_speed
-                offset_y = math.cos(current_time * 0.002) * shuffle_speed
-                self.dx = offset_x
-                self.dy = offset_y
-                self.angle = math.degrees(math.atan2(-self.dy, self.dx))
-                
-            else:
-                # State is not chasing, just stay idle
-                pass
-
-        if self.state == 'chasing' and target_entity:
-             self._handle_combat(target_entity, game, multiplier, current_time)
-
-        is_moving = self.dx != 0 or self.dy != 0
-
-        if is_moving:
-            self.walk_anim_angle = math.sin(time.time() * 15) * 2
-            self.vx = self.dx
-
-            if hasattr(self, 'sound_steps') and self.sound_steps:
-                if not hasattr(self, 'last_step_sound_time'):
-                    self.last_step_sound_time = current_time + random.randint(0, 400)
-                    self.current_step_delay = random.randint(350, 450)
-                    
-                delay = getattr(self, 'current_step_delay', 400)
-                if current_time - getattr(self, 'last_step_sound_time', 0) > delay:
-                    game.sound_manager.play_sound(
-                        self.sound_steps, 
-                        subdir='npc', 
-                        game=game, 
-                        source_pos=self.rect.center, 
-                        base_volume=0.3, 
-                        #pitch_variance=0.15 
-                    )
-                    self.last_step_sound_time = current_time
-                    self.current_step_delay = random.randint(350, 500) 
-        else:
-            self.walk_anim_angle = 0
-            self.vx = 0
-            
-        if self.melee_swing_timer > 0: self.melee_swing_timer -= game.dt_ms
-        if self.health_bar_timer > 0: self.health_bar_timer -= game.dt_ms
-
-        if not is_moving: return
-
-        if self.stuck_timer > 0:
-            self.stuck_timer -= game.dt_ms
-            rad = math.radians(self.stuck_angle)
-            self.dx += math.cos(rad) * effective_speed * 0.5
-            self.dy += -math.sin(rad) * effective_speed * 0.5
-
-        def check_collision(rect_check):
-            indices = rect_check.collidelistall(obstacles)
-            for idx in indices:
-                obstacle = obstacles[idx]
-                gx = obstacle.x // TILE_SIZE
-                gy = obstacle.y // TILE_SIZE
-                tile_def = game.map_manager.get_tile_at(gx, gy)
-                if tile_def and 'mask' in tile_def and getattr(self, 'mask', None):
-                    offset = (obstacle.x - rect_check.x, obstacle.y - rect_check.y)
-                    if self.mask.overlap(tile_def['mask'], offset):
-                        return obstacle
-                else:
-                    return obstacle
-            
-            for entity in entities_to_check:
-                hitbox = entity.rect.inflate(-12, -12)
-                if rect_check.colliderect(hitbox):
-                    return entity
-            return None
-
-        total_dist_x = abs(self.dx)
-        total_dist_y = abs(self.dy)
-        step_size_limit = TILE_SIZE * 0.45
-        steps = int(math.ceil(max(total_dist_x, total_dist_y) / step_size_limit))
-        steps = max(1, steps)
-        
-        step_dx = self.dx / steps
-        step_dy = self.dy / steps
-        max_slide = 6
-        moved_any = False
-
-        for _ in range(steps):
-            # --- X AXIS WITH VERTICAL CORNER SLIDING ---
-            self.x += step_dx
-            self.rect.x = round(self.x)
-            collider = check_collision(self.rect)
-            
-            if collider:
-                resolved = False
-                orig_rect_y = self.rect.y
-                for offset in range(1, max_slide + 1):
-                    self.rect.y = orig_rect_y - offset
-                    if not check_collision(self.rect):
-                        self.y -= offset
-                        self.rect.y = round(self.y)
-                        resolved = True
-                        break
-                    self.rect.y = orig_rect_y + offset
-                    if not check_collision(self.rect):
-                        self.y += offset
-                        self.rect.y = round(self.y)
-                        resolved = True
-                        break
-
-                if not resolved:
-                    self.rect.y = orig_rect_y
-                    self.x -= step_dx
-                    self.rect.x = round(self.x)
-                    self.dx = 0
-                else:
-                    moved_any = True
-            else:
-                moved_any = True
-
-            # --- Y AXIS WITH HORIZONTAL CORNER SLIDING ---
-            self.y += step_dy
-            self.rect.y = round(self.y)
-            collider = check_collision(self.rect)
-            
-            if collider:
-                resolved = False
-                orig_rect_x = self.rect.x
-                for offset in range(1, max_slide + 1):
-                    self.rect.x = orig_rect_x - offset
-                    if not check_collision(self.rect):
-                        self.x -= offset
-                        self.rect.x = round(self.x)
-                        resolved = True
-                        break
-                    self.rect.x = orig_rect_x + offset
-                    if not check_collision(self.rect):
-                        self.x += offset
-                        self.rect.x = round(self.x)
-                        resolved = True
-                        break
-
-                if not resolved:
-                    self.rect.x = orig_rect_x
-                    self.y -= step_dy
-                    self.rect.y = round(self.y)
-                    self.dy = 0
-                else:
-                    moved_any = True
-            else:
-                moved_any = True
-
-        if not moved_any and (abs(self.dx) > 0.1 or abs(self.dy) > 0.1):
-            if self.stuck_timer <= 0:
-                self.stuck_timer = 200
-                self.path = []
-
-        self.rect.topleft = (round(self.x), round(self.y))
-
-        if moved_any:
-            from core.systems.utils import add_entity_footstep
-            actual_dist = math.hypot(self.dx, self.dy)
-            add_entity_footstep(game, self, actual_dist)
-
-    def _handle_combat(self, target_entity, game, multiplier, current_time):
-        weapon = getattr(self, 'equipped_weapon', None)
-        is_ranged_weapon = weapon and weapon.item_type == 'weapon_ranged'
-        
         dx = target_entity.rect.centerx - self.rect.centerx
         dy = target_entity.rect.centery - self.rect.centery
-        dist = math.hypot(dx, dy)
-        
-        angle_to_target = math.degrees(math.atan2(-dy, dx))
-        angle_diff = (angle_to_target - self.angle + 180) % 360 - 180
-        
-        effective_attack_range = self.attack_range
-        attack_cooldown = self.attack_cooldown / multiplier 
-        if is_ranged_weapon:
-            effective_attack_range = TILE_SIZE * 8
-            attack_cooldown = 500 / multiplier
-        
-        is_in_front = abs(angle_diff) < 45 
+        self.melee_swing_angle = math.atan2(-dy, dx)
+        self.aim_angle = math.degrees(self.melee_swing_angle)
 
-        if dist <= effective_attack_range and (current_time - self.last_attack_time > attack_cooldown):
-            weapon_is_ready = True
-             
-            has_los = True
-            if is_ranged_weapon:
-                has_los = self.check_line_of_sight(target_entity, game)
+        weapon = getattr(self, 'equipped_weapon', None)
+        is_ranged = weapon and getattr(weapon, 'item_type', '') == 'weapon_ranged'
 
-            if not is_ranged_weapon and not is_in_front:
-                return 
+        base_damage = random.randint(self.min_attack, self.max_attack)
+        weapon_dmg = 0
+        if weapon:
+            if hasattr(weapon, 'damage'):
+                weapon_dmg = weapon.damage
+            elif hasattr(weapon, 'min_damage') and hasattr(weapon, 'max_damage'):
+                weapon_dmg = random.randint(weapon.min_damage, weapon.max_damage)
+        damage_to_deal = max(1, base_damage + weapon_dmg)
 
-            if weapon_is_ready and has_los:
-                self.last_attack_time = current_time
-                attack_angle = math.atan2(-dy, dx)
-                 
-                base_damage = random.randint(self.min_attack, self.max_attack)
-                weapon_dmg = 0
-                if weapon:
-                    if hasattr(weapon, 'damage'):
-                        weapon_dmg = weapon.damage
-                    elif hasattr(weapon, 'min_damage') and hasattr(weapon, 'max_damage'):
-                        weapon_dmg = random.randint(weapon.min_damage, weapon.max_damage)
-                
-                damage_to_deal = max(1, base_damage + weapon_dmg)
-                 
-                if is_ranged_weapon and weapon:
-                    weapon_sound = weapon.sounds.get('shoot') if hasattr(weapon, 'sounds') else None
-                    
-                    if weapon_sound:
-                        game.sound_manager.play_sound(
-                            weapon_sound, 
-                            subdir='items', 
-                            game=game, 
-                            source_pos=self.rect.center, 
-                            base_volume=0.5
-                        )
+        current_time = pygame.time.get_ticks()
 
-                    projectile = Projectile(self.rect.centerx, self.rect.centery, target_entity.rect.centerx, target_entity.rect.centery, speed=20)
-                    projectile.damage = damage_to_deal
-                    projectile.owner = self
-                    projectile.hostile = True
-                    game.projectiles.append(projectile)
-                    
-                else: 
-                    if getattr(self, 'sound_attack', None):
-                        game.sound_manager.play_sound(
-                            self.sound_attack, subdir='npc', 
-                            game=game, 
-                            source_pos=self.rect.center, 
-                            base_volume=0.3, 
-                            #pitch_variance=0.15
-                        )
-                    self.melee_swing_timer = 250
-                    self.melee_swing_angle = attack_angle
-                    
-                    if target_entity == game.player:
-                        target_entity.take_damage(game, damage_to_deal, 0, attacker=self)
-                    
-                    else:
-                        # Neither HNPC nor zombies kill animals
-                        if getattr(target_entity, 'type', '') == 'animal' or type(target_entity).__name__ == 'Animal':
-                            return
+        if is_ranged:
+            if self.has_line_of_sight(target_entity.rect, game, current_time):
+                if weapon and hasattr(weapon, 'sounds') and weapon.sounds.get('shoot'):
+                    game.sound_manager.play_sound(
+                        weapon.sounds['shoot'],
+                        subdir='items',
+                        game=game,
+                        source_pos=self.rect.center,
+                        base_volume=0.5,
+                        is_critical=True
+                    )
+                projectile = Projectile(
+                    self.rect.centerx,
+                    self.rect.centery,
+                    target_entity.rect.centerx,
+                    target_entity.rect.centery,
+                    speed=20,
+                    damage=damage_to_deal,
+                    game=game
+                )
+                projectile.owner = self
+                projectile.hostile = True
+                game.projectiles.append(projectile)
+        else:
+            self.melee_swing_timer = 15
+            if getattr(self, 'sound_attack', None):
+                game.sound_manager.play_sound(
+                    self.sound_attack,
+                    subdir='npc',
+                    game=game,
+                    source_pos=self.rect.center,
+                    base_volume=0.4,
+                    pitch_variance=0.15
+                )
+            elif weapon and hasattr(weapon, 'sounds') and weapon.sounds.get('swing'):
+                game.sound_manager.play_sound(
+                    weapon.sounds['swing'],
+                    subdir='items',
+                    game=game,
+                    source_pos=self.rect.center,
+                    base_volume=0.4,
+                    is_critical=True
+                )
 
-                        # HNPC does not attack or kill zombies
-                        if not self.is_friendly and isinstance(target_entity, Zombie):
-                            return
+            if target_entity == game.player:
+                if getattr(game.player, 'vehicle', None):
+                    veh = game.player.vehicle
+                    veh.damage_motor(random.uniform(0.5, 1.5))
+                else:
+                    target_entity.take_damage(game, damage_to_deal, 0, attacker=self)
+            else:
+                is_dead = target_entity.take_damage(damage_to_deal, game, attacker=self)
+                if is_dead:
+                    target_entity.die(game)
 
-                        # HNPC does not attack or kill FNPCs
-                        if not self.is_friendly and hasattr(game, 'npcs') and target_entity in game.npcs and getattr(target_entity, 'is_friendly', False):
-                            return
+    def update(self, game):
+        if getattr(self, 'is_dead', False) or getattr(self, 'health', 0) <= 0:
+            return
 
-                        is_dead = target_entity.take_damage(damage_to_deal, game, attacker=self)
-                        if is_dead:
-                            target_entity.die(game)
+        if getattr(self, 'layer', 1) != getattr(game, 'current_layer_index', 1):
+            return
+
+        current_time = pygame.time.get_ticks()
+
+        # Handle static friendly NPCs (storekeepers, quest givers, lobby survivors)
+        if getattr(self, 'is_static', False):
+            self.vx = 0
+            self.vy = 0
+            self.walk_anim_angle = 0
+            self.state = 'idle'
+            if game.player:
+                dx = game.player.rect.centerx - self.rect.centerx
+                dy = game.player.rect.centery - self.rect.centery
+                if math.hypot(dx, dy) < TILE_SIZE * 3:
+                    self.aim_angle = math.degrees(math.atan2(-dy, dx))
+            if self.health_bar_timer > 0:
+                self.health_bar_timer -= game.dt_ms
+            return
+
+        # Synchronize attack range from equipped weapon
+        weapon = getattr(self, 'equipped_weapon', None)
+        if weapon and getattr(weapon, 'item_type', '') == 'weapon_ranged':
+            self.attack_range = TILE_SIZE * 8
+        else:
+            self.attack_range = TILE_SIZE * 1.5
+
+        # Handle friendly roaming NPCs (wander peacefully, defend if attacked by player)
+        if getattr(self, 'is_friendly', False):
+            if getattr(self, 'current_attacker', None) == game.player:
+                self.is_friendly = False
+            else:
+                if getattr(self, 'aggro_timer', 0) > 0:
+                    self.aggro_timer -= game.dt_ms
+                self.state = 'wandering'
+                super().update_ai(game.player.rect, game.obstacles, [e for e in getattr(game, 'npcs', []) if e != self], game)
+                if self.health_bar_timer > 0:
+                    self.health_bar_timer -= game.dt_ms
+                if self.melee_swing_timer > 0:
+                    self.melee_swing_timer -= game.dt_ms
+                return
+
+        # --- HOSTILE NPC: Behaves exactly like a Zombie ---
+        if getattr(self, 'knockback_timer', 0) > 0:
+            super().update(game)
+            return
+
+        if getattr(self, 'aggro_timer', 0) > 0:
+            self.aggro_timer -= game.dt_ms
+
+        nearby_entities = [
+            e for e in getattr(game, 'active_zombies', game.zombies)
+            if getattr(e, 'layer', 1) == self.layer
+        ] + [
+            n for n in getattr(game, 'npcs', [])
+            if n != self and getattr(n, 'layer', 1) == self.layer
+        ]
+        obstacles = getattr(game, 'obstacles', [])
+
+        self.update_ai(game.player.rect, obstacles, nearby_entities, game)
+
+        # Smooth aim angle for weapon graphics
+        if game.player:
+            dx = game.player.rect.centerx - self.rect.centerx
+            dy = game.player.rect.centery - self.rect.centery
+            dist_to_p = math.hypot(dx, dy)
+            if dist_to_p <= self.attack_range * 1.5 or getattr(self, 'state', '') == 'chasing':
+                self.aim_angle = math.degrees(math.atan2(-dy, dx))
+            elif abs(self.vx) > 0.1 or abs(self.vy) > 0.1:
+                self.aim_angle = math.degrees(math.atan2(-self.vy, self.vx))
+
+        if self.health_bar_timer > 0:
+            self.health_bar_timer -= game.dt_ms
+        if self.melee_swing_timer > 0:
+            self.melee_swing_timer -= game.dt_ms
 
     def stop_moving(self):
         self.state = 'idle'

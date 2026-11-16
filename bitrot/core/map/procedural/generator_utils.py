@@ -37,34 +37,35 @@ class ProceduralGeneratorUtils:
             for r in range(len(grid)):
                 for c in range(len(grid[r])):
                     tile = grid[r][c]
+                    clean_tile = tile.strip() if isinstance(tile, str) else tile
                     gx, gy = ox + c, oy + r
                     if 0 <= gx < mw and 0 <= gy < mh:
                         if layer == 'base':
                             if clear_base:
-                                target[layer][gy][gx] = tile if (tile and tile != '') else ' '
+                                target[layer][gy][gx] = clean_tile if (clean_tile and clean_tile != '') else ' '
                             else:
-                                if tile and tile != ' ':
-                                    target[layer][gy][gx] = tile
+                                if clean_tile and clean_tile != ' ':
+                                    target[layer][gy][gx] = clean_tile
                         elif layer == 'ground':
-                            if tile and tile != ' ' and tile != '':
-                                target[layer][gy][gx] = tile
+                            if clean_tile and clean_tile not in (' ', '', '#'):
+                                target[layer][gy][gx] = clean_tile
                         else:
-                            if tile and tile != ' ':
-                                target[layer][gy][gx] = tile
+                            if clean_tile and clean_tile != ' ':
+                                target[layer][gy][gx] = clean_tile
 
                         if 'protected_mask' in target:
                             target['protected_mask'][gy][gx] = 1
 
-        # Automatically apply default building floor (house_floor_01) under roofs if ground is empty or grass
+        # Automatically apply default building floor under roofs ONLY if ground is unassigned
         if 'roof' in source and source['roof']:
             roof_grid = source['roof']
             for r in range(len(roof_grid)):
                 for c in range(len(roof_grid[r])):
-                    r_tile = roof_grid[r][c]
+                    r_tile = roof_grid[r][c].strip() if isinstance(roof_grid[r][c], str) else roof_grid[r][c]
                     if r_tile and r_tile != ' ':
                         gx, gy = ox + c, oy + r
                         if 0 <= gx < mw and 0 <= gy < mh:
-                            if target['ground'][gy][gx] in ('bg_grass', ' ', ''):
+                            if target['ground'][gy][gx] in (' ', '', '#'):
                                 target['ground'][gy][gx] = 'house_floor_01'
                             if 'protected_mask' in target:
                                 target['protected_mask'][gy][gx] = 1

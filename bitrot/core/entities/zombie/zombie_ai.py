@@ -55,6 +55,21 @@ class ZombieAI:
                 if hasattr(z, 'path'):
                     z.path = []
 
+        npcs_to_check = getattr(game, 'active_npcs', [])
+        if not npcs_to_check and hasattr(game, 'npcs'):
+            npcs_to_check = list(game.npcs)
+
+        for n in npcs_to_check:
+            if n is self or getattr(n, 'is_dead', False) or getattr(n, 'is_friendly', False) or getattr(n, 'is_static', False):
+                continue
+            dx = n.rect.centerx - self.rect.centerx
+            dy = n.rect.centery - self.rect.centery
+            if (dx * dx + dy * dy) <= rad_sq:
+                n.aggro_timer = max(getattr(n, 'aggro_timer', 0), 8000)
+                n.state = 'chasing'
+                if hasattr(n, 'path'):
+                    n.path = []
+
     def has_line_of_sight(self, target_rect, game, current_time):
         """Checks if there is an unobstructed body corridor (3-ray check) between entity and target."""
         if not target_rect:
@@ -293,11 +308,18 @@ class ZombieAI:
 
         dist_to_target_sq = dist_to_player_sq
 
-        detection_radius = getattr(core.data.config, 'ZOMBIE_DETECTION_RADIUS', 5 * TILE_SIZE)
+        if hasattr(self, 'is_friendly'):
+            detection_radius = getattr(core.data.config, 'NPC_DETECTION_RADIUS', 5 * TILE_SIZE)
+        else:
+            detection_radius = getattr(core.data.config, 'ZOMBIE_DETECTION_RADIUS', 5 * TILE_SIZE)
+
         if target_entity and target_entity == game.player and getattr(game.player, 'is_aiming', False):
             detection_radius *= 0.5
         elif target_entity and target_entity == game.player and getattr(game.player, 'is_running', False):
             detection_radius *= 1.4
+
+        if getattr(self, 'attack_range', 0) > TILE_SIZE * 3:
+            detection_radius = max(detection_radius, self.attack_range * 1.1)
 
         detection_radius_sq = detection_radius ** 2
         is_aggroed = getattr(self, 'aggro_timer', 0) > 0
@@ -305,6 +327,7 @@ class ZombieAI:
 
         # Store for debug visualization
         self.current_detection_radius = detection_radius
+        self.current_detection_range = detection_radius
         self.can_see_player = can_see_target
 
         target_pos = None
@@ -334,8 +357,13 @@ class ZombieAI:
             target_pos = target_rect.center
 
             attack_range_sq = (self.attack_range) ** 2
-            if dist_to_target_sq < attack_range_sq:
-                if current_time - getattr(self, 'last_attack_time', 0) > 1000:
+            can_attack = (dist_to_target_sq < attack_range_sq)
+            if getattr(self, 'attack_range', 0) > TILE_SIZE * 3 and not can_see_target:
+                can_attack = False
+
+            if can_attack:
+                attack_cooldown = getattr(self, 'attack_cooldown', 1000)
+                if current_time - getattr(self, 'last_attack_time', 0) > attack_cooldown:
                     self.attack(target_entity, game)
                     self.last_attack_time = current_time
                     self.vx, self.vy = 0, 0
@@ -348,8 +376,13 @@ class ZombieAI:
                 self.alert_nearby_zombies(game, detection_radius)
 
             attack_range_sq = (self.attack_range) ** 2
-            if dist_to_target_sq < attack_range_sq:
-                if current_time - getattr(self, 'last_attack_time', 0) > 1000:
+            can_attack = (dist_to_target_sq < attack_range_sq)
+            if getattr(self, 'attack_range', 0) > TILE_SIZE * 3 and not can_see_target:
+                can_attack = False
+
+            if can_attack:
+                attack_cooldown = getattr(self, 'attack_cooldown', 1000)
+                if current_time - getattr(self, 'last_attack_time', 0) > attack_cooldown:
                     self.attack(target_entity, game)
                     self.last_attack_time = current_time
                     self.vx, self.vy = 0, 0

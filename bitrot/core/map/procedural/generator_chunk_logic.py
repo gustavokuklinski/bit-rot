@@ -611,6 +611,8 @@ class ProceduralGeneratorChunk:
                         if 0 <= gx_pos < w and 0 <= gy_pos < h:
                             if any(pr.collidepoint(gx_pos, gy_pos) for pr in placed_rects):
                                 continue
+                            if layers.get('protected_mask') and layers['protected_mask'][gy_pos][gx_pos] == 1:
+                                continue
                             if layers['base'][gy_pos][gx_pos] == ' ' and layers['ground'][gy_pos][gx_pos] != road_tile:
                                 if layers['ground'][gy_pos][gx_pos] != getattr(self, 'water_tile', 'water_01'):
                                     layers['ground'][gy_pos][gx_pos] = tile_type
@@ -1253,9 +1255,9 @@ class ProceduralGeneratorChunk:
                     building_mask[ry][rx] = True
 
         dirty_decos = ['garden_stone', 'garden_stone_iron', 'garden_stone_powder', 'garden_grass_1' , 'garden_grass_2', 'garden_grass_3', 'garden_tall_grass']
-        wall_decos = ['garden_tree_8','garden_tree_6', 'garden_dirty_1', 'garden_dirty_2', 'garden_dirty_3', 'garden_dirty_4']
+        wall_decos = ['garden_tree_6', 'garden_dirty_1', 'garden_dirty_2', 'garden_dirty_3']
         sand_decos = ['garden_grass_1', 'garden_grass_2', 'garden_grass_3', 'garden_tall_grass']
-        asphalt_decos = ['garden_stone', 'garden_dirty_1', 'garden_dirty_2', 'garden_dirty_3', 'garden_dirty_4', 'garden_grass_1' , 'garden_grass_2', 'garden_grass_3', 'garden_tall_grass']
+        asphalt_decos = ['garden_stone', 'garden_dirty_1', 'garden_dirty_2', 'garden_dirty_3', 'garden_grass_1' , 'garden_grass_2', 'garden_grass_3', 'garden_tall_grass']
 
         path_tiles = set()
         for y in range(h):
@@ -1322,8 +1324,8 @@ class ProceduralGeneratorChunk:
         if not is_cave:
             for ry in range(ty, ty + th):
                 for rx in range(tx, tx + tw):
-                    if layers['roof'][ry][rx] != ' ' or (layers['base'][ry][rx] != ' ' and layers['base'][ry][rx] != '@'):
-                        if layers['ground'][ry][rx] in ('bg_grass', ' ', ''):
+                    if layers['roof'][ry][rx] != ' ' or (layers['base'][ry][rx] != ' ' and layers['base'][ry][rx] not in ('@', '#')):
+                        if layers['ground'][ry][rx] in (' ', ''):
                             layers['ground'][ry][rx] = 'house_floor_01'
 
         # 2. Paint pavement lot around the exterior perimeter only (never overwrite building interior)
