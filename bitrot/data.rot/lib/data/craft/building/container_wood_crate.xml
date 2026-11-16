@@ -1,4 +1,4 @@
-<recipe type="maptile_container" craft="create" output="Wood Crate" map_location="_map" gain_xp="[builder:1.0, maintenance:0.1]" amount="1" time="0.5">
+<recipe type="maptile_container" craft="create" output="Wood Crate" magazine="Carpentary Builder" map_location="_map" gain_xp="[builder:1.0, maintenance:0.1]" amount="1" time="0.5">
     <ingredient name="Plank" destroy="true" amount="12" />
     <ingredient name="Nails" destroy="true" amount="24" />
     <ingredient name="[Hammer, Primitive Hammer]" destroy="false" amount="1" />

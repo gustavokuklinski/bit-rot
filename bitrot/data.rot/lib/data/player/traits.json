@@ -3,17 +3,13 @@
     "professions": {
       "Profession_Civilian": {
         "name": "Civilian",
-        "cost": 0,
+        "cost": 2,
         "tooltip": "A blank slate. No bonuses, but no deficits.",
         "disable": [
           "Profession_Maintenance",
-          "Profession_CEO_assistant",
           "Profession_Mechanic",
-          "Profession_Spy",
-          "Profession_Scientist",
-          "Profession_Nurse",
-          "Profession_Police_Officer",
-          "Profession_Military_Officer"
+          "Profession_Military",
+          "Profession_Doctor"
         ],
         "attributes": {
           "level": {
@@ -22,76 +18,15 @@
           }
         }
       },
-      "Profession_Nurse": {
-        "name": "Nurse",
-        "cost": 2,
-        "tooltip": "Knows basic medicine and is light on their feet.",
-        "disable": [
-          "Profession_Maintenance",
-          "Profession_CEO_assistant",
-          "Profession_Mechanic",
-          "Profession_Spy",
-          "Profession_Scientist",
-          "Profession_Civilian",
-          "Profession_Police_Officer",
-          "Profession_Military_Officer"
-        ],
-        "attributes": {
-          "level": {
-            "strength": 5,
-            "fitness": 5,
-            "agility": 3,
-            "maintenance": 1,
-            "intelligence": 3,
-            "lucky": 1
-          }
-        },
-        "recipe": [
-          "Survivor Guide Basic"
-        ]
-      },
-      "Profession_Police_Officer": {
-        "name": "Police Officer",
+      "Profession_Military": {
+        "name": "Military",
         "cost": 4,
         "tooltip": "Proficient with firearms and moderately fit.",
         "disable": [
           "Profession_Maintenance",
-          "Profession_CEO_assistant",
           "Profession_Mechanic",
-          "Profession_Spy",
-          "Profession_Scientist",
           "Profession_Civilian",
-          "Profession_Nurse",
-          "Profession_Military_Officer"
-        ],
-        "attributes": {
-          "level": {
-            "strength": 5,
-            "fitness": 5,
-            "agility": 2,
-            "maintenance": 1,
-            "intelligence": 1,
-            "ranged": 3,
-            "lucky": 1
-          }
-        },
-        "recipe": [
-          "Survivor Guide Basic"
-        ]
-      },
-      "Profession_Military_Officer": {
-        "name": "Military Officer",
-        "cost": 4,
-        "tooltip": "Proficient with firearms and moderately fit.",
-        "disable": [
-          "Profession_Maintenance",
-          "Profession_CEO_assistant",
-          "Profession_Mechanic",
-          "Profession_Spy",
-          "Profession_Scientist",
-          "Profession_Civilian",
-          "Profession_Nurse",
-          "Profession_Police_Officer"
+          "Profession_Doctor"
         ],
         "attributes": {
           "level": {
@@ -99,37 +34,7 @@
             "fitness": 5,
             "agility": 3,
             "maintenance": 2,
-            "intelligence": 2,
-            "ranged": 2,
-            "lucky": 2
-          }
-        },
-        "recipe": [
-          "Survivor Guide Basic"
-        ]
-      },
-      "Profession_Scientist": {
-        "name": "Scientist",
-        "cost": 3,
-        "tooltip": "High intelligence, but severely lacking in physical prowess.",
-        "disable": [
-          "Profession_Maintenance",
-          "Profession_CEO_assistant",
-          "Profession_Mechanic",
-          "Profession_Spy",
-          "Profession_Civilian",
-          "Profession_Nurse",
-          "Profession_Police_Officer",
-          "Profession_Military_Officer"
-        ],
-        "attributes": {
-          "level": {
-            "strength": 5,
-            "fitness": 5,
-            "agility": 1,
-            "lucky": 2,
-            "maintenance": 2,
-            "intelligence": 5
+            "intelligence": 2
           }
         },
         "recipe": [
@@ -142,13 +47,9 @@
         "tooltip": "Knows how vehicles work and maintains tools well.",
         "disable": [
           "Profession_Maintenance",
-          "Profession_Scientist",
-          "Profession_CEO_assistant",
+          "Profession_Doctor",
           "Profession_Civilian",
-          "Profession_Spy",
-          "Profession_Nurse",
-          "Profession_Police_Officer",
-          "Profession_Military_Officer"
+          "Profession_Military"
         ],
         "attributes": {
           "level": {
@@ -156,63 +57,6 @@
             "fitness": 5,
             "agility": 2,
             "maintenance": 4,
-            "intelligence": 2,
-            "mechanics": 2
-          }
-        },
-        "recipe": [
-          "Survivor Guide Basic"
-        ]
-      },
-      "Profession_Spy": {
-        "name": "Spy",
-        "cost": 4,
-        "tooltip": "Highly agile and incredibly lucky.",
-        "disable": [
-          "Profession_Maintenance",
-          "Profession_Scientist",
-          "Profession_CEO_assistant",
-          "Profession_Mechanic",
-          "Profession_Civilian",
-          "Profession_Nurse",
-          "Profession_Police_Officer",
-          "Profession_Military_Officer"
-        ],
-        "attributes": {
-          "level": {
-            "strength": 5,
-            "fitness": 5,
-            "agility": 4,
-            "lucky": 4,
-            "maintenance": 1,
-            "intelligence": 2
-          }
-        },
-        "recipe": [
-          "Survivor Guide Basic"
-        ]
-      },
-      "Profession_CEO_assistant": {
-        "name": "CEO Assistant",
-        "cost": 1,
-        "tooltip": "Organized but inexperienced in combat.",
-        "disable": [
-          "Profession_Maintenance",
-          "Profession_Spy",
-          "Profession_Scientist",
-          "Profession_Mechanic",
-          "Profession_Civilian",
-          "Profession_Nurse",
-          "Profession_Police_Officer",
-          "Profession_Military_Officer"
-        ],
-        "attributes": {
-          "level": {
-            "strength": 5,
-            "fitness": 5,
-            "agility": 2,
-            "lucky": 2,
-            "maintenance": 1,
             "intelligence": 3
           }
         },
@@ -225,23 +69,41 @@
         "cost": 2,
         "tooltip": "Handy with tools and physical labor.",
         "disable": [
-          "Profession_Spy",
-          "Profession_Scientist",
+          "Profession_Doctor",
           "Profession_Mechanic",
           "Profession_Civilian",
-          "Profession_Nurse",
-          "Profession_Police_Officer",
-          "Profession_CEO_assistant",
-          "Profession_Military_Officer"
+          "Profession_Military"
         ],
         "attributes": {
           "level": {
             "strength": 5,
             "fitness": 5,
             "agility": 2,
-            "lucky": 1,
-            "maintenance": 3,
+            "maintenance": 4,
             "intelligence": 2
+          }
+        },
+        "recipe": [
+          "Survivor Guide Basic"
+        ]
+      },
+      "Profession_Doctor": {
+        "name": "Doctor",
+        "cost": 2,
+        "tooltip": "Handy with tools and physical labor.",
+        "disable": [
+          "Profession_Maintenance",
+          "Profession_Mechanic",
+          "Profession_Civilian",
+          "Profession_Military"
+        ],
+        "attributes": {
+          "level": {
+            "strength": 5,
+            "fitness": 5,
+            "agility": 2,
+            "maintenance": 2,
+            "intelligence": 4
           }
         },
         "recipe": [
@@ -250,6 +112,72 @@
       }
     },
     "traits": {
+      "hobby_fish": {
+        "name": "Hobby Fisher",
+        "cost": 2,
+        "tooltip": "+2 Level Fishing, +15% Fishing",
+        "disable": [
+          "hobby_chef",
+          "hobby_mechanic",
+          "hobby_farmer"
+        ],
+        "attributes": {
+          "fishing": 15,
+          "level": {
+            "fishing": 2
+          }
+        }
+      },
+      "hobby_chef": {
+        "name": "Hobby Chef",
+        "cost": 2,
+        "tooltip": "+2 Level Cooking, +15% Cooking",
+        "disable": [
+          "hobby_fish",
+          "hobby_mechanic",
+          "hobby_farmer"
+        ],
+        "attributes": {
+          "cooking": 15,
+          "level": {
+            "cooking": 2
+          }
+        }
+      },
+      "hobby_mechanic": {
+        "name": "Hobby Mechanic",
+        "cost": 2,
+        "tooltip": "+2 Level Mechanic, +15% Mechanic, +1 Level Weld, +5% Weld",
+        "disable": [
+          "hobby_fish",
+          "hobby_chef",
+          "hobby_farmer"
+        ],
+        "attributes": {
+          "mechanics": 15,
+          "weld": 5,
+          "level": {
+            "mechanics": 2,
+            "weld": 1
+          }
+        }
+      },
+      "hobby_farmer": {
+        "name": "Hobby Farmer",
+        "cost": 2,
+        "tooltip": "+2 Level Farming, +15% Farming",
+        "disable": [
+          "hobby_fish",
+          "hobby_chef",
+          "hobby_mechanic"
+        ],
+        "attributes": {
+          "farming": 15,
+          "level": {
+            "farming": 2
+          }
+        }
+      },
       "vaccine": {
         "name": "Vaccine",
         "cost": 2,

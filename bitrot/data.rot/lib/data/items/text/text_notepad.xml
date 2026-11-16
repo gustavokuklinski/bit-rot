@@ -4,5 +4,5 @@
         <text write="true" lenght="2048">
         </text>
     </properties>
-    <spawn chance="0" />
+    <spawn chance="1.0" />
 </item>

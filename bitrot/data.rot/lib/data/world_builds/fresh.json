@@ -99,7 +99,7 @@
         },
         "map": {
           "map_chunks": {
-            "value": 4,
+            "value": 6,
             "name": "Map size",
             "default": 4
           },

@@ -33,6 +33,7 @@ from core.states.paused import run_paused
 from core.states.game_over import run_game_over
 from core.states.chunk_loading import run_chunk_loading
 from core.systems.network_manager import NetworkManager
+from pygame._sdl2 import Window
 
 class Game:
     def __init__(self):
@@ -45,12 +46,15 @@ class Game:
             display_flags |= pygame.FULLSCREEN
         else:
             display_flags |= pygame.RESIZABLE
-        
+
+      
+
         self.game_screen = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT), display_flags)
         pygame.display.set_caption("Bit Rot - v." + GAME_VERSION)
         icon_image = pygame.image.load(os.path.join(BASE_DIR, "data.rot", "icons", "favicon.png")).convert_alpha()
         pygame.display.set_icon(icon_image)
         
+
         self.logger = GameLogger()
         self.logger.info("Bit Rot - Developed by Gustavo Kuklinski")
         self.logger.info("Initializing Rot Engine...")

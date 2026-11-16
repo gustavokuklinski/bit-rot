@@ -7,7 +7,7 @@
         <reduce status="[anxiety]" value="20" />
         
         <load min="1" max="10" />
-        <capacity value="10" />
+        <capacity value="20" />
         <sprite file="consumable_food/consumable_food_mre.png" />
     </properties>
     <spawn chance="1" />

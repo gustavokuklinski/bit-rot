@@ -39,7 +39,7 @@ class ProceduralGenerator(
     self.templates = load_building_templates(self.buildings_path)
 
     self.default_chunk_settings = {
-        'urban_chunk_ratio': 0.55,
+        'urban_chunk_ratio': 0.75,
         'min_urban_chunks': 1,
         'military_chunk_count': 1,
         'force_start_urban': True,
@@ -51,7 +51,7 @@ class ProceduralGenerator(
     self.forest_border_width = 1
     self.water_tile = 'water_01'
     self.sand_tile = 'beach_sand_01'
-    self.coast_width = 15
+    self.coast_width = 10
 
     self.grid_w = MAP_CHUNKS
     self.grid_h = MAP_CHUNKS
@@ -539,7 +539,7 @@ class ProceduralGenerator(
     num_urban = max(1, len(self.urban_chunks))
 
     self.global_building_limits = {
-        'Building': num_urban * 14,
+        'Building': num_urban * 18,
     }
 
     self.global_l2_limits = {
