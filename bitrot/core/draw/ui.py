@@ -343,16 +343,18 @@ def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
         if (dx * dx + dy * dy) <= view_radius_sq:
             pygame.draw.rect(surface, YELLOW, game.hovered_container.rect.move(offset_x, offset_y), 1)
 
-    # --- FOCUS BORDER & HIT TIMER FOR ZOMBIES AND STATIC NPCS ---
+    # --- FOCUS BORDER & HIT TIMER FOR HOSTILE TARGETS AND DESTRUCTIBLE TILES ---
     is_over_ui = game.context_menu.get('active', False) or any(
         m.get('rect') and m['rect'].collidepoint(game._get_scaled_mouse_pos()) for m in getattr(game, 'modals', [])
     )
 
-    focused_entity = None
+    focused_rect = None
+    focused_center = None
+
     if not is_over_ui and getattr(game, 'player', None):
         curr_layer = getattr(game, 'current_layer_index', 1)
 
-        # 1. Check Zombies
+        # 1. Check Zombies (excluding animals handled separately)
         for z in getattr(game, 'active_zombies', game.zombies):
             if getattr(z, 'is_dead', False) or getattr(z, 'health', 0) <= 0 or getattr(z, 'type', '') == 'animal':
                 continue
@@ -362,13 +364,35 @@ def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
                 dx = z.rect.centerx - game.player.rect.centerx
                 dy = z.rect.centery - game.player.rect.centery
                 if (dx * dx + dy * dy) <= view_radius_sq:
-                    focused_entity = z
+                    focused_rect = z.rect
+                    focused_center = z.rect.center
                     break
 
-        # 2. Check Static NPCs
-        if not focused_entity:
+        # 2. Check Animals
+        if not focused_rect:
+            animal_candidates = getattr(game, 'active_animals', [])
+            if not animal_candidates:
+                animal_candidates = [it for it in getattr(game, 'items_on_ground', []) if getattr(it, 'type', '') == 'animal']
+            for a in animal_candidates:
+                if getattr(a, 'is_dead', False) or getattr(a, 'health', 0) <= 0:
+                    continue
+                if getattr(a, 'layer', 1) != curr_layer:
+                    continue
+                if a.rect.collidepoint(world_mouse_pos):
+                    dx = a.rect.centerx - game.player.rect.centerx
+                    dy = a.rect.centery - game.player.rect.centery
+                    if (dx * dx + dy * dy) <= view_radius_sq:
+                        focused_rect = a.rect
+                        focused_center = a.rect.center
+                        break
+
+        # 3. Check Hostile NPCs (HNPCs only; friendly static FNPCs are excluded)
+        if not focused_rect:
             for n in getattr(game, 'npcs', []):
-                if getattr(n, 'is_dead', False) or getattr(n, 'health', 0) <= 0 or not getattr(n, 'is_static', False):
+                if getattr(n, 'is_dead', False) or getattr(n, 'health', 0) <= 0:
+                    continue
+                # Exclude friendly NPCs (FNPCs and friendly roaming survivors)
+                if getattr(n, 'is_friendly', True):
                     continue
                 if getattr(n, 'layer', 1) != curr_layer:
                     continue
@@ -376,14 +400,27 @@ def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
                     dx = n.rect.centerx - game.player.rect.centerx
                     dy = n.rect.centery - game.player.rect.centery
                     if (dx * dx + dy * dy) <= view_radius_sq:
-                        focused_entity = n
+                        focused_rect = n.rect
+                        focused_center = n.rect.center
                         break
 
-    if focused_entity:
+        # 4. Check Destructible Tiles (Doors, Windows, Barricades, Trees, Rocks)
+        if not focused_rect and hasattr(game, 'map_manager'):
+            tile_gx = int(world_mouse_pos[0] // TILE_SIZE)
+            tile_gy = int(world_mouse_pos[1] // TILE_SIZE)
+            if game.map_manager.is_tile_destructible(tile_gx, tile_gy):
+                tile_cx = tile_gx * TILE_SIZE + TILE_SIZE // 2
+                tile_cy = tile_gy * TILE_SIZE + TILE_SIZE // 2
+                dx = tile_cx - game.player.rect.centerx
+                dy = tile_cy - game.player.rect.centery
+                if (dx * dx + dy * dy) <= view_radius_sq:
+                    focused_rect = pygame.Rect(tile_gx * TILE_SIZE, tile_gy * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                    focused_center = (tile_cx, tile_cy)
+
+    if focused_rect and focused_center:
         p_cx = game.player.rect.centerx
         p_cy = game.player.rect.centery
-        e_cx = focused_entity.rect.centerx
-        e_cy = focused_entity.rect.centery
+        e_cx, e_cy = focused_center
         dist = math.hypot(e_cx - p_cx, e_cy - p_cy)
 
         # Determine thresholds based on weapon type
@@ -403,7 +440,7 @@ def draw_hovers(game, surface, offset_x, offset_y, screen_rect, zoom):
         else:
             border_color = (255, 50, 50)   # Red: Out of aim
 
-        draw_rect = focused_entity.rect.inflate(-2, -2).move(offset_x, offset_y)
+        draw_rect = focused_rect.inflate(-2, -2).move(offset_x, offset_y)
         bracket_len = 4
 
         # Tactical corner brackets (Instant, no loading/timer)

@@ -74,8 +74,6 @@
               "npc_answer": "Well, well. The scarecrow delivers. Here's your payment. Don't spend it all in one grave. Some days you win, some days you lose. Today you're just... disposable. Hehehe. Now get lost before I decide you're worth more as bait.",
               "rqst_item": "[Suitcase]",
               "req_item": "[Suitcase]",
-              "npc_state_friendly": "False",
-              "npc_state_static": "False",
               "award_item": "[Money WBRL:150]",
               "gain_xp": "[lucky:200]",
               "dialog_type": "once",

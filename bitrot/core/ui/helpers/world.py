@@ -54,29 +54,51 @@ def _get_world_presets_dir():
 
 def _load_world_presets(state):
     preset_dir = _get_world_presets_dir()
+    sandbox_file = os.path.join(preset_dir, "sandbox.json")
+    if os.path.exists(sandbox_file):
+        try:
+            os.remove(sandbox_file)
+        except Exception:
+            pass
+
     presets = ["world"]
     try:
-        files = [f for f in os.listdir(preset_dir) if f.endswith('.json')]
-        for f in sorted(files):
-            name = os.path.splitext(f)[0]
-            if name != 'world' and name not in presets:
-                presets.append(name)
-    except Exception:
-        pass
+        if os.path.exists(preset_dir):
+            files = [f for f in os.listdir(preset_dir) if f.endswith('.json')]
+            for f in sorted(files):
+                name = os.path.splitext(f)[0]
+                if name.startswith('temp_') or name == 'temp_world' or name == 'sandbox':
+                    continue
+                if name != 'world' and name not in presets:
+                    presets.append(name)
+    except Exception as e:
+        print(f"Error loading presets: {e}")
     state['config_preset_list'] = presets
+
+def _save_temp_world(state):
+    preset_dir = _get_world_presets_dir()
+    temp_path = os.path.join(preset_dir, "temp_world.json")
+    if 'world_data' in state and state['world_data']:
+        if 'map' not in state['world_data']:
+            state['world_data']['map'] = {}
+        if 'seed' not in state['world_data']['map']:
+            state['world_data']['map']['seed'] = {'name': 'World seed', 'default': ''}
+        state['world_data']['map']['seed']['value'] = str(state.get('world_seed', ''))
+        save_config_json(state['world_data'], temp_path)
+        state['temp_world_path'] = temp_path
 
 def _clone_to_custom(state):
     state['world_unsaved'] = True
+    _save_temp_world(state)
 
 def _save_world_preset(state):
-    preset_name = state.get('world_preset_name', '').strip()
-    if not preset_name or preset_name == "world":
-        preset_name = state.get('selected_config_preset', 'world')
-    if not preset_name:
-        preset_name = datetime.now().strftime("world_%Y%m%d_%H%M%S")
+    raw_name = state.get('world_preset_name', '').strip()
+    if not raw_name or raw_name == "world" or raw_name == "sandbox":
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        preset_name = f"world_{timestamp}"
+    else:
+        preset_name = raw_name.replace(' ', '_')
 
-    # Avoid spaces: convert to underscores
-    preset_name = preset_name.replace(' ', '_')
     state['world_preset_name'] = preset_name
     state['selected_config_preset'] = preset_name
 
@@ -123,16 +145,16 @@ def _draw_world_screen(game, state, mouse_pos):
 
     if not state.get('world_data'):
         preset_name = state.get('selected_config_preset', 'world')
-        state['world_preset_name'] = preset_name
-        correct_path = core.data.config.get_world_config_path(preset_name)
+        state['world_preset_name'] = ''
+        state['selected_config_preset'] = 'world' if preset_name == 'sandbox' else preset_name
+        correct_path = core.data.config.get_world_config_path(state['selected_config_preset'])
         state['world_data'] = load_config_data(correct_path)
         state['world_unsaved'] = False
         state['seed_input_active'] = False
         _load_world_presets(state)
 
-    # Always ensure preset name field is pre-filled with a timestamp
-    if not state.get('world_preset_name'):
-        state['world_preset_name'] = datetime.now().strftime("world_%Y%m%d_%H%M%S")
+    if 'config_preset_list' not in state or not state['config_preset_list']:
+        _load_world_presets(state)
 
     # Always ensure a valid seed exists and is synchronized
     if not state.get('world_seed'):
@@ -384,7 +406,10 @@ def _draw_world_screen(game, state, mouse_pos):
     pygame.draw.rect(game.game_screen, WHITE if state.get('name_input_active') else GRAY, name_input_rect, 1)
     
     preset_name_text = state.get('world_preset_name', '')
-    p_name_surf = font_12.render(preset_name_text, False, WHITE)
+    if not preset_name_text and not state.get('name_input_active'):
+        p_name_surf = font_12.render("world_<TIMESTAMP>", False, (120, 120, 120))
+    else:
+        p_name_surf = font_12.render(preset_name_text, False, WHITE)
     clickable_rects['name_input'] = name_input_rect
     
     if state.get('name_input_active') and int(pygame.time.get_ticks() / 500) % 2 == 0:
@@ -485,20 +510,12 @@ def _draw_world_screen(game, state, mouse_pos):
                 y_offset += option_height
 
     next_rect = pygame.Rect(col4_x, S(310) + S(20) + S(240) + S(20), col4_width, S(70))
-    is_unsaved = state.get('world_unsaved', False)
-
     clickable_rects['next_tab'] = next_rect
 
-    if is_unsaved:
-        pygame.draw.rect(game.game_screen, (200, 130, 20), next_rect, border_radius=border_radius)
-        if next_rect.collidepoint(mouse_pos):
-            pygame.draw.rect(game.game_screen, (220, 150, 40), next_rect.inflate(-S(4), -S(4)), border_radius=border_radius)
-        next_txt = font_16.render(tr('ui', "SAVE AND CONTINUE"), True, WHITE)
-    else:
-        pygame.draw.rect(game.game_screen, BTN_GREEN, next_rect, border_radius=border_radius)
-        if next_rect.collidepoint(mouse_pos):
-            pygame.draw.rect(game.game_screen, (0, 150, 0), next_rect.inflate(-S(4), -S(4)), border_radius=border_radius)
-        next_txt = font_16.render(tr('ui', "NEXT: PLAYER SETUP"), True, WHITE)
+    pygame.draw.rect(game.game_screen, BTN_GREEN, next_rect, border_radius=border_radius)
+    if next_rect.collidepoint(mouse_pos):
+        pygame.draw.rect(game.game_screen, (0, 150, 0), next_rect.inflate(-S(4), -S(4)), border_radius=border_radius)
+    next_txt = font_16.render(tr('ui', "NEXT: PLAYER SETUP"), True, WHITE)
 
     game.game_screen.blit(next_txt, next_txt.get_rect(center=next_rect.center))
     return clickable_rects
@@ -582,10 +599,9 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
             state['world_scroll_drag_last_y'] = mouse_pos[1]
             return
 
-        # Save and Continue
+        # Continue to Player Setup
         if clickable_rects.get('next_tab') and clickable_rects['next_tab'].collidepoint(mouse_pos):
-            # Save the preset
-            _save_world_preset(state)
+            _save_temp_world(state)
 
             mode_id = state.get('chosen_mode', 'sandbox')
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -605,7 +621,7 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
             game.player_setup_state['world_data'] = state['world_data']
             game.player_setup_state['world_seed'] = state.get('world_seed', '')
             game.player_setup_state['selected_config_preset'] = state.get('selected_config_preset', 'world')
-            game.player_setup_state['world_preset_name'] = state.get('world_preset_name', 'world')
+            game.player_setup_state['world_preset_name'] = state.get('world_preset_name', '')
             game.player_setup_state['chosen_mode'] = mode_id
             game.player_setup_state['current_tab'] = 'Player'
             return
@@ -631,7 +647,7 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
                 for option_name, option_rect in clickable_rects.get("load_dropdown_options", []):
                     if option_rect.collidepoint(mouse_pos):
                         state['selected_config_preset'] = option_name
-                        state['world_preset_name'] = option_name
+                        state['world_preset_name'] = option_name if option_name != 'world' else ''
                         state['config_dd_active'] = False
                         
                         # Automatically load the selected preset and fulfill fields
@@ -651,6 +667,7 @@ def handle_world_events(game, state, event, mouse_pos, clickable_rects=None):
                 state['config_dd_active'] = False
         elif clickable_rects.get('load_dropdown_button') and clickable_rects['load_dropdown_button'].collidepoint(mouse_pos):
             state['config_dd_active'] = True
+            _load_world_presets(state)
             return
 
         clicked_input = False

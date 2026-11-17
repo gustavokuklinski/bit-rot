@@ -124,13 +124,13 @@ def run_menu(game):
                 game.player_setup_state['chosen_mode'] = 'sandbox'
                 game.world_setup_state['chosen_mode'] = 'sandbox'
 
-                path = core.data.config.get_world_config_path('sandbox')
+                path = core.data.config.get_world_config_path('world')
                 world_data = load_config_data(path)
                 game.world_setup_state['world_data'] = world_data
                 game.player_setup_state['world_data'] = world_data
-                game.world_setup_state['world_preset_name'] = 'sandbox'
-                game.world_setup_state['selected_config_preset'] = 'sandbox'
-                game.player_setup_state['selected_config_preset'] = 'sandbox'
+                game.world_setup_state['world_preset_name'] = ''
+                game.world_setup_state['selected_config_preset'] = 'world'
+                game.player_setup_state['selected_config_preset'] = 'world'
 
                 seed_str = "".join(str(random.randint(0, 9)) for _ in range(12))
                 game.world_setup_state['world_seed'] = seed_str

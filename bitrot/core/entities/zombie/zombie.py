@@ -158,7 +158,8 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
             obstacles = game.obstacles
             multiplier = 1.0
 
-            kb_x, kb_y = self.knockback_velocity
+            kb_x = self.knockback_velocity[0] * 0.25
+            kb_y = self.knockback_velocity[1] * 0.25
 
             self.x += kb_x
             self.rect.x = int(self.x)
@@ -166,6 +167,7 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
                 if self.rect.colliderect(obstacle):
                     self.x -= kb_x
                     self.rect.x = int(self.x)
+                    self.knockback_velocity[0] = 0
                     break
 
             self.y += kb_y
@@ -174,6 +176,7 @@ class Zombie(ZombieData, ZombieGraphics, ZombieAI, ZombieCombat, pygame.sprite.S
                 if self.rect.colliderect(obstacle):
                     self.y -= kb_y
                     self.rect.y = int(self.y)
+                    self.knockback_velocity[1] = 0
                     break
 
             dt = game.dt_ms * multiplier

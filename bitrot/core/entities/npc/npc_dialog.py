@@ -58,8 +58,6 @@ class NPCDialog:
                         'stage': opt.get('stage'),
                         'tip': opt.get('tip'),
                         'unlock_flag': opt.get('unlock_flag'),
-                        'npc_state_friendly': opt.get('npc_state_friendly'),
-                        'npc_state_static': opt.get('npc_state_static'),
                         'award_item': opt.get('award_item'),
                         'rqst_item': opt.get('rqst_item'),
                         'complete_flag': opt.get('complete_flag'),

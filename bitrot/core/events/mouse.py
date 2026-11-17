@@ -1118,15 +1118,6 @@ def handle_mouse_down(game, event, mouse_pos):
                                         'npc_name': npc.name if npc else 'Survivor'
                                     })
 
-                                if opt.get('npc_state_friendly') is not None and npc:
-                                    npc.is_friendly = str(opt['npc_state_friendly']).lower() == 'true'
-                                    if not npc.is_friendly:
-                                        npc.state = 'chasing'
-                                        npc.current_attacker = game.player
-                                        npc.aggro_timer = 15000
-                                if opt.get('npc_state_static') is not None and npc:
-                                    npc.is_static = str(opt['npc_state_static']).lower() == 'true'
-
                                 return
                     else:
                         if topmost_modal.get('rect') and topmost_modal['rect'].collidepoint(mouse_pos):

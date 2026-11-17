@@ -1083,29 +1083,37 @@ def handle_keyboard_events(game, event, action_triggered=None):
             
             elif game.player and game.player.stamina > 0 and not getattr(game.player, 'is_reloading', False):
                 shove_range = TILE_SIZE * 1.5
-                closest_zombie = None
+                closest_enemy = None
                 min_dist = shove_range
-                
-                for zombie in game.zombies:
-                    if getattr(zombie, 'is_dead', False): continue
-                    dist = math.hypot(zombie.rect.centerx - game.player.rect.centerx, zombie.rect.centery - game.player.rect.centery)
+
+                curr_layer = getattr(game, 'current_layer_index', 1)
+                potential_targets = [
+                    z for z in getattr(game, 'active_zombies', game.zombies)
+                    if not getattr(z, 'is_dead', False) and getattr(z, 'layer', 1) == curr_layer
+                ] + [
+                    n for n in getattr(game, 'active_npcs', getattr(game, 'npcs', []))
+                    if not getattr(n, 'is_dead', False) and not getattr(n, 'is_friendly', True) and getattr(n, 'layer', 1) == curr_layer
+                ]
+
+                for enemy in potential_targets:
+                    dist = math.hypot(enemy.rect.centerx - game.player.rect.centerx, enemy.rect.centery - game.player.rect.centery)
                     if dist <= min_dist:
                         min_dist = dist
-                        closest_zombie = zombie
-                        
-                if closest_zombie:
-                    dx_kb = closest_zombie.rect.centerx - game.player.rect.centerx
-                    dy_kb = closest_zombie.rect.centery - game.player.rect.centery
+                        closest_enemy = enemy
+
+                if closest_enemy:
+                    dx_kb = closest_enemy.rect.centerx - game.player.rect.centerx
+                    dy_kb = closest_enemy.rect.centery - game.player.rect.centery
                     kb_angle = math.atan2(dy_kb, dx_kb)
-                    
+
                     force = 10
-                    closest_zombie.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
-                    closest_zombie.knockback_timer = 300
-                    
+                    closest_enemy.knockback_velocity = [math.cos(kb_angle) * force, math.sin(kb_angle) * force]
+                    closest_enemy.knockback_timer = 300
+
                     game.player.stamina = max(0.0, game.player.stamina - 2.0)
                     game.player.melee_swing_timer = 10
                     game.player.melee_swing_angle = kb_angle
-                    
+
                     print("You pushed the enemy!")
                     display_message(game, f"{tr('msg', 'You pushed an enemy away!')}")
 
