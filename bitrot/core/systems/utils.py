@@ -438,8 +438,16 @@ def capture_pause_screen(game):
 
 def get_scaled_mouse_pos(game):
     real_mouse_pos = pygame.mouse.get_pos()
-    current_w, current_h = game.game_screen.get_size()
+    display_surf = pygame.display.get_surface()
+    if display_surf and game.game_screen is not display_surf:
+        current_w, current_h = display_surf.get_size()
+    else:
+        current_w, current_h = game.game_screen.get_size()
+    if current_w <= 0 or current_h <= 0:
+        return real_mouse_pos
     scale = min(current_w / GAME_WIDTH, current_h / GAME_HEIGHT)
+    if scale <= 0:
+        return real_mouse_pos
     scaled_w, scaled_h = int(GAME_WIDTH * scale), int(GAME_HEIGHT * scale)
     blit_x = (current_w - scaled_w) // 2
     blit_y = (current_h - scaled_h) // 2

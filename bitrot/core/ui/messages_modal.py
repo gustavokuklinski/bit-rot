@@ -260,7 +260,7 @@ def draw_messages_modal(surface, game, modal, assets):
         pygame.draw.line(surface, WHITE, (cursor_x, input_rect.y + 5), (cursor_x, input_rect.bottom - 5))
 
     # --- Draw Send Button ---
-    is_hovered = send_btn_rect.collidepoint(pygame.mouse.get_pos())
+    is_hovered = send_btn_rect.collidepoint(mouse_pos)
     btn_col = GRAY_80 if is_hovered else GRAY_60
     pygame.draw.rect(surface, btn_col, send_btn_rect, border_radius=4)
     pygame.draw.rect(surface, WHITE, send_btn_rect, 1, border_radius=4)

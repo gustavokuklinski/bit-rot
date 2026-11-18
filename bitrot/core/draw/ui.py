@@ -1068,7 +1068,7 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
                 game.game_screen.blit(text_surf, (tip_x + 8, tip_y + 8))
 
     draw_belt_hud(game.game_screen, game, game.player, mouse_pos, dynamic_h)
-    alert_tooltip = draw_player_alerts(game.game_screen, game.player)
+    alert_tooltip = draw_player_alerts(game.game_screen, game.player, mouse_pos=mouse_pos)
     if alert_tooltip: game.hovered_item = alert_tooltip
 
     # --- LAYER 3: Modals (Sits on top of Buttons and HUD) ---

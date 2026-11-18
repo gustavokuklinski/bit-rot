@@ -30,7 +30,7 @@ def _get_alert_icon(filename):
             _alert_icons[filename] = surf
     return _alert_icons[filename]
 
-def draw_player_alerts(surface, player):
+def draw_player_alerts(surface, player, mouse_pos=None):
     if not player:
         return None
 
@@ -70,8 +70,9 @@ def draw_player_alerts(surface, player):
     start_x = (GAME_WIDTH // 2) - (total_width // 2)
     fixed_y = 10 
 
-    mouse_pos = pygame.mouse.get_pos()
-    tooltip_proxy = None 
+    if mouse_pos is None:
+        mouse_pos = pygame.mouse.get_pos()
+    tooltip_proxy = None
 
     for i, (icon_file, color, tooltip_text) in enumerate(active_alerts):
         x = start_x + (i * (icon_size + padding))

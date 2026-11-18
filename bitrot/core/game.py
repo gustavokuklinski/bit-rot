@@ -41,19 +41,25 @@ class Game:
         pygame.mixer.pre_init(22050, -16, 2, 512)
         pygame.init()
 
-        display_flags = pygame.SCALED | pygame.DOUBLEBUF
         if WINDOW_MODE.lower() == "fullscreen":
-            display_flags |= pygame.FULLSCREEN
+            display_flags = pygame.SCALED | pygame.DOUBLEBUF | pygame.FULLSCREEN
+            self.game_screen = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT), display_flags)
+            self.display_screen = self.game_screen
         else:
-            display_flags |= pygame.RESIZABLE
+            display_flags = pygame.DOUBLEBUF | pygame.RESIZABLE
+            self.display_screen = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT), display_flags)
+            self.game_screen = pygame.Surface((GAME_WIDTH, GAME_HEIGHT)).convert()
 
-      
-
-        self.game_screen = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT), display_flags)
         pygame.display.set_caption("Bit Rot - v." + GAME_VERSION)
         icon_image = pygame.image.load(os.path.join(BASE_DIR, "data.rot", "icons", "favicon.png")).convert_alpha()
         pygame.display.set_icon(icon_image)
-        
+
+        if WINDOW_MODE.lower() != "fullscreen":
+            try:
+                Window.from_display_module().maximize()
+                pygame.event.pump()
+            except Exception as e:
+                print(f"Could not maximize window: {e}")
 
         self.logger = GameLogger()
         self.logger.info("Bit Rot - Developed by Gustavo Kuklinski")
@@ -268,8 +274,46 @@ class Game:
     def respawn_player_in_world(self, player_data, save_folder_name):
         return respawn_player_in_world(self, player_data, save_folder_name)
 
+    def _get_present_metrics(self):
+        display_surf = pygame.display.get_surface() or getattr(self, 'display_screen', None)
+        if not display_surf or self.game_screen is display_surf:
+            return 1.0, 0, 0, GAME_WIDTH, GAME_HEIGHT
+        win_w, win_h = display_surf.get_size()
+        if win_w <= 0 or win_h <= 0:
+            return 1.0, 0, 0, GAME_WIDTH, GAME_HEIGHT
+        scale = min(win_w / GAME_WIDTH, win_h / GAME_HEIGHT)
+        if scale <= 0:
+            return 1.0, 0, 0, GAME_WIDTH, GAME_HEIGHT
+        scaled_w = max(1, int(GAME_WIDTH * scale))
+        scaled_h = max(1, int(GAME_HEIGHT * scale))
+        blit_x = (win_w - scaled_w) // 2
+        blit_y = (win_h - scaled_h) // 2
+        return scale, blit_x, blit_y, scaled_w, scaled_h
+
     def get_events(self):
-        return pygame.event.get()
+        events = pygame.event.get()
+        display_surf = pygame.display.get_surface() or getattr(self, 'display_screen', None)
+        if not display_surf or self.game_screen is display_surf:
+            return events
+
+        scale, blit_x, blit_y, _, _ = self._get_present_metrics()
+        if scale == 1.0 and blit_x == 0 and blit_y == 0:
+            return events
+
+        scaled_events = []
+        for ev in events:
+            if ev.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP) and not getattr(ev, 'from_joystick', False):
+                ev_dict = dict(ev.__dict__)
+                if 'pos' in ev_dict:
+                    px, py = ev_dict['pos']
+                    ev_dict['pos'] = (int((px - blit_x) / scale), int((py - blit_y) / scale))
+                if 'rel' in ev_dict:
+                    rx, ry = ev_dict['rel']
+                    ev_dict['rel'] = (int(rx / scale), int(ry / scale))
+                scaled_events.append(pygame.event.Event(ev.type, ev_dict))
+            else:
+                scaled_events.append(ev)
+        return scaled_events
 
     def save_game(self):
         return save_game(self)
@@ -499,6 +543,18 @@ class Game:
         if getattr(core.data.config, 'UI_CRT_FILTER', getattr(core.data.config, 'CRT_FILTER', True)):
             if self.game_state != 'SPLASH':
                 self._draw_crt_filter()
+
+        display_surf = pygame.display.get_surface() or getattr(self, 'display_screen', None)
+        if display_surf and self.game_screen is not display_surf:
+            _, blit_x, blit_y, scaled_w, scaled_h = self._get_present_metrics()
+            display_surf.fill((0, 0, 0))
+            if scaled_w == GAME_WIDTH and scaled_h == GAME_HEIGHT:
+                display_surf.blit(self.game_screen, (blit_x, blit_y))
+            else:
+                if not hasattr(self, '_scaled_present_surface') or self._scaled_present_surface.get_size() != (scaled_w, scaled_h):
+                    self._scaled_present_surface = pygame.Surface((scaled_w, scaled_h)).convert()
+                pygame.transform.scale(self.game_screen, (scaled_w, scaled_h), self._scaled_present_surface)
+                display_surf.blit(self._scaled_present_surface, (blit_x, blit_y))
 
         pygame.display.flip()
         self.dt_ms = self.clock.tick(60)

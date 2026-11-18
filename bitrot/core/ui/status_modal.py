@@ -75,7 +75,7 @@ def draw_status_modal(surface, player, modal, assets, zombies_killed, mouse_pos,
     tabs.draw(game, mouse_pos)
 
     if modal['active_tab'] == 'Status':
-        draw_status_tab(surface, player, modal, assets, zombies_killed)
+        draw_status_tab(surface, player, modal, assets, zombies_killed, mouse_pos=mouse_pos)
     elif modal['active_tab'] == 'Health':
         draw_health_tab(surface, player, modal, assets, game)
     elif modal['active_tab'] == 'Record':

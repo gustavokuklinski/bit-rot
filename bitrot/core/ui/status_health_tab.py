@@ -41,7 +41,7 @@ def draw_health_tab(surface, player, modal, assets, game=None):
     start_x = modal['rect'].x + padding
     current_y = modal['rect'].y + 70
     
-    mouse_pos = pygame.mouse.get_pos()
+    mouse_pos = game._get_scaled_mouse_pos() if (game and hasattr(game, '_get_scaled_mouse_pos')) else pygame.mouse.get_pos()
     active_tooltip_item = None
 
     # --- 1. PLAYER NAME (Centered) ---

@@ -181,7 +181,7 @@ class JoystickHandler:
         pygame.mouse.set_pos((int(phys_x), int(phys_y)))
         pygame.event.post(pygame.event.Event(
             pygame.MOUSEMOTION, 
-            {'pos': (int(logic_x), int(logic_y)), 'rel': (0, 0), 'buttons': pygame.mouse.get_pressed()}
+            {'pos': (int(logic_x), int(logic_y)), 'rel': (0, 0), 'buttons': pygame.mouse.get_pressed(), 'from_joystick': True}
         ))
 
     def _find_neighbor_slot(self, current_slot, all_slots, dir_x, dir_y):

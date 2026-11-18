@@ -12,14 +12,15 @@ class StatusTooltipItem:
         self.item_type = self.durability = self.defence = None
         self.load = self.capacity = self.min_damage = self.max_damage = self.ammo_type = None
 
-def draw_status_tab(surface, player, modal, assets, zombies_killed):
+def draw_status_tab(surface, player, modal, assets, zombies_killed, mouse_pos=None):
     padding = 10
     col_width = modal['rect'].width - (padding * 2)
     
     start_y = modal['rect'].y + 80
     col1_x = modal['rect'].x + padding
     
-    mouse_pos = pygame.mouse.get_pos()
+    if mouse_pos is None:
+        mouse_pos = pygame.mouse.get_pos()
     active_tooltip_item = None
     
     stat_icons = {}
