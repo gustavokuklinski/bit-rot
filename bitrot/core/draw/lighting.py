@@ -40,15 +40,16 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
 
     # Save active exploration state for previous map before switching
     prev_map = getattr(game, 'explored_map_name', None)
-    if prev_map and prev_map != curr_map and hasattr(game, 'explored_tiles'):
+    if prev_map and prev_map != curr_map and isinstance(getattr(game, 'explored_tiles', None), (bytearray, bytes)):
         game.explored_tiles_dict[prev_map] = game.explored_tiles
 
-    if (not hasattr(game, 'explored_tiles') or 
+    if (not isinstance(getattr(game, 'explored_tiles', None), (bytearray, bytes)) or 
         len(game.explored_tiles) != expected_size or 
         getattr(game, 'explored_map_name', '') != curr_map):
 
-        if curr_map in game.explored_tiles_dict and len(game.explored_tiles_dict[curr_map]) == expected_size:
-            game.explored_tiles = game.explored_tiles_dict[curr_map]
+        cached_explored = game.explored_tiles_dict.get(curr_map)
+        if isinstance(cached_explored, (bytearray, bytes)) and len(cached_explored) == expected_size:
+            game.explored_tiles = cached_explored
             game.explored_map_name = curr_map
         else:
             game.explored_tiles = bytearray(expected_size)
@@ -61,8 +62,10 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                 for tx in range(map_w):
                     g_char = ground_data[ty][tx] if ty < len(ground_data) and tx < len(ground_data[ty]) else ''
                     b_char = base_data[ty][tx] if ty < len(base_data) and tx < len(base_data[ty]) else ''
-                    if (g_char and ('water_' in g_char or 'petrol_' in g_char)) or \
-                       (b_char and ('water_' in b_char or 'petrol_' in b_char)):
+                    g_low = g_char.lower() if g_char else ''
+                    b_low = b_char.lower() if b_char else ''
+                    if ('water_' in g_low or g_low == 'water' or 'petrol_' in g_low) or \
+                       ('water_' in b_low or b_low == 'water' or 'petrol_' in b_low):
                         game.explored_tiles[row_idx + tx] = 1
 
             game.explored_tiles_dict[curr_map] = game.explored_tiles
@@ -266,9 +269,11 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
             except Exception: 
                 pass
 
-        if getattr(game.world_time, 'state', 'DAY') != 'DAY':
+        is_underground = getattr(game, 'current_layer_index', 1) in (2, 3)
+        if is_underground or getattr(game.world_time, 'state', 'DAY') != 'DAY':
+            light_cull_rect = screen_rect.inflate(128, 128)
             for map_light in game.map_lights:
-                if not map_light.get('active', True) or ('rect' in map_light and not screen_rect.colliderect(map_light['rect'])): 
+                if not map_light.get('active', True) or ('rect' in map_light and not light_cull_rect.colliderect(map_light['rect'])): 
                     continue
                 try:
                     cache_key = ('map_light_darkened', 32)

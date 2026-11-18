@@ -428,13 +428,11 @@ def parse_layered_map_layout(base_layout, ground_layout, spawn_layout, roof_layo
                     rect = pygame.Rect(pos_x, pos_y, TILE_SIZE, TILE_SIZE)
                     renderable_tiles.append((tile_def['image'], rect))
                     if tile_def.get('light_state') == 'on':
-                        base_radius = tile_def.get('light_radius', 0) * TILE_SIZE
-                        random_radius = int(random.uniform(base_radius, base_radius * 2))
-                        is_active = random.choice([True, False])
+                        uniform_radius = 4 * TILE_SIZE
                         map_lights.append({
                             'rect': rect,
-                            'radius': random_radius,
-                            'active': is_active
+                            'radius': uniform_radius,
+                            'active': True
                         })
 
     if len(roof_layout) != map_height or (map_height > 0 and len(roof_layout[0]) != map_width):

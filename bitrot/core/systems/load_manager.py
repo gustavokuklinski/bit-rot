@@ -319,7 +319,10 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     game.layer_animal_spawn_triggers = {}
     game.triggered_spawns = set()
     
-    game.map_states = {}  
+    game.map_states = {}
+    game.explored_tiles_dict = {}
+    game.explored_tiles = bytearray()
+    game.explored_map_name = ''
     game.spawn_point_grid = {}
     game.animal_spawn_point_grid = {}
     game.items_on_ground = []

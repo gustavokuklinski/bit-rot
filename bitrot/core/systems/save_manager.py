@@ -493,8 +493,9 @@ def save_game(game):
         saved_explored_tiles = {}
         if hasattr(game, 'explored_tiles_dict'):
             curr_map_name = getattr(game.map_manager, 'current_map_filename', '')
-            if curr_map_name and hasattr(game, 'explored_tiles'):
-                game.explored_tiles_dict[curr_map_name] = game.explored_tiles
+            cur_explored = getattr(game, 'explored_tiles', None)
+            if curr_map_name and isinstance(cur_explored, (bytearray, bytes)) and len(cur_explored) > 0:
+                game.explored_tiles_dict[curr_map_name] = cur_explored
             for m_name, b_arr in game.explored_tiles_dict.items():
                 if isinstance(b_arr, (bytearray, bytes)):
                     saved_explored_tiles[m_name] = b_arr.hex()
