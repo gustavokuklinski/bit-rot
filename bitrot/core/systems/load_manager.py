@@ -226,6 +226,8 @@ def respawn_player_in_world(game, new_player_data, save_folder_name):
     try:
         load_game(game, save_folder_name)
 
+        if new_player_data.get('game_mode'):
+            game.game_mode = new_player_data['game_mode']
         game.zombies_killed = 0
         game.current_save_folder_name = save_folder_name
         game.player_name = new_player_data.get('name', "Player")
@@ -380,6 +382,10 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         regenerate_map = True
         should_initial_save = True
 
+    if not is_loading_existing_save:
+        game.game_mode = player_data.get('game_mode') or (
+            'sandbox' if str(save_name).lower().startswith('save_sandbox_') else 'new_game'
+        )
     game.current_save_folder_name = save_name
     
     save_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", save_name)
@@ -731,8 +737,24 @@ def load_game(game, save_folder_name):
 
             if not has_alive_player and not getattr(game, '_is_respawning_player', False):
                 game.logger.info(f"Save '{save_folder_name}' has no alive players. Redirecting to Player Setup.")
+                saved_mode = host_raw.get('game_mode')
+                if not saved_mode:
+                    world_state_path = os.path.join(save_path, "world.jsonl")
+                    if os.path.exists(world_state_path):
+                        try:
+                            with open(world_state_path, "r") as wf:
+                                saved_mode = json.load(wf).get('game_mode')
+                        except Exception:
+                            pass
+                is_sandbox = (
+                    str(saved_mode).lower() == 'sandbox'
+                    or str(save_folder_name).lower().startswith('save_sandbox_')
+                )
+                game.game_mode = saved_mode or ('sandbox' if is_sandbox else 'new_game')
+                game.world_setup_state = {}
                 game.player_setup_state = {}
-                game.player_setup_state['current_tab'] = 'SelectCharacter'
+                game.player_setup_state['current_tab'] = 'Player' if is_sandbox else 'SelectCharacter'
+                game.player_setup_state['chosen_mode'] = game.game_mode
                 game.player_setup_state['respawn_save_folder'] = save_folder_name
                 game.current_save_folder_name = save_folder_name
                 game.game_state = 'PLAYER_SETUP'
@@ -754,8 +776,16 @@ def load_game(game, save_folder_name):
             )
             if is_player_dead and not getattr(game, '_is_respawning_player', False):
                 game.logger.info(f"Save '{save_folder_name}' has a deceased player. Redirecting to Player Setup.")
+                saved_mode = player_data.get('game_mode') or host_raw.get('game_mode')
+                is_sandbox = (
+                    str(saved_mode).lower() == 'sandbox'
+                    or str(save_folder_name).lower().startswith('save_sandbox_')
+                )
+                game.game_mode = saved_mode or ('sandbox' if is_sandbox else 'new_game')
+                game.world_setup_state = {}
                 game.player_setup_state = {}
-                game.player_setup_state['current_tab'] = 'SelectCharacter'
+                game.player_setup_state['current_tab'] = 'Player' if is_sandbox else 'SelectCharacter'
+                game.player_setup_state['chosen_mode'] = game.game_mode
                 game.player_setup_state['respawn_save_folder'] = save_folder_name
                 game.current_save_folder_name = save_folder_name
                 game.game_state = 'PLAYER_SETUP'
@@ -844,6 +874,13 @@ def load_game(game, save_folder_name):
             
         with open(world_state_path, "r") as f:
             world_data = json.load(f)
+
+        game.game_mode = (
+            host_raw.get('game_mode')
+            or world_data.get('game_mode')
+            or player_data.get('game_mode')
+            or ('sandbox' if str(save_folder_name).lower().startswith('save_sandbox_') else 'new_game')
+        )
 
         # Restore modal positions
         if "modal_positions" in world_data and isinstance(world_data["modal_positions"], dict):

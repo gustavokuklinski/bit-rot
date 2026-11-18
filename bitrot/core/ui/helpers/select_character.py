@@ -490,10 +490,11 @@ def _start_with_class(game, state, class_def):
     w_state = getattr(game, 'world_setup_state', {})
     preset_to_load = state.get('selected_config_preset') or w_state.get('selected_config_preset', 'world')
 
-    final_mode = w_state.get('chosen_mode') or state.get('chosen_mode') or 'sandbox'
+    final_mode = state.get('chosen_mode') or w_state.get('chosen_mode') or getattr(game, 'game_mode', None) or 'new_game'
     final_player_data['game_mode'] = final_mode
 
-    save_folder = state.get('save_folder_name') or w_state.get('save_folder_name') or getattr(game, 'current_save_folder_name', None)
+    save_folder = state.get('respawn_save_folder') or state.get('save_folder_name') or w_state.get('save_folder_name') or getattr(game, 'current_save_folder_name', None)
+    
     world_data = w_state.get('world_data') or state.get('world_data')
 
     if not save_folder and not state.get('respawn_save_folder'):

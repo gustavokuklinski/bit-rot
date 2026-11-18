@@ -235,6 +235,7 @@ class Game:
         self.is_giant_map = False
         self.paused_surface = None
         self.current_save_folder_name = None
+        self.game_mode = None
 
         self.is_aiming = False
         self.camera_pan_x = 0

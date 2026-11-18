@@ -112,6 +112,7 @@ def run_menu(game):
                     game.sound_manager.play_ui_hover()
                 game.player_setup_state = {}
                 game.world_setup_state = {}
+                game.game_mode = None
                 game.game_state = 'PLAYER_SETUP'
                 game.player_setup_state['current_tab'] = 'SelectWorld'
                 
@@ -120,6 +121,7 @@ def run_menu(game):
                     game.sound_manager.play_ui_hover()
                 game.player_setup_state = {}
                 game.world_setup_state = {}
+                game.game_mode = 'sandbox'
                 game.game_state = 'PLAYER_SETUP'
                 game.player_setup_state['chosen_mode'] = 'sandbox'
                 game.world_setup_state['chosen_mode'] = 'sandbox'

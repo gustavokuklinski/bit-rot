@@ -5,6 +5,24 @@ import core.data.config
 from core.ui.helpers.game_over import draw_game_over
 from core.systems.load_manager import handle_player_death
 
+def _redirect_to_respawn_setup(game):
+    save_folder = game.current_save_folder_name
+    game_mode = getattr(game, 'game_mode', None)
+    is_sandbox = (
+        str(game_mode).lower() == 'sandbox'
+        or str(save_folder).lower().startswith('save_sandbox_')
+    )
+    game.world_setup_state = {}
+    game.player_setup_state = {}
+    game.player_setup_state['respawn_save_folder'] = save_folder
+    if is_sandbox:
+        game.player_setup_state['chosen_mode'] = 'sandbox'
+        game.player_setup_state['current_tab'] = 'Player'
+    else:
+        game.player_setup_state['chosen_mode'] = game_mode or 'new_game'
+        game.player_setup_state['current_tab'] = 'SelectCharacter'
+    game.game_state = 'PLAYER_SETUP'
+
 def run_game_over(game):
     
     if hasattr(game, 'world_time') and game.world_time:
@@ -46,11 +64,7 @@ def run_game_over(game):
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RETURN, pygame.K_SPACE):
                 if not getattr(core.data.config, 'PERMADEATH', False) and getattr(game, 'current_save_folder_name', None):
-                    save_folder = game.current_save_folder_name
-                    game.player_setup_state = {}
-                    game.player_setup_state['current_tab'] = 'SelectCharacter'  # Go to Select Character
-                    game.player_setup_state['respawn_save_folder'] = save_folder
-                    game.game_state = 'PLAYER_SETUP'
+                    _redirect_to_respawn_setup(game)
                     return
                 else:
                     game.current_save_folder_name = None
@@ -70,11 +84,7 @@ def run_game_over(game):
             
             if respawn_btn.collidepoint(mouse_pos):
                 if not getattr(core.data.config, 'PERMADEATH', False) and getattr(game, 'current_save_folder_name', None):
-                    save_folder = game.current_save_folder_name
-                    game.player_setup_state = {}
-                    game.player_setup_state['current_tab'] = 'SelectCharacter'  # Go to Select Character
-                    game.player_setup_state['respawn_save_folder'] = save_folder
-                    game.game_state = 'PLAYER_SETUP'
+                    _redirect_to_respawn_setup(game)
                     return
             elif menu_btn.collidepoint(mouse_pos):
                 game.current_save_folder_name = None

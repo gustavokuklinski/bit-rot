@@ -98,6 +98,7 @@ def save_game(game):
         host_path = os.path.join(save_path, "host.json")
         host_data = {
             "os": platform.system(),
+            "game_mode": getattr(game, 'game_mode', None),
             "host": {},
             "remote": {}
         }
@@ -134,6 +135,7 @@ def save_game(game):
 
             player_data = {
                 "player_id": player_id,
+                "game_mode": getattr(game, 'game_mode', None),
                 "name": game.player.name,
                 "sex": game.player.sex,
                 "x": game.player.x,
@@ -187,6 +189,7 @@ def save_game(game):
         host_path = os.path.join(save_path, "host.json")
         host_data = {
             "os": platform.system(),
+            "game_mode": getattr(game, 'game_mode', None),
             "host": {},
             "remote": {}
         }
@@ -518,6 +521,7 @@ def save_game(game):
             saved_open_modals.append(m_entry)
 
         world_data = {
+            "game_mode": getattr(game, 'game_mode', None),
             "time": {
                 "game_time_ms": game.world_time.game_time_ms,
                 "day_count": game.world_time.day_count

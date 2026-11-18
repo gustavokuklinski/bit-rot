@@ -936,12 +936,13 @@ def handle_player_events(game, state, event, mouse_pos, clickable_rects):
 
                 # Normal single player logic below...
                 w_state = getattr(game, 'world_setup_state', {})
-                final_mode = w_state.get('chosen_mode') or state.get('chosen_mode') or 'sandbox'
+                final_mode = state.get('chosen_mode') or w_state.get('chosen_mode') or getattr(game, 'game_mode', None) or 'sandbox'
                 final_world_data = w_state.get('world_data') or state.get('world_data') or {}
                 final_player_data['game_mode'] = final_mode
                 final_player_data['game_settings'] = final_world_data
 
-                save_folder = state.get('save_folder_name') or w_state.get('save_folder_name') or getattr(game, 'current_save_folder_name', None)
+                save_folder = state.get('respawn_save_folder') or state.get('save_folder_name') or w_state.get('save_folder_name') or getattr(game, 'current_save_folder_name', None)
+
                 if not save_folder and not state.get('respawn_save_folder'):
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                     save_folder = f"save_{final_mode}_{timestamp}"
@@ -1181,7 +1182,15 @@ def run_player_setup(game):
             state['current_tab'] = 'SelectWorld'
 
         if not getattr(game, 'is_client', False):
-            state['world_data'] = load_config_data(core.data.config.get_world_config_path("world"))
+            respawn_folder = state.get('respawn_save_folder')
+            if respawn_folder:
+                respawn_world_path = os.path.join(get_writable_dir(), "data.rot", "save", "game", respawn_folder, "world.json")
+                if os.path.exists(respawn_world_path):
+                    state['world_data'] = load_config_data(respawn_world_path)
+                else:
+                    state['world_data'] = load_config_data(core.data.config.get_world_config_path("world"))
+            else:
+                state['world_data'] = load_config_data(core.data.config.get_world_config_path("world"))
         else:
             state['world_data'] = {}
         state['world_scroll_y'] = 0
@@ -1222,10 +1231,11 @@ def run_player_setup(game):
     player_btn = pygame.Rect(base_x, base_y + S(60), sidebar_width, btn_h)
     back_btn = pygame.Rect(base_x, GAME_HEIGHT - S(91) - center_offset_y, sidebar_width, btn_h)
 
+    is_respawn = bool(state.get('respawn_save_folder'))
     if state['current_tab'] not in ('SelectWorld', 'SelectCharacter'):
         is_client = getattr(game, 'is_client', False)
 
-        if not is_client:
+        if not is_client and not is_respawn:
             is_world_active = (state['current_tab'] == 'World')
             is_world_hovered = world_btn.collidepoint(mouse_pos)
             s_col = (80, 80, 80) if (is_world_active or is_world_hovered) else (60, 60, 60)
@@ -1260,7 +1270,7 @@ def run_player_setup(game):
     # --- BUTTON HOVER SOUND TRACKER FOR SETUP SCREENS ---
     if state['current_tab'] not in ('SelectWorld', 'SelectCharacter'):
         setup_buttons = [player_btn, back_btn]
-        if not getattr(game, 'is_client', False):
+        if not getattr(game, 'is_client', False) and not is_respawn:
             setup_buttons.append(world_btn)
 
         for k in ['start_button', 'save_button', 'delete_button', 'random_button', 'load_dropdown_button', 'next_tab']:
@@ -1313,7 +1323,7 @@ def run_player_setup(game):
             
         if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, 'button', 1) == 1:
             if state['current_tab'] not in ('SelectWorld', 'SelectCharacter'):
-                if not is_client and world_btn.collidepoint(event_pos):
+                if not is_client and not is_respawn and world_btn.collidepoint(event_pos):
                     state['current_tab'] = 'World'
                     continue
 
@@ -1322,7 +1332,10 @@ def run_player_setup(game):
                     continue
 
                 if back_btn.collidepoint(event_pos):
-                    if state['current_tab'] == 'Player' and state.get('chosen_mode') == 'sandbox':
+                    if is_respawn:
+                        game.current_save_folder_name = None
+                        game.game_state = 'MENU'
+                    elif state['current_tab'] == 'Player' and state.get('chosen_mode') == 'sandbox':
                         state['current_tab'] = 'World'
                     elif state['current_tab'] == 'World':
                         delete_pending_world_save(game, state)
