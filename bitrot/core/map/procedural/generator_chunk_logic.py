@@ -94,7 +94,115 @@ class ProceduralGeneratorChunk:
                     return char
         return 'tp_boat'
 
-    def _generate_lobby_chunk(self, gx, gy, w, h):
+    def _place_default_cave_pair(self, layers, occupied_mask_L2, occupied_mask_L3, w, h, strip_stairs=False):
+        c2_name = None
+        for k in self.templates.keys():
+            if k.lower() == 'cave_l2_02':
+                c2_name = k
+                break
+        if not c2_name:
+            for k in self.templates.keys():
+                if 'cave' in k.lower() and ('l2_02' in k.lower() or 'l2_2' in k.lower()):
+                    c2_name = k
+                    break
+
+        c3_name = None
+        for k in self.templates.keys():
+            if k.lower() == 'cave_l3_02':
+                c3_name = k
+                break
+        if not c3_name:
+            for k in self.templates.keys():
+                if 'cave' in k.lower() and ('l3_02' in k.lower() or 'l3_2' in k.lower()):
+                    c3_name = k
+                    break
+
+        if c2_name:
+            tmpl_c2 = self.templates[c2_name]
+            tmpl_c3 = self.templates.get(c3_name)
+            c2_w, c2_h = tmpl_c2['width'], tmpl_c2['height']
+            c3_w, c3_h = (tmpl_c3['width'], tmpl_c3['height']) if tmpl_c3 else (c2_w, c2_h)
+            fit_cw = max(c2_w, c3_w)
+            fit_ch = max(c2_h, c3_h)
+
+            for pad_val in [2, 1]:
+                for _ in range(80):
+                    tx = random.randint(pad_val, max(pad_val, w - fit_cw - pad_val))
+                    ty = random.randint(pad_val, max(pad_val, h - fit_ch - pad_val))
+
+                    collision = False
+                    for ly in range(max(0, ty - pad_val), min(h, ty + fit_ch + pad_val)):
+                        for lx in range(max(0, tx - pad_val), min(w, tx + fit_cw + pad_val)):
+                            if occupied_mask_L2[ly][lx] == 1 or occupied_mask_L3[ly][lx] == 1:
+                                collision = True
+                                break
+                        if collision:
+                            break
+
+                    if not collision:
+                        self._blit_template_mapped(layers, tmpl_c2, tx, ty, w, h, suffix='_L2', strip_stairs=strip_stairs)
+                        if hasattr(self, '_apply_l2_border'):
+                            self._apply_l2_border(layers, tx, ty, c2_w, c2_h, w, h, suffix='_L2', margin=4)
+
+                        if tmpl_c3:
+                            self._blit_template_mapped(layers, tmpl_c3, tx, ty, w, h, suffix='_L3', strip_stairs=strip_stairs)
+                            if hasattr(self, '_apply_l2_border'):
+                                self._apply_l2_border(layers, tx, ty, c3_w, c3_h, w, h, suffix='_L3', margin=4)
+
+                        for ly in range(max(0, ty - pad_val), min(h, ty + fit_ch + pad_val)):
+                            for lx in range(max(0, tx - pad_val), min(w, tx + fit_cw + pad_val)):
+                                occupied_mask_L2[ly][lx] = 1
+                                occupied_mask_L3[ly][lx] = 1
+                        return True
+        return False
+
+    def _get_stair_tile_for_layer(self, target_layer):
+        defs = getattr(self.game.tile_manager, 'definitions', {}) if hasattr(self.game, 'tile_manager') else {}
+        for char, t_def in defs.items():
+            if t_def.get('is_stair') and t_def.get('target_layer') == target_layer:
+                return char
+
+        any_stair_char = None
+        for char, t_def in defs.items():
+            if t_def.get('is_stair'):
+                any_stair_char = char
+                break
+
+        if any_stair_char:
+            new_char = f"stair_to_L{target_layer}"
+            if new_char not in defs:
+                cloned_def = defs[any_stair_char].copy()
+                cloned_def['target_layer'] = target_layer
+                cloned_def['is_stair'] = True
+                cloned_def['name'] = f"Stair to Layer {target_layer}"
+                defs[new_char] = cloned_def
+            return new_char
+
+        return 'stair_down'
+
+    def _find_stairs_in_template(self, tmpl):
+        defs = getattr(self.game.tile_manager, 'definitions', {}) if hasattr(self.game, 'tile_manager') else {}
+        stairs = []
+        if not tmpl:
+            return stairs
+        tw = tmpl.get('width', 0)
+        th = tmpl.get('height', 0)
+
+        for r in range(th):
+            for c in range(tw):
+                bc = tmpl['base'][r][c] if r < len(tmpl.get('base', [])) and c < len(tmpl['base'][r]) else ' '
+                gc = tmpl['ground'][r][c] if r < len(tmpl.get('ground', [])) and c < len(tmpl['ground'][r]) else ' '
+
+                b_stair = (bc in defs and defs[bc].get('is_stair')) or 'stair' in str(bc).lower()
+                g_stair = (gc in defs and defs[gc].get('is_stair')) or 'stair' in str(gc).lower()
+
+                if b_stair:
+                    stairs.append((c, r, 'base', bc))
+                elif g_stair:
+                    stairs.append((c, r, 'ground', gc))
+        return stairs
+
+    def _generate_lobby_chunk(self, gx, gy, w, h, assigned_l2_templates=None, assigned_l3_templates=None, conns_l2=None, conns_l3=None):
         boat_char = self._resolve_boat_char()
         water_tile = getattr(self, 'water_tile', 'water_01')
 
@@ -105,13 +213,14 @@ class ProceduralGeneratorChunk:
             'roof': [[' ' for _ in range(w)] for _ in range(h)],
             'light': [[' ' for _ in range(w)] for _ in range(h)],
             'protected_mask': [[0 for _ in range(w)] for _ in range(h)],
-            'base_L2': [['@' for _ in range(w)] for _ in range(h)],
-            'ground_L2': [['dirty_01' for _ in range(w)] for _ in range(h)],
+            'base_L2': [[' ' for _ in range(w)] for _ in range(h)],
+            'ground_L2': [[' ' for _ in range(w)] for _ in range(h)],
             'spawn_L2': [[' ' for _ in range(w)] for _ in range(h)],
             'roof_L2': [[' ' for _ in range(w)] for _ in range(h)],
             'light_L2': [[' ' for _ in range(w)] for _ in range(h)],
-            'base_L3': [['@' for _ in range(w)] for _ in range(h)],
-            'ground_L3': [['dirty_01' for _ in range(w)] for _ in range(h)],
+            'protected_mask_L2': [[0 for _ in range(w)] for _ in range(h)],
+            'base_L3': [[' ' for _ in range(w)] for _ in range(h)],
+            'ground_L3': [[' ' for _ in range(w)] for _ in range(h)],
             'spawn_L3': [[' ' for _ in range(w)] for _ in range(h)],
             'roof_L3': [[' ' for _ in range(w)] for _ in range(h)],
             'light_L3': [[' ' for _ in range(w)] for _ in range(h)],
@@ -165,6 +274,39 @@ class ProceduralGeneratorChunk:
                     if 0 <= tx + dx < w and 0 <= ty + dy < h:
                         layers['protected_mask_L3'][ty + dy][tx + dx] = 1
 
+        # 5. Setup Lobby L1 <-> L3 Stair ONLY (No L3 -> L2 stair inside Lobby_L3)
+        occupied_mask_L2 = [[0 for _ in range(w)] for _ in range(h)]
+        occupied_mask_L3 = [[0 for _ in range(w)] for _ in range(h)]
+        pad = 4
+        for ly in range(max(0, ty - pad), min(h, ty + th + pad)):
+            for lx in range(max(0, tx - pad), min(w, tx + tw + pad)):
+                occupied_mask_L3[ly][lx] = 1
+
+        stair_to_l3_char = self._get_stair_tile_for_layer(3)
+        stair_to_l1_char = self._get_stair_tile_for_layer(1)
+
+        l1_stairs = self._find_stairs_in_template(tmpl_l1)
+        if l1_stairs:
+            s1_c, s1_r, s1_loc, _ = l1_stairs[0]
+        else:
+            s1_c, s1_r = tw // 2, th // 2
+            s1_loc = 'base'
+
+        s1_gx = tx + s1_c
+        s1_gy = ty + s1_r
+
+        # L1 Stair -> climbs to Layer 3
+        if s1_loc == 'ground':
+            layers['ground'][s1_gy][s1_gx] = stair_to_l3_char
+            layers['base'][s1_gy][s1_gx] = ' '
+        else:
+            layers['base'][s1_gy][s1_gx] = stair_to_l3_char
+
+        # L3 Landing Stair -> returns to Layer 1
+        layers['base_L3'][s1_gy][s1_gx] = stair_to_l1_char
+        layers['ground_L3'][s1_gy][s1_gx] = 'house_floor_01'
+
+        # 6. Clear L1 entity spawns and place Boat + Player Spawn on Lobby_L1
         for y in range(h):
             for x in range(w):
                 sp = layers['spawn'][y][x]
@@ -203,6 +345,7 @@ class ProceduralGeneratorChunk:
                 if boat_coords:
                     break
 
+        player_spawn_tile = (tx + tw // 2, ty + th // 2)
         if boat_coords:
             bx, by = boat_coords
             candidates = []
@@ -219,9 +362,92 @@ class ProceduralGeneratorChunk:
             if candidates:
                 candidates.sort(key=lambda c: c[0])
                 px, py = candidates[0][1], candidates[0][2]
+                player_spawn_tile = (px, py)
                 layers['spawn'][py][px] = 'P'
             else:
-                layers['spawn'][ty + th // 2][tx + tw // 2] = 'P'
+                layers['spawn'][player_spawn_tile[1]][player_spawn_tile[0]] = 'P'
+
+        # 7. Generate a random Cave on Lobby L1 as a small island connecting L1 <-> L2
+        self._place_lobby_cave_island(
+            layers, occupied_mask_L2, occupied_mask_L3,
+            tx, ty, tw, th, w, h,
+            boat_coords=boat_coords,
+            player_spawn_tile=player_spawn_tile,
+            lobby_stair_tile=(s1_gx, s1_gy),
+            water_tile=water_tile
+        )
+
+        # Clear any L1 hostiles/animals that the Cave template might have brought onto Lobby L1
+        for y in range(h):
+            for x in range(w):
+                sp = layers['spawn'][y][x]
+                if sp in ('HNPC', 'FNPC', 'Z', 'ANM'):
+                    layers['spawn'][y][x] = ' '
+
+        # 8. Spawn Builds Marked for L3 on Layer 3 (strip unpaired stairs)
+        if assigned_l3_templates:
+            for l3_name in assigned_l3_templates:
+                if l3_name not in self.templates:
+                    continue
+                l3_tmpl = self.templates[l3_name]
+                l3_w, l3_h = l3_tmpl['width'], l3_tmpl['height']
+
+                for _ in range(60):
+                    btx = random.randint(pad, max(pad, w - l3_w - pad))
+                    bty = random.randint(pad, max(pad, h - l3_h - pad))
+
+                    collision = False
+                    for ly in range(max(0, bty - pad), min(h, bty + l3_h + pad)):
+                        for lx in range(max(0, btx - pad), min(w, btx + l3_w + pad)):
+                            if occupied_mask_L3[ly][lx] == 1:
+                                collision = True
+                                break
+                        if collision:
+                            break
+
+                    if not collision:
+                        self._blit_template_mapped(layers, l3_tmpl, btx, bty, w, h, suffix='_L3', strip_stairs=True)
+                        if hasattr(self, '_apply_l2_border'):
+                            self._apply_l2_border(layers, btx, bty, l3_w, l3_h, w, h, suffix='_L3', margin=4)
+
+                        for ly in range(max(0, bty - pad), min(h, bty + l3_h + pad)):
+                            for lx in range(max(0, btx - pad), min(w, btx + l3_w + pad)):
+                                occupied_mask_L3[ly][lx] = 1
+                        break
+
+        # 9. Stamp Default Game Cave Templates (Cave_L2_02 on L2 & Cave_L3_02 on L3) keeping L2 <-> L3 stairs
+        self._place_default_cave_pair(layers, occupied_mask_L2, occupied_mask_L3, w, h)
+
+        # 10. Stamp any assigned L2 builds (strip unpaired stairs)
+        if assigned_l2_templates:
+            for l2_name in assigned_l2_templates:
+                if l2_name not in self.templates:
+                    continue
+                l2_tmpl = self.templates[l2_name]
+                l2_w, l2_h = l2_tmpl['width'], l2_tmpl['height']
+
+                for _ in range(60):
+                    btx = random.randint(pad, max(pad, w - l2_w - pad))
+                    bty = random.randint(pad, max(pad, h - l2_h - pad))
+
+                    collision = False
+                    for ly in range(max(0, bty - pad), min(h, bty + l2_h + pad)):
+                        for lx in range(max(0, btx - pad), min(w, btx + l2_w + pad)):
+                            if occupied_mask_L2[ly][lx] == 1:
+                                collision = True
+                                break
+                        if collision:
+                            break
+
+                    if not collision:
+                        self._blit_template_mapped(layers, l2_tmpl, btx, bty, w, h, suffix='_L2', strip_stairs=True)
+                        if hasattr(self, '_apply_l2_border'):
+                            self._apply_l2_border(layers, btx, bty, l2_w, l2_h, w, h, suffix='_L2', margin=4)
+
+                        for ly in range(max(0, bty - pad), min(h, bty + l2_h + pad)):
+                            for lx in range(max(0, btx - pad), min(w, btx + l2_w + pad)):
+                                occupied_mask_L2[ly][lx] = 1
+                        break
 
         fnpc_candidates = []
         for dy in range(1, th - 1):
@@ -253,6 +479,207 @@ class ProceduralGeneratorChunk:
                     layers['spawn_L3'][ly][lx] = 'HNPC'
 
         return layers
+
+    def _get_l2_counterpart(self, tmpl_name, is_forest=False):
+        potential_l2_names = []
+        if 'l1' in tmpl_name.lower():
+            potential_l2_names.append(tmpl_name.replace('L1', 'L2').replace('l1', 'l2'))
+        potential_l2_names.append(f"{tmpl_name}_L2")
+        parts = tmpl_name.rsplit('_', 1)
+        if len(parts) == 2 and parts[1].isdigit():
+            potential_l2_names.append(f"{parts[0]}_L2_{parts[1]}")
+            potential_l2_names.append(f"{parts[0]}_L2")
+        low = tmpl_name.lower()
+        if is_forest:
+            potential_l2_names.append("Forest_L2")
+        else:
+            if "petrol" in low and "building" in low: potential_l2_names.append("Petrol_Building_L2")
+            elif "petrol" in low: potential_l2_names.append("Petrol_L2")
+            if "building" in low: potential_l2_names.append("Building_L2")
+
+        for pot in potential_l2_names:
+            for k in self.templates.keys():
+                if k.lower() == pot.lower():
+                    return k
+        return None
+
+    def _get_l3_counterpart(self, tmpl_name, is_forest=False):
+        potential_l3_names = []
+        low = tmpl_name.lower()
+        if 'l2' in low:
+            potential_l3_names.append(tmpl_name.replace('L2', 'L3').replace('l2', 'l3'))
+        elif 'l1' in low:
+            potential_l3_names.append(tmpl_name.replace('L1', 'L3').replace('l1', 'l3'))
+        potential_l3_names.append(f"{tmpl_name}_L3")
+        parts = tmpl_name.rsplit('_', 1)
+        if len(parts) == 2 and parts[1].isdigit():
+            potential_l3_names.append(f"{parts[0]}_L3_{parts[1]}")
+            potential_l3_names.append(f"{parts[0]}_L3")
+        if is_forest:
+            potential_l3_names.append("Forest_L3")
+        else:
+            if "cave" in low and ("02" in low or "2" in low):
+                potential_l3_names.append("Cave_L3_02")
+            if "bunker" in low: potential_l3_names.append("Bunker_L3")
+            if "dungeon" in low: potential_l3_names.append("Dungeon_L3")
+
+        for pot in potential_l3_names:
+            for k in self.templates.keys():
+                if k.lower() == pot.lower():
+                    return k
+        return None
+
+    def _place_lobby_cave_island(self, layers, occupied_mask_L2, occupied_mask_L3,
+                                 tx, ty, tw, th, w, h,
+                                 boat_coords=None, player_spawn_tile=None,
+                                 lobby_stair_tile=None, water_tile='water_01'):
+        cave_temps = [
+            t for t in self.categorized_templates.get('Cave', [])
+            if 'l2' not in t.lower() and 'l3' not in t.lower()
+        ]
+        if not cave_temps:
+            cave_temps = list(self.categorized_templates.get('Cave', []))
+        cave_with_l2 = [t for t in cave_temps if self._get_l2_counterpart(t, is_forest=False)]
+        if cave_with_l2:
+            cave_temps = cave_with_l2
+        if not cave_temps:
+            return False
+
+        cave_name = random.choice(cave_temps)
+        cave_tmpl = self.templates.get(cave_name)
+        if not cave_tmpl:
+            return False
+
+        l2_key = self._get_l2_counterpart(cave_name, is_forest=False)
+        tmpl_l2 = self.templates.get(l2_key) if l2_key else None
+        l3_key = self._get_l3_counterpart(cave_name, is_forest=False)
+        tmpl_l3 = self.templates.get(l3_key) if l3_key else None
+
+        cw_t, ch_t = cave_tmpl['width'], cave_tmpl['height']
+        fit_w = max(cw_t, tmpl_l2['width'] if tmpl_l2 else 0, tmpl_l3['width'] if tmpl_l3 else 0)
+        fit_h = max(ch_t, tmpl_l2['height'] if tmpl_l2 else 0, tmpl_l3['height'] if tmpl_l3 else 0)
+
+        lobby_excl_rect = pygame.Rect(tx - 10, ty - 10, tw + 20, th + 20)
+        lobby_cx, lobby_cy = tx + tw / 2.0, ty + th / 2.0
+        pad = 4
+
+        def is_valid_cave_spot(cx0, cy0):
+            if cx0 < 10 or cy0 < 10 or cx0 + fit_w > w - 10 or cy0 + fit_h > h - 10:
+                return False
+            c_rect = pygame.Rect(cx0 - 6, cy0 - 6, fit_w + 12, fit_h + 12)
+            if c_rect.colliderect(lobby_excl_rect):
+                return False
+            if boat_coords:
+                bx, by = boat_coords
+                if (cx0 - 6 <= bx <= cx0 + fit_w + 6) and (cy0 - 6 <= by <= cy0 + fit_h + 6):
+                    return False
+            for ly in range(max(0, cy0 - pad), min(h, cy0 + fit_h + pad)):
+                for lx in range(max(0, cx0 - pad), min(w, cx0 + fit_w + pad)):
+                    if occupied_mask_L2[ly][lx] == 1 or occupied_mask_L3[ly][lx] == 1:
+                        return False
+            return True
+
+        chosen_pos = None
+        for _ in range(160):
+            angle = random.uniform(0, 2 * math.pi)
+            dist = random.uniform(max(tw, th) / 2.0 + max(fit_w, fit_h) / 2.0 + 12.0,
+                                  max(tw, th) / 2.0 + max(fit_w, fit_h) / 2.0 + 26.0)
+            cand_x = int(lobby_cx + math.cos(angle) * dist - fit_w / 2.0)
+            cand_y = int(lobby_cy + math.sin(angle) * dist - fit_h / 2.0)
+            if is_valid_cave_spot(cand_x, cand_y):
+                chosen_pos = (cand_x, cand_y)
+                break
+
+        if not chosen_pos:
+            for _ in range(200):
+                cand_x = random.randint(10, max(10, w - fit_w - 10))
+                cand_y = random.randint(10, max(10, h - fit_h - 10))
+                if is_valid_cave_spot(cand_x, cand_y):
+                    chosen_pos = (cand_x, cand_y)
+                    break
+
+        if not chosen_pos:
+            return False
+
+        cave_tx, cave_ty = chosen_pos
+
+        # 1. Paint small organic island landmass on L1 around the cave footprint
+        icx = cave_tx + cw_t / 2.0
+        icy = cave_ty + ch_t / 2.0
+        rx_grass = cw_t / 2.0 + 3.5
+        ry_grass = ch_t / 2.0 + 3.5
+        rx_sand = rx_grass + 3.0
+        ry_sand = ry_grass + 3.0
+        noise_phase = random.uniform(0, 2 * math.pi)
+
+        min_iy = max(2, int(icy - ry_sand - 3))
+        max_iy = min(h - 2, int(icy + ry_sand + 4))
+        min_ix = max(2, int(icx - rx_sand - 3))
+        max_ix = min(w - 2, int(icx + rx_sand + 4))
+
+        island_walkable_tiles = []
+        for iy in range(min_iy, max_iy):
+            for ix in range(min_ix, max_ix):
+                if layers['protected_mask'][iy][ix] == 1:
+                    continue
+                if boat_coords and (ix, iy) == boat_coords:
+                    continue
+                if tx <= ix < tx + tw and ty <= iy < ty + th:
+                    continue
+
+                dx_n = (ix - icx) / max(1.0, rx_grass)
+                dy_n = (iy - icy) / max(1.0, ry_grass)
+                ang = math.atan2(dy_n, dx_n)
+                wobble = 0.14 * math.sin(ang * 3 + noise_phase) + 0.09 * math.cos(ang * 5 - noise_phase)
+                norm_grass = math.hypot(dx_n, dy_n) + wobble
+
+                dx_s = (ix - icx) / max(1.0, rx_sand)
+                dy_s = (iy - icy) / max(1.0, ry_sand)
+                norm_sand = math.hypot(dx_s, dy_s) + wobble
+
+                if norm_grass <= 1.0:
+                    layers['ground'][iy][ix] = 'bg_grass'
+                    island_walkable_tiles.append((ix, iy))
+                elif norm_sand <= 1.0:
+                    if layers['ground'][iy][ix] == water_tile:
+                        layers['ground'][iy][ix] = 'beach_sand_01'
+                    island_walkable_tiles.append((ix, iy))
+
+        # 2. Stamp Cave_L1 onto L1, Cave_L2 onto L2, and Cave_L3 (if any) onto L3
+        self._blit_template(layers, cave_tmpl, cave_tx, cave_ty, w, h, clear_base=True)
+
+        if tmpl_l2:
+            self._blit_template_mapped(layers, tmpl_l2, cave_tx, cave_ty, w, h, suffix='_L2')
+            l2_w, l2_h = tmpl_l2['width'], tmpl_l2['height']
+            if hasattr(self, '_apply_l2_border'):
+                self._apply_l2_border(layers, cave_tx, cave_ty, l2_w, l2_h, w, h, suffix='_L2', margin=4)
+            for ly in range(max(0, cave_ty - pad), min(h, cave_ty + l2_h + pad)):
+                for lx in range(max(0, cave_tx - pad), min(w, cave_tx + l2_w + pad)):
+                    occupied_mask_L2[ly][lx] = 1
+
+        if tmpl_l3:
+            self._blit_template_mapped(layers, tmpl_l3, cave_tx, cave_ty, w, h, suffix='_L3')
+            l3_w, l3_h = tmpl_l3['width'], tmpl_l3['height']
+            if hasattr(self, '_apply_l2_border'):
+                self._apply_l2_border(layers, cave_tx, cave_ty, l3_w, l3_h, w, h, suffix='_L3', margin=4)
+            for ly in range(max(0, cave_ty - pad), min(h, cave_ty + l3_h + pad)):
+                for lx in range(max(0, cave_tx - pad), min(w, cave_tx + l3_w + pad)):
+                    occupied_mask_L3[ly][lx] = 1
+
+        # 3. Light island decorations strictly outside the 2-tile walkway around the cave template
+        deco_pool = ['garden_tree_16', 'garden_stone', 'garden_grass_1', 'garden_grass_2']
+        for (ix, iy) in island_walkable_tiles:
+            if layers['protected_mask'][iy][ix] == 1 or layers['base'][iy][ix] != ' ':
+                continue
+            if (cave_tx - 2 <= ix < cave_tx + cw_t + 2) and (cave_ty - 2 <= iy < cave_ty + ch_t + 2):
+                continue
+            if layers['ground'][iy][ix] == 'bg_grass' and random.random() < 0.08:
+                layers['base'][iy][ix] = random.choice(deco_pool)
+
+        # 4. Smooth coastal borders around the Cave island (protected_mask preserves Lobby_L1 & cave_tmpl)
+        self._apply_sand_smoothing(layers, w, h, 'beach_sand_01')
+        self._apply_terrain_smoothing(layers, w, h)
+        return True
 
     def _place_single_teleport_boat(self, layers, w, h):
         boat_char = self._resolve_boat_char()
@@ -769,7 +1196,13 @@ class ProceduralGeneratorChunk:
                             layers['protected_mask'][y][x] = 1
 
         if getattr(self, 'lobby_chunk', None) and (gx, gy) == self.lobby_chunk:
-            return self._generate_lobby_chunk(gx, gy, w, h)
+            return self._generate_lobby_chunk(
+                gx, gy, w, h,
+                assigned_l2_templates=assigned_l2_templates,
+                assigned_l3_templates=assigned_l3_templates,
+                conns_l2=conns_l2,
+                conns_l3=conns_l3
+            )
 
         # 4.5 Place Port_L1 at the shore of all non-military chunks BEFORE buildings and walls
         is_military = (getattr(self, 'military_chunk', None) == (gx, gy))
@@ -787,54 +1220,8 @@ class ProceduralGeneratorChunk:
                 ry2 = random.randint(safe_margin, max(safe_margin + 1, h - safe_margin))
                 draw_secondary_maze_road(rx1, ry1, rx2, ry2, tile_type=dirt_tile)
 
-        def get_l2_counterpart(tmpl_name, is_forest=False):
-            potential_l2_names = []
-            if 'l1' in tmpl_name.lower():
-                potential_l2_names.append(tmpl_name.replace('L1', 'L2').replace('l1', 'l2'))
-            potential_l2_names.append(f"{tmpl_name}_L2")
-            parts = tmpl_name.rsplit('_', 1)
-            if len(parts) == 2 and parts[1].isdigit():
-                potential_l2_names.append(f"{parts[0]}_L2_{parts[1]}")
-                potential_l2_names.append(f"{parts[0]}_L2")
-            low = tmpl_name.lower()
-            if is_forest:
-                potential_l2_names.append("Forest_L2")
-            else:
-                if "petrol" in low and "building" in low: potential_l2_names.append("Petrol_Building_L2")
-                elif "petrol" in low: potential_l2_names.append("Petrol_L2")
-                if "building" in low: potential_l2_names.append("Building_L2")
-
-            for pot in potential_l2_names:
-                for k in self.templates.keys():
-                    if k.lower() == pot.lower():
-                        return k
-            return None
-
-        def get_l3_counterpart(tmpl_name, is_forest=False):
-            potential_l3_names = []
-            low = tmpl_name.lower()
-            if 'l2' in low:
-                potential_l3_names.append(tmpl_name.replace('L2', 'L3').replace('l2', 'l3'))
-            elif 'l1' in low:
-                potential_l3_names.append(tmpl_name.replace('L1', 'L3').replace('l1', 'l3'))
-            potential_l3_names.append(f"{tmpl_name}_L3")
-            parts = tmpl_name.rsplit('_', 1)
-            if len(parts) == 2 and parts[1].isdigit():
-                potential_l3_names.append(f"{parts[0]}_L3_{parts[1]}")
-                potential_l3_names.append(f"{parts[0]}_L3")
-            if is_forest:
-                potential_l3_names.append("Forest_L3")
-            else:
-                if "cave" in low and ("02" in low or "2" in low):
-                    potential_l3_names.append("Cave_L3_02")
-                if "bunker" in low: potential_l3_names.append("Bunker_L3")
-                if "dungeon" in low: potential_l3_names.append("Dungeon_L3")
-
-            for pot in potential_l3_names:
-                for k in self.templates.keys():
-                    if k.lower() == pot.lower():
-                        return k
-            return None
+        get_l2_counterpart = self._get_l2_counterpart
+        get_l3_counterpart = self._get_l3_counterpart
 
         # 6. Place Buildings (TETRIS METHOD)
         def get_tetris_candidates(tw, th, gap=1):
@@ -1110,76 +1497,8 @@ class ProceduralGeneratorChunk:
         if hasattr(self, '_scatter_npcs'):
             self._scatter_npcs(layers, occupied_mask, w, h)
 
-        # --- 9.5. CONNECT CAVE_L2_02 TO CAVE_L3_02 ON EVERY CHUNK ---
-        # Look up Cave_L2_02 and Cave_L3_02
-        is_military = (getattr(self, 'military_chunk', None) == (gx, gy))
-        is_lobby = (getattr(self, 'lobby_chunk', None) == (gx, gy))
-
-        if not is_military and not is_lobby:
-            c2_name = None
-            for k in self.templates.keys():
-                if k.lower() == 'cave_l2_02':
-                    c2_name = k
-                    break
-            if not c2_name:
-                for k in self.templates.keys():
-                    if 'cave' in k.lower() and ('l2_02' in k.lower() or 'l2_2' in k.lower()):
-                        c2_name = k
-                        break
-
-            c3_name = None
-            for k in self.templates.keys():
-                if k.lower() == 'cave_l3_02':
-                    c3_name = k
-                    break
-            if not c3_name:
-                for k in self.templates.keys():
-                    if 'cave' in k.lower() and ('l3_02' in k.lower() or 'l3_2' in k.lower()):
-                        c3_name = k
-                        break
-
-            if c2_name:
-                tmpl_c2 = self.templates[c2_name]
-                tmpl_c3 = self.templates.get(c3_name)
-                c2_w, c2_h = tmpl_c2['width'], tmpl_c2['height']
-                c3_w, c3_h = (tmpl_c3['width'], tmpl_c3['height']) if tmpl_c3 else (c2_w, c2_h)
-                fit_cw = max(c2_w, c3_w)
-                fit_ch = max(c2_h, c3_h)
-
-                placed_cave_pair = False
-                for pad_val in [2, 1]:  # 2-tile margin
-                    for _ in range(80):
-                        tx = random.randint(pad_val, max(pad_val, w - fit_cw - pad_val))
-                        ty = random.randint(pad_val, max(pad_val, h - fit_ch - pad_val))
-                        
-                        collision = False
-                        for ly in range(max(0, ty - pad_val), min(h, ty + fit_ch + pad_val)):
-                            for lx in range(max(0, tx - pad_val), min(w, tx + fit_cw + pad_val)):
-                                if occupied_mask_L2[ly][lx] == 1 or occupied_mask_L3[ly][lx] == 1:
-                                    collision = True
-                                    break
-                            if collision: break
-
-                        if not collision:
-                            # Blit Cave_L2_02 to Layer 2 with 2-tile margin
-                            self._blit_template_mapped(layers, tmpl_c2, tx, ty, w, h, suffix='_L2')
-                            if hasattr(self, '_apply_l2_border'):
-                                self._apply_l2_border(layers, tx, ty, c2_w, c2_h, w, h, suffix='_L2', margin=4)
-
-                            # Blit Cave_L3_02 to Layer 3 with 2-tile margin at matching (tx, ty)
-                            if tmpl_c3:
-                                self._blit_template_mapped(layers, tmpl_c3, tx, ty, w, h, suffix='_L3')
-                                if hasattr(self, '_apply_l2_border'):
-                                    self._apply_l2_border(layers, tx, ty, c3_w, c3_h, w, h, suffix='_L3', margin=4)
-
-                            for ly in range(max(0, ty - pad_val), min(h, ty + fit_ch + pad_val)):
-                                for lx in range(max(0, tx - pad_val), min(w, tx + fit_cw + pad_val)):
-                                    occupied_mask_L2[ly][lx] = 1
-                                    occupied_mask_L3[ly][lx] = 1
-                            placed_cave_pair = True
-                            break
-                    if placed_cave_pair:
-                        break
+        # --- 9.5. CONNECT CAVE_L2_02 TO CAVE_L3_02 ON EVERY CHUNK (INCLUDING MILITARY) ---
+        self._place_default_cave_pair(layers, occupied_mask_L2, occupied_mask_L3, w, h)
 
         # 10. Assigned L2 Spawning (Dungeons and Bunkers with 2-tile margin)
         if assigned_l2_templates:

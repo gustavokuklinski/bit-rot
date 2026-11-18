@@ -70,7 +70,24 @@ class ProceduralGeneratorUtils:
                             if 'protected_mask' in target:
                                 target['protected_mask'][gy][gx] = 1
 
-    def _blit_template_mapped(self, target_layers, source_tmpl, tx, ty, mw, mh, suffix=''):
+    def _is_stair_tile(self, tile):
+        if not tile or tile == ' ':
+            return False
+        defs = getattr(self.game.tile_manager, 'definitions', {}) if hasattr(self, 'game') and hasattr(self.game, 'tile_manager') else {}
+        if tile in defs and defs[tile].get('is_stair', False):
+            return True
+        return 'stair' in str(tile).lower()
+
+    def _get_adjacent_non_stair_floor(self, grid, r, c):
+        for dr, dc in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < len(grid) and 0 <= nc < len(grid[nr]):
+                cand = grid[nr][nc]
+                if cand and cand not in (' ', '', '#', '@') and not self._is_stair_tile(cand):
+                    return cand
+        return 'dirty_01'
+
+    def _blit_template_mapped(self, target_layers, source_tmpl, tx, ty, mw, mh, suffix='', strip_stairs=False):
         mask_key = 'protected_mask' + suffix
         if mask_key not in target_layers:
             target_layers[mask_key] = [[0 for _ in range(mw)] for _ in range(mh)]
@@ -85,6 +102,9 @@ class ProceduralGeneratorUtils:
             for r in range(len(grid)):
                 for c in range(len(grid[r])):
                     tile = grid[r][c]
+                    if strip_stairs and layer in ('base', 'ground') and self._is_stair_tile(tile):
+                        tile = ' ' if layer == 'base' else self._get_adjacent_non_stair_floor(grid, r, c)
+
                     gx, gy = tx + c, ty + r
                     if 0 <= gx < mw and 0 <= gy < mh:
                         if layer == 'base':

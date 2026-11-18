@@ -51,7 +51,7 @@ class ProceduralGenerator(
     self.forest_border_width = 1
     self.water_tile = 'water_01'
     self.sand_tile = 'beach_sand_01'
-    self.coast_width = 10
+    self.coast_width = 20
 
     self.grid_w = MAP_CHUNKS
     self.grid_h = MAP_CHUNKS
@@ -498,17 +498,19 @@ class ProceduralGenerator(
         self.grid_w = needed_w
         self.grid_h = needed_h
 
-        connect_target = (sx + shift_x, sy + shift_y)
-        self._link_conns(
-            self.connections_grid,
-            lobby_gx,
-            lobby_gy,
-            connect_target[0],
-            connect_target[1],
-            link_l1=False,
-            link_l2=False,
-            link_l3=True
-        )
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+          nx, ny = lobby_gx + dx, lobby_gy + dy
+          if (nx, ny) in self.active_chunks and (nx, ny) != self.lobby_chunk:
+            self._link_conns(
+                self.connections_grid,
+                lobby_gx,
+                lobby_gy,
+                nx,
+                ny,
+                link_l1=False,
+                link_l2=True,
+                link_l3=True
+            )
     else:
         self.lobby_chunk = None
 
@@ -631,8 +633,31 @@ class ProceduralGenerator(
 
     if self.lobby_chunk:
       self.chunk_priority_map[self.lobby_chunk] = []
-      self.chunk_l2_priority_map[self.lobby_chunk] = []
-      self.chunk_l3_priority_map[self.lobby_chunk] = []
+      l2_cands = [
+          t for t in (
+              self.categorized_l2_templates.get('Bunker', [])
+              + self.categorized_l2_templates.get('Dungeon', [])
+              + self.l2_templates
+          )
+          if 'lobby' not in t.lower()
+      ]
+      if l2_cands:
+          self.chunk_l2_priority_map[self.lobby_chunk] = random.sample(l2_cands, min(2, len(l2_cands)))
+      else:
+          self.chunk_l2_priority_map[self.lobby_chunk] = []
+
+      l3_cands = [
+          t for t in (
+              self.categorized_l3_templates.get('Bunker', [])
+              + self.categorized_l3_templates.get('Dungeon', [])
+              + self.l3_templates
+          )
+          if 'lobby' not in t.lower()
+      ]
+      if l3_cands:
+          self.chunk_l3_priority_map[self.lobby_chunk] = random.sample(l3_cands, min(2, len(l3_cands)))
+      else:
+          self.chunk_l3_priority_map[self.lobby_chunk] = []
 
     if spawn_military and self.military_chunk:
       if military_l3_deck:
@@ -950,44 +975,18 @@ class ProceduralGenerator(
         if k.endswith('_L3')
     }
 
-    # If this is the lobby chunk, connect L3 to the adjacent chunk doorway and save
-    if is_lobby:
-      self._connect_l2_drunkards(l3_layers, conns_l2=conns_l3)
-      self._enforce_l2_contained_borders(l3_layers, c_w, c_h, conns_l2=conns_l3)
-      self._decorate_l2_pathways(l3_layers, c_w, c_h, conns_l2=conns_l3)
-      self._populate_l2_spawns(l3_layers)
+    # If this is the lobby chunk, format L2 & L3 with corridors and spawns, then save
+    if not is_lobby:
+      self._apply_terrain_smoothing(l1_layers, c_w, c_h)
+      self._apply_sand_smoothing(l1_layers, c_w, c_h, 'sand_01')
+      self._apply_sand_smoothing(l1_layers, c_w, c_h, 'beach_sand_01')
+      self._apply_asphalt_smoothing(l1_layers, c_w, c_h)
 
-      if hasattr(self, '_scatter_animals'):
-        self._scatter_animals(l3_layers, None, c_w, c_h, multiplier=1, is_l2=False)
-      if hasattr(self, '_scatter_npcs_l2'):
-        self._scatter_npcs_l2(l3_layers, c_w, c_h, suffix='')
+      self._scatter_vehicles(l1_layers, None, c_w, c_h)
+      self._scatter_animals(l1_layers, None, c_w, c_h, multiplier=2 if is_forest else 1, is_l2=False)
+
       if hasattr(self, '_scatter_quest_items'):
-        self._scatter_quest_items(l3_layers, None, c_w, c_h, 3)
-
-      for y in range(c_h):
-        for x in range(c_w):
-          if l3_layers['ground'][y][x] == ' ':
-            l3_layers['ground'][y][x] = 'dirty_01'
-            l3_layers['base'][y][x] = '@'
-
-      self._save_chunk(f'map_L1_{gx}_{gy}', l1_layers)
-      self._save_chunk(f'map_L2_{gx}_{gy}', l2_layers)
-      self._save_chunk(f'map_L3_{gx}_{gy}', l3_layers)
-      self.generated_chunks.add((gx, gy))
-      print(f'[ProceduralGenerator] Saved Lobby Chunk ({gx}, {gy}) [L1 Safe Haven, L3 Normal Spawns] successfully.')
-      return
-
-    # Format Layer 1 (Surface)
-    self._apply_terrain_smoothing(l1_layers, c_w, c_h)
-    self._apply_sand_smoothing(l1_layers, c_w, c_h, 'sand_01')
-    self._apply_sand_smoothing(l1_layers, c_w, c_h, 'beach_sand_01')
-    self._apply_asphalt_smoothing(l1_layers, c_w, c_h)
-
-    self._scatter_vehicles(l1_layers, None, c_w, c_h)
-    self._scatter_animals(l1_layers, None, c_w, c_h, multiplier=2 if is_forest else 1, is_l2=False)
-
-    if hasattr(self, '_scatter_quest_items'):
-      self._scatter_quest_items(l1_layers, None, c_w, c_h, 1)
+        self._scatter_quest_items(l1_layers, None, c_w, c_h, 1)
 
     # Format Layer 2 (Caves 1) - EXACT SAME SPAWN DENSITY AS L1
     self._connect_l2_drunkards(l2_layers, conns_l2=conns_l2)

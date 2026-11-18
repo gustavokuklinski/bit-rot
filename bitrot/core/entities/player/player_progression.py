@@ -243,22 +243,22 @@ class PlayerProgression:
             if (dx*dx + dy*dy) < det_radius_sq:
                 nearby_zombies += 1
         
-        horde_gain = self.config.get_stat('anxiety', 'horde_gain', 0.05)
+        horde_gain = self.config.get_stat('anxiety', 'horde_gain', 0.005)
         passive_gain = self.config.get_stat('anxiety', 'passive_gain', 0.001)
-        base = horde_gain if nearby_zombies > 2 else passive_gain
+        base = horde_gain if nearby_zombies > 10 else passive_gain
         bonus_perc = self.get_anxiety_bonus(player)
 
         # Drugs soothe anxiety: 0% drugs -> max 100% anxiety; 100% drugs -> max 10% anxiety
-        drugs_val = max(0.0, min(100.0, float(getattr(player, 'drugs', 0.0))))
-        drugs_ratio = drugs_val / 100.0
-        max_anxiety = 100.0 - (drugs_ratio * 90.0)
+        #drugs_val = max(0.0, min(100.0, float(getattr(player, 'drugs', 0.0))))
+        #drugs_ratio = drugs_val / 100.0
+        max_anxiety = 100.0
 
         dt = getattr(game, 'dt_mult', 1.0)
         if player.anxiety > max_anxiety:
-            relief_speed = (0.05 + (drugs_ratio * 0.15)) * dt
+            relief_speed = (0.05 + 0.15) * dt
             player.anxiety = max(max_anxiety, player.anxiety - relief_speed)
         else:
-            gain_scale = max(0.05, 1.0 - (drugs_ratio * 0.90))
+            gain_scale = max(0.05, 1.0)
             anxiety_gain = base * (1.0 + (bonus_perc / 100.0)) * gain_scale * dt
             player.anxiety = min(max_anxiety, player.anxiety + anxiety_gain)
 
