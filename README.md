@@ -111,6 +111,9 @@ pip install -r requirements.txt
 ### 3. Play
 ```bash
 python bitrot/bitrot.py
+
+# Open the game editor
+python bitrot/bitrot.py --editor
 ```
 
 ---
@@ -128,27 +131,18 @@ If you prefer to run the compilation manually or customize the build flags, use 
 ```bash
 # Build the game as a standalone directory
 nuitka --onefile --assume-yes-for-downloads --output-dir=./build --output-filename=bitrot.bin --static-libpython=yes --include-data-dir=bitrot/data.rot=data.rot bitrot/bitrot.py
-
-# Build the editor as a standalone directory
-nuitka --onefile --assume-yes-for-downloads --output-dir=./build --output-filename=bitrot.bin --static-libpython=yes --include-data-dir=bitrot/data.rot=data.rot bitrot/editor.py
 ```
 
 #### Windows
 ```bash
 # Build the game with a custom icon and no console window
 nuitka --onefile --assume-yes-for-downloads --output-dir=./build --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --include-data-dir=./bitrot/data.rot=data.rot bitrot/bitrot.py
-
-# Build the editor with a custom icon and no console window
-nuitka --onefile --assume-yes-for-downloads --output-dir=./build --windows-console-mode=disable --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico --include-data-dir=./bitrot/data.rot=data.rot bitrot/editor.py
 ```
 
 #### macOS
 ```bash
 # Build the game as an application bundle
 nuitka --standalone --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --output-dir=./build ./bitrot/bitrot.py
-
-# Build the editor as an application bundle
-nuitka --standalone --macos-create-app-bundle --macos-app-icon=./bitrot/data.rot/icons/favicon.icns --output-dir=./build ./bitrot/editor.py
 ```
 
 *This process will create a `build/` directory containing the standalone executable and all required dependencies.*

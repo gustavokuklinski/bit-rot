@@ -1379,17 +1379,21 @@ def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world
 
             if target_layer == 'roof':
                 has_target_tile = bool(getattr(game, 'roof_data', None) and 0 <= mouse_ty < len(game.roof_data) and 0 <= mouse_tx < len(game.roof_data[0]) and game.roof_data[mouse_ty][mouse_tx] != ' ')
-                can_pickup = in_range and has_target_tile
+                r_char = game.roof_data[mouse_ty][mouse_tx] if has_target_tile else ''
+                r_def = game.tile_manager.definitions.get(r_char, {}) if hasattr(game, 'tile_manager') else {}
+                is_stair_tile = bool(r_def.get('is_stair', False)) or ('stair' in str(r_char).lower()) or ('stair' in str(r_def.get('name', '')).lower())
+                can_pickup = in_range and has_target_tile and not is_stair_tile
             elif target_layer == 'map':
                 has_target_tile = bool(getattr(game, 'map_data', None) and 0 <= mouse_ty < len(game.map_data) and 0 <= mouse_tx < len(game.map_data[0]) and game.map_data[mouse_ty][mouse_tx] != ' ')
                 tile_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
                 cont = next((c for c in getattr(game, 'containers', []) if hasattr(c, 'rect') and c.rect.colliderect(tile_rect)), None)
                 tile_char = game.map_data[mouse_ty][mouse_tx] if (has_target_tile and 0 <= mouse_ty < len(game.map_data) and 0 <= mouse_tx < len(game.map_data[0])) else ''
                 t_def = game.tile_manager.definitions.get(tile_char, {}) if hasattr(game, 'tile_manager') else {}
+                is_stair_tile = bool(t_def.get('is_stair', False)) or ('stair' in str(tile_char).lower()) or ('stair' in str(t_def.get('name', '')).lower())
                 is_maptile_cont = (cont and getattr(cont, 'item_type', '') == 'maptile_container') or (t_def.get('type') == 'maptile_container')
                 is_valid_open = not is_maptile_cont or (cont and getattr(cont, 'is_opened', False))
                 is_empty_or_no_cont = (cont is None) or (not hasattr(cont, 'inventory')) or (len(cont.inventory) == 0)
-                can_pickup = in_range and has_target_tile and is_empty_or_no_cont and is_valid_open
+                can_pickup = in_range and has_target_tile and not is_stair_tile and is_empty_or_no_cont and is_valid_open
 
             screen_snap_x = ((snap_x + offset_x) * zoom) + GAME_OFFSET_X + game.viewport_left_offset
             screen_snap_y = ((snap_y + offset_y) * zoom)

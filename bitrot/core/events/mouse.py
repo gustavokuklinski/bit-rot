@@ -424,6 +424,14 @@ def handle_mouse_down(game, event, mouse_pos):
             tool_item = p_info.get('item')
             curr_layer = getattr(game, 'current_layer_index', 1)
 
+            def _is_stair_tile_char(t_char):
+                if not t_char or t_char == ' ':
+                    return False
+                t_def_chk = game.tile_manager.definitions.get(t_char, {}) if hasattr(game, 'tile_manager') else {}
+                if t_def_chk.get('is_stair', False):
+                    return True
+                return 'stair' in str(t_char).lower() or 'stair' in str(t_def_chk.get('name', '')).lower()
+
             def _damage_pickup_tool_and_fx():
                 if tool_item and hasattr(tool_item, 'durability') and tool_item.durability is not None:
                     tool_item.durability = max(0, tool_item.durability - 1)
@@ -498,6 +506,9 @@ def handle_mouse_down(game, event, mouse_pos):
                     if not tile_char or tile_char == ' ':
                         display_message(tr('msg', "No roof tile here to pickup."))
                         return
+                    if _is_stair_tile_char(tile_char):
+                        display_message(tr('msg', "Cannot pickup stair tile!"))
+                        return
 
                     game.roof_data[mouse_ty][mouse_tx] = ' '
                     if hasattr(game, 'all_roof_layers') and curr_layer in game.all_roof_layers:
@@ -515,6 +526,9 @@ def handle_mouse_down(game, event, mouse_pos):
                     tile_char = game.map_data[mouse_ty][mouse_tx]
                     if not tile_char or tile_char == ' ':
                         display_message(tr('msg', "No map tile here to pickup."))
+                        return
+                    if _is_stair_tile_char(tile_char):
+                        display_message(tr('msg', "Cannot pickup stair tile!"))
                         return
 
                     tile_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
@@ -556,6 +570,9 @@ def handle_mouse_down(game, event, mouse_pos):
                     tile_char = game.map_data[mouse_ty][mouse_tx]
                     if not tile_char or tile_char == ' ':
                         display_message(tr('msg', "No map tile here to pickup."))
+                        return
+                    if _is_stair_tile_char(tile_char):
+                        display_message(tr('msg', "Cannot pickup stair tile!"))
                         return
 
                     tile_rect = pygame.Rect(snap_x, snap_y, TILE_SIZE, TILE_SIZE)
