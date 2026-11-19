@@ -376,17 +376,8 @@ class ProceduralGenerator(
 
     current_chunks = core.data.config.MAP_CHUNKS
 
-    if seed_pattern and '-' in seed_pattern:
-      parts = seed_pattern.split('-', 1)
-      n_part = parts[0] or str(current_chunks)
-      try:
-        req_n = int(n_part)
-      except ValueError:
-        req_n = current_chunks
-      actual_seed = parts[1] or 'DEFAULT'
-    else:
-      req_n = current_chunks
-      actual_seed = seed_pattern or 'DEFAULT'
+    req_n = current_chunks
+    actual_seed = seed_pattern or 'DEFAULT'
 
     target_chunks = max(1, req_n)
     print(f'[ProceduralGenerator] Seed: {actual_seed} | Target Chunks: {target_chunks} (Fixed 128x128)')

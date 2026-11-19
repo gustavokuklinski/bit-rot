@@ -165,4 +165,4 @@ class ZombieData:
                     except Exception as e:
                         print(f"[ZombieData] Error loading zombie JSON '{filepath}': {e}")
 
-        print(f"[ZombieData] Successfully loaded {loaded_count} zombie templates from '{folder}'.")
+        #GameLogger.info(f"[ZombieData] Successfully loaded {loaded_count} zombie templates from '{folder}'.")

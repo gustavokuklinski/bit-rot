@@ -36,7 +36,7 @@ from core.systems.network_manager import NetworkManager
 from pygame._sdl2 import Window
 
 class Game:
-    def __init__(self):
+    def __init__(self, debug_config=None):
         os.environ['SDL_RENDER_SCALE_QUALITY'] = '0'
         pygame.mixer.pre_init(22050, -16, 2, 512)
         pygame.init()
@@ -270,6 +270,10 @@ class Game:
         self.dynamic_h = GAME_HEIGHT
 
         self.network_manager = NetworkManager(self)
+
+        if debug_config and debug_config.get('debug'):
+            from core.systems.load_manager import prepare_debug_game
+            prepare_debug_game(self, debug_config)
 
     def respawn_player_in_world(self, player_data, save_folder_name):
         return respawn_player_in_world(self, player_data, save_folder_name)

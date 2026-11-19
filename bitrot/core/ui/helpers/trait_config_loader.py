@@ -74,7 +74,7 @@ def load_trait_definitions():
 
             traits[trait_id] = trait_data
 
-        print(f"Loaded {len(traits)} traits from traits.json.")
+        #print(f"Loaded {len(traits)} traits from traits.json.")
 
     except Exception as e:
         print(f"Error loading traits JSON: {e}")

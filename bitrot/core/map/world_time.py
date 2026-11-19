@@ -77,7 +77,7 @@ class WorldTime:
                 elif self.state in ["NIGHT", "TRANSITION_TO_NIGHT"]:
                     self.night_channel = self.game.sound_manager.play_sound("night.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=2000)
                 
-                if self.weather == "RAIN":
+                if self.weather in ("RAIN", "RAIN_FOG"):
                     self.rain_channel = self.game.sound_manager.play_sound("rain.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=2000)
             self._initial_sounds_played = True
 
@@ -114,7 +114,7 @@ class WorldTime:
             self.cave_channel.fadeout(1000)
             self.cave_channel = None
 
-        if self.weather == 'RAIN' and (not self.rain_channel or not self.rain_channel.get_busy()) and hasattr(self.game, 'sound_manager'):
+        if self.weather in ('RAIN', 'RAIN_FOG') and (not self.rain_channel or not self.rain_channel.get_busy()) and hasattr(self.game, 'sound_manager'):
             self.rain_channel = self.game.sound_manager.play_sound("rain.ogg", "ambience", loops=-1, base_volume=0.6, is_critical=True, fade_ms=2000)
             
         if self.state in ["DAY", "TRANSITION_TO_DAY"] and (not self.day_channel or not self.day_channel.get_busy()) and hasattr(self.game, 'sound_manager'):

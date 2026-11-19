@@ -112,8 +112,21 @@ pip install -r requirements.txt
 ```bash
 python bitrot/bitrot.py
 
-# Open the game editor
+# To open the game editor, use the flag: '--editor'
 python bitrot/bitrot.py --editor
+```
+
+### 4. Debug mode
+```bash
+
+python bitrot/bitrot.py --debug \
+  --world="data.rot/lib/data/debug/world.json" \
+  --player="data.rot/lib/data/debug/player.json" \
+  --weather="RAIN_FOG" \
+  --time="22:00" \
+  --spawn-item="data.rot/lib/data/items/mobile/mobile_off.xml" \
+  --spawn-cloth="data.rot/lib/data/clothes/arms/arms_jacket.xml"
+
 ```
 
 ---

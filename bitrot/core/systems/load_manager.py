@@ -4,6 +4,7 @@ import os
 import json
 import re
 import uuid
+import xml.etree.ElementTree as ET
 import pygame
 import random
 from datetime import datetime
@@ -34,6 +35,141 @@ from core.systems.utils import teleport_player_to_chunk
 from core.ui.notifications import add_notification
 from core.data.localization import tr
 from core.ui.helpers.keybinds import get_open_ui_prompt_text
+from core.data.player_xml_parser import parse_player_data
+from core.ui.helpers.trait_config_loader import TRAIT_DEFINITIONS, load_config_data
+
+def _resolve_cli_path(raw_path):
+    if not raw_path:
+        return None
+    p = str(raw_path).strip()
+    if os.path.exists(p):
+        return p
+    rel = p.lstrip('/\\')
+    if rel.startswith('bitrot/'):
+        rel_stripped = rel[len('bitrot/'):]
+    elif rel.startswith('bitrot\\'):
+        rel_stripped = rel[len('bitrot\\'):]
+    else:
+        rel_stripped = rel
+
+    for cand in (
+        os.path.join(BASE_DIR, rel),
+        os.path.join(BASE_DIR, rel_stripped),
+        os.path.join(get_writable_dir(), rel),
+        os.path.join(get_writable_dir(), rel_stripped),
+    ):
+        if os.path.exists(cand):
+            return cand
+    return p
+
+def _load_debug_world_data(world_path):
+    if not world_path:
+        return load_config_data(core.data.config.get_world_config_path("world"))
+    resolved = _resolve_cli_path(world_path)
+    if not resolved or not os.path.exists(resolved):
+        print(f"[Debug] Warning: World template not found at '{world_path}', using default world.")
+        return load_config_data(core.data.config.get_world_config_path("world"))
+
+    try:
+        with open(resolved, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        if isinstance(raw, dict) and 'builds' in raw and isinstance(raw['builds'], dict) and raw['builds']:
+            stem = os.path.splitext(os.path.basename(resolved))[0].lower()
+            build_node = raw['builds'].get(stem) or next(iter(raw['builds'].values()))
+            return build_node.get('world', build_node)
+        return raw.get('world', raw)
+    except Exception as e:
+        print(f"[Debug] Error loading world JSON '{resolved}': {e}")
+        return load_config_data(core.data.config.get_world_config_path("world"))
+
+def _extract_name_from_item_xml(raw_arg):
+    resolved = _resolve_cli_path(raw_arg)
+    if resolved and os.path.exists(resolved) and resolved.lower().endswith('.xml'):
+        try:
+            tree = ET.parse(resolved)
+            root = tree.getroot()
+            name = root.attrib.get('name')
+            if name:
+                return name
+        except Exception as e:
+            print(f"[Debug] Error parsing XML '{resolved}': {e}")
+    return str(raw_arg).strip()
+
+def prepare_debug_game(game, debug_config):
+    game.debug_tab_unlocked = True
+
+    world_path = debug_config.get('world')
+    world_data = _load_debug_world_data(world_path)
+    game_mode = 'debug'
+    if world_path:
+        game_mode = os.path.splitext(os.path.basename(world_path))[0] or 'debug'
+
+    # Resolve seed and chunk count from world template
+    map_cfg = world_data.get('map', {}) if isinstance(world_data, dict) else {}
+    raw_chunks = map_cfg.get('map_chunks', map_cfg.get('chunks', {}))
+    chunks_val = raw_chunks.get('value') if isinstance(raw_chunks, dict) else raw_chunks
+    try:
+        chunks = int(chunks_val) if chunks_val is not None else core.data.config.MAP_CHUNKS
+    except (ValueError, TypeError):
+        chunks = core.data.config.MAP_CHUNKS
+
+    seed_node = map_cfg.get('seed', map_cfg.get('world_seed', {}))
+    raw_seed = seed_node.get('value', '') if isinstance(seed_node, dict) else str(seed_node or '')
+    raw_seed = str(raw_seed).strip()
+    if not raw_seed:
+        raw_seed = "".join(str(random.randint(0, 9)) for _ in range(12))
+    world_seed = raw_seed if raw_seed.startswith(f"{chunks}-") else f"{chunks}-{raw_seed}"
+
+    # Parse player template
+    player_path = _resolve_cli_path(debug_config.get('player')) if debug_config.get('player') else None
+    base_data, trait_names = parse_player_data(filepath=player_path)
+    if not base_data:
+        base_data = {'name': 'DebugPlayer', 'sex': 'Male', 'stats': {}, 'attributes': {}, 'clothes': {}, 'visuals': {}}
+
+    player_data = dict(base_data)
+    player_data['player_id'] = str(uuid.uuid4())
+    player_data['traits'] = list(trait_names)
+    player_data.setdefault('visuals', {'center': 'player.png', 'left': 'player_left.png', 'right': 'player_right.png'})
+    player_data['sounds'] = {'steps': 'steps.ogg'}
+
+    # Apply trait stat/level bonuses if defined
+    attrs = {k: (v.copy() if isinstance(v, dict) else v) for k, v in player_data.get('attributes', {}).items()}
+    stats = dict(player_data.get('stats', {}))
+    for t_id in player_data['traits']:
+        t_def = TRAIT_DEFINITIONS.get(t_id, {})
+        for attr, val in t_def.get('starting_levels', {}).items():
+            if attr in attrs:
+                if isinstance(attrs[attr], dict):
+                    attrs[attr]['level'] = max(0, attrs[attr].get('level', 0) + val)
+                else:
+                    attrs[attr] = max(0, attrs[attr] + val)
+        if 'drugs' in t_def.get('stats', {}):
+            stats['drugs'] = max(float(stats.get('drugs', 0.0)), float(t_def['stats']['drugs']))
+    player_data['attributes'] = attrs
+    player_data['stats'] = stats
+
+    # Collect CLI spawned items and clothes
+    spawn_names = []
+    for raw_item in debug_config.get('spawn_items', []) or []:
+        iname = _extract_name_from_item_xml(raw_item)
+        if iname:
+            spawn_names.append(iname)
+    for raw_cloth in debug_config.get('spawn_clothes', []) or []:
+        cname = _extract_name_from_item_xml(raw_cloth)
+        if cname:
+            spawn_names.append(cname)
+
+    player_data['debug_spawn_items'] = spawn_names
+    player_data['debug_weather'] = debug_config.get('weather')
+    player_data['debug_time'] = debug_config.get('time')
+    player_data['game_mode'] = game_mode
+    player_data['game_settings'] = world_data
+    player_data['world_seed'] = world_seed
+
+    game.game_mode = game_mode
+    game.loading_data = player_data
+    game.loading_done = False
+    game.game_state = 'LOADING'
 
 def load_map(game, map_filename):
     game.all_map_layers.clear()
@@ -699,7 +835,69 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
 
         manage_dynamic_npcs(game)
 
+    # Spawn debug CLI items/clothes into player inventory (stacking when possible, dropping overflow at feet)
+    debug_spawns = player_data.get('debug_spawn_items', [])
+    if debug_spawns and getattr(game, 'player', None):
+        Item.load_item_templates()
+        for spawn_name in debug_spawns:
+            new_item = Item.create_from_name(spawn_name)
+            if not new_item:
+                continue
+            if len(game.player.inventory) < game.player.get_total_inventory_slots():
+                game.player.inventory.append(new_item)
+                if hasattr(game.player, 'stack_item_in_inventory'):
+                    game.player.stack_item_in_inventory(new_item)
+            else:
+                if hasattr(game.player, 'stack_item_in_inventory'):
+                    game.player.stack_item_in_inventory(new_item)
+                if getattr(new_item, 'load', 1) != 0 and new_item not in game.player.inventory:
+                    new_item.rect.center = game.player.rect.center
+                    new_item.x, new_item.y = new_item.rect.topleft
+                    new_item.layer = getattr(game, 'current_layer_index', 1)
+                    new_item.map_filename = getattr(game.map_manager, 'current_map_filename', '')
+                    game.items_on_ground.append(new_item)
+
     game.world_time = WorldTime(game)
+
+    # Apply debug CLI time override
+    debug_time = player_data.get('debug_time')
+    if debug_time:
+        raw_t = str(debug_time).strip()
+        try:
+            if ':' in raw_t:
+                hh_s, mm_s = raw_t.split(':', 1)
+                exact_hr = (int(hh_s) % 24) + (int(mm_s) / 60.0)
+            else:
+                exact_hr = float(raw_t) % 24.0
+            wt = game.world_time
+            wt.game_time_ms = (exact_hr / 24.0) * wt.day_length_ms
+            wt.current_hour = int(exact_hr)
+            if wt.sunrise_hour <= exact_hr < (wt.sunrise_hour + wt.transition_duration_hours):
+                wt.state = "TRANSITION_TO_DAY"
+                fade = wt.ease_in_out((exact_hr - wt.sunrise_hour) / wt.transition_duration_hours)
+            elif (wt.sunrise_hour + wt.transition_duration_hours) <= exact_hr < wt.sunset_hour:
+                wt.state = "DAY"
+                fade = 1.0
+            elif wt.sunset_hour <= exact_hr < (wt.sunset_hour + wt.transition_duration_hours):
+                wt.state = "TRANSITION_TO_NIGHT"
+                fade = 1.0 - wt.ease_in_out((exact_hr - wt.sunset_hour) / wt.transition_duration_hours)
+            else:
+                wt.state = "NIGHT"
+                fade = 0.0
+            wt.current_ambient_light = wt.lerp(wt.night_ambient, wt.day_ambient, fade)
+            game.player_view_radius = wt.lerp(wt.night_radius, wt.day_radius, fade)
+            wt._last_state = wt.state
+        except Exception as e:
+            print(f"[Debug] Invalid --time value '{raw_t}': {e}")
+
+    # Apply debug CLI weather override
+    debug_weather = player_data.get('debug_weather')
+    if debug_weather:
+        w_norm = str(debug_weather).strip().upper()
+        if w_norm in ('RAIN', 'RAIN_FOG', 'FOG', 'CLEAR'):
+            game.world_time.weather = w_norm
+            game.world_time.weather_timer = 180000
+
     game.game_start_time = pygame.time.get_ticks()
 
     if should_initial_save:

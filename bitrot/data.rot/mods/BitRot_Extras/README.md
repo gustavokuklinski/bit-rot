@@ -35,7 +35,6 @@ Setup where your mod will work.
         "./data.rot/lib/*" # Mod work directory
         ],
     "editor_config": [
-        "entity", # Entity tab on editor
         "code", # Code tab on editor
         "art" # Art tab on editor
     ],

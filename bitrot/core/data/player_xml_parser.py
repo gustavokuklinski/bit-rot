@@ -7,21 +7,22 @@ from core.data.config import DATA_PATH, SPRITE_PATH
 
 PLAYER_JSON_PATH = os.path.join(DATA_PATH, 'player', 'player.json')
 
-def parse_player_data():
+def parse_player_data(filepath=None):
     """
-    Parses player.json and returns a dictionary of base player data
+    Parses player JSON and returns a dictionary of base player data
     and a list of initial trait names.
     """
-    if not os.path.exists(PLAYER_JSON_PATH):
-        print(f"FATAL: Player JSON not found at {PLAYER_JSON_PATH}")
+    target_path = filepath or PLAYER_JSON_PATH
+    if not os.path.exists(target_path):
+        print(f"FATAL: Player JSON not found at {target_path}")
         return {}, []
 
     try:
-        with open(PLAYER_JSON_PATH, 'r', encoding='utf-8') as f:
+        with open(target_path, 'r', encoding='utf-8') as f:
             raw = json.load(f)
-        p_node = raw.get('player', raw)
+        p_node = raw.get('player', raw.get('preset', raw))
     except Exception as e:
-        print(f"FATAL: Error reading {PLAYER_JSON_PATH}: {e}")
+        print(f"FATAL: Error reading {target_path}: {e}")
         return {}, []
 
     data = {
@@ -33,7 +34,12 @@ def parse_player_data():
         'initial_loot': [],
         'visuals': {},
         'clothes': p_node.get('clothes', {}),
-        'known_recipes': list(p_node.get('recipes', []))
+        'clothes_colors': {
+            slot: tuple(int(c) for c in col[:3])
+            for slot, col in p_node.get('clothes_colors', {}).items()
+            if isinstance(col, (list, tuple)) and len(col) >= 3
+        },
+        'known_recipes': list(p_node.get('recipes', p_node.get('known_recipes', [])))
     }
 
     # Stats

@@ -412,4 +412,4 @@ def load_item_templates_data(items_dir=DATA_PATH + 'items/'):
             except Exception as e:
                 print(f"Error parsing cloth {filepath}: {e}")
     
-    print(f"Loaded {len(ITEM_TEMPLATES)} total item/cloth templates.")
+    #print(f"Loaded {len(ITEM_TEMPLATES)} total item/cloth templates.")
