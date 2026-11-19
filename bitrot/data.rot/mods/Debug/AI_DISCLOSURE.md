@@ -1,6 +1,6 @@
 # AI Disclosure
 
-**Last Updated:** november 19, 2026
+**Last Updated:** November 19, 2026
 
 ## Overview
 In the spirit of transparency and open-source collaboration, this document outlines the use of Generative AI in the development of this repository. While AI tools were leveraged to accelerate certain aspects of development, all output has been subject to human review and validation.

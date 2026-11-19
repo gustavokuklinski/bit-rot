@@ -2,7 +2,7 @@
     <properties>
         <defence value="0.0" />
         <capacity value="1" />
-        <sprite file="util_belt_holster.png" />
+        <sprite file="utils/util_belt_holster.png" />
     </properties>
     <spawn chance="1" />
 </cloth>

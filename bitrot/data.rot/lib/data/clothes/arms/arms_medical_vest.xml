@@ -3,7 +3,7 @@
         <defence value="1" />
         <capacity value="2" />
         <durability min="1" max="100" />
-        <sprite file="arms_medical_vest.png" />
+        <sprite file="arms/arms_medical_vest.png" />
     </properties>
     <spawn chance="1" />
 </cloth>

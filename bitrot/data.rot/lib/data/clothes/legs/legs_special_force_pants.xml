@@ -3,7 +3,7 @@
         <defence value="20" />
         <capacity value="6" />
         <durability min="50" max="100" />
-        <sprite file="legs_special_force_pants.png" />
+        <sprite file="legs/legs_special_force_pants.png" />
     </properties>
     <loot>
         <item name="9mm Ammo" chance="1.0" />

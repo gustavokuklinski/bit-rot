@@ -120,10 +120,10 @@ python bitrot/bitrot.py --editor
 ```bash
 
 python bitrot/bitrot.py --debug \
-  --world="data.rot/lib/data/debug/world.json" \
-  --player="data.rot/lib/data/debug/player.json" \
+  --world="data.rot/mods/Debug/data/world/world.json" \
+  --player="data.rot/mods/Debug/data/player/player.json" \
   --weather="RAIN_FOG" \
-  --time="22:00" \
+  --time="12:00" \
   --spawn-item="data.rot/lib/data/items/mobile/mobile_off.xml" \
   --spawn-cloth="data.rot/lib/data/clothes/arms/arms_jacket.xml"
 
@@ -211,4 +211,5 @@ Once the process is complete, GitHub will upload the compiled binaries as **Arti
 The best way to reach us is through [GitHub Discussions](https://github.com/gustavokuklinski/bit-rot/discussions) or [Discord](https://discord.gg/SK4s7V6mEZ).
 
 ---
+
 **Survive. Adapt. Fight the Rot.**

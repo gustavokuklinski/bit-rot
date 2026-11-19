@@ -77,6 +77,26 @@ def draw_tooltips(surface, font):
         surface.blit(text_surf, (tt_rect.x + pad_x, tt_rect.y + pad_y))
         _active_tooltip = None
 
+def measure_text_width(font, text, italic=False):
+    if not italic:
+        return font.size(text)[0]
+    was_italic = font.get_italic()
+    font.set_italic(True)
+    try:
+        return font.size(text)[0]
+    finally:
+        font.set_italic(was_italic)
+
+def render_text(font, text, color, italic=False):
+    if not italic:
+        return font.render(text, True, color)
+    was_italic = font.get_italic()
+    font.set_italic(True)
+    try:
+        return font.render(text, True, color)
+    finally:
+        font.set_italic(was_italic)
+
 # ----------------------------------------------------------------------
 # GLOBAL FOCUS MANAGER
 # ----------------------------------------------------------------------

@@ -3,7 +3,7 @@
         <defence value="0.0" />
         <capacity value="2" />
         <durability min="100" max="100" />
-        <sprite file="util_military_vest.png" />
+        <sprite file="utils/util_military_vest.png" />
     </properties>
     <spawn chance="1" />
 </cloth>

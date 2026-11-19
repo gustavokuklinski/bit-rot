@@ -1,6 +1,6 @@
 # AI Disclosure
 
-**Last Updated:** September 1, 2026
+**Last Updated:** November 19, 2026
 
 ## Overview
 In the spirit of transparency and open-source collaboration, this document outlines the use of Generative AI in the development of this repository. While AI tools were leveraged to accelerate certain aspects of development, all output has been subject to human review and validation.
@@ -11,16 +11,18 @@ In the spirit of transparency and open-source collaboration, this document outli
 The following Large Language Models (LLMs) were utilized during the development lifecycle:
 
 - **Gemini 4 Hydrogen**
-- **Gemma4 31B IT**
-- **Gemini Pro Latest**
 - **Gemini 3.8 Flash**
 - **Gemini 3.1 Pro Preview**
 - **Gemini 2.5 Pro**
+- **Gemini Pro Latest**
+
+- **Gemma4 31B IT**
+
 ---
 - **Qwen3.5**
 - **ChatGPT-5o**
 - **DeepSeek-R1**
-- **Cloude Sonnet 5.5**
+- **Claude Sonnet 5.5**
 
 > **Agent Usage:** No autonomous AI agents were deployed. All interactions were session-based, prompt-by-prompt, with no continuous autonomous loops.
 

@@ -1,7 +1,10 @@
 import os
 import re
 import pygame
-from editor.ui import UITextArea, UITextBox, UIDropdown, UITheme, draw_styled_button, FocusManager
+from editor.ui import (
+    UITextArea, UITextBox, UIDropdown, UITheme,
+    draw_styled_button, FocusManager, measure_text_width, render_text
+)
 from editor.config import XML_DATA_ROOT, GAME_ROOT, ICON_SIZE
 
 # ----------------------------------------------------------------------
@@ -335,9 +338,10 @@ class CodeFileTree:
                         if node['is_dir']:
                             self.expanded[node['path']] = not self.expanded.get(node['path'], False)
                             self.refresh()
+                            return True
                         else:
                             self.selected_path = node['path']
-                        return True
+                            return {"action": "open_file", "path": node['path']}
                     y += self.line_height
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button in (4, 5):
             if self.rect.collidepoint(event.pos):
@@ -403,6 +407,8 @@ class CodeEditor:
         self.tab_scroll_start_offset = 0
         self.tab_thumb_rect = None
 
+        self._last_tab_click = (-1, 0)
+
         self.text_area = CodeTextArea(250, content_y, width - 250, height - content_y, font)
 
         # Toolbar Buttons with widened dimensions to prevent text clipping
@@ -446,7 +452,8 @@ class CodeEditor:
             fname = os.path.basename(path)
             modified = self.is_file_modified(path)
             display_name = f"*{fname}" if modified else fname
-            text_w = self.font.size(display_name)[0]
+            is_preview = self.file_data.get(path, {}).get("is_preview", False) and not modified
+            text_w = measure_text_width(self.font, display_name, italic=is_preview)
             tab_w = max(90, text_w + 44)
 
             if i == idx:
@@ -465,7 +472,7 @@ class CodeEditor:
 
         self.tab_scroll_x = max(0, min(self.max_tab_scroll, self.tab_scroll_x))
 
-    def open_file(self, path):
+    def open_file(self, path, preview=False):
         if 0 <= self.active_tab_idx < len(self.open_files):
             old_path = self.open_files[self.active_tab_idx]
             if old_path in self.file_data:
@@ -473,22 +480,44 @@ class CodeEditor:
                 self.file_data[old_path]["cursor_pos"] = self.text_area.cursor_pos
                 self.file_data[old_path]["scroll_y"] = self.text_area.scroll_y
 
-        if path not in self.open_files:
+        if path in self.open_files:
+            if not preview and path in self.file_data:
+                self.file_data[path]["is_preview"] = False
+            self.active_tab_idx = self.open_files.index(path)
+        else:
             try:
                 with open(path, 'r', encoding='utf-8') as f:
                     content = f.read().replace('\t', '    ')
-                self.open_files.append(path)
-                self.file_data[path] = {
-                    "content": content,
-                    "saved_content": content,
-                    "cursor_pos": 0,
-                    "scroll_y": 0
-                }
             except Exception as e:
                 print(f"Error opening file: {e}")
                 return
-        
-        self.active_tab_idx = self.open_files.index(path)
+
+            new_entry = {
+                "content": content,
+                "saved_content": content,
+                "cursor_pos": 0,
+                "scroll_y": 0,
+                "is_preview": preview
+            }
+
+            preview_idx = None
+            if preview:
+                for i, p in enumerate(self.open_files):
+                    if self.file_data.get(p, {}).get("is_preview", False) and not self.is_file_modified(p):
+                        preview_idx = i
+                        break
+
+            self.file_data[path] = new_entry
+            if preview_idx is not None:
+                old_preview_path = self.open_files[preview_idx]
+                if old_preview_path in self.file_data:
+                    del self.file_data[old_preview_path]
+                self.open_files[preview_idx] = path
+                self.active_tab_idx = preview_idx
+            else:
+                self.open_files.append(path)
+                self.active_tab_idx = len(self.open_files) - 1
+
         self._sync_text_area(is_new_open=True)
         self.ensure_tab_visible(self.active_tab_idx)
 
@@ -524,6 +553,7 @@ class CodeEditor:
                 if path in self.file_data:
                     self.file_data[path]["content"] = self.text_area.text
                     self.file_data[path]["saved_content"] = self.text_area.text
+                    self.file_data[path]["is_preview"] = False
                 print(f"Saved: {path}")
             except Exception as e:
                 print(f"Save error: {e}")
@@ -566,7 +596,8 @@ class CodeEditor:
             modified = self.is_file_modified(path)
             display_name = f"*{fname}" if modified else fname
             
-            text_w = self.font.size(display_name)[0]
+            is_preview = self.file_data.get(path, {}).get("is_preview", False) and not modified
+            text_w = measure_text_width(self.font, display_name, italic=is_preview)
             tab_w = max(90, text_w + 44)
             
             tab_rect = pygame.Rect(cur_x, tabs_y, tab_w, self.tab_bar_h)
@@ -577,7 +608,8 @@ class CodeEditor:
                 "rect": tab_rect,
                 "close_rect": close_rect,
                 "display_name": display_name,
-                "modified": modified
+                "modified": modified,
+                "is_preview": is_preview
             })
             cur_x += tab_w + 2
             
@@ -752,6 +784,13 @@ class CodeEditor:
                             self.request_close_tab(tab_info["index"])
                             return True
                         elif tab_info["rect"].collidepoint(event.pos):
+                            now = pygame.time.get_ticks()
+                            last_idx, last_time = self._last_tab_click
+                            if last_idx == tab_info["index"] and now - last_time <= 350:
+                                if tab_info["path"] in self.file_data:
+                                    self.file_data[tab_info["path"]]["is_preview"] = False
+                            self._last_tab_click = (tab_info["index"], now)
+
                             if self.active_tab_idx != tab_info["index"]:
                                 if 0 <= self.active_tab_idx < len(self.open_files):
                                     old_path = self.open_files[self.active_tab_idx]
@@ -763,9 +802,10 @@ class CodeEditor:
                             return True
 
         # Left File Tree
-        if self.file_tree.handle_event(event):
-            if self.file_tree.selected_path:
-                self.open_file(self.file_tree.selected_path)
+        ft_res = self.file_tree.handle_event(event)
+        if ft_res:
+            if isinstance(ft_res, dict) and ft_res.get("action") == "open_file":
+                self.open_file(ft_res["path"], preview=True)
             return True
 
         # Text Area editing
@@ -774,6 +814,8 @@ class CodeEditor:
                 path = self.open_files[self.active_tab_idx]
                 if path in self.file_data:
                     self.file_data[path]["content"] = self.text_area.text
+                    if self.is_file_modified(path):
+                        self.file_data[path]["is_preview"] = False
             return True
 
         return False
@@ -827,7 +869,7 @@ class CodeEditor:
                 accent_bar = UITheme.WARNING if is_modified else UITheme.ACCENT
                 pygame.draw.rect(surface, accent_bar, (tab_rect.x, tab_rect.y, tab_rect.width, 3))
 
-            txt = self.font.render(tab_info["display_name"], True, txt_color)
+            txt = render_text(self.font, tab_info["display_name"], txt_color, italic=tab_info.get("is_preview", False))
             surface.blit(txt, (tab_rect.x + 8, tab_rect.centery - txt.get_height()//2))
 
             c_hover = close_rect.collidepoint(mouse_pos)

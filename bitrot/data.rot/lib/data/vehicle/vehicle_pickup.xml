@@ -25,10 +25,10 @@
         <item item="Kukaroach (Bit Rot publisher)" chance="0.1" />
     </loot>
     <visuals>
-        <sprite id="top" file="car_pickup_top.png" />
-        <sprite id="down" file="car_pickup_down.png" />
-        <sprite id="left" file="car_pickup_left.png" />
-        <sprite id="right" file="car_pickup_right.png" />
+        <sprite id="top" file="car_pickup/car_pickup_top.png" />
+        <sprite id="down" file="car_pickup/car_pickup_down.png" />
+        <sprite id="left" file="car_pickup/car_pickup_left.png" />
+        <sprite id="right" file="car_pickup/car_pickup_right.png" />
     </visuals>
     <sound>
         <idle src="vehicle_idle.ogg" />

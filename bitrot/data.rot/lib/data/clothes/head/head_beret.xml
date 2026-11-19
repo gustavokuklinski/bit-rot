@@ -2,7 +2,7 @@
     <properties>
         <defence value="0" />
         <durability min="1" max="100" />
-        <sprite file="head_beret.png" />
+        <sprite file="head/head_beret.png" />
     </properties>
     <spawn chance="1" />
 </cloth>

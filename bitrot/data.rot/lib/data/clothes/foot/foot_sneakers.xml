@@ -2,7 +2,7 @@
     <properties>
         <defence value="2" />
         <durability min="1" max="100" />
-        <sprite file="foot_sneakers.png" />
+        <sprite file="foot/foot_sneakers.png" />
     </properties>
     <spawn chance="1" />
 </cloth>

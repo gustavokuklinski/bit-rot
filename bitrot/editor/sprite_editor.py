@@ -3,7 +3,7 @@ import pygame
 from editor.config import SPRITE_ROOT, TILE_SIZE
 from editor.ui import (
     UITextBox, UIDropdown, UITheme, 
-    draw_styled_button, FocusManager
+    draw_styled_button, FocusManager, measure_text_width, render_text
 )
 from editor.config import get_sprites_dir, LIB_ROOT
 
@@ -69,6 +69,8 @@ class SpriteEditor:
         self.categories = self._resolve_categories()
         self.active_category = list(self.categories.keys())[0] if self.categories else "Items"
         self.files = []
+        self.tree_data = []
+        self.expanded_dirs = {}
 
         # Tabs
         self.open_tabs = []
@@ -82,6 +84,7 @@ class SpriteEditor:
         self.close_confirm_dialog = None
         self.new_sprite_dialog = None
 
+        self._last_tab_click = (-1, 0)
         # Sidebar Controls
         cat_opts = [{"label": c, "value": c} for c in self.categories.keys()]
         self.category_dropdown = UIDropdown(10, self.y_offset + 38, self.sidebar_w - 20, 30, self.font, cat_opts, self.active_category)
@@ -187,15 +190,98 @@ class SpriteEditor:
         self.width = width
         self.height = height
 
+    def _build_sprite_tree(self, dir_path, root_dir, depth=0):
+        dirs_nodes = []
+        file_nodes = []
+        try:
+            entries = sorted(os.listdir(dir_path), key=str.lower)
+        except OSError:
+            return []
+
+        for name in entries:
+            full_path = os.path.join(dir_path, name)
+            if os.path.isdir(full_path):
+                children = self._build_sprite_tree(full_path, root_dir, depth + 1)
+                dirs_nodes.append({
+                    "name": name,
+                    "path": full_path,
+                    "rel_path": os.path.relpath(full_path, root_dir).replace('\\', '/'),
+                    "is_dir": True,
+                    "depth": depth,
+                    "children": children
+                })
+            elif name.lower().endswith('.png'):
+                file_nodes.append({
+                    "name": name,
+                    "path": full_path,
+                    "rel_path": os.path.relpath(full_path, root_dir).replace('\\', '/'),
+                    "is_dir": False,
+                    "depth": depth,
+                    "children": []
+                })
+        return dirs_nodes + file_nodes
+
+    def _get_visible_tree_nodes(self):
+        query = self.search_input.text.strip().lower()
+
+        def flatten_unfiltered(nodes, out):
+            for n in nodes:
+                out.append(n)
+                if n["is_dir"] and self.expanded_dirs.get(n["path"], False):
+                    flatten_unfiltered(n["children"], out)
+
+        def flatten_filtered(nodes, out, force_include=False):
+            matched_any = False
+            for n in nodes:
+                if n["is_dir"]:
+                    dir_matches = query in n["name"].lower()
+                    sub_out = []
+                    child_matched = flatten_filtered(n["children"], sub_out, force_include=(force_include or dir_matches))
+                    if force_include or dir_matches or child_matched:
+                        out.append(n)
+                        out.extend(sub_out)
+                        matched_any = True
+                else:
+                    if force_include or query in n["rel_path"].lower():
+                        out.append(n)
+                        matched_any = True
+            return matched_any
+
+        result = []
+        if not query:
+            flatten_unfiltered(self.tree_data, result)
+        else:
+            flatten_filtered(self.tree_data, result)
+        return result
+
+    def _get_new_sprite_folder_options(self):
+        opts = []
+        seen = set()
+        for cat_label, cat_path in self.categories.items():
+            if cat_path not in seen:
+                seen.add(cat_path)
+                opts.append({"label": cat_label, "value": cat_path})
+            if os.path.isdir(cat_path):
+                for root, dirs, _ in os.walk(cat_path):
+                    for d in sorted(dirs, key=str.lower):
+                        sub_p = os.path.join(root, d)
+                        if sub_p not in seen:
+                            seen.add(sub_p)
+                            rel = os.path.relpath(sub_p, cat_path).replace('\\', '/')
+                            opts.append({"label": f"{cat_label}/{rel}", "value": sub_p})
+        return opts
+
     def refresh_file_list(self):
-        """Scans the active category for PNGs without creating any directories."""
+        """Scans the active category for PNGs as a tree without creating directories."""
         self.categories = self._resolve_categories()
         if self.active_category not in self.categories:
             self.active_category = list(self.categories.keys())[0]
 
         cat_dir = self.categories.get(self.active_category)
         self.files = []
+        self.tree_data = []
         if cat_dir and os.path.exists(cat_dir):
+            self.tree_data = self._build_sprite_tree(cat_dir, cat_dir, depth=0)
             for root, dirs, files in os.walk(cat_dir):
                 for f in sorted(files):
                     if f.lower().endswith('.png'):
@@ -214,7 +300,7 @@ class SpriteEditor:
             return self.open_tabs[self.active_tab_idx]
         return None
 
-    def create_tab(self, path, surface=None):
+    def create_tab(self, path, surface=None, is_preview=False):
         if surface is None:
             if os.path.exists(path):
                 try:
@@ -235,20 +321,35 @@ class SpriteEditor:
             "surf": surf,
             "undo_stack": [surf.copy()],
             "redo_stack": [],
-            "saved_snapshot": pygame.image.tostring(surf, 'RGBA')
+            "saved_snapshot": pygame.image.tostring(surf, 'RGBA'),
+            "is_preview": is_preview
         }
 
-    def open_tab_sprite(self, path):
+    def open_tab_sprite(self, path, preview=False):
         for i, tab in enumerate(self.open_tabs):
             if tab["path"] == path:
+                if not preview:
+                    tab["is_preview"] = False
                 self.active_tab_idx = i
                 self.ensure_tab_visible(i)
                 self.center_canvas()
                 return
 
-        tab = self.create_tab(path)
-        self.open_tabs.append(tab)
-        self.active_tab_idx = len(self.open_tabs) - 1
+        tab = self.create_tab(path, is_preview=preview)
+        preview_idx = None
+        if preview:
+            for i, existing in enumerate(self.open_tabs):
+                if existing.get("is_preview", False) and not self.is_tab_modified(existing):
+                    preview_idx = i
+                    break
+
+        if preview_idx is not None:
+            self.open_tabs[preview_idx] = tab
+            self.active_tab_idx = preview_idx
+        else:
+            self.open_tabs.append(tab)
+            self.active_tab_idx = len(self.open_tabs) - 1
+
         self.ensure_tab_visible(self.active_tab_idx)
         self.center_canvas()
 
@@ -289,6 +390,7 @@ class SpriteEditor:
             os.makedirs(os.path.dirname(tab["path"]), exist_ok=True)
             pygame.image.save(tab["surf"], tab["path"])
             tab["saved_snapshot"] = pygame.image.tostring(tab["surf"], 'RGBA')
+            tab["is_preview"] = False
             self.refresh_file_list()
         except Exception as e:
             print(f"Error saving sprite: {e}")
@@ -299,6 +401,8 @@ class SpriteEditor:
         last = tab["undo_stack"].pop()
         tab["redo_stack"].append(last)
         tab["surf"].blit(tab["undo_stack"][-1], (0, 0))
+        if self.is_tab_modified(tab):
+            tab["is_preview"] = False
 
     def redo_current(self):
         tab = self.get_current_tab()
@@ -306,6 +410,8 @@ class SpriteEditor:
         nxt = tab["redo_stack"].pop()
         tab["undo_stack"].append(nxt)
         tab["surf"].blit(nxt, (0, 0))
+        if self.is_tab_modified(tab):
+            tab["is_preview"] = False
 
     def push_undo_state(self):
         tab = self.get_current_tab()
@@ -349,12 +455,17 @@ class SpriteEditor:
         w, h = self.clipboard_surf.get_size()
         self.sel_rect = pygame.Rect(px, py, w, h)
 
+        if self.is_tab_modified(tab):
+            tab["is_preview"] = False
+
     def apply_pixel_draw(self, px, py, is_first=False):
         tab = self.get_current_tab()
         if not tab or not (0 <= px < 16 and 0 <= py < 16): return
 
         if self.tool == "fill" and is_first:
             self.flood_fill(tab["surf"], px, py, (*self.selected_color, 255))
+            if self.is_tab_modified(tab):
+                tab["is_preview"] = False
             return
 
         if self.tool in ["pencil", "eraser"]:
@@ -363,6 +474,8 @@ class SpriteEditor:
                 if is_first:
                     self.push_undo_state()
                 tab["surf"].set_at((px, py), color)
+                if self.is_tab_modified(tab):
+                    tab["is_preview"] = False
 
     def get_swatch_rect(self, col_idx, row_idx):
         palette_x = self.width - self.palette_panel_w
@@ -383,8 +496,10 @@ class SpriteEditor:
         target_left, target_right = 0, 0
 
         for i, tab in enumerate(self.open_tabs):
-            display_name = f"*{tab['name']}" if self.is_tab_modified(tab) else tab['name']
-            tab_w = max(90, self.font.size(display_name)[0] + 44)
+            is_mod = self.is_tab_modified(tab)
+            is_preview = tab.get("is_preview", False) and not is_mod
+            display_name = f"*{tab['name']}" if is_mod else tab['name']
+            tab_w = max(90, measure_text_width(self.font, display_name, italic=is_preview) + 44)
             if i == idx:
                 target_left, target_right = rel_x, rel_x + tab_w
             rel_x += tab_w + 2
@@ -401,11 +516,13 @@ class SpriteEditor:
         cur_x = self.sidebar_w - self.tab_scroll_x
         tabs_y = self.y_offset + self.toolbar_h
         for i, tab in enumerate(self.open_tabs):
-            display_name = f"*{tab['name']}" if self.is_tab_modified(tab) else tab['name']
-            tab_w = max(90, self.font.size(display_name)[0] + 44)
+            is_mod = self.is_tab_modified(tab)
+            is_preview = tab.get("is_preview", False) and not is_mod
+            display_name = f"*{tab['name']}" if is_mod else tab['name']
+            tab_w = max(90, measure_text_width(self.font, display_name, italic=is_preview) + 44)
             t_rect = pygame.Rect(cur_x, tabs_y, tab_w, self.tab_bar_h)
             c_rect = pygame.Rect(t_rect.right - 20, t_rect.y + 10, 16, 16)
-            tab_rects.append({"index": i, "tab": tab, "rect": t_rect, "close_rect": c_rect, "display_name": display_name})
+            tab_rects.append({"index": i, "tab": tab, "rect": t_rect, "close_rect": c_rect, "display_name": display_name, "is_preview": is_preview})
             cur_x += tab_w + 2
         view_w = self.width - self.sidebar_w - self.palette_panel_w
         self.max_tab_scroll = max(0, (cur_x + self.tab_scroll_x) - self.sidebar_w - view_w)
@@ -567,6 +684,11 @@ class SpriteEditor:
                         self.request_close_tab(t_info["index"])
                         return True
                     elif t_info["rect"].collidepoint(event.pos):
+                        now = pygame.time.get_ticks()
+                        last_idx, last_time = self._last_tab_click
+                        if last_idx == t_info["index"] and now - last_time <= 350:
+                            t_info["tab"]["is_preview"] = False
+                        self._last_tab_click = (t_info["index"], now)
                         self.active_tab_idx = t_info["index"]
                         self.center_canvas()
                         return True
@@ -574,8 +696,9 @@ class SpriteEditor:
         # Sidebar Search & Dragging
         if self.search_input.handle_event(event):
             list_h = self.height - self.y_offset - 145
-            self.max_sidebar_scroll = max(0, len(self.filtered_files) * 26 + 10 - list_h)
-            self.sidebar_scroll = max(0, min(self.sidebar_scroll, self.max_sidebar_scroll))
+            visible_nodes = self._get_visible_tree_nodes()
+            self.max_sidebar_scroll = max(0, len(visible_nodes) * 26 + 10 - list_h)
+            self.sidebar_scroll = 0
             return True
 
         if event.type == pygame.MOUSEBUTTONUP:
@@ -609,7 +732,7 @@ class SpriteEditor:
                     self.sidebar_start_offset = self.sidebar_scroll
                     return True
                 if self.new_btn.collidepoint(event.pos):
-                    folder_opts = [{"label": c, "value": p} for c, p in self.categories.items()]
+                    folder_opts = self._get_new_sprite_folder_options()
                     modal_rect = pygame.Rect(self.width//2 - 260, self.height//2 - 120, 520, 240)
                     f_dd = UIDropdown(modal_rect.x + 130, modal_rect.y + 55, 360, 30, self.font, folder_opts, self.categories[self.active_category], searchable=True)
                     n_box = UITextBox(modal_rect.x + 130, modal_rect.y + 105, 360, 30, self.font, "new_sprite.png")
@@ -618,11 +741,15 @@ class SpriteEditor:
                     self.new_sprite_dialog = {"folder_dd": f_dd, "box": n_box}
                     return True
 
+                visible_nodes = self._get_visible_tree_nodes()
                 list_y = sidebar_list_rect.y + 5 - self.sidebar_scroll
-                for fname in self.filtered_files:
-                    r = pygame.Rect(10, list_y, self.sidebar_w - 24, 24)
-                    if r.collidepoint(event.pos):
-                        self.open_tab_sprite(os.path.join(self.categories[self.active_category], fname))
+                for node in visible_nodes:
+                    r = pygame.Rect(8, list_y, self.sidebar_w - 20, 24)
+                    if sidebar_list_rect.collidepoint(event.pos) and r.collidepoint(event.pos):
+                        if node["is_dir"]:
+                            self.expanded_dirs[node["path"]] = not self.expanded_dirs.get(node["path"], False)
+                        else:
+                            self.open_tab_sprite(node["path"], preview=True)
                         return True
                     list_y += 26
 
@@ -723,28 +850,40 @@ class SpriteEditor:
         draw_styled_button(surface, self.new_btn, "+ New Sprite", self.font, mouse_pos, UITheme.SUCCESS, UITheme.SUCCESS_HOVER)
 
         list_clip = pygame.Rect(0, self.y_offset + 145, self.sidebar_w, self.height - self.y_offset - 145)
-        surface.set_clip(list_clip)
-        
+        text_clip = pygame.Rect(0, self.y_offset + 145, self.sidebar_w - 10, self.height - self.y_offset - 145)
+        surface.set_clip(text_clip)
+
         active_tab = self.get_current_tab()
         active_path = active_tab["path"] if active_tab else None
-        
+        visible_nodes = self._get_visible_tree_nodes()
+        query = self.search_input.text.strip()
+
         list_y = list_clip.y + 5 - self.sidebar_scroll
-        for fname in self.filtered_files:
-            full_p = os.path.join(self.categories[self.active_category], fname)
-            r = pygame.Rect(8, list_y, self.sidebar_w - 20, 24)
-            if full_p == active_path:
-                pygame.draw.rect(surface, UITheme.LIST_HOVER, r, border_radius=4)
-            elif r.collidepoint(mouse_pos):
-                pygame.draw.rect(surface, UITheme.HOVER_BG, r, border_radius=4)
-            surface.blit(self.font.render(fname[:25], True, UITheme.TEXT), (14, list_y + 4))
+        for node in visible_nodes:
+            if list_y + 24 >= list_clip.y and list_y <= list_clip.bottom:
+                r = pygame.Rect(8, list_y, self.sidebar_w - 20, 24)
+                x = 12 + node["depth"] * 15
+                if node["is_dir"]:
+                    if r.collidepoint(mouse_pos):
+                        pygame.draw.rect(surface, UITheme.HOVER_BG, r, border_radius=4)
+                    is_exp = self.expanded_dirs.get(node["path"], False) or bool(query)
+                    icon = "[-]" if is_exp else "[+]"
+                    surface.blit(self.font.render(f"{icon} {node['name']}", True, UITheme.TEXT), (x, list_y + 4))
+                else:
+                    if node["path"] == active_path:
+                        pygame.draw.rect(surface, UITheme.LIST_HOVER, r, border_radius=4)
+                    elif r.collidepoint(mouse_pos):
+                        pygame.draw.rect(surface, UITheme.HOVER_BG, r, border_radius=4)
+                    surface.blit(self.font.render(node["name"], True, UITheme.TEXT), (x, list_y + 4))
             list_y += 26
         surface.set_clip(None)
 
         # 3. Sidebar Scrollbar Track and Thumb
-        self.max_sidebar_scroll = max(0, len(self.filtered_files) * 26 + 10 - list_clip.height)
+        content_h = len(visible_nodes) * 26 + 10
+        self.max_sidebar_scroll = max(0, content_h - list_clip.height)
+        self.sidebar_scroll = max(0, min(self.sidebar_scroll, self.max_sidebar_scroll))
         if self.max_sidebar_scroll > 0:
             track_rect = pygame.Rect(self.sidebar_w - 8, list_clip.y, 8, list_clip.height)
-            content_h = len(self.filtered_files) * 26 + 10
             thumb_h = max(20, int((list_clip.height / content_h) * list_clip.height))
             thumb_y = list_clip.y + (self.sidebar_scroll / self.max_sidebar_scroll) * (list_clip.height - thumb_h)
             self.sidebar_thumb_rect = pygame.Rect(track_rect.x, thumb_y, 8, thumb_h)
@@ -785,7 +924,7 @@ class SpriteEditor:
             if is_active:
                 pygame.draw.rect(surface, UITheme.WARNING if is_mod else UITheme.ACCENT, (tab_rect.x, tab_rect.y, tab_rect.width, 3))
 
-            txt = self.font.render(t_info["display_name"], True, txt_col)
+            txt = render_text(self.font, t_info["display_name"], txt_col, italic=t_info.get("is_preview", False))
             surface.blit(txt, (tab_rect.x + 8, tab_rect.centery - txt.get_height()//2))
 
             c_hover = close_rect.collidepoint(mouse_pos)

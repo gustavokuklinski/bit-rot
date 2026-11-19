@@ -15,7 +15,8 @@ from editor.assets import load_map_tiles_from_xml, load_sprite_images, load_item
 from editor.map import Map
 from editor.ui import (
     Sidebar, Toolbar, NewBuildingModal, MenuBar, UITheme, 
-    draw_tooltips, draw_styled_button, RenameBuildingModal, UIDropdown
+    draw_tooltips, draw_styled_button, RenameBuildingModal, UIDropdown,
+    measure_text_width, render_text
 )
 
 import xml.etree.ElementTree as ET
@@ -83,58 +84,150 @@ except Exception:
 MAP_PATTERN = re.compile(r"(map_L\d+_P(?:\d+_)*\d+)(_light|_roof|_map|_spawn|_ground)?\.csv")
 BUILDING_PATTERN = re.compile(r"(.+)(_light|_roof|_map|_spawn|_ground)\.csv")
 
+def _find_sprite_in_dir(sprite_base_dir, rel_sub, sp_file):
+    sp_norm = sp_file.replace('\\', '/')
+    if not sp_norm.lower().endswith('.png'):
+        sp_norm += '.png'
+
+    candidates = [
+        os.path.join(sprite_base_dir, sp_norm),
+        os.path.join(sprite_base_dir, rel_sub, sp_norm) if rel_sub else os.path.join(sprite_base_dir, sp_norm),
+        os.path.join(sprite_base_dir, os.path.basename(sp_norm))
+    ]
+    for c_path in candidates:
+        if os.path.exists(c_path):
+            return c_path
+
+    sp_base = os.path.basename(sp_norm).lower()
+    if os.path.exists(sprite_base_dir):
+        for s_root, _, s_files in os.walk(sprite_base_dir):
+            for sf in s_files:
+                if sf.lower() == sp_base:
+                    return os.path.join(s_root, sf)
+    return None
+
 def resolve_item_metadata(name, tab_type="Items"):
     """Finds the corresponding XML or JSON file, category, and sprite PNG across subfolders."""
     clean_name = name.strip("[]")
     name_alts = {clean_name.lower(), clean_name.lower().replace(" ", "_"), clean_name.lower().replace("_", " ")}
 
     active_root = get_active_content_root()
-    item_dir = os.path.join(active_root, 'data', 'items')
-    s_item_dir = os.path.join(active_root, 'sprites', 'items')
+    search_roots = [active_root]
+    if os.path.normpath(active_root) != os.path.normpath(LIB_ROOT):
+        search_roots.append(LIB_ROOT)
 
-    if os.path.exists(item_dir):
-        for root_d, dirs, files in os.walk(item_dir):
-            rel_sub = os.path.relpath(root_d, item_dir).replace('\\', '/')
-            if rel_sub == '.':
-                rel_sub = ''
-            for f in files:
-                p = os.path.join(root_d, f)
-                stem = os.path.splitext(f)[0].lower()
-                if f.endswith('.xml'):
-                    try:
-                        root = ET.parse(p).getroot()
-                        if root.attrib.get('name', '').lower() in name_alts or stem in name_alts:
-                            sp_node = root.find(".//sprite")
-                            sp_file = sp_node.attrib.get('file', f"{stem}.png") if sp_node is not None else f"{stem}.png"
-                            if not sp_file.lower().endswith('.png'): sp_file += '.png'
-                            candidate_paths = [
-                                os.path.join(s_item_dir, rel_sub, sp_file) if rel_sub else os.path.join(s_item_dir, sp_file),
-                                os.path.join(s_item_dir, sp_file)
-                            ]
-                            for c_path in candidate_paths:
-                                if os.path.exists(c_path):
-                                    return {"category": "Items", "xml_filename": f, "xml_path": p, "sprite_path": c_path}
-                            for s_root, _, s_files in os.walk(s_item_dir):
-                                if os.path.basename(sp_file) in s_files:
-                                    return {"category": "Items", "xml_filename": f, "xml_path": p, "sprite_path": os.path.join(s_root, os.path.basename(sp_file))}
-                            target_p = os.path.join(s_item_dir, rel_sub, sp_file) if rel_sub else os.path.join(s_item_dir, sp_file)
-                            return {"category": "Items", "xml_filename": f, "xml_path": p, "sprite_path": target_p}
-                    except Exception: pass
-                elif f.endswith('.json'):
-                    try:
-                        with open(p, 'r', encoding='utf-8') as jf:
-                            jd = json.load(jf)
-                        if stem in name_alts or any(stem in k.lower() for k in jd.keys()):
-                            candidate = os.path.join(s_item_dir, rel_sub, f"{stem}.png") if rel_sub else os.path.join(s_item_dir, f"{stem}.png")
-                            return {"category": "Items", "xml_filename": f, "xml_path": p, "sprite_path": candidate}
-                    except Exception: pass
+    if tab_type == "Tiles":
+        fallback_match = None
+        for content_root in search_roots:
+            map_dir = os.path.join(content_root, 'data', 'map')
+            s_map_dir = os.path.join(content_root, 'sprites', 'map')
+            if not os.path.exists(map_dir):
+                continue
+
+            for root_d, _, files in os.walk(map_dir):
+                rel_sub = os.path.relpath(root_d, map_dir).replace('\\', '/')
+                if rel_sub == '.':
+                    rel_sub = ''
+                for f in sorted(files):
+                    p = os.path.join(root_d, f)
+                    stem = os.path.splitext(f)[0].lower()
+                    if f.endswith('.xml'):
+                        try:
+                            root = ET.parse(p).getroot()
+                            if root.tag != 'map':
+                                continue
+                            char_attr = root.attrib.get('char', '')
+                            exact_char = (char_attr == clean_name)
+                            soft_match = (
+                                char_attr.lower() == clean_name.lower()
+                                or root.attrib.get('name', '').lower() in name_alts
+                                or stem in name_alts
+                            )
+                            if exact_char or soft_match:
+                                sp_node = root.find('visuals/sprite')
+                                if sp_node is None:
+                                    sp_node = root.find('.//sprite')
+                                sp_file = sp_node.attrib.get('file', f"{stem}.png") if sp_node is not None else f"{stem}.png"
+                                if not sp_file.lower().endswith('.png'):
+                                    sp_file += '.png'
+
+                                resolved_sp = _find_sprite_in_dir(s_map_dir, rel_sub, sp_file)
+                                if not resolved_sp and os.path.normpath(content_root) != os.path.normpath(LIB_ROOT):
+                                    resolved_sp = _find_sprite_in_dir(os.path.join(LIB_ROOT, 'sprites', 'map'), rel_sub, sp_file)
+                                if not resolved_sp:
+                                    resolved_sp = os.path.join(s_map_dir, rel_sub, sp_file) if rel_sub else os.path.join(s_map_dir, sp_file)
+
+                                res = {"category": "Map", "xml_filename": f, "xml_path": p, "sprite_path": resolved_sp}
+                                if exact_char:
+                                    return res
+                                if fallback_match is None:
+                                    fallback_match = res
+                        except Exception:
+                            pass
+                    elif f.endswith('.json'):
+                        try:
+                            with open(p, 'r', encoding='utf-8') as jf:
+                                jd = json.load(jf)
+                            if stem in name_alts or (isinstance(jd, dict) and jd.get('char') == clean_name):
+                                resolved_sp = _find_sprite_in_dir(s_map_dir, rel_sub, f"{stem}.png")
+                                if not resolved_sp:
+                                    resolved_sp = os.path.join(s_map_dir, rel_sub, f"{stem}.png") if rel_sub else os.path.join(s_map_dir, f"{stem}.png")
+                                res = {"category": "Map", "xml_filename": f, "xml_path": p, "sprite_path": resolved_sp}
+                                if fallback_match is None:
+                                    fallback_match = res
+                        except Exception:
+                            pass
+        if fallback_match is not None:
+            return fallback_match
+    else:
+        for content_root in search_roots:
+            for data_sub, sprite_sub in [('items', 'items'), ('clothes', 'clothes')]:
+                item_dir = os.path.join(content_root, 'data', data_sub)
+                s_item_dir = os.path.join(content_root, 'sprites', sprite_sub)
+                if not os.path.exists(item_dir):
+                    continue
+                for root_d, _, files in os.walk(item_dir):
+                    rel_sub = os.path.relpath(root_d, item_dir).replace('\\', '/')
+                    if rel_sub == '.':
+                        rel_sub = ''
+                    for f in sorted(files):
+                        p = os.path.join(root_d, f)
+                        stem = os.path.splitext(f)[0].lower()
+                        if f.endswith('.xml'):
+                            try:
+                                root = ET.parse(p).getroot()
+                                if root.attrib.get('name', '').lower() in name_alts or stem in name_alts:
+                                    sp_node = root.find(".//sprite")
+                                    sp_file = sp_node.attrib.get('file', f"{stem}.png") if sp_node is not None else f"{stem}.png"
+                                    if not sp_file.lower().endswith('.png'):
+                                        sp_file += '.png'
+                                    resolved_sp = _find_sprite_in_dir(s_item_dir, rel_sub, sp_file)
+                                    if not resolved_sp and os.path.normpath(content_root) != os.path.normpath(LIB_ROOT):
+                                        resolved_sp = _find_sprite_in_dir(os.path.join(LIB_ROOT, 'sprites', sprite_sub), rel_sub, sp_file)
+                                    if not resolved_sp:
+                                        resolved_sp = os.path.join(s_item_dir, rel_sub, sp_file) if rel_sub else os.path.join(s_item_dir, sp_file)
+                                    return {"category": "Items", "xml_filename": f, "xml_path": p, "sprite_path": resolved_sp}
+                            except Exception:
+                                pass
+                        elif f.endswith('.json'):
+                            try:
+                                with open(p, 'r', encoding='utf-8') as jf:
+                                    jd = json.load(jf)
+                                if stem in name_alts or any(stem in k.lower() for k in jd.keys()):
+                                    resolved_sp = _find_sprite_in_dir(s_item_dir, rel_sub, f"{stem}.png")
+                                    if not resolved_sp:
+                                        resolved_sp = os.path.join(s_item_dir, rel_sub, f"{stem}.png") if rel_sub else os.path.join(s_item_dir, f"{stem}.png")
+                                    return {"category": "Items", "xml_filename": f, "xml_path": p, "sprite_path": resolved_sp}
+                            except Exception:
+                                pass
 
     target_dir = os.path.join(active_root, 'data', 'map' if tab_type == "Tiles" else 'items')
     target_s_dir = os.path.join(active_root, 'sprites', 'map' if tab_type == "Tiles" else 'items')
+    ext = ".xml" if tab_type == "Tiles" else ".json"
     return {
         "category": "Map" if tab_type == "Tiles" else "Items",
-        "xml_filename": f"{clean_name}.json",
-        "xml_path": os.path.join(target_dir, f"{clean_name}.json"),
+        "xml_filename": f"{clean_name}{ext}",
+        "xml_path": os.path.join(target_dir, f"{clean_name}{ext}"),
         "sprite_path": os.path.join(target_s_dir, f"{clean_name}.png")
     }
 
@@ -283,10 +376,12 @@ def editor():
     RULER_H = 18
     RULER_FONT = pygame.font.Font(None, 15)
 
-    def open_building_tab(folder, name, root_dir):
+    def open_building_tab(folder, name, root_dir, preview=False):
         nonlocal active_b_idx, b_tab_scroll_x, max_b_tab_scroll
         for i, tab in enumerate(building_tabs):
             if tab["folder"] == folder and tab["name"] == name:
+                if not preview:
+                    tab["is_preview"] = False
                 active_b_idx = i
                 ensure_b_tab_visible(i)
                 return
@@ -299,7 +394,7 @@ def editor():
             if l_key in building_file_tree.layer_properties:
                 g_map.layer_properties[l_name]["visible"] = building_file_tree.layer_properties[l_key]["visible"]
 
-        building_tabs.append({
+        new_tab = {
             "map": g_map,
             "folder": folder,
             "name": name,
@@ -310,9 +405,23 @@ def editor():
             "sel_rect": None,
             "sel_start": None,
             "is_selecting": False,
-            "modified": False
-        })
-        active_b_idx = len(building_tabs) - 1
+            "modified": False,
+            "is_preview": preview
+        }
+
+        preview_idx = None
+        if preview:
+            for i, existing in enumerate(building_tabs):
+                if existing.get("is_preview", False) and not existing["modified"]:
+                    preview_idx = i
+                    break
+
+        if preview_idx is not None:
+            building_tabs[preview_idx] = new_tab
+            active_b_idx = preview_idx
+        else:
+            building_tabs.append(new_tab)
+            active_b_idx = len(building_tabs) - 1
         ensure_b_tab_visible(active_b_idx)
 
     def ensure_b_tab_visible(idx):
@@ -323,8 +432,9 @@ def editor():
         rel_x = 0
         target_l, target_r = 0, 0
         for i, t in enumerate(building_tabs):
+            is_preview = t.get("is_preview", False) and not t["modified"]
             d_name = f"*{t['name']}" if t["modified"] else t["name"]
-            tw = max(90, FONT.size(d_name)[0] + 44)
+            tw = max(90, measure_text_width(FONT, d_name, italic=is_preview) + 44)
             if i == idx:
                 target_l, target_r = rel_x, rel_x + tw
             rel_x += tw + 2
@@ -351,7 +461,7 @@ def editor():
     if building_file_tree.selected_map:
         fld, m_name = building_file_tree.selected_map
         b_root = os.path.join(BUILDINGS_DIR, fld) if fld else BUILDINGS_DIR
-        open_building_tab(fld, m_name, b_root)
+        open_building_tab(fld, m_name, b_root, preview=True)
 
     clipboard = None
     tile_to_place = None
@@ -435,6 +545,8 @@ def editor():
                         if tab["name"] == o_name and tab.get("folder") == res.get("folder"):
                             tab["name"] = n_name
                             
+                            tab["is_preview"] = False
+                            
                     building_file_tree.refresh()
                 continue
 
@@ -487,6 +599,7 @@ def editor():
                         if cur_tab["sel_rect"] and sidebar.selected_tile:
                             cur_tab["map"].fill_rect(cur_tab["sel_rect"], sidebar.selected_tile, cur_tab["map"].active_layer_name)
                             cur_tab["modified"] = True
+                            cur_tab["is_preview"] = False
                     elif tb_action == "ERASER":
                         tile_to_place = "eraser"
                         toolbar.active_tool = "ERASER"
@@ -496,12 +609,14 @@ def editor():
                         rect = cur_tab["sel_rect"] if cur_tab["sel_rect"] else pygame.Rect(0, 0, cur_tab["map"].width, cur_tab["map"].height)
                         cur_tab["map"].clear_rect(rect, cur_tab["map"].active_layer_name)
                         cur_tab["modified"] = True
+                        cur_tab["is_preview"] = False
                     elif tb_action == "COPY" and cur_tab and cur_tab["sel_rect"]:
                         clipboard = cur_tab["map"].get_tiles_in_rect(cur_tab["sel_rect"], cur_tab["map"].active_layer_name)
                     elif tb_action == "PASTE" and cur_tab and clipboard:
                         tx, ty = (cur_tab["sel_rect"].x, cur_tab["sel_rect"].y) if cur_tab["sel_rect"] else (0, 0)
                         cur_tab["map"].paste_tiles((tx, ty), clipboard, cur_tab["map"].active_layer_name)
                         cur_tab["modified"] = True
+                        cur_tab["is_preview"] = False
                 continue
 
             if event.type == pygame.KEYDOWN:
@@ -509,6 +624,7 @@ def editor():
                 if ctrl and event.key == pygame.K_s and cur_tab:
                     save_map_layers(cur_tab["map"], cur_tab["name"], cur_tab["root_dir"])
                     cur_tab["modified"] = False
+                    cur_tab["is_preview"] = False
                 elif ctrl and event.key == pygame.K_w and cur_tab:
                     close_building_tab(active_b_idx)
                 elif ctrl and event.key == pygame.K_z and cur_tab:
@@ -519,6 +635,7 @@ def editor():
                     tx, ty = (cur_tab["sel_rect"].x, cur_tab["sel_rect"].y) if cur_tab["sel_rect"] else (0, 0)
                     cur_tab["map"].paste_tiles((tx, ty), clipboard, cur_tab["map"].active_layer_name)
                     cur_tab["modified"] = True
+                    cur_tab["is_preview"] = False
                 elif event.key == pygame.K_ESCAPE and cur_tab:
                     cur_tab["is_selecting"] = False
                     cur_tab["sel_rect"] = None
@@ -536,13 +653,19 @@ def editor():
                 elif event.button == 1:
                     cur_tx = FILE_TREE_WIDTH - b_tab_scroll_x
                     for i, t in enumerate(building_tabs):
-                        tw = max(90, FONT.size(f"*{t['name']}" if t['modified'] else t['name'])[0] + 44)
+                        is_preview = t.get("is_preview", False) and not t["modified"]
+                        tw = max(90, measure_text_width(FONT, f"*{t['name']}" if t['modified'] else t['name'], italic=is_preview) + 44)
                         t_box = pygame.Rect(cur_tx, b_tabs_rect.y, tw, b_tab_bar_h)
                         c_box = pygame.Rect(t_box.right - 20, t_box.y + 9, 16, 16)
                         if c_box.collidepoint(event.pos):
                             close_building_tab(i)
                             break
                         elif t_box.collidepoint(event.pos):
+                            now = pygame.time.get_ticks()
+                            last_idx, last_time = last_b_tab_click
+                            if last_idx == i and now - last_time <= 350:
+                                t["is_preview"] = False
+                            last_b_tab_click = (i, now)
                             active_b_idx = i
                             ensure_b_tab_visible(i)
                             break
@@ -558,6 +681,7 @@ def editor():
                 elif tb_action == "SAVE MAP" and cur_tab:
                     save_map_layers(cur_tab["map"], cur_tab["name"], cur_tab["root_dir"])
                     cur_tab["modified"] = False
+                    cur_tab["is_preview"] = False
                 continue
 
             sb_res = sidebar.handle_event(event)
@@ -609,7 +733,7 @@ def editor():
                     if ft_res.get('action') == 'select_map':
                         fld, m_name = ft_res['folder'], ft_res['map_name']
                         r_dir = os.path.join(BUILDINGS_DIR, fld) if fld else BUILDINGS_DIR
-                        open_building_tab(fld, m_name, r_dir)
+                        open_building_tab(fld, m_name, r_dir, preview=True)
                     elif ft_res.get('action') == 'toggle_visibility':
                         for tab in building_tabs:
                             if tab["folder"] == ft_res["folder"] and tab["name"] == ft_res["map_name"]:
@@ -632,19 +756,27 @@ def editor():
                         mx, my = event.pos
                         map_x = int(((mx - cur_tab["cam_x"]) / z_scale) // TILE_SIZE)
                         map_y = int(((my - cur_tab["cam_y"]) / z_scale) // TILE_SIZE)
+                        active_grid = cur_tab["map"].get_active_layer_grid()
+                        in_bounds = active_grid is not None and 0 <= map_x < cur_tab["map"].width and 0 <= map_y < cur_tab["map"].height
 
                         if cur_tab["is_selecting"]:
                             cur_tab["sel_start"] = (map_x, map_y)
                             cur_tab["sel_rect"] = pygame.Rect(map_x, map_y, 1, 1)
-                        elif tile_to_place == "eraser":
-                            cur_tab["map"].set_tile(map_x, map_y, None)
-                            cur_tab["modified"] = True
-                        elif sidebar.selected_tile:
-                            cur_tab["map"].set_tile(map_x, map_y, sidebar.selected_tile)
-                            cur_tab["modified"] = True
-                        elif sidebar.selected_item and cur_tab["map"].active_layer_name == "spawn":
-                            cur_tab["map"].set_tile(map_x, map_y, sidebar.selected_item)
-                            cur_tab["modified"] = True
+                        elif tile_to_place == "eraser" and in_bounds:
+                            if active_grid[map_y][map_x] is not None:
+                                cur_tab["map"].set_tile(map_x, map_y, None)
+                                cur_tab["modified"] = True
+                                cur_tab["is_preview"] = False
+                        elif sidebar.selected_tile and in_bounds:
+                            if active_grid[map_y][map_x] != sidebar.selected_tile:
+                                cur_tab["map"].set_tile(map_x, map_y, sidebar.selected_tile)
+                                cur_tab["modified"] = True
+                                cur_tab["is_preview"] = False
+                        elif sidebar.selected_item and cur_tab["map"].active_layer_name == "spawn" and in_bounds:
+                            if active_grid[map_y][map_x] != sidebar.selected_item:
+                                cur_tab["map"].set_tile(map_x, map_y, sidebar.selected_item)
+                                cur_tab["modified"] = True
+                                cur_tab["is_preview"] = False
 
                 if event.type == pygame.MOUSEBUTTONUP:
                     if event.button == 3: dragging_cam = False
@@ -665,15 +797,23 @@ def editor():
                     elif not cur_tab["is_selecting"] and pygame.mouse.get_pressed()[0] and map_view_rect.collidepoint(event.pos):
                         map_x = int(((event.pos[0] - cur_tab["cam_x"]) / z_scale) // TILE_SIZE)
                         map_y = int(((event.pos[1] - cur_tab["cam_y"]) / z_scale) // TILE_SIZE)
-                        if tile_to_place == "eraser":
-                            cur_tab["map"].set_tile(map_x, map_y, None)
-                            cur_tab["modified"] = True
-                        elif sidebar.selected_tile:
-                            cur_tab["map"].set_tile(map_x, map_y, sidebar.selected_tile)
-                            cur_tab["modified"] = True
-                        elif sidebar.selected_item and cur_tab["map"].active_layer_name == "spawn":
-                            cur_tab["map"].set_tile(map_x, map_y, sidebar.selected_item)
-                            cur_tab["modified"] = True
+                        active_grid = cur_tab["map"].get_active_layer_grid()
+                        in_bounds = active_grid is not None and 0 <= map_x < cur_tab["map"].width and 0 <= map_y < cur_tab["map"].height
+                        if tile_to_place == "eraser" and in_bounds:
+                            if active_grid[map_y][map_x] is not None:
+                                cur_tab["map"].set_tile(map_x, map_y, None)
+                                cur_tab["modified"] = True
+                                cur_tab["is_preview"] = False
+                        elif sidebar.selected_tile and in_bounds:
+                            if active_grid[map_y][map_x] != sidebar.selected_tile:
+                                cur_tab["map"].set_tile(map_x, map_y, sidebar.selected_tile)
+                                cur_tab["modified"] = True
+                                cur_tab["is_preview"] = False
+                        elif sidebar.selected_item and cur_tab["map"].active_layer_name == "spawn" and in_bounds:
+                            if active_grid[map_y][map_x] != sidebar.selected_item:
+                                cur_tab["map"].set_tile(map_x, map_y, sidebar.selected_item)
+                                cur_tab["modified"] = True
+                                cur_tab["is_preview"] = False
 
         screen.fill(UITheme.BG)
         
@@ -751,7 +891,8 @@ def editor():
             for i, t in enumerate(building_tabs):
                 is_active = (i == active_b_idx)
                 d_name = f"*{t['name']}" if t["modified"] else t["name"]
-                tw = max(90, FONT.size(d_name)[0] + 44)
+                is_preview = t.get("is_preview", False) and not t["modified"]
+                tw = max(90, measure_text_width(FONT, d_name, italic=is_preview) + 44)
                 t_box = pygame.Rect(cur_tx, tab_bar_rect.y, tw, b_tab_bar_h)
                 c_box = pygame.Rect(t_box.right - 20, t_box.y + 9, 16, 16)
                 
@@ -765,7 +906,7 @@ def editor():
                 if is_active:
                     pygame.draw.rect(screen, UITheme.WARNING if t["modified"] else UITheme.ACCENT, (t_box.x, t_box.y, t_box.width, 3))
                 
-                txt = FONT.render(d_name, True, tcol)
+                txt = render_text(FONT, d_name, tcol, italic=is_preview)
                 screen.blit(txt, (t_box.x + 8, t_box.centery - txt.get_height()//2))
 
                 chov = c_box.collidepoint(mouse_pos)

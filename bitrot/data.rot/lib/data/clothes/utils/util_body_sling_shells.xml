@@ -2,7 +2,7 @@
     <properties>
         <defence value="0.0" />
         <capacity value="1" />
-        <sprite file="util_body_sling_shells.png" />
+        <sprite file="utils/util_body_sling_shells.png" />
     </properties>
     <spawn chance="1" />
 </cloth>

@@ -2,7 +2,7 @@
     <properties>
         <defence value="1" />
         <durability min="1" max="100" />
-        <sprite file="head_balaclava.png" />
+        <sprite file="head/head_balaclava.png" />
     </properties>
     <spawn chance="1" />
 </cloth>

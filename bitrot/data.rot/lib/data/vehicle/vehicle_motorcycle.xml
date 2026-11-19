@@ -18,10 +18,10 @@
         <item item="Car Tire" chance="0.3" />
     </loot>
     <visuals>
-        <sprite id="top" file="car_motorcycle_top.png" />
-        <sprite id="down" file="car_motorcycle_down.png" />
-        <sprite id="left" file="car_motorcycle_left.png" />
-        <sprite id="right" file="car_motorcycle_right.png" />
+        <sprite id="top" file="car_motorcycle/car_motorcycle_top.png" />
+        <sprite id="down" file="car_motorcycle/car_motorcycle_down.png" />
+        <sprite id="left" file="car_motorcycle/car_motorcycle_left.png" />
+        <sprite id="right" file="car_motorcycle/car_motorcycle_right.png" />
     </visuals>
     <sound>
         <idle src="vehicle_idle.ogg" />

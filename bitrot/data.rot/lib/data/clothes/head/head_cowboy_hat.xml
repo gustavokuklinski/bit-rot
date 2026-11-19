@@ -1,7 +1,7 @@
 <cloth name="Cowbow Hat" type="cloth" id="head" builder="true" hide_cloth="[hair]">
     <properties>
         <defence value="0" />
-        <sprite file="head_cowboy_hat.png" />
+        <sprite file="head/head_cowboy_hat.png" />
     </properties>
     <spawn chance="1" />
 </cloth>
