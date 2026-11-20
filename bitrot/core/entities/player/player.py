@@ -353,7 +353,8 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         if is_aiming and is_firing:
              if self.active_weapon and getattr(self.active_weapon, 'machine_gun', False):
                   from core.events.mouse import handle_attack
-                  handle_attack(game, pygame.mouse.get_pos())
+                  scaled_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+                  handle_attack(game, scaled_pos)
 
         if is_moving:
             anim_speed = 25 if self.is_running else 15

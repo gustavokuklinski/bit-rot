@@ -563,18 +563,48 @@ class ProceduralGeneratorChunk:
         lobby_cx, lobby_cy = tx + tw / 2.0, ty + th / 2.0
         pad = 4
 
+        # Also pick a Forest building for the Lobby islet
+        forest_tmpl = None
+        forest_l2 = None
+        forest_l3 = None
+        if getattr(self, 'forest_templates', None):
+            f_name = random.choice(self.forest_templates)
+            forest_tmpl = self.templates.get(f_name)
+            if forest_tmpl:
+                f_l2_key = self._get_l2_counterpart(f_name, is_forest=True)
+                if f_l2_key:
+                    forest_l2 = self.templates.get(f_l2_key)
+                f_l3_key = self._get_l3_counterpart(f_name, is_forest=True)
+                if f_l3_key:
+                    forest_l3 = self.templates.get(f_l3_key)
+
+        fw_t = forest_tmpl['width'] if forest_tmpl else 0
+        fh_t = forest_tmpl['height'] if forest_tmpl else 0
+        fit_fw = max(fw_t, forest_l2['width'] if forest_l2 else 0, forest_l3['width'] if forest_l3 else 0)
+        fit_fh = max(fh_t, forest_l2['height'] if forest_l2 else 0, forest_l3['height'] if forest_l3 else 0)
+
+        if forest_tmpl:
+            place_horiz = random.random() < 0.5
+            forest_rel_x = (fit_w + 2) if place_horiz else 0
+            forest_rel_y = 0 if place_horiz else (fit_h + 2)
+            comb_w = max(fit_w, forest_rel_x + fit_fw)
+            comb_h = max(fit_h, forest_rel_y + fit_fh)
+        else:
+            forest_rel_x, forest_rel_y = 0, 0
+            comb_w, comb_h = fit_w, fit_h
+
         def is_valid_cave_spot(cx0, cy0):
-            if cx0 < 10 or cy0 < 10 or cx0 + fit_w > w - 10 or cy0 + fit_h > h - 10:
+            if cx0 < 10 or cy0 < 10 or cx0 + comb_w > w - 10 or cy0 + comb_h > h - 10:
                 return False
-            c_rect = pygame.Rect(cx0 - 6, cy0 - 6, fit_w + 12, fit_h + 12)
+            c_rect = pygame.Rect(cx0 - 6, cy0 - 6, comb_w + 12, comb_h + 12)
             if c_rect.colliderect(lobby_excl_rect):
                 return False
             if boat_coords:
                 bx, by = boat_coords
-                if (cx0 - 6 <= bx <= cx0 + fit_w + 6) and (cy0 - 6 <= by <= cy0 + fit_h + 6):
+                if (cx0 - 6 <= bx <= cx0 + comb_w + 6) and (cy0 - 6 <= by <= cy0 + comb_h + 6):
                     return False
-            for ly in range(max(0, cy0 - pad), min(h, cy0 + fit_h + pad)):
-                for lx in range(max(0, cx0 - pad), min(w, cx0 + fit_w + pad)):
+            for ly in range(max(0, cy0 - pad), min(h, cy0 + comb_h + pad)):
+                for lx in range(max(0, cx0 - pad), min(w, cx0 + comb_w + pad)):
                     if occupied_mask_L2[ly][lx] == 1 or occupied_mask_L3[ly][lx] == 1:
                         return False
             return True
@@ -582,18 +612,18 @@ class ProceduralGeneratorChunk:
         chosen_pos = None
         for _ in range(160):
             angle = random.uniform(0, 2 * math.pi)
-            dist = random.uniform(max(tw, th) / 2.0 + max(fit_w, fit_h) / 2.0 + 12.0,
-                                  max(tw, th) / 2.0 + max(fit_w, fit_h) / 2.0 + 26.0)
-            cand_x = int(lobby_cx + math.cos(angle) * dist - fit_w / 2.0)
-            cand_y = int(lobby_cy + math.sin(angle) * dist - fit_h / 2.0)
+            dist = random.uniform(max(tw, th) / 2.0 + max(comb_w, comb_h) / 2.0 + 12.0,
+                                  max(tw, th) / 2.0 + max(comb_w, comb_h) / 2.0 + 26.0)
+            cand_x = int(lobby_cx + math.cos(angle) * dist - comb_w / 2.0)
+            cand_y = int(lobby_cy + math.sin(angle) * dist - comb_h / 2.0)
             if is_valid_cave_spot(cand_x, cand_y):
                 chosen_pos = (cand_x, cand_y)
                 break
 
         if not chosen_pos:
             for _ in range(200):
-                cand_x = random.randint(10, max(10, w - fit_w - 10))
-                cand_y = random.randint(10, max(10, h - fit_h - 10))
+                cand_x = random.randint(10, max(10, w - comb_w - 10))
+                cand_y = random.randint(10, max(10, h - comb_h - 10))
                 if is_valid_cave_spot(cand_x, cand_y):
                     chosen_pos = (cand_x, cand_y)
                     break
@@ -602,12 +632,13 @@ class ProceduralGeneratorChunk:
             return False
 
         cave_tx, cave_ty = chosen_pos
+        forest_tx, forest_ty = cave_tx + forest_rel_x, cave_ty + forest_rel_y
 
-        # 1. Paint small organic island landmass on L1 around the cave footprint
-        icx = cave_tx + cw_t / 2.0
-        icy = cave_ty + ch_t / 2.0
-        rx_grass = cw_t / 2.0 + 3.5
-        ry_grass = ch_t / 2.0 + 3.5
+        # 1. Paint small organic island landmass on L1 around the cave & forest footprints
+        icx = cave_tx + comb_w / 2.0
+        icy = cave_ty + comb_h / 2.0
+        rx_grass = comb_w / 2.0 + 3.5
+        ry_grass = comb_h / 2.0 + 3.5
         rx_sand = rx_grass + 3.0
         ry_sand = ry_grass + 3.0
         noise_phase = random.uniform(0, 2 * math.pi)
@@ -645,8 +676,10 @@ class ProceduralGeneratorChunk:
                         layers['ground'][iy][ix] = 'beach_sand_01'
                     island_walkable_tiles.append((ix, iy))
 
-        # 2. Stamp Cave_L1 onto L1, Cave_L2 onto L2, and Cave_L3 (if any) onto L3
+        # 2. Stamp Cave and Forest building onto L1, L2, and L3
         self._blit_template(layers, cave_tmpl, cave_tx, cave_ty, w, h, clear_base=True)
+        if forest_tmpl:
+            self._blit_template(layers, forest_tmpl, forest_tx, forest_ty, w, h, clear_base=True)
 
         if tmpl_l2:
             self._blit_template_mapped(layers, tmpl_l2, cave_tx, cave_ty, w, h, suffix='_L2')
@@ -666,20 +699,790 @@ class ProceduralGeneratorChunk:
                 for lx in range(max(0, cave_tx - pad), min(w, cave_tx + l3_w + pad)):
                     occupied_mask_L3[ly][lx] = 1
 
-        # 3. Light island decorations strictly outside the 2-tile walkway around the cave template
+        if forest_l2:
+            self._blit_template_mapped(layers, forest_l2, forest_tx, forest_ty, w, h, suffix='_L2')
+            fl2_w, fl2_h = forest_l2['width'], forest_l2['height']
+            if hasattr(self, '_apply_l2_border'):
+                self._apply_l2_border(layers, forest_tx, forest_ty, fl2_w, fl2_h, w, h, suffix='_L2', margin=4)
+            for ly in range(max(0, forest_ty - pad), min(h, forest_ty + fl2_h + pad)):
+                for lx in range(max(0, forest_tx - pad), min(w, forest_tx + fl2_w + pad)):
+                    occupied_mask_L2[ly][lx] = 1
+
+        if forest_l3:
+            self._blit_template_mapped(layers, forest_l3, forest_tx, forest_ty, w, h, suffix='_L3')
+            fl3_w, fl3_h = forest_l3['width'], forest_l3['height']
+            if hasattr(self, '_apply_l2_border'):
+                self._apply_l2_border(layers, forest_tx, forest_ty, fl3_w, fl3_h, w, h, suffix='_L3', margin=4)
+            for ly in range(max(0, forest_ty - pad), min(h, forest_ty + fl3_h + pad)):
+                for lx in range(max(0, forest_tx - pad), min(w, forest_tx + fl3_w + pad)):
+                    occupied_mask_L3[ly][lx] = 1
+
+        # 3. Grass and sand decorations strictly outside the 2-tile walkway around the cave and forest
         deco_pool = ['garden_tree_16', 'garden_stone', 'garden_grass_1', 'garden_grass_2']
+        sand_deco_pool = ['garden_tree_16', 'garden_grass_1', 'garden_grass_2', 'garden_grass_3', 'garden_tall_grass', 'garden_stone']
         for (ix, iy) in island_walkable_tiles:
             if layers['protected_mask'][iy][ix] == 1 or layers['base'][iy][ix] != ' ':
                 continue
             if (cave_tx - 2 <= ix < cave_tx + cw_t + 2) and (cave_ty - 2 <= iy < cave_ty + ch_t + 2):
                 continue
+            if forest_tmpl and (forest_tx - 2 <= ix < forest_tx + fw_t + 2) and (forest_ty - 2 <= iy < forest_ty + fh_t + 2):
+                continue
             if layers['ground'][iy][ix] == 'bg_grass' and random.random() < 0.08:
                 layers['base'][iy][ix] = random.choice(deco_pool)
+            elif layers['ground'][iy][ix] == 'beach_sand_01' and random.random() < 0.06:
+                layers['base'][iy][ix] = random.choice(sand_deco_pool)
 
         # 4. Smooth coastal borders around the Cave island (protected_mask preserves Lobby_L1 & cave_tmpl)
         self._apply_sand_smoothing(layers, w, h, 'beach_sand_01')
         self._apply_terrain_smoothing(layers, w, h)
         return True
+
+    def _generate_islet_chunk(self, gx, gy, w, h, conns, assigned_l2_templates=None, assigned_l3_templates=None, conns_l2=None, conns_l3=None):
+        water_tile = getattr(self, 'water_tile', 'water_01')
+        sand_tile = getattr(self, 'sand_tile', 'beach_sand_01')
+        road_tile = 'asphalt_01'
+        cx, cy = w // 2, h // 2
+
+        layers = {
+            'base': [[' ' for _ in range(w)] for _ in range(h)],
+            'ground': [[water_tile for _ in range(w)] for _ in range(h)],
+            'spawn': [[' ' for _ in range(w)] for _ in range(h)],
+            'roof': [[' ' for _ in range(w)] for _ in range(h)],
+            'light': [[' ' for _ in range(w)] for _ in range(h)],
+            'protected_mask': [[0 for _ in range(w)] for _ in range(h)],
+            'base_L2': [[' ' for _ in range(w)] for _ in range(h)],
+            'ground_L2': [[' ' for _ in range(w)] for _ in range(h)],
+            'spawn_L2': [[' ' for _ in range(w)] for _ in range(h)],
+            'roof_L2': [[' ' for _ in range(w)] for _ in range(h)],
+            'light_L2': [[' ' for _ in range(w)] for _ in range(h)],
+            'protected_mask_L2': [[0 for _ in range(w)] for _ in range(h)],
+            'base_L3': [[' ' for _ in range(w)] for _ in range(h)],
+            'ground_L3': [[' ' for _ in range(w)] for _ in range(h)],
+            'spawn_L3': [[' ' for _ in range(w)] for _ in range(h)],
+            'roof_L3': [[' ' for _ in range(w)] for _ in range(h)],
+            'light_L3': [[' ' for _ in range(w)] for _ in range(h)],
+            'protected_mask_L3': [[0 for _ in range(w)] for _ in range(h)],
+        }
+        occupied_mask_L2 = [[0 for _ in range(w)] for _ in range(h)]
+        occupied_mask_L3 = [[0 for _ in range(w)] for _ in range(h)]
+
+        # 1. Select Cave (preferring L2 counterpart) and Forest building
+        cave_temps = [
+            t for t in self.categorized_templates.get('Cave', [])
+            if 'l2' not in t.lower() and 'l3' not in t.lower()
+        ]
+        if not cave_temps:
+            cave_temps = list(self.categorized_templates.get('Cave', []))
+        cave_with_l2 = [t for t in cave_temps if self._get_l2_counterpart(t, is_forest=False)]
+        if cave_with_l2:
+            cave_temps = cave_with_l2
+
+        cave_name = random.choice(cave_temps) if cave_temps else None
+        cave_tmpl = self.templates.get(cave_name) if cave_name else None
+        tmpl_l2 = self.templates.get(self._get_l2_counterpart(cave_name, is_forest=False)) if cave_name else None
+        tmpl_l3 = self.templates.get(self._get_l3_counterpart(cave_name, is_forest=False)) if cave_name else None
+
+        forest_name = random.choice(self.forest_templates) if getattr(self, 'forest_templates', None) else None
+        forest_tmpl = self.templates.get(forest_name) if forest_name else None
+        forest_l2 = self.templates.get(self._get_l2_counterpart(forest_name, is_forest=True)) if forest_name else None
+        forest_l3 = self.templates.get(self._get_l3_counterpart(forest_name, is_forest=True)) if forest_name else None
+
+        cw_t = cave_tmpl['width'] if cave_tmpl else 0
+        ch_t = cave_tmpl['height'] if cave_tmpl else 0
+        fw_t = forest_tmpl['width'] if forest_tmpl else 0
+        fh_t = forest_tmpl['height'] if forest_tmpl else 0
+
+        # 2. Protected bridge corridors (4-tile bridge + 1-tile clearance around hub, only when bridged)
+        asphalt_bridge_dirs = [
+            k for k in ('top', 'bottom', 'left', 'right')
+            if conns.get(k) and conns.get(f'{k}_type') in ('asphalt', 'asphalt_bridge')
+        ]
+        sand_bridge_dirs = [
+            k for k in ('top', 'bottom', 'left', 'right')
+            if conns.get(k) and conns.get(f'{k}_type') == 'sand_bridge'
+        ]
+        has_any_bridge = bool(asphalt_bridge_dirs)
+        bridge_rects = [pygame.Rect(cx - 3, cy - 3, 6, 6)] if has_any_bridge else []
+        if 'top' in asphalt_bridge_dirs:
+            bridge_rects.append(pygame.Rect(cx - 3, 0, 6, cy + 3))
+        if 'bottom' in asphalt_bridge_dirs:
+            bridge_rects.append(pygame.Rect(cx - 3, cy - 3, 6, h - (cy - 3)))
+        if 'left' in asphalt_bridge_dirs:
+            bridge_rects.append(pygame.Rect(0, cy - 3, cx + 3, 6))
+        if 'right' in asphalt_bridge_dirs:
+            bridge_rects.append(pygame.Rect(cx - 3, cy - 3, w - (cx - 3), 6))
+
+        def find_spot_near_top(tw, th, extra_rects=None):
+            if tw <= 0 or th <= 0:
+                return None
+            excl = list(bridge_rects) + (extra_rects or [])
+            candidates = [
+                (cx - tw // 2, cy - 4 - th),
+                (cx - 4 - tw, cy - 4 - th),
+                (cx + 4, cy - 4 - th),
+                (cx - 4 - tw, cy - th // 2),
+                (cx + 4, cy - th // 2),
+                (cx - 4 - tw, cy + 4),
+                (cx + 4, cy + 4),
+                (cx - tw // 2, cy + 4),
+            ]
+            for ox in range(-20, 21, 4):
+                for oy in range(-24, 16, 4):
+                    candidates.append((cx + ox - tw // 2, cy + oy - th // 2))
+            for cand_x, cand_y in candidates:
+                if cand_x < 10 or cand_y < 10 or cand_x + tw > w - 10 or cand_y + th > h - 10:
+                    continue
+                rect = pygame.Rect(cand_x, cand_y, tw, th)
+                if not any(rect.colliderect(er) for er in excl):
+                    return (cand_x, cand_y)
+            return None
+
+        cave_pos = find_spot_near_top(cw_t, ch_t) if cave_tmpl else None
+        cave_excl = [pygame.Rect(cave_pos[0] - 2, cave_pos[1] - 2, cw_t + 4, ch_t + 4)] if cave_pos else []
+        forest_pos = find_spot_near_top(fw_t, fh_t, extra_rects=cave_excl) if forest_tmpl else None
+
+        # 3. Paint small organic grass + beach sand islet covering hub (if bridged), cave, and forest
+        bounds_rects = [pygame.Rect(cx - 3, cy - 3, 6, 6)] if has_any_bridge else []
+        if cave_pos:
+            bounds_rects.append(pygame.Rect(cave_pos[0], cave_pos[1], cw_t, ch_t))
+        if forest_pos:
+            bounds_rects.append(pygame.Rect(forest_pos[0], forest_pos[1], fw_t, fh_t))
+        if not bounds_rects:
+            bounds_rects.append(pygame.Rect(cx - 3, cy - 3, 6, 6))
+
+        min_bx = min(r.left for r in bounds_rects)
+        min_by = min(r.top for r in bounds_rects)
+        max_bx = max(r.right for r in bounds_rects)
+        max_by = max(r.bottom for r in bounds_rects)
+
+        icx = (min_bx + max_bx) / 2.0
+        icy = (min_by + max_by) / 2.0
+        rx_grass = max(8.0, (max_bx - min_bx) / 2.0 + 3.0)
+        ry_grass = max(8.0, (max_by - min_by) / 2.0 + 3.0)
+        rx_sand = rx_grass + 3.5
+        ry_sand = ry_grass + 3.5
+        noise_phase = random.uniform(0, 2 * math.pi)
+
+        min_iy = max(2, int(icy - ry_sand - 4))
+        max_iy = min(h - 2, int(icy + ry_sand + 5))
+        min_ix = max(2, int(icx - rx_sand - 4))
+        max_ix = min(w - 2, int(icx + rx_sand + 5))
+
+        islet_walkable_tiles = []
+        for iy in range(min_iy, max_iy):
+            for ix in range(min_ix, max_ix):
+                dx_n = (ix - icx) / max(1.0, rx_grass)
+                dy_n = (iy - icy) / max(1.0, ry_grass)
+                ang = math.atan2(dy_n, dx_n)
+                wobble = 0.14 * math.sin(ang * 3 + noise_phase) + 0.09 * math.cos(ang * 5 - noise_phase)
+                norm_grass = math.hypot(dx_n, dy_n) + wobble
+
+                dx_s = (ix - icx) / max(1.0, rx_sand)
+                dy_s = (iy - icy) / max(1.0, ry_sand)
+                norm_sand = math.hypot(dx_s, dy_s) + wobble
+
+                if norm_grass <= 1.0:
+                    layers['ground'][iy][ix] = 'bg_grass'
+                    islet_walkable_tiles.append((ix, iy))
+                elif norm_sand <= 1.0:
+                    layers['ground'][iy][ix] = sand_tile
+                    islet_walkable_tiles.append((ix, iy))
+
+        for br in bounds_rects[1:]:
+            for iy in range(max(2, br.top - 1), min(h - 2, br.bottom + 1)):
+                for ix in range(max(2, br.left - 1), min(w - 2, br.right + 1)):
+                    layers['ground'][iy][ix] = 'bg_grass'
+                    if (ix, iy) not in islet_walkable_tiles:
+                        islet_walkable_tiles.append((ix, iy))
+
+        # 4. Carve 4-tile-wide asphalt bridges connecting active bridge edges to central hub
+        if has_any_bridge:
+            for gy_pos in range(cy - 2, cy + 2):
+                for gx_pos in range(cx - 2, cx + 2):
+                    layers['ground'][gy_pos][gx_pos] = road_tile
+                    layers['base'][gy_pos][gx_pos] = ' '
+
+        bridge_tiles = set()
+        if 'top' in asphalt_bridge_dirs:
+            for gy_pos in range(0, cy + 2):
+                for gx_pos in range(cx - 2, cx + 2):
+                    layers['ground'][gy_pos][gx_pos] = road_tile
+                    layers['base'][gy_pos][gx_pos] = ' '
+                    bridge_tiles.add((gx_pos, gy_pos))
+        if 'bottom' in asphalt_bridge_dirs:
+            for gy_pos in range(cy - 2, h):
+                for gx_pos in range(cx - 2, cx + 2):
+                    layers['ground'][gy_pos][gx_pos] = road_tile
+                    layers['base'][gy_pos][gx_pos] = ' '
+                    bridge_tiles.add((gx_pos, gy_pos))
+        if 'left' in asphalt_bridge_dirs:
+            for gx_pos in range(0, cx + 2):
+                for gy_pos in range(cy - 2, cy + 2):
+                    layers['ground'][gy_pos][gx_pos] = road_tile
+                    layers['base'][gy_pos][gx_pos] = ' '
+                    bridge_tiles.add((gx_pos, gy_pos))
+        if 'right' in asphalt_bridge_dirs:
+            for gx_pos in range(cx - 2, w):
+                for gy_pos in range(cy - 2, cy + 2):
+                    layers['ground'][gy_pos][gx_pos] = road_tile
+                    layers['base'][gy_pos][gx_pos] = ' '
+                    bridge_tiles.add((gx_pos, gy_pos))
+
+        # 5. Stamp Cave and Forest building (and their L2/L3 counterparts)
+        pad = 4
+        if cave_tmpl and cave_pos:
+            ctx, cty = cave_pos
+            self._blit_template(layers, cave_tmpl, ctx, cty, w, h, clear_base=True)
+            if tmpl_l2:
+                self._blit_template_mapped(layers, tmpl_l2, ctx, cty, w, h, suffix='_L2')
+                if hasattr(self, '_apply_l2_border'):
+                    self._apply_l2_border(layers, ctx, cty, tmpl_l2['width'], tmpl_l2['height'], w, h, suffix='_L2', margin=4)
+                for ly in range(max(0, cty - pad), min(h, cty + tmpl_l2['height'] + pad)):
+                    for lx in range(max(0, ctx - pad), min(w, ctx + tmpl_l2['width'] + pad)):
+                        occupied_mask_L2[ly][lx] = 1
+            if tmpl_l3:
+                self._blit_template_mapped(layers, tmpl_l3, ctx, cty, w, h, suffix='_L3')
+                if hasattr(self, '_apply_l2_border'):
+                    self._apply_l2_border(layers, ctx, cty, tmpl_l3['width'], tmpl_l3['height'], w, h, suffix='_L3', margin=4)
+                for ly in range(max(0, cty - pad), min(h, cty + tmpl_l3['height'] + pad)):
+                    for lx in range(max(0, ctx - pad), min(w, ctx + tmpl_l3['width'] + pad)):
+                        occupied_mask_L3[ly][lx] = 1
+
+        if forest_tmpl and forest_pos:
+            ftx, fty = forest_pos
+            self._blit_template(layers, forest_tmpl, ftx, fty, w, h, clear_base=True)
+            if forest_l2:
+                self._blit_template_mapped(layers, forest_l2, ftx, fty, w, h, suffix='_L2')
+                if hasattr(self, '_apply_l2_border'):
+                    self._apply_l2_border(layers, ftx, fty, forest_l2['width'], forest_l2['height'], w, h, suffix='_L2', margin=4)
+                for ly in range(max(0, fty - pad), min(h, fty + forest_l2['height'] + pad)):
+                    for lx in range(max(0, ftx - pad), min(w, ftx + forest_l2['width'] + pad)):
+                        occupied_mask_L2[ly][lx] = 1
+            if forest_l3:
+                self._blit_template_mapped(layers, forest_l3, ftx, fty, w, h, suffix='_L3')
+                if hasattr(self, '_apply_l2_border'):
+                    self._apply_l2_border(layers, ftx, fty, forest_l3['width'], forest_l3['height'], w, h, suffix='_L3', margin=4)
+                for ly in range(max(0, fty - pad), min(h, fty + forest_l3['height'] + pad)):
+                    for lx in range(max(0, ftx - pad), min(w, ftx + forest_l3['width'] + pad)):
+                        occupied_mask_L3[ly][lx] = 1
+
+        # 6. Scatter grass/sand decorations outside templates and bridges
+        grass_decos = ['garden_tree_16', 'garden_stone', 'garden_grass_1', 'garden_grass_2', 'garden_grass_3', 'garden_tall_grass']
+        sand_decos = ['garden_tree_16', 'garden_grass_1', 'garden_grass_2', 'garden_grass_3', 'garden_tall_grass']
+        # 5.5 Generate 4 to 7 extra mini-islets (5 to 8 islets total) connected by drunkard-walk sandbars
+        num_extra_islets = random.randint(4, 7)
+        main_open_tiles = [
+            (ix, iy) for (ix, iy) in islet_walkable_tiles
+            if (ix, iy) not in bridge_tiles and layers['protected_mask'][iy][ix] == 0
+        ]
+        archipelago_islets = [{
+            'cx': icx,
+            'cy': icy,
+            'tiles': main_open_tiles if main_open_tiles else [(int(icx), int(icy))]
+        }]
+        extra_islet_tiles = []
+        sandbar_tiles = set()
+        main_excl_dist = max(rx_sand, ry_sand) + 6.0
+
+        for _ in range(num_extra_islets):
+            chosen_mini = None
+            mr_gx = random.uniform(3.5, 5.5)
+            mr_gy = random.uniform(3.5, 5.5)
+            mr_sx = mr_gx + 2.5
+            mr_sy = mr_gy + 2.5
+
+            for attempt in range(180):
+                min_other_dist = 14.5 if attempt < 110 else 11.5
+                min_main_dist = main_excl_dist if attempt < 110 else max(rx_sand, ry_sand) + 4.0
+                cand_mx = random.randint(12, w - 13)
+                cand_my = random.randint(12, h - 13)
+
+                if math.hypot(cand_mx - icx, cand_my - icy) < min_main_dist:
+                    continue
+
+                mini_rect = pygame.Rect(
+                    int(cand_mx - mr_sx - 1), int(cand_my - mr_sy - 1),
+                    int((mr_sx + 1) * 2), int((mr_sy + 1) * 2)
+                )
+                if any(mini_rect.colliderect(br.inflate(3, 3)) for br in bridge_rects):
+                    continue
+                if any(math.hypot(cand_mx - isl['cx'], cand_my - isl['cy']) < min_other_dist for isl in archipelago_islets[1:]):
+                    continue
+
+                chosen_mini = (cand_mx, cand_my, mr_gx, mr_gy, mr_sx, mr_sy)
+                break
+
+            if not chosen_mini:
+                continue
+
+            mx, my, m_gx, m_gy, m_sx, m_sy = chosen_mini
+            m_phase = random.uniform(0, 2 * math.pi)
+            mini_tiles = []
+
+            for iy in range(max(4, int(my - m_sy - 3)), min(h - 4, int(my + m_sy + 4))):
+                for ix in range(max(4, int(mx - m_sx - 3)), min(w - 4, int(mx + m_sx + 4))):
+                    if (ix, iy) in bridge_tiles or layers['protected_mask'][iy][ix] == 1:
+                        continue
+                    dx_n = (ix - mx) / max(1.0, m_gx)
+                    dy_n = (iy - my) / max(1.0, m_gy)
+                    ang = math.atan2(dy_n, dx_n)
+                    wob = 0.16 * math.sin(ang * 3 + m_phase) + 0.10 * math.cos(ang * 5 - m_phase)
+                    norm_g = math.hypot(dx_n, dy_n) + wob
+                    norm_s = math.hypot((ix - mx) / max(1.0, m_sx), (iy - my) / max(1.0, m_sy)) + wob
+
+                    if norm_g <= 1.0:
+                        layers['ground'][iy][ix] = 'bg_grass'
+                        mini_tiles.append((ix, iy))
+                    elif norm_s <= 1.0 and layers['ground'][iy][ix] == water_tile:
+                        layers['ground'][iy][ix] = sand_tile
+                        mini_tiles.append((ix, iy))
+
+            if not mini_tiles:
+                layers['ground'][my][mx] = 'bg_grass'
+                mini_tiles.append((mx, my))
+
+            extra_islet_tiles.extend(mini_tiles)
+
+            # Connect to the nearest already-connected islet via Drunkard's Walk sand pathway
+            anchor_isl = min(archipelago_islets, key=lambda isl: (isl['cx'] - mx) ** 2 + (isl['cy'] - my) ** 2)
+            start_pt = min(anchor_isl['tiles'], key=lambda p: (p[0] - mx) ** 2 + (p[1] - my) ** 2)
+            end_pt = min(mini_tiles, key=lambda p: (p[0] - start_pt[0]) ** 2 + (p[1] - start_pt[1]) ** 2)
+
+            self._carve_sand_drunkard_path(
+                layers, start_pt, end_pt, bridge_tiles, sand_tile, water_tile, w, h, sandbar_tiles=sandbar_tiles
+            )
+            archipelago_islets.append({'cx': mx, 'cy': my, 'tiles': mini_tiles})
+
+        # Add 1-2 extra sandbar loops between nearby mini-islets for natural archipelago connectivity
+        if len(archipelago_islets) >= 3:
+            for _ in range(min(2, len(archipelago_islets) - 2)):
+                isl_a = random.choice(archipelago_islets[1:])
+                other_isls = [isl for isl in archipelago_islets[1:] if isl is not isl_a]
+                isl_b = min(other_isls, key=lambda isl: (isl['cx'] - isl_a['cx']) ** 2 + (isl['cy'] - isl_a['cy']) ** 2)
+                s_pt = min(isl_a['tiles'], key=lambda p: (p[0] - isl_b['cx']) ** 2 + (p[1] - isl_b['cy']) ** 2)
+                e_pt = min(isl_b['tiles'], key=lambda p: (p[0] - s_pt[0]) ** 2 + (p[1] - s_pt[1]) ** 2)
+                self._carve_sand_drunkard_path(
+                    layers, s_pt, e_pt, bridge_tiles, sand_tile, water_tile, w, h, sandbar_tiles=sandbar_tiles
+                )
+
+        islet_walkable_tiles.extend(extra_islet_tiles)
+
+        # 5.6 Connect the archipelago out to every 'sand_bridge' chunk portal via Drunkard's Walk sandbars
+        sand_bridge_targets = []
+        for s_dir in sand_bridge_dirs:
+            if s_dir == 'top':
+                p_tiles = [(tx, ty) for ty in range(0, 4) for tx in range(cx - 2, cx + 2)]
+                portal_pt = (cx, 2)
+            elif s_dir == 'bottom':
+                p_tiles = [(tx, ty) for ty in range(h - 4, h) for tx in range(cx - 2, cx + 2)]
+                portal_pt = (cx, h - 3)
+            elif s_dir == 'left':
+                p_tiles = [(tx, ty) for ty in range(cy - 2, cy + 2) for tx in range(0, 4)]
+                portal_pt = (2, cy)
+            else:
+                p_tiles = [(tx, ty) for ty in range(cy - 2, cy + 2) for tx in range(w - 4, w)]
+                portal_pt = (w - 3, cy)
+
+            for px, py in p_tiles:
+                if (px, py) not in bridge_tiles and layers['protected_mask'][py][px] == 0:
+                    layers['ground'][py][px] = sand_tile
+                    layers['base'][py][px] = ' '
+                    sandbar_tiles.add((px, py))
+
+            nearest_isl = min(archipelago_islets, key=lambda isl: (isl['cx'] - portal_pt[0]) ** 2 + (isl['cy'] - portal_pt[1]) ** 2)
+            start_pt = min(nearest_isl['tiles'], key=lambda p: (p[0] - portal_pt[0]) ** 2 + (p[1] - portal_pt[1]) ** 2)
+            self._carve_sand_drunkard_path(
+                layers, start_pt, portal_pt, bridge_tiles, sand_tile, water_tile, w, h,
+                sandbar_tiles=sandbar_tiles, margin=1, clear_obstacles=True
+            )
+            sand_bridge_targets.append({'cx': portal_pt[0], 'cy': portal_pt[1], 'tiles': p_tiles})
+
+        walkable_sand_decos = ['garden_grass_1', 'garden_grass_2', 'garden_grass_3', 'garden_tall_grass']
+        for (ix, iy) in islet_walkable_tiles:
+            if (ix, iy) in bridge_tiles or layers['protected_mask'][iy][ix] == 1 or layers['base'][iy][ix] != ' ':
+                continue
+            if cave_pos and (cave_pos[0] - 1 <= ix < cave_pos[0] + cw_t + 1) and (cave_pos[1] - 1 <= iy < cave_pos[1] + ch_t + 1):
+                continue
+            if forest_pos and (forest_pos[0] - 1 <= ix < forest_pos[0] + fw_t + 1) and (forest_pos[1] - 1 <= iy < forest_pos[1] + fh_t + 1):
+                continue
+            if (ix, iy) in sandbar_tiles:
+                if random.random() < 0.04:
+                    layers['base'][iy][ix] = random.choice(walkable_sand_decos)
+                continue
+            if layers['ground'][iy][ix] == 'bg_grass' and random.random() < 0.10:
+                layers['base'][iy][ix] = random.choice(grass_decos)
+            elif layers['ground'][iy][ix] == sand_tile and random.random() < 0.06:
+                layers['base'][iy][ix] = random.choice(sand_decos)
+
+        # 6.5 Verify 100% walkable connectivity from main islet to every mini-islet and repair any gap
+        defs = self.game.tile_manager.definitions if hasattr(self.game, 'tile_manager') else {}
+
+        def _is_walkable_tile(tx, ty):
+            g = layers['ground'][ty][tx]
+            if g == water_tile or 'water' in str(g).lower():
+                return False
+            b = layers['base'][ty][tx]
+            if b in ('@', '#'):
+                return False
+            if b != ' ' and defs.get(b, {}).get('is_obstacle', False):
+                return False
+            return True
+
+        def _bfs_reachable(seeds):
+            vis = set()
+            q = []
+            for sx, sy in seeds:
+                if 0 <= sx < w and 0 <= sy < h and _is_walkable_tile(sx, sy) and (sx, sy) not in vis:
+                    vis.add((sx, sy))
+                    q.append((sx, sy))
+            while q:
+                qx, qy = q.pop(0)
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = qx + dx, qy + dy
+                    if 0 <= nx < w and 0 <= ny < h and (nx, ny) not in vis and _is_walkable_tile(nx, ny):
+                        vis.add((nx, ny))
+                        q.append((nx, ny))
+            return vis
+
+        seed_tiles = [p for p in archipelago_islets[0]['tiles'] if _is_walkable_tile(p[0], p[1])]
+        if has_any_bridge:
+            seed_tiles.append((cx, cy))
+        reachable = _bfs_reachable(seed_tiles)
+
+        for isl in archipelago_islets[1:] + sand_bridge_targets:
+            if not any(pt in reachable for pt in isl['tiles']):
+                if not reachable:
+                    break
+                t_pt = min(isl['tiles'], key=lambda p: (p[0] - icx) ** 2 + (p[1] - icy) ** 2)
+                r_pt = min(reachable, key=lambda p: (p[0] - t_pt[0]) ** 2 + (p[1] - t_pt[1]) ** 2)
+                self._carve_sand_drunkard_path(
+                    layers, r_pt, t_pt, bridge_tiles, sand_tile, water_tile, w, h,
+                    sandbar_tiles=sandbar_tiles, force_direct=True, clear_obstacles=True, margin=1
+                )
+                reachable = _bfs_reachable(list(reachable))
+
+        # 7. Set zombie spawns on walkable islet tiles (excluding edge connector portals)
+        z_candidates = []
+        for iy in range(6, h - 6):
+            for ix in range(6, w - 6):
+                g_tile = layers['ground'][iy][ix]
+                if g_tile != water_tile and 'water' not in g_tile.lower() and layers['base'][iy][ix] == ' ' and layers['spawn'][iy][ix] == ' ':
+                    z_candidates.append((ix, iy))
+
+        z_limit = max(3, getattr(core.data.config, 'ZOMBIE_MAX_CHUNK', 6))
+        if z_candidates and z_limit > 0:
+            for (zx, zy) in random.sample(z_candidates, min(z_limit, len(z_candidates))):
+                layers['spawn'][zy][zx] = 'Z'
+
+        # 8. Populate L2 and L3 buildings so the player can explore underground
+        if assigned_l2_templates:
+            for l2_name in assigned_l2_templates:
+                if l2_name not in self.templates:
+                    continue
+                l2_tmpl = self.templates[l2_name]
+                l2_w, l2_h = l2_tmpl['width'], l2_tmpl['height']
+                for _ in range(40):
+                    tx = random.randint(pad, max(pad, w - l2_w - pad))
+                    ty = random.randint(pad, max(pad, h - l2_h - pad))
+                    collision = any(
+                        occupied_mask_L2[ly][lx] == 1
+                        for ly in range(max(0, ty - pad), min(h, ty + l2_h + pad))
+                        for lx in range(max(0, tx - pad), min(w, tx + l2_w + pad))
+                    )
+                    if not collision:
+                        self._blit_template_mapped(layers, l2_tmpl, tx, ty, w, h, suffix='_L2')
+                        if hasattr(self, '_apply_l2_border'):
+                            self._apply_l2_border(layers, tx, ty, l2_w, l2_h, w, h, suffix='_L2', margin=4)
+                        for ly in range(max(0, ty - pad), min(h, ty + l2_h + pad)):
+                            for lx in range(max(0, tx - pad), min(w, tx + l2_w + pad)):
+                                occupied_mask_L2[ly][lx] = 1
+                        break
+
+        if assigned_l3_templates:
+            for l3_name in assigned_l3_templates:
+                if l3_name not in self.templates:
+                    continue
+                l3_tmpl = self.templates[l3_name]
+                l3_w, l3_h = l3_tmpl['width'], l3_tmpl['height']
+                for _ in range(40):
+                    tx = random.randint(pad, max(pad, w - l3_w - pad))
+                    ty = random.randint(pad, max(pad, h - l3_h - pad))
+                    collision = any(
+                        occupied_mask_L3[ly][lx] == 1
+                        for ly in range(max(0, ty - pad), min(h, ty + l3_h + pad))
+                        for lx in range(max(0, tx - pad), min(w, tx + l3_w + pad))
+                    )
+                    if not collision:
+                        self._blit_template_mapped(layers, l3_tmpl, tx, ty, w, h, suffix='_L3')
+                        if hasattr(self, '_apply_l2_border'):
+                            self._apply_l2_border(layers, tx, ty, l3_w, l3_h, w, h, suffix='_L3', margin=4)
+                        for ly in range(max(0, ty - pad), min(h, ty + l3_h + pad)):
+                            for lx in range(max(0, tx - pad), min(w, tx + l3_w + pad)):
+                                occupied_mask_L3[ly][lx] = 1
+                        break
+
+        if hasattr(self, '_scatter_npcs_l2'):
+            self._scatter_npcs_l2(layers, w, h, suffix='_L2')
+            self._scatter_npcs_l2(layers, w, h, suffix='_L3')
+
+        return layers
+
+    def _carve_sand_drunkard_path(self, layers, start_pos, end_pos, bridge_tiles, sand_tile, water_tile, w, h, sandbar_tiles=None, force_direct=False, clear_obstacles=False, margin=4, occupied_mask=None):
+        cur_x, cur_y = int(start_pos[0]), int(start_pos[1])
+        tx, ty = int(end_pos[0]), int(end_pos[1])
+        ground = layers['ground']
+        base = layers['base']
+        protected = layers['protected_mask']
+        min_b = max(0, int(margin))
+        max_bx = w - min_b
+        max_by = h - min_b
+        step_min = min_b + 1 if min_b > 0 else 1
+        step_maxx = w - step_min - 1
+        step_maxy = h - step_min - 1
+
+        wander_budget = 0 if force_direct else ((abs(tx - cur_x) + abs(ty - cur_y)) * 3 + 25)
+        hard_cap = wander_budget + abs(tx - cur_x) + abs(ty - cur_y) + 80
+        steps = 0
+
+        def stamp_sand(px, py):
+            brush = [(-1, 0), (1, 0), (0, -1), (0, 1), (0, 0)]
+            for dx, dy in brush:
+                nx, ny = px + dx, py + dy
+                if min_b <= nx < max_bx and min_b <= ny < max_by:
+                    if (nx, ny) in bridge_tiles or protected[ny][nx] == 1:
+                        continue
+                    if ground[ny][nx] == water_tile:
+                        ground[ny][nx] = sand_tile
+                        if sandbar_tiles is not None:
+                            sandbar_tiles.add((nx, ny))
+                        if occupied_mask is not None:
+                            occupied_mask[ny][nx] = 1
+                    elif ground[ny][nx] == sand_tile and sandbar_tiles is not None:
+                        sandbar_tiles.add((nx, ny))
+                        if occupied_mask is not None:
+                            occupied_mask[ny][nx] = 1
+                    if clear_obstacles and base[ny][nx] not in (' ', '@', '#'):
+                        base[ny][nx] = ' '
+
+        while (cur_x != tx or cur_y != ty) and steps < hard_cap:
+            steps += 1
+            stamp_sand(cur_x, cur_y)
+
+            dx_goal = tx - cur_x
+            dy_goal = ty - cur_y
+            if dx_goal == 0 and dy_goal == 0:
+                break
+
+            use_greedy = (steps >= wander_budget) or (random.random() < 0.65)
+            if use_greedy:
+                if abs(dx_goal) >= abs(dy_goal) and dx_goal != 0:
+                    step_x = 1 if dx_goal > 0 else -1
+                    step_y = 0
+                elif dy_goal != 0:
+                    step_x = 0
+                    step_y = 1 if dy_goal > 0 else -1
+                else:
+                    step_x = 1 if dx_goal > 0 else -1
+                    step_y = 0
+            else:
+                step_x, step_y = random.choice([(1, 0), (-1, 0), (0, 1), (0, -1)])
+
+            cand_x = max(step_min, min(step_maxx, cur_x + step_x))
+            cand_y = max(step_min, min(step_maxy, cur_y + step_y))
+
+            # Avoid stepping through Cave/Forest protected tiles when an unblocked neighbor exists
+            if protected[cand_y][cand_x] == 1:
+                alts = []
+                for adx, ady in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    ax = max(step_min, min(step_maxx, cur_x + adx))
+                    ay = max(step_min, min(step_maxy, cur_y + ady))
+                    if protected[ay][ax] == 0:
+                        alts.append(((tx - ax) ** 2 + (ty - ay) ** 2, ax, ay))
+                if alts:
+                    alts.sort(key=lambda a: a[0])
+                    cand_x, cand_y = alts[0][1], alts[0][2]
+
+            cur_x, cur_y = cand_x, cand_y
+
+        stamp_sand(tx, ty)
+
+    def _world_noise_2d(self, wx, wy, scale, seed_int):
+        def _hash2(ix, iy):
+            n = (ix * 374761393 + iy * 668265263 + seed_int * 1442695041) & 0xFFFFFFFF
+            n = ((n ^ (n >> 13)) * 1274126177) & 0xFFFFFFFF
+            return ((n ^ (n >> 16)) & 0xFFFF) / 65535.0
+
+        sx = wx / float(scale)
+        sy = wy / float(scale)
+        ix = int(math.floor(sx))
+        iy = int(math.floor(sy))
+        fx = sx - ix
+        fy = sy - iy
+        u = fx * fx * (3.0 - 2.0 * fx)
+        v = fy * fy * (3.0 - 2.0 * fy)
+
+        a = _hash2(ix, iy)
+        b = _hash2(ix + 1, iy)
+        c = _hash2(ix, iy + 1)
+        d = _hash2(ix + 1, iy + 1)
+        val = (a * (1.0 - u) + b * u) * (1.0 - v) + (c * (1.0 - u) + d * u) * v
+        return (val * 2.0) - 1.0
+
+    def _get_chunk_island_profile(self, cgx, cgy, w, h):
+        seed_str = str(getattr(self, '_world_seed_str', getattr(self.game, 'world_seed', 'DEFAULT')))
+        rng = random.Random(f"island_{seed_str}_{cgx}_{cgy}")
+
+        is_forest = (cgx, cgy) in getattr(self, 'forest_chunks', set())
+        is_mil = (cgx, cgy) == getattr(self, 'military_chunk', None)
+
+        if is_forest:
+            ox = rng.uniform(-11.0, 11.0)
+            oy = rng.uniform(-11.0, 11.0)
+            rx = rng.uniform(30.0, 44.0)
+            ry = rng.uniform(26.0, 42.0)
+        elif is_mil:
+            ox = rng.uniform(-5.0, 5.0)
+            oy = rng.uniform(-5.0, 5.0)
+            rx = rng.uniform(44.0, 51.0)
+            ry = rng.uniform(42.0, 50.0)
+        else:
+            ox = rng.uniform(-7.0, 7.0)
+            oy = rng.uniform(-7.0, 7.0)
+            rx = rng.uniform(37.0, 50.0)
+            ry = rng.uniform(34.0, 47.0)
+
+        rot = rng.uniform(0.0, math.pi)
+        h2_amp = rng.uniform(0.06, 0.16)
+        h2_phase = rng.uniform(0.0, 2.0 * math.pi)
+        h3_amp = rng.uniform(0.05, 0.14)
+        h3_phase = rng.uniform(0.0, 2.0 * math.pi)
+
+        base_wx = cgx * w + (w / 2.0) + ox
+        base_wy = cgy * h + (h / 2.0) + oy
+
+        sub_lobes = []
+        for _ in range(rng.randint(1, 2)):
+            la = rng.uniform(0.0, 2.0 * math.pi)
+            ld = rng.uniform(14.0, 24.0)
+            lr = rng.uniform(16.0, 25.0) if not is_forest else rng.uniform(14.0, 22.0)
+            sub_lobes.append((base_wx + math.cos(la) * ld, base_wy + math.sin(la) * ld, lr))
+
+        return {
+            'cx': base_wx,
+            'cy': base_wy,
+            'rx': rx,
+            'ry': ry,
+            'cos_r': math.cos(-rot),
+            'sin_r': math.sin(-rot),
+            'h2_amp': h2_amp,
+            'h2_phase': h2_phase,
+            'h3_amp': h3_amp,
+            'h3_phase': h3_phase,
+            'sub_lobes': sub_lobes
+        }
+
+    def _compute_world_landmass_grid(self, layers, occupied_mask, gx, gy, w, h, conns,
+                                     coast_left, coast_right, coast_top, coast_bottom,
+                                     road_tile, sand_tile, water_tile, skip_fn):
+        seed_str = str(getattr(self, '_world_seed_str', getattr(self.game, 'world_seed', 'DEFAULT')))
+        seed_int = sum((idx + 1) * ord(ch) for idx, ch in enumerate(seed_str)) & 0x7FFFFFFF
+
+        self_prof = self._get_chunk_island_profile(gx, gy, w, h)
+
+        # Gather land-connected continent neighbors (non-bridge L1 links)
+        continent_links = []
+        dir_checks = [
+            ('left', -1, 0, coast_left),
+            ('right', 1, 0, coast_right),
+            ('top', 0, -1, coast_top),
+            ('bottom', 0, 1, coast_bottom)
+        ]
+        for dkey, dx, dy, is_coast in dir_checks:
+            if not is_coast and conns.get(dkey) and conns.get(f"{dkey}_type") != 'asphalt_bridge':
+                nx, ny = gx + dx, gy + dy
+                n_prof = self._get_chunk_island_profile(nx, ny, w, h)
+                continent_links.append(n_prof)
+
+        def _eval_lobe(wx, wy, prof):
+            dx = wx - prof['cx']
+            dy = wy - prof['cy']
+            lx = dx * prof['cos_r'] - dy * prof['sin_r']
+            ly = dx * prof['sin_r'] + dy * prof['cos_r']
+            ang = math.atan2(ly, lx)
+            r_scale = 1.0 + prof['h2_amp'] * math.sin(2.0 * ang + prof['h2_phase']) + prof['h3_amp'] * math.sin(3.0 * ang + prof['h3_phase'])
+            dist_norm = math.hypot(lx / (prof['rx'] * r_scale), ly / (prof['ry'] * r_scale))
+            best = 1.0 / max(0.25, dist_norm)
+            for scx, scy, sr in prof['sub_lobes']:
+                d_sub = math.hypot(wx - scx, wy - scy) / sr
+                best = max(best, 1.0 / max(0.25, d_sub))
+            return best
+
+        def _dist_to_seg(wx, wy, ax, ay, bx, by):
+            vx, vy = bx - ax, by - ay
+            len_sq = vx * vx + vy * vy
+            if len_sq <= 1e-6:
+                return math.hypot(wx - ax, wy - ay)
+            t = max(0.0, min(1.0, ((wx - ax) * vx + (wy - ay) * vy) / len_sq))
+            return math.hypot(wx - (ax + t * vx), wy - (ay + t * vy))
+
+        cap_radius = 30.0
+        tree_chance = 0.05
+        cx, cy = w // 2, h // 2
+
+        for y in range(h):
+            wy = gy * h + y
+            d_top = y if coast_top else 999
+            d_bottom = (h - 1 - y) if coast_bottom else 999
+
+            for x in range(w):
+                if skip_fn(x, y):
+                    continue
+                if layers['ground'][y][x] == road_tile:
+                    continue
+
+                wx = gx * w + x
+                field_val = _eval_lobe(wx, wy, self_prof)
+
+                for n_prof in continent_links:
+                    field_val = max(field_val, _eval_lobe(wx, wy, n_prof))
+                    seg_d = _dist_to_seg(wx, wy, self_prof['cx'], self_prof['cy'], n_prof['cx'], n_prof['cy'])
+                    field_val = max(field_val, cap_radius / max(8.0, seg_d))
+
+                # World-space continuous 2D multi-octave noise for organic coves and headlands
+                noise_val = (
+                    self._world_noise_2d(wx, wy, 18.0, seed_int) * 0.16 +
+                    self._world_noise_2d(wx, wy, 8.0, seed_int + 7919) * 0.08
+                )
+                field_val += noise_val
+
+                # Guarantee central hub stays on grass
+                if math.hypot(x - cx, y - cy) <= 10.0:
+                    field_val = max(field_val, 1.15)
+
+                # Smooth falloff near coastal chunk borders so individual islands never touch edges as squares
+                if skip_fn(x, y):
+                    field_val = max(field_val, 1.15)
+
+                # Smooth falloff near coastal chunk borders so individual islands never touch edges as squares
+                d_left = x if coast_left else 999
+                d_right = (w - 1 - x) if coast_right else 999
+                edge_dist = min(d_top, d_bottom, d_left, d_right)
+                if edge_dist < 14:
+                    t_edge = max(0.0, (edge_dist - 4.0) / 10.0)
+                    field_val *= (0.45 + 0.55 * t_edge)
+
+                if field_val >= 1.0:
+                    if layers['ground'][y][x] in (' ', ''):
+                        layers['ground'][y][x] = 'bg_grass'
+                elif field_val >= 0.84:
+                    if layers['ground'][y][x] != water_tile:
+                        layers['ground'][y][x] = sand_tile
+                        layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
+                        occupied_mask[y][x] = 1
+                else:
+                    layers['ground'][y][x] = water_tile
+                    layers['base'][y][x] = ' '
+                    occupied_mask[y][x] = 1
 
     def _place_single_teleport_boat(self, layers, w, h):
         boat_char = self._resolve_boat_char()
@@ -700,7 +1503,7 @@ class ProceduralGeneratorChunk:
                     layers['spawn'][y][x] = ' '
                     return
 
-    def _place_port_at_shore(self, layers, occupied_mask, placed_rects, w, h, coast_left, coast_right, coast_top, coast_bottom, draw_secondary_maze_road):
+    def _place_port_at_shore(self, layers, occupied_mask, placed_rects, w, h, coast_left, coast_right, coast_top, coast_bottom, draw_secondary_maze_road, sandbar_tiles=None):        
         port_name = getattr(self, 'port_template', None)
         if not port_name or port_name not in self.templates:
             for k in ['Port_L1', 'Port_01', 'port_l1', 'port_01', 'Port', 'port']:
@@ -735,28 +1538,63 @@ class ProceduralGeneratorChunk:
         best_score = -999999
         chosen_side = available_coasts[0]
 
-        for side in available_coasts:
-            if side == 'bottom':
-                ty_min, ty_max = max(2, h - ph - 6), max(2, h - ph - 1)
-                tx_min, tx_max = 6, max(7, w - pw - 6)
-            elif side == 'top':
-                ty_min, ty_max = 1, min(h - ph - 2, 6)
-                tx_min, tx_max = 6, max(7, w - pw - 6)
-            elif side == 'left':
-                tx_min, tx_max = 1, min(w - pw - 2, 6)
-                ty_min, ty_max = 6, max(7, h - ph - 6)
-            else:
-                tx_min, tx_max = max(2, w - pw - 6), max(2, w - pw - 1)
-                ty_min, ty_max = 6, max(7, h - ph - 6)
+        water_tile = getattr(self, 'water_tile', 'water_01')
 
-            for _ in range(40):
-                tx = random.randint(tx_min, tx_max)
-                ty = random.randint(ty_min, ty_max)
+        def _find_shoreline_spots(side_name):
+            spots = []
+            if side_name == 'bottom':
+                for sx in range(6, w - 6, 2):
+                    for sy in range(h - 3, cy + 4, -1):
+                        if 'water' not in layers['ground'][sy][sx].lower() and layers['ground'][sy + 1][sx] == water_tile:
+                            spots.append((sx - pw // 2, sy - ph // 2))
+                            break
+            elif side_name == 'top':
+                for sx in range(6, w - 6, 2):
+                    for sy in range(3, cy - 4):
+                        if 'water' not in layers['ground'][sy][sx].lower() and layers['ground'][sy - 1][sx] == water_tile:
+                            spots.append((sx - pw // 2, sy - ph // 2))
+                            break
+            elif side_name == 'left':
+                for sy in range(6, h - 6, 2):
+                    for sx in range(3, cx - 4):
+                        if 'water' not in layers['ground'][sy][sx].lower() and layers['ground'][sy][sx - 1] == water_tile:
+                            spots.append((sx - pw // 2, sy - ph // 2))
+                            break
+            else:
+                for sy in range(6, h - 6, 2):
+                    for sx in range(w - 3, cx + 4, -1):
+                        if 'water' not in layers['ground'][sy][sx].lower() and layers['ground'][sy][sx + 1] == water_tile:
+                            spots.append((sx - pw // 2, sy - ph // 2))
+                            break
+            return spots
+
+        for side in available_coasts:
+            shore_spots = _find_shoreline_spots(side)
+            random.shuffle(shore_spots)
+            if not shore_spots:
+                if side == 'bottom':
+                    shore_spots = [(random.randint(6, max(7, w - pw - 6)), random.randint(max(2, h - ph - 12), max(2, h - ph - 2))) for _ in range(30)]
+                elif side == 'top':
+                    shore_spots = [(random.randint(6, max(7, w - pw - 6)), random.randint(2, min(h - ph - 2, 12))) for _ in range(30)]
+                elif side == 'left':
+                    shore_spots = [(random.randint(2, min(w - pw - 2, 12)), random.randint(6, max(7, h - ph - 6))) for _ in range(30)]
+                else:
+                    shore_spots = [(random.randint(max(2, w - pw - 12), max(2, w - pw - 2)), random.randint(6, max(7, h - ph - 6))) for _ in range(30)]
+
+            for cand_tx, cand_ty in shore_spots[:50]:
+                tx = max(2, min(w - pw - 2, cand_tx))
+                ty = max(2, min(h - ph - 2, cand_ty))
 
                 collides_conn = False
                 for ry in range(ty, ty + ph):
                     for rx in range(tx, tx + pw):
                         if self._is_in_connector_zone_internal(rx, ry, w, h, cx, cy):
+                            collides_conn = True
+                            break
+                        if str(layers['ground'][ry][rx]).startswith('asphalt'):
+                            collides_conn = True
+                            break
+                    if sandbar_tiles and (rx, ry) in sandbar_tiles:
                             collides_conn = True
                             break
                     if collides_conn: break
@@ -895,13 +1733,24 @@ class ProceduralGeneratorChunk:
         connector_radius = 3
 
         def is_in_connector_zone(tx, ty):
-            if conns['top'] and ty < connector_depth and abs(tx - cx) <= connector_radius:
+            if conns['top'] and ty < connector_depth and (cx - 2 <= tx <= cx + 1):
                 return True
-            if conns['bottom'] and ty >= h - connector_depth and abs(tx - cx) <= connector_radius:
+            if conns['bottom'] and ty >= h - connector_depth and (cx - 2 <= tx <= cx + 1):
                 return True
-            if conns['left'] and tx < connector_depth and abs(ty - cy) <= connector_radius:
+            if conns['left'] and tx < connector_depth and (cy - 2 <= ty <= cy + 1):
                 return True
-            if conns['right'] and tx >= w - connector_depth and abs(ty - cy) <= connector_radius:
+            if conns['right'] and tx >= w - connector_depth and (cy - 2 <= ty <= cy + 1):
+                return True
+            return False
+
+        def is_in_non_bridge_connector_zone(tx, ty):
+            if conns['top'] and conns.get('top_type') not in ('asphalt_bridge', 'sand_bridge') and ty < connector_depth and (cx - 2 <= tx <= cx + 1):
+                return True
+            if conns['bottom'] and conns.get('bottom_type') not in ('asphalt_bridge', 'sand_bridge') and ty >= h - connector_depth and (cx - 2 <= tx <= cx + 1):
+                return True
+            if conns['left'] and conns.get('left_type') not in ('asphalt_bridge', 'sand_bridge') and tx < connector_depth and (cy - 2 <= ty <= cy + 1):
+                return True
+            if conns['right'] and conns.get('right_type') not in ('asphalt_bridge', 'sand_bridge') and tx >= w - connector_depth and (cy - 2 <= ty <= cy + 1):
                 return True
             return False
 
@@ -1054,146 +1903,36 @@ class ProceduralGeneratorChunk:
 
         # 2. Connections with Guaranteed Straight Padding
         lead_in = 4
-        if conns['top']:
-            conn_type = road_tile if conns['top_type'] == 'asphalt' else (sand_tile if conns['top_type'] == 'sand' else dirt_tile)
+        if conns['top'] and conns.get('top_type') != 'sand_bridge':
+            conn_type = road_tile if conns['top_type'] in ('asphalt', 'asphalt_bridge') else (sand_tile if conns['top_type'] == 'sand' else dirt_tile)
             carve_straight_segment(cx, 0, cx, lead_in, conn_type)
             draw_secondary_maze_road(cx, lead_in, cx, cy, conn_type)
             
-        if conns['bottom']:
-            conn_type = road_tile if conns['bottom_type'] == 'asphalt' else (sand_tile if conns['bottom_type'] == 'sand' else dirt_tile)
+        if conns['bottom'] and conns.get('bottom_type') != 'sand_bridge':
+            conn_type = road_tile if conns['bottom_type'] in ('asphalt', 'asphalt_bridge') else (sand_tile if conns['bottom_type'] == 'sand' else dirt_tile)
             carve_straight_segment(cx, h - 1, cx, h - 1 - lead_in, conn_type)
             draw_secondary_maze_road(cx, h - 1 - lead_in, cx, cy, conn_type)
             
-        if conns['left']:
-            conn_type = road_tile if conns['left_type'] == 'asphalt' else (sand_tile if conns['left_type'] == 'sand' else dirt_tile)
+        if conns['left'] and conns.get('left_type') != 'sand_bridge':
+            conn_type = road_tile if conns['left_type'] in ('asphalt', 'asphalt_bridge') else (sand_tile if conns['left_type'] == 'sand' else dirt_tile)
             carve_straight_segment(0, cy, lead_in, cy, conn_type)
             draw_secondary_maze_road(lead_in, cy, cx, cy, conn_type)
             
-        if conns['right']:
-            conn_type = road_tile if conns['right_type'] == 'asphalt' else (sand_tile if conns['right_type'] == 'sand' else dirt_tile)
+        if conns['right'] and conns.get('right_type') != 'sand_bridge':
+            conn_type = road_tile if conns['right_type'] in ('asphalt', 'asphalt_bridge') else (sand_tile if conns['right_type'] == 'sand' else dirt_tile)
             carve_straight_segment(w - 1, cy, w - 1 - lead_in, cy, conn_type)
             draw_secondary_maze_road(w - 1 - lead_in, cy, cx, cy, conn_type)
 
-        # 3. Border Wall
-        border_w = getattr(self, 'forest_border_width', 1)
-        for y in range(h):
-            for x in range(w):
-                if is_in_connector_zone(x, y): continue
-                if (x < border_w and coast_left) or (x >= w - border_w and coast_right):
-                    continue
-                if (y < border_w and coast_top) or (y >= h - border_w and coast_bottom):
-                    continue
-                if x < border_w or x >= w - border_w or y < border_w or y >= h - border_w:
-                    if occupied_mask[y][x] == 0:
-                        tile = random.choice(getattr(self, 'forest_tiles', ['wall_stone']))
-                        layers['base'][y][x] = tile
-                        occupied_mask[y][x] = 1
+        # 4. World-Space Organic Island & Continent Landmass Generation
+        water_tile_name = getattr(self, 'water_tile', 'water_01')
+        beach_sand_tile = getattr(self, 'sand_tile', 'beach_sand_01')
 
-        # 4. Organic Beach Coastlines
-        cw = getattr(self, 'coast_width', 15)
-        def get_coast_noise(idx, scale=0.1, amp=4.0):
-            q_idx = (idx // 4) * 4
-            val = math.sin(q_idx * scale) * amp 
-            val += math.sin(q_idx * scale * 2.1) * (amp * 0.5)
-            pseudo_random = (math.sin(q_idx * 12.9898) * 43758.5453) % 4.0 - 2.0
-            val += pseudo_random
-            return int(val)
-
-        tree_chance = 0.05
-
-        if coast_left:
-            for y in range(h):
-                if is_in_connector_zone(0, y): continue
-                global_y = gy * h + y
-                offset = get_coast_noise(global_y)
-                water_lim = max(4, (cw - 8) + offset)
-                sand_lim = max(water_lim + 3, cw + offset)
-                for x in range(cw + 8):
-                    if x >= w or is_in_connector_zone(x, y): break
-                    if layers['ground'][y][x] == road_tile: continue
-                    dist = x
-                    if dist < water_lim:
-                        layers['ground'][y][x] = getattr(self, 'water_tile', 'water_01')
-                        layers['base'][y][x] = ' '
-                        occupied_mask[y][x] = 1 
-                        layers['protected_mask'][y][x] = 1
-                    elif dist < sand_lim:
-                        if layers['ground'][y][x] != getattr(self, 'water_tile', 'water_01'):
-                            layers['ground'][y][x] = getattr(self, 'sand_tile', 'sand_01')
-                            layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
-                            occupied_mask[y][x] = 1
-                            layers['protected_mask'][y][x] = 1
-
-        if coast_right:
-            for y in range(h):
-                if is_in_connector_zone(w - 1, y): continue
-                global_y = gy * h + y
-                offset = get_coast_noise(global_y)
-                water_lim = max(4, (cw - 8) + offset)
-                sand_lim = max(water_lim + 3, cw + offset)
-                min_x = w - (cw + 8)
-                for x in range(min_x, w):
-                    if x < 0 or is_in_connector_zone(x, y): continue
-                    if layers['ground'][y][x] == road_tile: continue
-                    dist = w - 1 - x
-                    if dist < water_lim:
-                        layers['ground'][y][x] = getattr(self, 'water_tile', 'water_01')
-                        layers['base'][y][x] = ' '
-                        occupied_mask[y][x] = 1 
-                        layers['protected_mask'][y][x] = 1
-                    elif dist < sand_lim:
-                        if layers['ground'][y][x] != getattr(self, 'water_tile', 'water_01'):
-                            layers['ground'][y][x] = getattr(self, 'sand_tile', 'sand_01')
-                            layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
-                            occupied_mask[y][x] = 1
-                            layers['protected_mask'][y][x] = 1
-
-        if coast_top:
-            for x in range(w):
-                if is_in_connector_zone(x, 0): continue
-                global_x = gx * w + x
-                offset = get_coast_noise(global_x)
-                water_lim = max(4, (cw - 8) + offset)
-                sand_lim = max(water_lim + 3, cw + offset)
-                for y in range(cw + 8):
-                    if y >= h or is_in_connector_zone(x, y): break
-                    if layers['ground'][y][x] == road_tile: continue
-                    dist = y
-                    if dist < water_lim:
-                        layers['ground'][y][x] = getattr(self, 'water_tile', 'water_01')
-                        layers['base'][y][x] = ' '
-                        occupied_mask[y][x] = 1 
-                        layers['protected_mask'][y][x] = 1
-                    elif dist < sand_lim:
-                        if layers['ground'][y][x] != getattr(self, 'water_tile', 'water_01'):
-                            layers['ground'][y][x] = getattr(self, 'sand_tile', 'sand_01')
-                            layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
-                            occupied_mask[y][x] = 1
-                            layers['protected_mask'][y][x] = 1
-
-        if coast_bottom:
-            for x in range(w):
-                if is_in_connector_zone(x, h - 1): continue
-                global_x = gx * w + x
-                offset = get_coast_noise(global_x)
-                water_lim = max(4, (cw - 8) + offset)
-                sand_lim = max(water_lim + 3, cw + offset)
-                min_y = h - (cw + 8)
-                for y in range(min_y, h):
-                    if y < 0 or is_in_connector_zone(x, y): continue
-                    if layers['ground'][y][x] == road_tile: continue
-                    dist = h - 1 - y
-                    if dist < water_lim:
-                        layers['ground'][y][x] = getattr(self, 'water_tile', 'water_01')
-                        layers['base'][y][x] = ' '
-                        occupied_mask[y][x] = 1 
-                        layers['protected_mask'][y][x] = 1
-                    elif dist < sand_lim:
-                        if layers['ground'][y][x] != getattr(self, 'water_tile', 'water_01'):
-                            layers['ground'][y][x] = getattr(self, 'sand_tile', 'sand_01')
-                            layers['base'][y][x] = 'garden_tree_16' if random.random() < tree_chance else ' '
-                            occupied_mask[y][x] = 1
-                            layers['protected_mask'][y][x] = 1
+        if not (getattr(self, 'lobby_chunk', None) == (gx, gy) or (gx, gy) in getattr(self, 'islet_chunks', set())):
+            self._compute_world_landmass_grid(
+                layers, occupied_mask, gx, gy, w, h, conns,
+                coast_left, coast_right, coast_top, coast_bottom,
+                road_tile, beach_sand_tile, water_tile_name, is_in_non_bridge_connector_zone
+            )
 
         if getattr(self, 'lobby_chunk', None) and (gx, gy) == self.lobby_chunk:
             return self._generate_lobby_chunk(
@@ -1204,11 +1943,68 @@ class ProceduralGeneratorChunk:
                 conns_l3=conns_l3
             )
 
+        if (gx, gy) in getattr(self, 'islet_chunks', set()):
+            return self._generate_islet_chunk(
+                gx, gy, w, h, conns,
+                assigned_l2_templates=assigned_l2_templates,
+                assigned_l3_templates=assigned_l3_templates,
+                conns_l2=conns_l2,
+                conns_l3=conns_l3
+            )
+
+        # 4.2 Carve drunkard sandbars connecting continent/island shores to any 'sand_bridge' chunk boundary
+        sandbar_tiles = set()
+        sand_bridge_dirs = [
+            dkey for dkey in ('top', 'bottom', 'left', 'right')
+            if conns.get(dkey) and conns.get(f'{dkey}_type') == 'sand_bridge'
+        ]
+        if sand_bridge_dirs:
+            land_pool = [
+                (lx, ly) for ly in range(6, h - 6) for lx in range(6, w - 6)
+                if layers['ground'][ly][lx] in ('bg_grass', beach_sand_tile, dirt_tile, road_tile)
+                and layers['protected_mask'][ly][lx] == 0
+                and layers['base'][ly][lx] == ' '
+            ]
+            for dkey in sand_bridge_dirs:
+                if dkey == 'top':
+                    p_tiles = [(tx, ty) for ty in range(0, 4) for tx in range(cx - 2, cx + 2)]
+                    portal_pt = (cx, 2)
+                elif dkey == 'bottom':
+                    p_tiles = [(tx, ty) for ty in range(h - 4, h) for tx in range(cx - 2, cx + 2)]
+                    portal_pt = (cx, h - 3)
+                elif dkey == 'left':
+                    p_tiles = [(tx, ty) for ty in range(cy - 2, cy + 2) for tx in range(0, 4)]
+                    portal_pt = (2, cy)
+                else:
+                    p_tiles = [(tx, ty) for ty in range(cy - 2, cy + 2) for tx in range(w - 4, w)]
+                    portal_pt = (w - 3, cy)
+
+                for px, py in p_tiles:
+                    layers['ground'][py][px] = beach_sand_tile
+                    layers['base'][py][px] = ' '
+                    occupied_mask[py][px] = 1
+                    sandbar_tiles.add((px, py))
+
+                if land_pool:
+                    anchor_pt = min(land_pool, key=lambda p: (p[0] - portal_pt[0]) ** 2 + (p[1] - portal_pt[1]) ** 2)
+                else:
+                    anchor_pt = (cx, cy)
+
+                self._carve_sand_drunkard_path(
+                    layers, anchor_pt, portal_pt, bridge_tiles=set(), sand_tile=beach_sand_tile,
+                    water_tile=water_tile_name, w=w, h=h, sandbar_tiles=sandbar_tiles,
+                    margin=1, clear_obstacles=True, occupied_mask=occupied_mask
+                )
+                draw_secondary_maze_road(anchor_pt[0], anchor_pt[1], cx, cy, dirt_tile, path_width=2)
+
         # 4.5 Place Port_L1 at the shore of all non-military chunks BEFORE buildings and walls
         is_military = (getattr(self, 'military_chunk', None) == (gx, gy))
         if not is_military:
-            self._place_port_at_shore(layers, occupied_mask, placed_rects, w, h, coast_left, coast_right, coast_top, coast_bottom, draw_secondary_maze_road)
-
+            self._place_port_at_shore(
+                layers, occupied_mask, placed_rects, w, h,
+                coast_left, coast_right, coast_top, coast_bottom,
+                draw_secondary_maze_road, sandbar_tiles=sandbar_tiles
+            )
         # 5. Organic Trade Routes for Urban Chunks
         if allow_buildings and not force_forest:
             num_routes = 4
@@ -1453,11 +2249,11 @@ class ProceduralGeneratorChunk:
             is_connection_open = False
             if is_horizontal:
                 if (by == 0 and conns['top']) or (by == h - 1 and conns['bottom']):
-                    if abs(bx - cx) <= connector_radius:
+                    if cx - 2 <= bx <= cx + 1:
                         is_connection_open = True
             else:
                 if (bx == 0 and conns['left']) or (bx == w - 1 and conns['right']):
-                    if abs(by - cy) <= connector_radius:
+                    if cy - 2 <= by <= cy + 1:
                         is_connection_open = True
 
             # If it is the active connection corridor, keep passage open for road
@@ -1478,8 +2274,8 @@ class ProceduralGeneratorChunk:
                 layers['base'][by][bx] = ' '
                 return
 
-            # "Place the border on the top of sand" -> Set ground to sand, base to '@'
-            layers['ground'][by][bx] = sand_border_tile
+            if layers['ground'][by][bx] in (' ', ''):
+                layers['ground'][by][bx] = sand_border_tile
             layers['base'][by][bx] = '@'
             occupied_mask[by][bx] = 1
 
@@ -1606,7 +2402,15 @@ class ProceduralGeneratorChunk:
                         if 'dirty' in ground_tile and random.random() < 0.05:
                             layers['base'][y][x] = random.choice(dirty_decos)
                         elif 'asphalt' in ground_tile and random.random() < 0.05:
-                            layers['base'][y][x] = random.choice(asphalt_decos)
+                            near_coast = any(
+                                0 <= y + dy < h and 0 <= x + dx < w and (
+                                    'water' in layers['ground'][y + dy][x + dx] or
+                                    'beach_sand' in layers['ground'][y + dy][x + dx]
+                                )
+                                for dy in range(-2, 3) for dx in range(-2, 3)
+                            )
+                            if not near_coast:
+                                layers['base'][y][x] = random.choice(asphalt_decos)
                     else:
                         dist_to_path = 999
                         for dy in range(-2, 3):

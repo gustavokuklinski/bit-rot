@@ -99,9 +99,9 @@
         },
         "map": {
           "map_chunks": {
-            "value": 12,
+            "value": 15,
             "name": "Map size",
-            "default": 12
+            "default": 15
           },
           "seed": {
             "value": "",
@@ -165,7 +165,7 @@
             "default": true
           },
           "sight_check": {
-            "value": true,
+            "value": false,
             "name": "Sight player",
             "default": true
           },

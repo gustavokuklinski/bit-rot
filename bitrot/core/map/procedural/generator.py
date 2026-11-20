@@ -66,6 +66,7 @@ class ProceduralGenerator(
     self.chunk_l3_priority_map = {}
     self.forest_chunks = set()
     self.urban_chunks = set()
+    self.islet_chunks = set()
     self.generated_chunks = set()
 
     self._init_templates()
@@ -365,9 +366,13 @@ class ProceduralGenerator(
         self.urban_chunks = {
             tuple(c) for c in meta.get('urban_chunks', [])
         }
+        self.islet_chunks = {
+            tuple(c) for c in meta.get('islet_chunks', [])
+        }
         self.generated_chunks = {
             tuple(c) for c in meta.get('generated_chunks', [])
         }
+        self._world_seed_str = str(meta.get('world_seed', seed_pattern or 'DEFAULT'))
         self.game.generator = self
         start_gx, start_gy = self.start_chunk
         return f'map_L1_{start_gx}_{start_gy}_map.csv'
@@ -381,6 +386,7 @@ class ProceduralGenerator(
 
     target_chunks = max(1, req_n)
     print(f'[ProceduralGenerator] Seed: {actual_seed} | Target Chunks: {target_chunks} (Fixed 128x128)')
+    self._world_seed_str = str(actual_seed)
     random.seed(actual_seed)
 
     if not os.path.exists(self.output_folder):
@@ -697,6 +703,230 @@ class ProceduralGenerator(
         self.chunk_l3_priority_map[urban_list[idx]].append(tmpl)
         idx = (idx + 1) % len(urban_list)
 
+    # Connect some random eligible urban chunks with asphalt bridges
+    self.islet_chunks = set()
+
+    # Connect urban islands to the next eligible urban chunk (0, 1, or 2 connector islets via BFS)
+    DIRS = [(1, 0, 'right'), (-1, 0, 'left'), (0, 1, 'bottom'), (0, -1, 'top')]
+
+    def _is_eligible_urban(coord):
+      return (
+          coord in self.urban_chunks
+          and coord not in self.forest_chunks
+          and coord != self.military_chunk
+          and coord != self.lobby_chunk
+          and coord not in self.islet_chunks
+      )
+
+    def _get_l1_component(start_coord):
+      comp = {start_coord}
+      q = [start_coord]
+      while q:
+        cx_c, cy_c = q.pop(0)
+        if not (0 <= cy_c < len(self.connections_grid) and 0 <= cx_c < len(self.connections_grid[0])):
+          continue
+        cell_conns = self.connections_grid[cy_c][cx_c]
+        for dx, dy, dkey in DIRS:
+          if cell_conns.get(dkey, False):
+            nxt = (cx_c + dx, cy_c + dy)
+            if nxt in self.active_chunks and nxt not in comp:
+              comp.add(nxt)
+              q.append(nxt)
+      return comp
+
+    def _ensure_grid_bounds(tx, ty):
+      needed_w = max(self.grid_w, tx + 1)
+      needed_h = max(self.grid_h, ty + 1)
+      if needed_w == self.grid_w and needed_h == self.grid_h:
+        return
+
+      def _blank_conn():
+        return {
+            'top': False, 'bottom': False, 'left': False, 'right': False,
+            'top_type': 'asphalt', 'bottom_type': 'asphalt',
+            'left_type': 'asphalt', 'right_type': 'asphalt',
+            'l2_top': False, 'l2_bottom': False, 'l2_left': False, 'l2_right': False,
+            'l3_top': False, 'l3_bottom': False, 'l3_left': False, 'l3_right': False
+        }
+
+      for row in self.connections_grid:
+        while len(row) < needed_w:
+          row.append(_blank_conn())
+      while len(self.connections_grid) < needed_h:
+        self.connections_grid.append([_blank_conn() for _ in range(needed_w)])
+      self.grid_w = needed_w
+      self.grid_h = needed_h
+
+    islet_l2_pool = [
+        t for t in (
+            self.categorized_l2_templates.get('Bunker', [])
+            + self.categorized_l2_templates.get('Dungeon', [])
+            + self.l2_templates
+        )
+        if 'lobby' not in t.lower()
+    ]
+    islet_l3_pool = [
+        t for t in (
+            self.categorized_l3_templates.get('Bunker', [])
+            + self.categorized_l3_templates.get('Dungeon', [])
+            + self.l3_templates
+        )
+        if 'lobby' not in t.lower()
+    ]
+
+    urban_islands = [
+        c for c in sorted(self.isolated_island_chunks)
+        if _is_eligible_urban(c)
+    ]
+    random.shuffle(urban_islands)
+
+    for c1 in urban_islands:
+      comp_c1 = _get_l1_component(c1)
+      # Find minimal-islet path (up to 2 intermediate empty cells) to another eligible urban chunk
+      bfs_q = [(c1, [])]
+      visited_empty = {c1}
+      found_paths = []
+      best_islet_len = None
+
+      while bfs_q:
+        curr, islets = bfs_q.pop(0)
+        if best_islet_len is not None and len(islets) > best_islet_len:
+          break
+
+        shuffled_dirs = list(DIRS)
+        random.shuffle(shuffled_dirs)
+        for dx, dy, _ in shuffled_dirs:
+          nxt = (curr[0] + dx, curr[1] + dy)
+          if nxt in self.active_chunks:
+            if _is_eligible_urban(nxt) and nxt not in comp_c1:
+              best_islet_len = len(islets)
+              found_paths.append((c1, islets, nxt))
+          else:
+            if len(islets) < 2 and 0 <= nxt[0] <= self.grid_w and 0 <= nxt[1] <= self.grid_h:
+              if nxt not in visited_empty:
+                visited_empty.add(nxt)
+                bfs_q.append((nxt, islets + [nxt]))
+
+      if not found_paths:
+        continue
+
+      ch1, chosen_islets, ch2 = random.choice(found_paths)
+      chain = [ch1] + chosen_islets + [ch2]
+
+      for islet_coord in chosen_islets:
+        ix, iy = islet_coord
+        _ensure_grid_bounds(ix, iy)
+        if islet_coord not in self.active_chunks:
+          self.active_chunks.add(islet_coord)
+          self.islet_chunks.add(islet_coord)
+          self.chunk_priority_map[islet_coord] = []
+          self.chunk_l2_priority_map[islet_coord] = (
+              random.sample(islet_l2_pool, min(2, len(islet_l2_pool))) if islet_l2_pool else []
+          )
+          self.chunk_l3_priority_map[islet_coord] = (
+              random.sample(islet_l3_pool, min(2, len(islet_l3_pool))) if islet_l3_pool else []
+          )
+
+      for idx_node in range(len(chain) - 1):
+        a = chain[idx_node]
+        b = chain[idx_node + 1]
+        is_islet_link = (a in self.islet_chunks) or (b in self.islet_chunks)
+        self._link_conns(
+            self.connections_grid, a[0], a[1], b[0], b[1],
+            road_type='asphalt_bridge',
+            link_l1=True,
+            link_l2=is_islet_link,
+            link_l3=is_islet_link
+        )
+
+      for islet_coord in chosen_islets:
+        ix, iy = islet_coord
+        for dx, dy, _ in DIRS:
+          adj = (ix + dx, iy + dy)
+          if adj in self.active_chunks:
+            self._link_conns(
+                self.connections_grid, ix, iy, adj[0], adj[1],
+                link_l1=False, link_l2=True, link_l3=True
+            )
+
+    # Read all map grid cells and complete every empty ocean void cell with an archipelago islet (connected on L2 & L3)
+    void_cells = []
+    for vy in range(self.grid_h):
+      for vx in range(self.grid_w):
+        cand = (vx, vy)
+        if cand not in self.active_chunks:
+          void_cells.append(cand)
+
+    if void_cells:
+      for v_coord in void_cells:
+        self.active_chunks.add(v_coord)
+        self.islet_chunks.add(v_coord)
+        self.chunk_priority_map[v_coord] = []
+        self.chunk_l2_priority_map[v_coord] = (
+            random.sample(islet_l2_pool, min(2, len(islet_l2_pool))) if islet_l2_pool else []
+        )
+        self.chunk_l3_priority_map[v_coord] = (
+            random.sample(islet_l3_pool, min(2, len(islet_l3_pool))) if islet_l3_pool else []
+        )
+
+      for vx, vy in void_cells:
+        for dx, dy, _ in DIRS:
+          adj = (vx + dx, vy + dy)
+          if adj in self.active_chunks:
+            self._link_conns(
+                self.connections_grid, vx, vy, adj[0], adj[1],
+                link_l1=False, link_l2=True, link_l3=True
+            )
+
+    # Interconnect islets with adjacent continents, islands, and other islets on L1 via drunkard sand paths
+    def _is_sand_linkable(coord):
+      return (
+          coord in self.active_chunks
+          and coord != self.lobby_chunk
+          and coord != self.military_chunk
+      )
+
+    for ix, iy in sorted(self.islet_chunks):
+      if not _is_sand_linkable((ix, iy)):
+        continue
+      for dx, dy, dkey in DIRS:
+        adj = (ix + dx, iy + dy)
+        if not _is_sand_linkable(adj):
+          continue
+        if not self.connections_grid[iy][ix].get(dkey, False):
+          self._link_conns(
+              self.connections_grid, ix, iy, adj[0], adj[1],
+              road_type='sand_bridge', link_l1=True, link_l2=True, link_l3=True
+          )
+
+    # Ensure any remaining separate L1 components (excluding lobby and military) interconnect via sand_bridge
+    all_linkable = sorted(c for c in self.active_chunks if _is_sand_linkable(c))
+    if all_linkable:
+      while True:
+        comp_map = {}
+        comp_id = 0
+        for c in all_linkable:
+          if c not in comp_map:
+            for member in _get_l1_component(c):
+              comp_map[member] = comp_id
+            comp_id += 1
+        if comp_id <= 1:
+          break
+
+        cross_edges = []
+        for cx_c, cy_c in all_linkable:
+          for dx, dy, dkey in DIRS:
+            adj = (cx_c + dx, cy_c + dy)
+            if _is_sand_linkable(adj) and comp_map.get((cx_c, cy_c)) != comp_map.get(adj):
+              cross_edges.append(((cx_c, cy_c), adj))
+        if not cross_edges:
+          break
+        a, b = random.choice(cross_edges)
+        self._link_conns(
+            self.connections_grid, a[0], a[1], b[0], b[1],
+            road_type='sand_bridge', link_l1=True, link_l2=False, link_l3=False
+        )
+
     self.game.generator = self
     self.generated_chunks = set()
 
@@ -735,6 +965,8 @@ class ProceduralGenerator(
                 },
                 'forest_chunks': [list(c) for c in self.forest_chunks],
                 'urban_chunks': [list(c) for c in self.urban_chunks],
+                'islet_chunks': [list(c) for c in self.islet_chunks],
+                'world_seed': getattr(self, '_world_seed_str', 'DEFAULT'),
                 'generated_chunks': [list(c) for c in self.generated_chunks],
             },
             f,
@@ -922,10 +1154,10 @@ class ProceduralGenerator(
     if is_isolated:
       coast_left = coast_right = coast_top = coast_bottom = True
     else:
-      coast_left = not conns_l1['left']
-      coast_right = not conns_l1['right']
-      coast_top = not conns_l1['top']
-      coast_bottom = not conns_l1['bottom']
+      coast_left = (not conns_l1['left']) or (conns_l1['left_type'] in ('asphalt_bridge', 'sand_bridge'))
+      coast_right = (not conns_l1['right']) or (conns_l1['right_type'] in ('asphalt_bridge', 'sand_bridge'))
+      coast_top = (not conns_l1['top']) or (conns_l1['top_type'] in ('asphalt_bridge', 'sand_bridge'))
+      coast_bottom = (not conns_l1['bottom']) or (conns_l1['bottom_type'] in ('asphalt_bridge', 'sand_bridge'))
 
     c_w = self.chunk_size
     c_h = self.chunk_size
@@ -966,6 +1198,7 @@ class ProceduralGenerator(
         if k.endswith('_L3')
     }
 
+    is_islet = ((gx, gy) in getattr(self, 'islet_chunks', set()))
     # If this is the lobby chunk, format L2 & L3 with corridors and spawns, then save
     if not is_lobby:
       self._apply_terrain_smoothing(l1_layers, c_w, c_h)
@@ -973,7 +1206,8 @@ class ProceduralGenerator(
       self._apply_sand_smoothing(l1_layers, c_w, c_h, 'beach_sand_01')
       self._apply_asphalt_smoothing(l1_layers, c_w, c_h)
 
-      self._scatter_vehicles(l1_layers, None, c_w, c_h)
+      if not is_islet:
+        self._scatter_vehicles(l1_layers, None, c_w, c_h)
       self._scatter_animals(l1_layers, None, c_w, c_h, multiplier=2 if is_forest else 1, is_l2=False)
 
       if hasattr(self, '_scatter_quest_items'):

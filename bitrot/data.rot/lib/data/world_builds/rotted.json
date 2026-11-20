@@ -99,9 +99,9 @@
         },
         "map": {
           "map_chunks": {
-            "value": 24,
+            "value": 20,
             "name": "Map size",
-            "default": 24
+            "default": 20
           },
           "seed": {
             "value": "",

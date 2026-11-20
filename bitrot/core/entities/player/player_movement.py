@@ -51,13 +51,37 @@ def get_available_chunk_transition(game):
     # Connection corridor geometry (centered along each boundary)
     cx_px = chunk_width_px // 2
     cy_px = chunk_height_px // 2
-    corridor_tolerance = 4.5 * TILE_SIZE  # Must be within corridor opening
+    corridor_tolerance = 2.0 * TILE_SIZE  # Must be on top of the 4-tile corridor opening
 
-    # Only allow teleportation when player reaches the connection opening
+    # Only allow teleportation when player reaches the open connection corridor
     if dir_x != 0 and abs(target.rect.centery - cy_px) > corridor_tolerance:
         return None
     if dir_y != 0 and abs(target.rect.centerx - cx_px) > corridor_tolerance:
         return None
+
+    # Verify the actual chunk boundary tile aligned with the player/vehicle is open (no '@' wall or water)
+    if layer == 1 and getattr(game, 'map_data', None):
+        map_h = len(game.map_data)
+        map_w = len(game.map_data[0]) if map_h > 0 else 0
+        if map_w > 0 and map_h > 0:
+            if dir_x == -1:
+                edge_gx, edge_gy = 0, max(0, min(map_h - 1, int(target.rect.centery // TILE_SIZE)))
+            elif dir_x == 1:
+                edge_gx, edge_gy = map_w - 1, max(0, min(map_h - 1, int(target.rect.centery // TILE_SIZE)))
+            elif dir_y == -1:
+                edge_gx, edge_gy = max(0, min(map_w - 1, int(target.rect.centerx // TILE_SIZE))), 0
+            else:
+                edge_gx, edge_gy = max(0, min(map_w - 1, int(target.rect.centerx // TILE_SIZE))), map_h - 1
+
+            b_char = str(game.map_data[edge_gy][edge_gx]).strip()
+            if b_char in ('@', '#'):
+                return None
+            t_def = game.map_manager.get_tile_at(edge_gx, edge_gy) if hasattr(game, 'map_manager') else None
+            if t_def and t_def.get('is_obstacle', False):
+                return None
+            if getattr(game, 'ground_data', None) and 0 <= edge_gy < len(game.ground_data) and 0 <= edge_gx < len(game.ground_data[edge_gy]):
+                if 'water' in str(game.ground_data[edge_gy][edge_gx]).lower():
+                    return None
 
     new_gx = gx + dir_x
     new_gy = gy + dir_y
@@ -145,24 +169,47 @@ def perform_chunk_transition(game, dir_x, dir_y, new_map, layer):
     cx_px = new_width // 2
     cy_px = new_height // 2
 
-    if dir_x == 1:
-        dest_x = 3 * TILE_SIZE
-        dest_y = cy_px if layer in (2, 3) else (cy_px + (target.y - old_height / 2.0))
-    elif dir_x == -1:
-        dest_x = new_width - (4 * TILE_SIZE)
-        dest_y = cy_px if layer in (2, 3) else (cy_px + (target.y - old_height / 2.0))
-    elif dir_y == 1:
-        dest_x = cx_px if layer in (2, 3) else (cx_px + (target.x - old_width / 2.0))
-        dest_y = 3 * TILE_SIZE
-    elif dir_y == -1:
-        dest_x = cx_px if layer in (2, 3) else (cx_px + (target.x - old_width / 2.0))
-        dest_y = new_height - (4 * TILE_SIZE)
-    else:
-        dest_x = cx_px
-        dest_y = cy_px
+    old_cx_px = old_width / 2.0
+    old_cy_px = old_height / 2.0
+    min_open_x = cx_px - 2 * TILE_SIZE
+    max_open_x = cx_px + 2 * TILE_SIZE - target.rect.width
+    min_open_y = cy_px - 2 * TILE_SIZE
+    max_open_y = cy_px + 2 * TILE_SIZE - target.rect.height
 
-    dest_x = max(2 * TILE_SIZE, min(dest_x, new_width - 3 * TILE_SIZE))
-    dest_y = max(2 * TILE_SIZE, min(dest_y, new_height - 3 * TILE_SIZE))
+    if dir_x == 1:
+        dest_x = 2 * TILE_SIZE
+        if layer in (2, 3):
+            dest_y = cy_px - target.rect.height / 2.0
+        else:
+            raw_y = cy_px + (target.rect.centery - old_cy_px) - target.rect.height / 2.0
+            dest_y = max(min_open_y, min(raw_y, max_open_y))
+    elif dir_x == -1:
+        dest_x = new_width - (2 * TILE_SIZE) - target.rect.width
+        if layer in (2, 3):
+            dest_y = cy_px - target.rect.height / 2.0
+        else:
+            raw_y = cy_px + (target.rect.centery - old_cy_px) - target.rect.height / 2.0
+            dest_y = max(min_open_y, min(raw_y, max_open_y))
+    elif dir_y == 1:
+        if layer in (2, 3):
+            dest_x = cx_px - target.rect.width / 2.0
+        else:
+            raw_x = cx_px + (target.rect.centerx - old_cx_px) - target.rect.width / 2.0
+            dest_x = max(min_open_x, min(raw_x, max_open_x))
+        dest_y = 2 * TILE_SIZE
+    elif dir_y == -1:
+        if layer in (2, 3):
+            dest_x = cx_px - target.rect.width / 2.0
+        else:
+            raw_x = cx_px + (target.rect.centerx - old_cx_px) - target.rect.width / 2.0
+            dest_x = max(min_open_x, min(raw_x, max_open_x))
+        dest_y = new_height - (2 * TILE_SIZE) - target.rect.height
+    else:
+        dest_x = cx_px - target.rect.width / 2.0
+        dest_y = cy_px - target.rect.height / 2.0
+
+    dest_x = max(2 * TILE_SIZE, min(dest_x, new_width - 2 * TILE_SIZE - target.rect.width))
+    dest_y = max(2 * TILE_SIZE, min(dest_y, new_height - 2 * TILE_SIZE - target.rect.height))
 
     delta_x = dest_x - target.x
     delta_y = dest_y - target.y
