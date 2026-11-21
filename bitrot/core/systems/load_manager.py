@@ -459,6 +459,12 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
     game.explored_tiles_dict = {}
     game.explored_tiles = bytearray()
     game.explored_map_name = ''
+    game.gps_explored_dict = {}
+    game.gps_explored_tiles = bytearray()
+    game.gps_explored_map_name = ''
+    game._gps_fog_surface = None
+    game._gps_fog_map_file = None
+    game._gps_pending_reveals = set()
     game.spawn_point_grid = {}
     game.animal_spawn_point_grid = {}
     game.items_on_ground = []
@@ -696,7 +702,13 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
                                     npc.is_friendly = False
                                 else:
                                     npc = NPC(px, py, game, is_static=True, layer=game.current_layer_index)
-                                game.npcs.add(npc)
+                                
+                                blocked_obstacles = list(game.obstacles) + [n.rect for n in game.npcs]
+                                free_pos = find_free_tile(npc.rect, blocked_obstacles, max_radius=8, initial_pos=(px, py))
+                                if free_pos:
+                                    npc.rect.topleft = free_pos
+                                    npc.x, npc.y = free_pos
+                                    game.npcs.add(npc)
 
             if 1 in game.all_map_layers:
                 game.logger.info("Initializing Layer 1 Population (Vehicles, Animals)...")
@@ -1256,6 +1268,18 @@ def load_game(game, save_folder_name):
             if active_map in game.explored_tiles_dict:
                 game.explored_tiles = game.explored_tiles_dict[active_map]
                 game.explored_map_name = active_map
+
+        if 'gps_explored_tiles' in world_data and isinstance(world_data['gps_explored_tiles'], dict):
+            if not hasattr(game, 'gps_explored_dict'):
+                game.gps_explored_dict = {}
+            for m_name, hex_data in world_data['gps_explored_tiles'].items():
+                try:
+                    game.gps_explored_dict[m_name] = bytearray.fromhex(hex_data)
+                except Exception:
+                    pass
+            if active_map in game.gps_explored_dict:
+                game.gps_explored_tiles = game.gps_explored_dict[active_map]
+                game.gps_explored_map_name = active_map
 
         saved_items = world_data.get('items', [])
 

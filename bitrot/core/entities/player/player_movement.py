@@ -298,7 +298,8 @@ def perform_chunk_transition(game, dir_x, dir_y, new_map, layer):
                 is_static = (npc_type in ('FNPC')) if layer not in (2, 3) else False
                 npc = NPC(nx, ny, game, is_static=is_static, layer=layer)
                 npc.is_friendly = is_static
-                free_spot = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
+                blocked_obstacles = list(game.obstacles) + [n.rect for n in game.npcs]
+                free_spot = find_free_tile(npc.rect, blocked_obstacles, max_radius=15, initial_pos=(nx, ny))
                 if free_spot:
                     npc.rect.topleft = free_spot
                     npc.x, npc.y = free_spot
@@ -513,6 +514,25 @@ class PlayerMovement:
         else:
             resolve_stuck_in_obstacle(self, obstacles, game)
             
+            speed_mult = 1.0
+
+            # 1. STRICT LAYER FILTER: Only check entities on the player's current layer
+            curr_layer = getattr(game, 'current_layer_index', 1)
+            raw_entities = zombies + (list(game.npcs) if hasattr(game, 'npcs') and hasattr(game.npcs, '__iter__') else []) + getattr(game, 'active_animals', [])
+
+            entities = []
+            friendly_npcs = []
+            for e in raw_entities:
+                if getattr(e, 'layer', 1) != curr_layer:
+                    continue  # Prevents invisible L1/L2 entities from blocking L3!
+                entities.append(e)
+                if getattr(e, 'is_friendly', False) and not getattr(e, 'is_dead', False):
+                    friendly_npcs.append(e)
+
+            initially_inside_fnpc = {
+                id(e) for e in friendly_npcs if self.rect.colliderect(e.rect.inflate(-4, -4))
+            }
+
             def check_collision(rect_check):
                 indices = rect_check.collidelistall(obstacles)
 
@@ -527,24 +547,13 @@ class PlayerMovement:
                             return 'tile'
                     else:
                         return 'tile'
+
+                for fnpc in friendly_npcs:
+                    if id(fnpc) in initially_inside_fnpc:
+                        continue
+                    if rect_check.colliderect(fnpc.rect.inflate(-4, -4)):
+                        return 'tile'
                 return None
-
-            speed_mult = 1.0
-
-            # 1. STRICT LAYER FILTER: Only check entities on the player's current layer
-            curr_layer = getattr(game, 'current_layer_index', 1)
-            raw_entities = zombies + (list(game.npcs) if hasattr(game, 'npcs') and hasattr(game.npcs, '__iter__') else []) + getattr(game, 'active_animals', [])
-
-            entities = []
-            for e in raw_entities:
-                if getattr(e, 'layer', 1) != curr_layer:
-                    continue  # Prevents invisible L1/L2 entities from blocking L3!
-                
-                # 2. PASSTHROUGH FNPCs: Friendly NPCs never slow down the player and cannot be pushed
-                if getattr(e, 'is_friendly', False):
-                    continue
-
-                entities.append(e)
 
             for entity in entities:
                 if not getattr(entity, 'is_dead', False) and self.rect.colliderect(entity.rect):

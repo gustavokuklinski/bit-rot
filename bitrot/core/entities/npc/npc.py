@@ -426,6 +426,24 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
         current_time = pygame.time.get_ticks()
 
+        # Process physical push / knockback for all NPCs (including static & friendly FNPCs)
+        if getattr(self, 'knockback_timer', 0) > 0:
+            self._process_npc_knockback(game)
+            if getattr(self, 'is_static', False):
+                if game.player:
+                    dx = game.player.rect.centerx - self.rect.centerx
+                    dy = game.player.rect.centery - self.rect.centery
+                    if math.hypot(dx, dy) < TILE_SIZE * 3:
+                        self.aim_angle = math.degrees(math.atan2(-dy, dx))
+            if self.health_bar_timer > 0:
+                self.health_bar_timer -= game.dt_ms
+            if self.melee_swing_timer > 0:
+                self.melee_swing_timer -= game.dt_ms
+            return
+
+        if getattr(self, 'is_friendly', False):
+            self._separate_overlapping_npcs(game)
+
         # Handle static friendly NPCs (storekeepers, quest givers, lobby survivors)
         if getattr(self, 'is_static', False):
             self.vx = 0
@@ -496,6 +514,96 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self.health_bar_timer -= game.dt_ms
         if self.melee_swing_timer > 0:
             self.melee_swing_timer -= game.dt_ms
+
+    def _process_npc_knockback(self, game):
+        obstacles = getattr(game, 'obstacles', [])
+        my_layer = getattr(self, 'layer', 1)
+        other_npcs = [
+            n for n in getattr(game, 'npcs', [])
+            if n is not self and not getattr(n, 'is_dead', False) and getattr(n, 'layer', 1) == my_layer
+        ]
+        dt_mult = getattr(game, 'dt_mult', 1.0)
+        kb_x = self.knockback_velocity[0] * 0.25 * dt_mult
+        kb_y = self.knockback_velocity[1] * 0.25 * dt_mult
+        moved_any = False
+
+        # X axis with obstacle and NPC-to-NPC collision + push propagation
+        self.x += kb_x
+        self.rect.x = round(self.x)
+        hit_x = any(self.rect.colliderect(obs) for obs in obstacles)
+        if not hit_x:
+            for other in other_npcs:
+                if self.rect.colliderect(other.rect):
+                    cur_dx = abs(self.rect.centerx - other.rect.centerx)
+                    prev_dx = abs((self.rect.centerx - kb_x) - other.rect.centerx)
+                    if cur_dx <= prev_dx:
+                        if getattr(other, 'is_friendly', False):
+                            if not hasattr(other, 'knockback_velocity') or isinstance(other.knockback_velocity, tuple):
+                                other.knockback_velocity = [0.0, 0.0]
+                            push_dir = 1.0 if kb_x > 0 else (-1.0 if kb_x < 0 else 0.0)
+                            other.knockback_velocity[0] += push_dir * 0.5
+                            other.knockback_timer = max(getattr(other, 'knockback_timer', 0), 100)
+                        hit_x = True
+                        break
+        if hit_x:
+            self.x -= kb_x
+            self.rect.x = round(self.x)
+            self.knockback_velocity[0] = 0.0
+        elif abs(kb_x) > 0.01:
+            moved_any = True
+
+        # Y axis with obstacle and NPC-to-NPC collision + push propagation
+        self.y += kb_y
+        self.rect.y = round(self.y)
+        hit_y = any(self.rect.colliderect(obs) for obs in obstacles)
+        if not hit_y:
+            for other in other_npcs:
+                if self.rect.colliderect(other.rect):
+                    cur_dy = abs(self.rect.centery - other.rect.centery)
+                    prev_dy = abs((self.rect.centery - kb_y) - other.rect.centery)
+                    if cur_dy <= prev_dy:
+                        if getattr(other, 'is_friendly', False):
+                            if not hasattr(other, 'knockback_velocity') or isinstance(other.knockback_velocity, tuple):
+                                other.knockback_velocity = [0.0, 0.0]
+                            push_dir = 1.0 if kb_y > 0 else (-1.0 if kb_y < 0 else 0.0)
+                            other.knockback_velocity[1] += push_dir * 0.5
+                            other.knockback_timer = max(getattr(other, 'knockback_timer', 0), 100)
+                        hit_y = True
+                        break
+        if hit_y:
+            self.y -= kb_y
+            self.rect.y = round(self.y)
+            self.knockback_velocity[1] = 0.0
+        elif abs(kb_y) > 0.01:
+            moved_any = True
+
+        self.rect.topleft = (round(self.x), round(self.y))
+        self.walk_anim_angle = math.sin(time.time() * 15) * 2 if moved_any else 0
+
+        self.knockback_timer -= getattr(game, 'dt_ms', 16)
+        decay_factor = math.pow(0.9, dt_mult)
+        self.knockback_velocity[0] *= decay_factor
+        self.knockback_velocity[1] *= decay_factor
+
+    def _separate_overlapping_npcs(self, game):
+        obstacles = getattr(game, 'obstacles', [])
+        my_layer = getattr(self, 'layer', 1)
+        for other in getattr(game, 'npcs', []):
+            if other is self or getattr(other, 'is_dead', False) or getattr(other, 'layer', 1) != my_layer:
+                continue
+            if self.rect.colliderect(other.rect):
+                dx = self.rect.centerx - other.rect.centerx
+                dy = self.rect.centery - other.rect.centery
+                dist = math.hypot(dx, dy)
+                if dist > 0.001:
+                    nx, ny = (dx / dist) * 1.5, (dy / dist) * 1.5
+                else:
+                    nx, ny = (1.5 if id(self) > id(other) else -1.5), 0.0
+                cand = self.rect.move(round(nx), round(ny))
+                if not any(cand.colliderect(obs) for obs in obstacles):
+                    self.x += nx
+                    self.y += ny
+                    self.rect.topleft = (round(self.x), round(self.y))
 
     def stop_moving(self):
         self.state = 'idle'

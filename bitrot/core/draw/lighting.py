@@ -39,9 +39,19 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
         game.explored_tiles_dict = {}
 
     # Save active exploration state for previous map before switching
+    if not hasattr(game, 'gps_explored_dict'):
+        game.gps_explored_dict = {}
+    if not hasattr(game, '_gps_pending_reveals'):
+        game._gps_pending_reveals = set()
+
+    # Save active exploration state for previous map before switching
     prev_map = getattr(game, 'explored_map_name', None)
     if prev_map and prev_map != curr_map and isinstance(getattr(game, 'explored_tiles', None), (bytearray, bytes)):
         game.explored_tiles_dict[prev_map] = game.explored_tiles
+
+    prev_gps_map = getattr(game, 'gps_explored_map_name', None)
+    if prev_gps_map and prev_gps_map != curr_map and isinstance(getattr(game, 'gps_explored_tiles', None), (bytearray, bytes)):
+        game.gps_explored_dict[prev_gps_map] = game.gps_explored_tiles
 
     if (not isinstance(getattr(game, 'explored_tiles', None), (bytearray, bytes)) or 
         len(game.explored_tiles) != expected_size or 
@@ -69,6 +79,20 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                         game.explored_tiles[row_idx + tx] = 1
 
             game.explored_tiles_dict[curr_map] = game.explored_tiles
+
+    if (not isinstance(getattr(game, 'gps_explored_tiles', None), (bytearray, bytes)) or
+        len(game.gps_explored_tiles) != expected_size or
+        getattr(game, 'gps_explored_map_name', '') != curr_map):
+
+        cached_gps = game.gps_explored_dict.get(curr_map)
+        if isinstance(cached_gps, (bytearray, bytes)) and len(cached_gps) == expected_size:
+            game.gps_explored_tiles = cached_gps
+        else:
+            game.gps_explored_tiles = bytearray(expected_size)
+            game.gps_explored_dict[curr_map] = game.gps_explored_tiles
+        game.gps_explored_map_name = curr_map
+        game._gps_fog_surface = None
+        game._gps_pending_reveals.clear()
 
     ambient = int(game.world_time.current_ambient_light)
     light_mask_low = game.light_mask_low_cache
@@ -168,6 +192,8 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                     max_ty = min(map_h, pty + r_tiles + 1)
                     
                     explored = game.explored_tiles
+                    gps_explored = game.gps_explored_tiles
+                    pending_gps = game._gps_pending_reveals
                     for ty in range(min_ty, max_ty):
                         row_idx = ty * map_w
                         center_y_low = int((ty * TILE_SIZE + offset_y + TILE_SIZE // 2) // divisor)
@@ -176,7 +202,11 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
                                 center_x_low = int((tx * TILE_SIZE + offset_x + TILE_SIZE // 2) // divisor)
                                 if 0 <= center_x_low < low_res_w:
                                     if light_mask_low.get_at((center_x_low, center_y_low))[0] > 20:
-                                        explored[row_idx + tx] = 1
+                                        idx = row_idx + tx
+                                        explored[idx] = 1
+                                        if gps_explored[idx] == 0:
+                                            gps_explored[idx] = 1
+                                            pending_gps.add((tx, ty))
 
                 # Render Explored Memory (Grey Fog of War memory)
                 if map_w > 0 and map_h > 0:
@@ -216,6 +246,23 @@ def draw_lighting(game, surface, offset_x, offset_y, view_w, view_h):
         except Exception as e:
             print(f"Error drawing player vision: {e}")
 
+    # Ensure the player's immediate 3x3 tiles are always revealed on GPS/Minimap
+    if game.player and map_w > 0 and map_h > 0 and isinstance(getattr(game, 'gps_explored_tiles', None), bytearray):
+        ptx = int(game.player.rect.centerx // TILE_SIZE)
+        pty = int(game.player.rect.centery // TILE_SIZE)
+        gps_explored = game.gps_explored_tiles
+        pending_gps = game._gps_pending_reveals
+        for dy in (-1, 0, 1):
+            ty = pty + dy
+            if 0 <= ty < map_h:
+                row_idx = ty * map_w
+                for dx in (-1, 0, 1):
+                    tx = ptx + dx
+                    if 0 <= tx < map_w:
+                        idx = row_idx + tx
+                        if gps_explored[idx] == 0:
+                            gps_explored[idx] = 1
+                            pending_gps.add((tx, ty))
     # Dynamic Light Sources
     for inv in [game.player.belt, game.player.inventory]:
         for item in inv:

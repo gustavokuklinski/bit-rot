@@ -177,7 +177,12 @@ class AsyncSpawnManager:
         if max_npc > 0 and max_npc_chunk > 0 and len(game.npcs) < max_npc:
           npc = NPC(x, y, game, is_static=False, layer=layer)
           npc.is_friendly = False
-          game.npcs.add(npc)
+          blocked_obs = list(getattr(game, 'obstacles', [])) + [n.rect for n in game.npcs]
+          free_pos = find_free_tile(npc.rect, blocked_obs, max_radius=8, initial_pos=(x, y))
+          if free_pos:
+            npc.rect.topleft = free_pos
+            npc.x, npc.y = free_pos
+            game.npcs.add(npc)
 
       # Friendly NPC (FNPC)
       elif e_type in ('fnpc'):
@@ -186,14 +191,24 @@ class AsyncSpawnManager:
           e_type = 'hnpc'
           npc = NPC(x, y, game, is_static=False, layer=layer)
           npc.is_friendly = False
-          game.npcs.add(npc)
+          blocked_obs = list(getattr(game, 'obstacles', [])) + [n.rect for n in game.npcs]
+          free_pos = find_free_tile(npc.rect, blocked_obs, max_radius=8, initial_pos=(x, y))
+          if free_pos:
+            npc.rect.topleft = free_pos
+            npc.x, npc.y = free_pos
+            game.npcs.add(npc)
         else:
           max_npc = getattr(core.data.config, 'MAX_NPCS_GLOBAL', 1500)
           max_npc_chunk = getattr(core.data.config, 'NPC_MAX_CHUNK', 6)
           if max_npc > 0 and max_npc_chunk > 0 and len(game.npcs) < max_npc:
             npc = NPC(x, y, game, is_static=True, layer=layer)
             npc.is_friendly = True
-            game.npcs.add(npc)
+            blocked_obs = list(getattr(game, 'obstacles', [])) + [n.rect for n in game.npcs]
+            free_pos = find_free_tile(npc.rect, blocked_obs, max_radius=8, initial_pos=(x, y))
+            if free_pos:
+              npc.rect.topleft = free_pos
+              npc.x, npc.y = free_pos
+              game.npcs.add(npc)
 
       elif e_type in ('hnpc', 'fnpc'):
         curr_map = getattr(game.map_manager, 'current_map_filename', '')

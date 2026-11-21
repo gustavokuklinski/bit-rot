@@ -32,7 +32,7 @@ from core.ui.helpers.keybinds import keybind_manager
 from core.ui.notifications import draw_notifications
 from core.events.mouse_drag import check_recursive_containment
 from core.entities.item.item_helpers import does_allow_liquid, get_container_available_liquid, is_container_closed_or_locked, get_container_liquid_capacity_units, player_has_mobile
-from core.ui.mobile_map_tab import generate_minimap_cache, MINIMAP_PLAYER_COLOR
+from core.ui.mobile_map_tab import generate_minimap_cache, get_fogged_minimap_surface, MINIMAP_PLAYER_COLOR
 
 # Hardcoded default English fallbacks for interaction tooltips
 DEFAULT_TOOLTIPS = {
@@ -550,6 +550,11 @@ def draw_mini_gps_hud(surface, game, view_right, dynamic_h, mouse_pos):
     if not cache_surf:
         game.mini_gps_rect = None
         return None
+    
+    cache_surf = get_fogged_minimap_surface(game, cache_surf, current_layer, current_map_file)
+    if not cache_surf:
+        game.mini_gps_rect = None
+        return None
 
     # --- Enlarged Geometry (160x160 map area, 168x188 box) ---
     map_size = 160
@@ -620,6 +625,8 @@ def draw_mini_gps_hud(surface, game, view_right, dynamic_h, mouse_pos):
 
     old_clip = surface.get_clip()
     surface.set_clip(map_rect)
+
+    pygame.draw.rect(surface, (0, 0, 0), map_rect)
 
     if clipped_src.width > 0 and clipped_src.height > 0:
         sub_surf = cache_surf.subsurface(clipped_src)

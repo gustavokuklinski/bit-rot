@@ -489,7 +489,8 @@ def process_chat_command(game, text):
             is_static = (npc_type == 'FNPC')
             npc = NPC(nx, ny, game, is_static=is_static, layer=curr_layer)
             npc.is_friendly = is_static
-            free_pos = find_free_tile(npc.rect, game.obstacles, max_radius=15, initial_pos=(nx, ny))
+            blocked_obstacles = list(game.obstacles) + [n.rect for n in game.npcs]
+            free_pos = find_free_tile(npc.rect, blocked_obstacles, max_radius=15, initial_pos=(nx, ny))
             if free_pos:
                 npc.rect.topleft = free_pos
                 npc.x, npc.y = free_pos

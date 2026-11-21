@@ -500,6 +500,16 @@ def save_game(game):
                 if isinstance(b_arr, (bytearray, bytes)):
                     saved_explored_tiles[m_name] = b_arr.hex()
 
+        saved_gps_explored_tiles = {}
+        if hasattr(game, 'gps_explored_dict'):
+            curr_map_name = getattr(game.map_manager, 'current_map_filename', '')
+            cur_gps_explored = getattr(game, 'gps_explored_tiles', None)
+            if curr_map_name and isinstance(cur_gps_explored, (bytearray, bytes)) and len(cur_gps_explored) > 0:
+                game.gps_explored_dict[curr_map_name] = cur_gps_explored
+            for m_name, b_arr in game.gps_explored_dict.items():
+                if isinstance(b_arr, (bytearray, bytes)):
+                    saved_gps_explored_tiles[m_name] = b_arr.hex()
+
         saved_open_modals = []
         for m in getattr(game, 'modals', []):
             m_type = m.get('type')
@@ -537,7 +547,8 @@ def save_game(game):
             "farm_crops": saved_farm_crops,
             "radio_frequencies": getattr(game, 'radio_frequencies', {}),
             "current_radio_freq": getattr(game, 'current_radio_freq', 110.42),
-            "explored_tiles": saved_explored_tiles
+            "explored_tiles": saved_explored_tiles,
+            "gps_explored_tiles": saved_gps_explored_tiles
         }
 
         with open(os.path.join(save_path, "world.jsonl"), "w") as f:

@@ -281,6 +281,75 @@ def generate_minimap_cache(game, full_map=False, target_chunk=None, target_layer
         pixels.close()
         return cache_surf
 
+def get_fogged_minimap_surface(game, base_cache_surf, current_layer, current_map_file):
+    """Returns a black Fog-of-War masked minimap surface showing only explored tiles."""
+    if not base_cache_surf:
+        return None
+
+    map_w, map_h = base_cache_surf.get_size()
+    expected_size = map_w * map_h
+    gps_explored = getattr(game, 'gps_explored_tiles', None)
+
+    if (not isinstance(gps_explored, (bytearray, bytes)) or
+        len(gps_explored) != expected_size or
+        getattr(game, 'gps_explored_map_name', '') != current_map_file):
+
+        if not hasattr(game, 'gps_explored_dict'):
+            game.gps_explored_dict = {}
+        cached_exp = game.gps_explored_dict.get(current_map_file)
+        if isinstance(cached_exp, (bytearray, bytes)) and len(cached_exp) == expected_size:
+            game.gps_explored_tiles = cached_exp
+        else:
+            game.gps_explored_tiles = bytearray(expected_size)
+            game.gps_explored_dict[current_map_file] = game.gps_explored_tiles
+        game.gps_explored_map_name = current_map_file
+        gps_explored = game.gps_explored_tiles
+        game._gps_fog_surface = None
+
+    fog_surf = getattr(game, '_gps_fog_surface', None)
+    if (fog_surf is None or
+        fog_surf.get_size() != (map_w, map_h) or
+        getattr(game, '_gps_fog_layer', None) != current_layer or
+        getattr(game, '_gps_fog_map_file', None) != current_map_file):
+
+        fog_surf = base_cache_surf.copy()
+        mask_surf = pygame.Surface((map_w, map_h))
+        mask_surf.fill((0, 0, 0))
+
+        for ty in range(map_h):
+            row_off = ty * map_w
+            in_run = False
+            run_start = 0
+            for tx in range(map_w):
+                if gps_explored[row_off + tx]:
+                    if not in_run:
+                        in_run = True
+                        run_start = tx
+                else:
+                    if in_run:
+                        pygame.draw.rect(mask_surf, (255, 255, 255), (run_start, ty, tx - run_start, 1))
+                        in_run = False
+            if in_run:
+                pygame.draw.rect(mask_surf, (255, 255, 255), (run_start, ty, map_w - run_start, 1))
+
+        fog_surf.blit(mask_surf, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
+
+        game._gps_fog_surface = fog_surf
+        game._gps_fog_layer = current_layer
+        game._gps_fog_map_file = current_map_file
+        if hasattr(game, '_gps_pending_reveals'):
+            game._gps_pending_reveals.clear()
+        return fog_surf
+
+    pending = getattr(game, '_gps_pending_reveals', None)
+    if pending:
+        for tx, ty in list(pending):
+            if 0 <= tx < map_w and 0 <= ty < map_h:
+                fog_surf.set_at((tx, ty), base_cache_surf.get_at((tx, ty)))
+        pending.clear()
+
+    return fog_surf
+
 def draw_map_tab(surface, game, modal, assets, full_map=False, target_chunk=None, target_layer=None, is_view_only=False):
     if 'map_zoom' not in modal:
         modal['map_zoom'] = 6
@@ -356,7 +425,7 @@ def draw_map_tab(surface, game, modal, assets, full_map=False, target_chunk=None
     else:
         modal['is_dragging_map'] = False
 
-    pygame.draw.rect(surface, (20, 20, 20), map_area_rect)
+    pygame.draw.rect(surface, (0, 0, 0) if not is_view_only else (20, 20, 20), map_area_rect)
     if not game.player:
         return
 
@@ -379,6 +448,9 @@ def draw_map_tab(surface, game, modal, assets, full_map=False, target_chunk=None
         modal[f'{cache_key}_file'] = current_map_file
 
     cached_surf = modal.get(cache_key)
+
+    if cached_surf and not is_view_only:
+        cached_surf = get_fogged_minimap_surface(game, cached_surf, current_layer, current_map_file)
 
     if cached_surf:
         map_zoom = float(modal.get('map_zoom', 6))

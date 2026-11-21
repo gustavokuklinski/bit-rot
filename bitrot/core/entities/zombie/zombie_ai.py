@@ -562,6 +562,16 @@ class ZombieAI:
             if player and not getattr(player, 'is_dead', False) and player.health > 0:
                 if rect_check.colliderect(player.rect.inflate(-10, -10)):
                     return player
+            if getattr(self, 'is_friendly', False):
+                my_layer = getattr(self, 'layer', 1)
+                for other in nearby_entities:
+                    if other is self or getattr(other, 'is_dead', False) or getattr(other, 'layer', 1) != my_layer:
+                        continue
+                    if getattr(other, 'is_friendly', False) and rect_check.colliderect(other.rect):
+                        cur_dist_sq = (self.rect.centerx - other.rect.centerx) ** 2 + (self.rect.centery - other.rect.centery) ** 2
+                        new_dist_sq = (rect_check.centerx - other.rect.centerx) ** 2 + (rect_check.centery - other.rect.centery) ** 2
+                        if new_dist_sq <= cur_dist_sq:
+                            return other
             return None
 
         safe_step_size = TILE_SIZE * 0.45
