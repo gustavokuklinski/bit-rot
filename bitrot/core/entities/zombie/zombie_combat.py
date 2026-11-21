@@ -50,7 +50,7 @@ class ZombieCombat:
         current_time = pygame.time.get_ticks()
         if current_time - getattr(self, 'last_hit_sound_time', 0) > getattr(self, 'hit_sound_cooldown', 300):
             if hasattr(self, 'sound_hit') and self.sound_hit:
-                snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
+                snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else ('npc' if (hasattr(self, 'is_friendly') or type(self).__name__ == 'NPC') else 'zombie')
                 game.sound_manager.play_sound(
                     self.sound_hit, 
                     subdir=snd_dir, 
@@ -117,7 +117,7 @@ class ZombieCombat:
 
         # Play attack sound only when actually biting/hitting an unshielded entity
         if getattr(self, 'sound_attack', None):
-            snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
+            snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else ('npc' if (hasattr(self, 'is_friendly') or type(self).__name__ == 'NPC') else 'zombie')
             game.sound_manager.play_sound(
                 self.sound_attack, 
                 subdir=snd_dir, 
@@ -153,7 +153,7 @@ class ZombieCombat:
 
         # 1. Play sound
         if getattr(self, 'sound_dead', None) and hasattr(game, 'sound_manager'):
-            snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
+            snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else ('npc' if (hasattr(self, 'is_friendly') or type(self).__name__ == 'NPC') else 'zombie')
             game.sound_manager.play_sound(
                 self.sound_dead, 
                 subdir=snd_dir, 

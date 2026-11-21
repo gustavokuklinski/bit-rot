@@ -398,7 +398,7 @@ class ZombieAI:
                     self.wander_sound_cooldown = random.randint(6000, 14000)
 
                 if current_time - self.last_wander_sound_time > self.wander_sound_cooldown:
-                    snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
+                    snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else ('npc' if (hasattr(self, 'is_friendly') or type(self).__name__ == 'NPC') else 'zombie')
                     game.sound_manager.play_sound(
                         self.sound_wander,
                         subdir=snd_dir,
@@ -671,7 +671,7 @@ class ZombieAI:
                     self.melee_swing_timer = 10
 
                     if getattr(self, 'sound_attack', None):
-                        snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else 'zombie'
+                        snd_dir = 'animals' if getattr(self, 'type', '') == 'animal' else ('npc' if (hasattr(self, 'is_friendly') or type(self).__name__ == 'NPC') else 'zombie')
                         game.sound_manager.play_sound(
                             self.sound_attack, subdir=snd_dir, game=game,
                             source_pos=self.rect.center, base_volume=0.6

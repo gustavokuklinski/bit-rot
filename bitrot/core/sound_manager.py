@@ -124,7 +124,7 @@ class SoundManager:
         full_path = mod_manager.get_override_path(os.path.join(SOUND_PATH, sound_path))
         if not os.path.exists(full_path):
             filename = os.path.basename(sound_path)
-            for candidate_subdir in ['map', 'ui', 'items', 'craft', '']:
+            for candidate_subdir in ['map', 'ui', 'items', 'craft', 'npc', 'zombie', 'animals', '']:
                 alt_path = os.path.join(SOUND_PATH, candidate_subdir, filename) if candidate_subdir else os.path.join(SOUND_PATH, filename)
                 alt_path = mod_manager.get_override_path(alt_path)
                 if os.path.exists(alt_path):
@@ -133,7 +133,7 @@ class SoundManager:
         try:
             self.sounds[name] = pygame.mixer.Sound(full_path)
             return True
-        except pygame.error as e:
+        except (pygame.error, FileNotFoundError, OSError) as e:
             print(f"Warning: Could not load sound '{name}' from '{full_path}': {e}")
             return False
 
