@@ -36,6 +36,7 @@ jobs:
           --output-dir=./build `
           --windows-console-mode=disable `
           --windows-icon-from-ico=./bitrot/data.rot/icons/favicon.ico `
+          --include-data-dir=./bitrot/data.rot=data.rot `
           bitrot/bitrot.py
 
       - name: Sign Executable
