@@ -497,7 +497,7 @@ class PlayerMovement:
             if hasattr(game, 'npcs'):
                 npcs_to_check = game.npcs.sprites() if hasattr(game.npcs, 'sprites') else game.npcs
                 for npc in list(npcs_to_check):
-                    if not npc.is_dead and vehicle_rect.colliderect(npc.rect):
+                    if not npc.is_dead and not getattr(npc, 'is_friendly', False) and vehicle_rect.colliderect(npc.rect):
                         self.vehicle.damage_motor(1.5)
                         damage_to_npc = 2
                         is_dead = npc.take_damage(damage_to_npc, game, attacker=self)
@@ -533,6 +533,34 @@ class PlayerMovement:
                 id(e) for e in friendly_npcs if self.rect.colliderect(e.rect.inflate(-4, -4))
             }
 
+            pushed_this_frame = set()
+
+            def _apply_fnpc_push(fnpc):
+                if id(fnpc) in pushed_this_frame:
+                    return
+                pushed_this_frame.add(id(fnpc))
+                dx = fnpc.rect.centerx - self.rect.centerx
+                dy = fnpc.rect.centery - self.rect.centery
+                dist = math.hypot(dx, dy)
+                if dist > 0.001:
+                    nx, ny = dx / dist, dy / dist
+                else:
+                    v_mag = math.hypot(self.vx, self.vy)
+                    if v_mag > 0.001:
+                        nx, ny = self.vx / v_mag, self.vy / v_mag
+                    else:
+                        nx, ny = random.choice([(-1.0, 0.0), (1.0, 0.0), (0.0, -1.0), (0.0, 1.0)])
+                push_power = 2.0
+                if not hasattr(fnpc, 'knockback_velocity') or isinstance(fnpc.knockback_velocity, tuple):
+                    fnpc.knockback_velocity = [0.0, 0.0]
+                fnpc.knockback_velocity[0] += nx * push_power
+                fnpc.knockback_velocity[1] += ny * push_power
+                kb_mag = math.hypot(fnpc.knockback_velocity[0], fnpc.knockback_velocity[1])
+                if kb_mag > 3.5:
+                    fnpc.knockback_velocity[0] = (fnpc.knockback_velocity[0] / kb_mag) * 3.5
+                    fnpc.knockback_velocity[1] = (fnpc.knockback_velocity[1] / kb_mag) * 3.5
+                fnpc.knockback_timer = max(getattr(fnpc, 'knockback_timer', 0), 120)
+
             def check_collision(rect_check):
                 indices = rect_check.collidelistall(obstacles)
 
@@ -552,11 +580,21 @@ class PlayerMovement:
                     if id(fnpc) in initially_inside_fnpc:
                         continue
                     if rect_check.colliderect(fnpc.rect.inflate(-4, -4)):
+                        if self.vx != 0 or self.vy != 0:
+                            _apply_fnpc_push(fnpc)
                         return 'tile'
                 return None
 
+            is_player_moving = (self.vx != 0 or self.vy != 0)
             for entity in entities:
                 if not getattr(entity, 'is_dead', False) and self.rect.colliderect(entity.rect):
+                    is_fnpc = getattr(entity, 'is_friendly', False)
+                    if is_fnpc:
+                        if is_player_moving or self.rect.colliderect(entity.rect.inflate(-4, -4)):
+                            speed_mult = min(speed_mult, 0.20)
+                            _apply_fnpc_push(entity)
+                        continue
+
                     if hasattr(self, 'mask') and hasattr(entity, 'mask') and self.mask and entity.mask:
                         offset = (entity.rect.x - self.rect.x, entity.rect.y - self.rect.y)
                         if not self.mask.overlap(entity.mask, offset):

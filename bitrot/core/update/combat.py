@@ -140,8 +140,8 @@ def trigger_explosion(game, x, y, damage, radius, owner, explosion_sound=None):
     dead_npcs = []
     if hasattr(game, 'npcs'):
         for n in game.npcs:
-            # FNPCs ignore explosions caused by Zombies, Animals, or HNPCs
-            if getattr(n, 'is_friendly', True) and (is_zombie_owner or is_animal_owner or is_hnpc_owner):
+            # FNPCs are completely invulnerable to all explosions, including player explosions
+            if getattr(n, 'is_friendly', False):
                 continue
 
             # HNPCs ignore explosions caused by Zombies

@@ -335,13 +335,14 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         if getattr(target_entity, 'is_dead', False) or getattr(target_entity, 'health', 1) <= 0:
             return
 
-        # Friendly NPCs or zombies or animals are not attacked by hostile NPCs
+        # Friendly NPCs and animals are never attacked; hostile NPCs ignore zombies, while FNPCs attack zombies
         if hasattr(game, 'npcs') and target_entity in game.npcs and getattr(target_entity, 'is_friendly', False):
             return
         if getattr(target_entity, 'type', '') == 'animal' or type(target_entity).__name__ == 'Animal':
             return
         if isinstance(target_entity, Zombie) and getattr(target_entity, 'type', '') != 'animal':
-            return
+            if not getattr(self, 'is_friendly', False):
+                return
 
         dx = target_entity.rect.centerx - self.rect.centerx
         dy = target_entity.rect.centery - self.rect.centery
@@ -383,7 +384,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                     game=game
                 )
                 projectile.owner = self
-                projectile.hostile = True
+                projectile.hostile = not getattr(self, 'is_friendly', False)
                 game.projectiles.append(projectile)
         else:
             self.melee_swing_timer = 15
@@ -415,7 +416,11 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             else:
                 is_dead = target_entity.take_damage(damage_to_deal, game, attacker=self)
                 if is_dead:
-                    target_entity.die(game)
+                    if isinstance(target_entity, Zombie) and getattr(target_entity, 'type', '') != 'animal' and type(target_entity).__name__ != 'NPC':
+                        from core.update.combat import handle_zombie_death
+                        handle_zombie_death(game, target_entity, game.items_on_ground, game.obstacles, None)
+                    else:
+                        target_entity.die(game)
 
     def update(self, game):
         if getattr(self, 'is_dead', False) or getattr(self, 'health', 0) <= 0:
@@ -445,20 +450,6 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             self._separate_overlapping_npcs(game)
 
         # Handle static friendly NPCs (storekeepers, quest givers, lobby survivors)
-        if getattr(self, 'is_static', False):
-            self.vx = 0
-            self.vy = 0
-            self.walk_anim_angle = 0
-            self.state = 'idle'
-            if game.player:
-                dx = game.player.rect.centerx - self.rect.centerx
-                dy = game.player.rect.centery - self.rect.centery
-                if math.hypot(dx, dy) < TILE_SIZE * 3:
-                    self.aim_angle = math.degrees(math.atan2(-dy, dx))
-            if self.health_bar_timer > 0:
-                self.health_bar_timer -= game.dt_ms
-            return
-
         # Synchronize attack range from equipped weapon
         weapon = getattr(self, 'equipped_weapon', None)
         if weapon and getattr(weapon, 'item_type', '') == 'weapon_ranged':
@@ -466,20 +457,14 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         else:
             self.attack_range = TILE_SIZE * 1.5
 
-        # Handle friendly roaming NPCs (wander peacefully, defend if attacked by player)
+        # Friendly NPCs (both static FNPCs and friendly roamers) kill nearby visible zombies and stay friendly
         if getattr(self, 'is_friendly', False):
-            if getattr(self, 'current_attacker', None) == game.player:
-                self.is_friendly = False
-            else:
-                if getattr(self, 'aggro_timer', 0) > 0:
-                    self.aggro_timer -= game.dt_ms
-                self.state = 'wandering'
-                super().update_ai(game.player.rect, game.obstacles, [e for e in getattr(game, 'npcs', []) if e != self], game)
-                if self.health_bar_timer > 0:
-                    self.health_bar_timer -= game.dt_ms
-                if self.melee_swing_timer > 0:
-                    self.melee_swing_timer -= game.dt_ms
-                return
+            self._update_friendly_behavior(game, current_time)
+            if self.health_bar_timer > 0:
+                self.health_bar_timer -= game.dt_ms
+            if self.melee_swing_timer > 0:
+                self.melee_swing_timer -= game.dt_ms
+            return
 
         # --- HOSTILE NPC: Behaves exactly like a Zombie ---
         if getattr(self, 'knockback_timer', 0) > 0:
@@ -515,6 +500,101 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         if self.melee_swing_timer > 0:
             self.melee_swing_timer -= game.dt_ms
 
+    def _update_friendly_behavior(self, game, current_time):
+        detect_radius = max(
+            getattr(core.data.config, 'NPC_DETECTION_RADIUS', 5 * TILE_SIZE),
+            getattr(self, 'attack_range', TILE_SIZE * 1.5),
+            TILE_SIZE * 8
+        )
+        detect_radius_sq = detect_radius * detect_radius
+
+        best_zombie = None
+        best_dist_sq = float('inf')
+
+        for z in getattr(game, 'zombies', []):
+            if getattr(z, 'is_dead', False) or getattr(z, 'health', 0) <= 0:
+                continue
+            if getattr(z, 'type', 'zombie') == 'animal' or type(z).__name__ == 'NPC':
+                continue
+            if getattr(z, 'layer', 1) != self.layer:
+                continue
+
+            dx = z.rect.centerx - self.rect.centerx
+            dy = z.rect.centery - self.rect.centery
+            dist_sq = dx * dx + dy * dy
+            if dist_sq <= detect_radius_sq and dist_sq < best_dist_sq:
+                if self.has_line_of_sight(z.rect, game, current_time):
+                    best_zombie = z
+                    best_dist_sq = dist_sq
+
+        if best_zombie is not None:
+            dx = best_zombie.rect.centerx - self.rect.centerx
+            dy = best_zombie.rect.centery - self.rect.centery
+            self.aim_angle = math.degrees(math.atan2(-dy, dx))
+            self.state = 'chasing'
+
+            if best_dist_sq <= (self.attack_range ** 2):
+                self.vx = 0
+                self.vy = 0
+                self.walk_anim_angle = 0
+                attack_cooldown = getattr(self, 'attack_cooldown', 1000)
+                if current_time - getattr(self, 'last_attack_time', 0) > attack_cooldown:
+                    self.attack(best_zombie, game)
+                    self.last_attack_time = current_time
+            else:
+                obstacles = getattr(game, 'obstacles', [])
+                nearby_entities = [
+                    e for e in getattr(game, 'active_zombies', game.zombies)
+                    if getattr(e, 'layer', 1) == self.layer
+                ] + [
+                    n for n in getattr(game, 'npcs', [])
+                    if n != self and getattr(n, 'layer', 1) == self.layer
+                ]
+                self.move_towards(
+                    best_zombie.rect.center, obstacles, nearby_entities, game,
+                    can_see_target=True, allow_break_obstacles=False
+                )
+            return
+
+        if getattr(self, 'is_static', False):
+            self.vx = 0
+            self.vy = 0
+            self.walk_anim_angle = 0
+            self.state = 'idle'
+            if game.player:
+                dx = game.player.rect.centerx - self.rect.centerx
+                dy = game.player.rect.centery - self.rect.centery
+                if math.hypot(dx, dy) < TILE_SIZE * 3:
+                    self.aim_angle = math.degrees(math.atan2(-dy, dx))
+            return
+
+        self.state = 'wandering'
+        if core.data.config.ZOMBIE_WANDER_ENABLED and getattr(game, 'map_data', None):
+            target_reached = self.wander_target and math.hypot(
+                self.wander_target[0] - self.rect.centerx,
+                self.wander_target[1] - self.rect.centery
+            ) < TILE_SIZE
+            wander_interval = core.data.config.ZOMBIE_WANDER_CHANGE_INTERVAL
+            if (current_time - getattr(self, 'last_wander_change', 0) > wander_interval) or (self.wander_target is None) or target_reached:
+                for _ in range(6):
+                    wander_radius = 5 * TILE_SIZE
+                    new_tx = self.rect.centerx + random.randint(-wander_radius, wander_radius)
+                    new_ty = self.rect.centery + random.randint(-wander_radius, wander_radius)
+                    gx, gy = int(new_tx // TILE_SIZE), int(new_ty // TILE_SIZE)
+                    if 0 <= gy < len(game.map_data) and 0 <= gx < len(game.map_data[0]):
+                        tile = game.map_manager.get_tile_at(gx, gy)
+                        if not tile or not tile.get('is_obstacle', False):
+                            self.wander_target = (new_tx, new_ty)
+                            break
+                self.last_wander_change = current_time
+            if self.wander_target:
+                obstacles = getattr(game, 'obstacles', [])
+                nearby_npcs = [n for n in getattr(game, 'npcs', []) if n != self and getattr(n, 'layer', 1) == self.layer]
+                self.move_towards(
+                    self.wander_target, obstacles, nearby_npcs, game,
+                    can_see_target=False, allow_break_obstacles=False
+                )
+
     def _process_npc_knockback(self, game):
         obstacles = getattr(game, 'obstacles', [])
         my_layer = getattr(self, 'layer', 1)
@@ -527,22 +607,37 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         kb_y = self.knockback_velocity[1] * 0.25 * dt_mult
         moved_any = False
 
+        def _hits_obstacle(rect_check):
+            for idx in rect_check.collidelistall(obstacles):
+                obs = obstacles[idx]
+                gx = obs.x // TILE_SIZE
+                gy = obs.y // TILE_SIZE
+                tile_def = game.map_manager.get_tile_at(gx, gy) if hasattr(game, 'map_manager') else None
+                if tile_def and 'mask' in tile_def and getattr(self, 'mask', None):
+                    offset = (obs.x - rect_check.x, obs.y - rect_check.y)
+                    if self.mask.overlap(tile_def['mask'], offset):
+                        return True
+                else:
+                    return True
+            return False
+
         # X axis with obstacle and NPC-to-NPC collision + push propagation
         self.x += kb_x
         self.rect.x = round(self.x)
-        hit_x = any(self.rect.colliderect(obs) for obs in obstacles)
+        hit_x = _hits_obstacle(self.rect)
         if not hit_x:
+            cur_fx = self.x + self.rect.width * 0.5
+            prev_fx = cur_fx - kb_x
             for other in other_npcs:
-                if self.rect.colliderect(other.rect):
-                    cur_dx = abs(self.rect.centerx - other.rect.centerx)
-                    prev_dx = abs((self.rect.centerx - kb_x) - other.rect.centerx)
-                    if cur_dx <= prev_dx:
+                if self.rect.colliderect(other.rect.inflate(-2, -2)):
+                    other_fx = getattr(other, 'x', other.rect.x) + other.rect.width * 0.5
+                    if abs(cur_fx - other_fx) < abs(prev_fx - other_fx):
                         if getattr(other, 'is_friendly', False):
                             if not hasattr(other, 'knockback_velocity') or isinstance(other.knockback_velocity, tuple):
                                 other.knockback_velocity = [0.0, 0.0]
                             push_dir = 1.0 if kb_x > 0 else (-1.0 if kb_x < 0 else 0.0)
-                            other.knockback_velocity[0] += push_dir * 0.5
-                            other.knockback_timer = max(getattr(other, 'knockback_timer', 0), 100)
+                            other.knockback_velocity[0] += push_dir * 1.0
+                            other.knockback_timer = max(getattr(other, 'knockback_timer', 0), 120)
                         hit_x = True
                         break
         if hit_x:
@@ -555,19 +650,20 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         # Y axis with obstacle and NPC-to-NPC collision + push propagation
         self.y += kb_y
         self.rect.y = round(self.y)
-        hit_y = any(self.rect.colliderect(obs) for obs in obstacles)
+        hit_y = _hits_obstacle(self.rect)
         if not hit_y:
+            cur_fy = self.y + self.rect.height * 0.5
+            prev_fy = cur_fy - kb_y
             for other in other_npcs:
-                if self.rect.colliderect(other.rect):
-                    cur_dy = abs(self.rect.centery - other.rect.centery)
-                    prev_dy = abs((self.rect.centery - kb_y) - other.rect.centery)
-                    if cur_dy <= prev_dy:
+                if self.rect.colliderect(other.rect.inflate(-2, -2)):
+                    other_fy = getattr(other, 'y', other.rect.y) + other.rect.height * 0.5
+                    if abs(cur_fy - other_fy) < abs(prev_fy - other_fy):
                         if getattr(other, 'is_friendly', False):
                             if not hasattr(other, 'knockback_velocity') or isinstance(other.knockback_velocity, tuple):
                                 other.knockback_velocity = [0.0, 0.0]
                             push_dir = 1.0 if kb_y > 0 else (-1.0 if kb_y < 0 else 0.0)
-                            other.knockback_velocity[1] += push_dir * 0.5
-                            other.knockback_timer = max(getattr(other, 'knockback_timer', 0), 100)
+                            other.knockback_velocity[1] += push_dir * 1.0
+                            other.knockback_timer = max(getattr(other, 'knockback_timer', 0), 120)
                         hit_y = True
                         break
         if hit_y:
@@ -578,6 +674,9 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
             moved_any = True
 
         self.rect.topleft = (round(self.x), round(self.y))
+        if moved_any and getattr(self, 'is_static', False):
+            self.start_x = self.x
+            self.start_y = self.y
         self.walk_anim_angle = math.sin(time.time() * 15) * 2 if moved_any else 0
 
         self.knockback_timer -= getattr(game, 'dt_ms', 16)
@@ -611,7 +710,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         self.idle_timer = 500
     
     def die(self, game):
-        if self.is_dead:
+        if self.is_dead or getattr(self, 'is_friendly', False):
             return
 
         if not hasattr(self, 'inventory') or self.inventory is None:

@@ -8,43 +8,108 @@ from core.update.combat import trigger_explosion, create_blood_splatter, player_
 def update_projectiles(game, GRID_SIZE, zombies_to_remove):
     projectiles_to_remove = []
     multiplier = 1.0
-    
+    curr_layer = getattr(game, 'current_layer_index', 1)
+
     for p in game.projectiles:
         world_max_x = game.world_min_x + game.map_width_pixels
         world_max_y = game.world_min_y + game.map_height_pixels
 
+        prev_pos = (p.x, p.y)
         local_obstacles = get_nearby_obstacles(p.rect, game.cached_obstacle_grid, GRID_SIZE)
 
         hit_wall = False
+        wall_hit_dist_sq = float('inf')
         for ob in local_obstacles:
             if p.rect.colliderect(ob):
                 gx, gy = ob.centerx // TILE_SIZE, ob.centery // TILE_SIZE
                 tile_def = game.map_manager.get_tile_at(gx, gy)
                 if tile_def and tile_def.get('is_visible'): continue 
-                hit_wall = True; break
+                hit_wall = True
+                wall_hit_dist_sq = 0.0
+                break
 
         reached_max = p.update(game.world_min_x, game.world_min_y, world_max_x, world_max_y)
-        
-        if reached_max or hit_wall:
-            projectiles_to_remove.append(p)
-            if getattr(p, 'is_explosive', False):
+        curr_pos = (p.x, p.y)
+
+        if not hit_wall and not getattr(p, 'is_explosive', False):
+            seg_obstacles = get_nearby_obstacles(p.rect, game.cached_obstacle_grid, GRID_SIZE)
+            for ob in seg_obstacles:
+                clip = ob.clipline(prev_pos, curr_pos)
+                if clip or p.rect.colliderect(ob):
+                    gx, gy = ob.centerx // TILE_SIZE, ob.centery // TILE_SIZE
+                    tile_def = game.map_manager.get_tile_at(gx, gy)
+                    if tile_def and tile_def.get('is_visible'):
+                        continue
+                    pt = clip[0] if clip else curr_pos
+                    d_sq = (pt[0] - prev_pos[0]) ** 2 + (pt[1] - prev_pos[1]) ** 2
+                    if d_sq < wall_hit_dist_sq:
+                        wall_hit_dist_sq = d_sq
+                    hit_wall = True
+
+        if getattr(p, 'is_explosive', False):
+            if reached_max or hit_wall:
+                projectiles_to_remove.append(p)
                 trigger_explosion(game, p.x, p.y, p.damage, getattr(p, 'explosion_radius', 3), p.owner, getattr(p, 'explosion_sound', None))
             continue
-            
-        if getattr(p, 'is_explosive', False): continue
 
         if getattr(p, 'hostile', False) and game.player and not game.player.is_dead:
-            if p.rect.colliderect(game.player.rect):
-                game.player.take_damage(game, getattr(p, 'damage', 5), 0, attacker=getattr(p, 'owner', None))
-                print(f"You were hit!")
-                projectiles_to_remove.append(p)
-                continue
-                
-        
-        search_rect = p.rect.inflate(10, 10)
+            p_clip = game.player.rect.clipline(prev_pos, curr_pos)
+            if p_clip or p.rect.colliderect(game.player.rect):
+                pt = p_clip[0] if p_clip else curr_pos
+                p_dist_sq = (pt[0] - prev_pos[0]) ** 2 + (pt[1] - prev_pos[1]) ** 2
+                if p_dist_sq <= wall_hit_dist_sq:
+                    game.player.take_damage(game, getattr(p, 'damage', 5), 0, attacker=getattr(p, 'owner', None))
+                    print(f"You were hit!")
+                    projectiles_to_remove.append(p)
+                    continue
+
+        min_sx = int(min(prev_pos[0], curr_pos[0]))
+        min_sy = int(min(prev_pos[1], curr_pos[1]))
+        seg_w = max(1, int(abs(curr_pos[0] - prev_pos[0])))
+        seg_h = max(1, int(abs(curr_pos[1] - prev_pos[1])))
+        search_rect = pygame.Rect(min_sx, min_sy, seg_w, seg_h).inflate(16, 16)
         potential_hits = game.quadtree.query(search_rect)
-        
-        hit_zombie = next((z for z in potential_hits if isinstance(z, Zombie) and z not in zombies_to_remove and p.rect.colliderect(z.rect)), None)
+
+        seen_z_ids = {id(e) for e in potential_hits}
+        zombie_candidates = list(potential_hits)
+        for z_extra in getattr(game, 'active_zombies', []) + getattr(game, 'active_animals', []):
+            if id(z_extra) not in seen_z_ids:
+                seen_z_ids.add(id(z_extra))
+                zombie_candidates.append(z_extra)
+
+        guaranteed_z = getattr(p, 'guaranteed_target', None)
+        if guaranteed_z is not None and id(guaranteed_z) not in seen_z_ids:
+            zombie_candidates.append(guaranteed_z)
+
+        hit_zombie = None
+        best_hit_dist_sq = float('inf')
+        p_owner = getattr(p, 'owner', None)
+
+        for z in zombie_candidates:
+            if not isinstance(z, Zombie) or type(z).__name__ == 'NPC':
+                continue
+            if z in zombies_to_remove or z == p_owner:
+                continue
+            if getattr(z, 'is_dead', False) or getattr(z, 'health', 0) <= 0:
+                continue
+            if getattr(z, 'layer', 1) != curr_layer:
+                continue
+
+            if z == guaranteed_z:
+                hit_zombie = z
+                break
+
+            z_clip = z.rect.clipline(prev_pos, curr_pos)
+            if z_clip or p.rect.colliderect(z.rect):
+                pt = z_clip[0] if z_clip else curr_pos
+                d_sq = (pt[0] - prev_pos[0]) ** 2 + (pt[1] - prev_pos[1]) ** 2
+                if d_sq <= wall_hit_dist_sq and d_sq < best_hit_dist_sq:
+                    best_hit_dist_sq = d_sq
+                    hit_zombie = z
+
+        if not hit_zombie and (reached_max or hit_wall):
+            projectiles_to_remove.append(p)
+            continue
 
         if hit_zombie:
             is_animal = getattr(hit_zombie, 'type', 'zombie') == 'animal'
@@ -52,7 +117,7 @@ def update_projectiles(game, GRID_SIZE, zombies_to_remove):
             damage = getattr(p, 'damage', 5)
 
             is_hnpc_owner = (owner is not None and type(owner).__name__ == 'NPC' and not getattr(owner, 'is_friendly', True))
-            is_zombie_owner = (owner is not None and isinstance(owner, Zombie))
+            is_zombie_owner = (owner is not None and isinstance(owner, Zombie) and type(owner).__name__ != 'NPC')
 
             # HNPC shots do not hurt zombies
             if is_hnpc_owner and not is_animal:
@@ -110,7 +175,18 @@ def update_projectiles(game, GRID_SIZE, zombies_to_remove):
             projectiles_to_remove.append(p)
             continue
         
-        hit_npc = next((n for n in potential_hits if n in getattr(game, 'npcs', []) and not n.is_dead and p.rect.colliderect(n.rect)), None)
+        hit_npc = None
+        for n in getattr(game, 'active_npcs', getattr(game, 'npcs', [])):
+            if n.is_dead or n == p_owner or getattr(n, 'is_friendly', False):
+                continue
+            if getattr(n, 'layer', 1) != curr_layer:
+                continue
+            n_clip = n.rect.clipline(prev_pos, curr_pos)
+            if n_clip or p.rect.colliderect(n.rect):
+                pt = n_clip[0] if n_clip else curr_pos
+                if ((pt[0] - prev_pos[0]) ** 2 + (pt[1] - prev_pos[1]) ** 2) <= wall_hit_dist_sq:
+                    hit_npc = n
+                    break
 
         if hit_npc:
              attacker = getattr(p, 'owner', game.player) or game.player
@@ -141,10 +217,16 @@ def update_projectiles(game, GRID_SIZE, zombies_to_remove):
                       hit_npc.knockback_timer = 200
 
              if not hit_npc.is_dead:
-                 hit_npc.aggro_timer, hit_npc.current_attacker, hit_npc.state = 10000, attacker, True, 'chasing'
+                 hit_npc.aggro_timer, hit_npc.current_attacker, hit_npc.state = 10000, attacker, 'chasing'
                  for other_npc in game.npcs:
-                     if other_npc != hit_npc and not other_npc.is_dead and (other_npc.rect.centerx - hit_npc.rect.centerx)**2 + (other_npc.rect.centery - hit_npc.rect.centery)**2 < (TILE_SIZE * 15) ** 2:
-                         other_npc.aggro_timer, other_npc.state = max(other_npc.aggro_timer, 8000), True, 'chasing'
+                     if (
+                         other_npc != hit_npc
+                         and not other_npc.is_dead
+                         and not getattr(other_npc, 'is_friendly', False)
+                         and getattr(other_npc, 'layer', 1) == curr_layer
+                         and (other_npc.rect.centerx - hit_npc.rect.centerx)**2 + (other_npc.rect.centery - hit_npc.rect.centery)**2 < (TILE_SIZE * 15) ** 2
+                     ):
+                         other_npc.aggro_timer, other_npc.state = max(other_npc.aggro_timer, 8000), 'chasing'
 
              if hit_npc.take_damage(damage, game, attacker=attacker) and attacker == game.player:
                  print(f"You shot and killed {hit_npc.name}!")

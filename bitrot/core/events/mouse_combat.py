@@ -86,22 +86,65 @@ def handle_attack(game, mouse_pos):
 
                 damage = game.player.get_attack_damage()
 
-                for _ in range(weapon.pellets):
-                    spread = math.radians(random.uniform(-total_spread_deg / 2, total_spread_deg / 2))
-                    angle = base_angle + spread
-                    
-                    target_x = game.player.rect.centerx + math.cos(angle) * calc_dist
-                    target_y = game.player.rect.centery + math.sin(angle) * calc_dist
+                p_cx, p_cy = game.player.rect.center
+                curr_layer = getattr(game, 'current_layer_index', 1)
+                close_zombie = None
+                best_close_score = float('inf')
+                obstacles = getattr(game, 'obstacles', [])
 
-                    game.projectiles.append(Projectile(
-                        game.player.rect.centerx, 
-                        game.player.rect.centery, 
-                        target_x, 
+                for z in getattr(game, 'zombies', []):
+                    if getattr(z, 'is_dead', False) or getattr(z, 'health', 0) <= 0:
+                        continue
+                    if getattr(z, 'type', 'zombie') == 'animal' or getattr(z, 'layer', 1) != curr_layer:
+                        continue
+
+                    z_dx = z.rect.centerx - p_cx
+                    z_dy = z.rect.centery - p_cy
+                    z_dist = math.hypot(z_dx, z_dy)
+
+                    is_overlapping = z.rect.colliderect(game.player.rect) or z_dist <= (TILE_SIZE * 1.1)
+                    is_in_front = False
+                    if z_dist <= (TILE_SIZE * 2.5):
+                        if z.rect.collidepoint(target_world_x, target_world_y):
+                            is_in_front = True
+                        elif z_dist > 0:
+                            ang_diff = abs((math.atan2(z_dy, z_dx) - base_angle + math.pi) % (2 * math.pi) - math.pi)
+                            if ang_diff <= math.radians(55):
+                                is_in_front = True
+
+                    if is_overlapping or is_in_front:
+                        if is_overlapping or game.player.has_line_of_sight(z.rect, obstacles, game):
+                            score = z_dist - (1000.0 if is_overlapping else 0.0)
+                            if score < best_close_score:
+                                best_close_score = score
+                                close_zombie = z
+
+                for pellet_idx in range(weapon.pellets):
+                    if close_zombie is not None and pellet_idx == 0:
+                        c_dx = close_zombie.rect.centerx - p_cx
+                        c_dy = close_zombie.rect.centery - p_cy
+                        angle = math.atan2(c_dy, c_dx) if (c_dx != 0 or c_dy != 0) else base_angle
+                    else:
+                        aim_ref = math.atan2(close_zombie.rect.centery - p_cy, close_zombie.rect.centerx - p_cx) if (close_zombie is not None and (close_zombie.rect.centerx != p_cx or close_zombie.rect.centery != p_cy)) else base_angle
+                        spread = math.radians(random.uniform(-total_spread_deg / 2, total_spread_deg / 2))
+                        angle = aim_ref + spread
+                    
+                    target_x = p_cx + math.cos(angle) * calc_dist
+                    target_y = p_cy + math.sin(angle) * calc_dist
+
+                    proj = Projectile(
+                        p_cx,
+                        p_cy,
+                        target_x,
                         target_y,
                         max_distance=max_dist_pixels,
                         damage=damage,
                         game=game
-                    ))
+                    )
+                    proj.owner = game.player
+                    if close_zombie is not None and pellet_idx == 0:
+                        proj.guaranteed_target = close_zombie
+                    game.projectiles.append(proj)
 
                 weapon.load -= 1
 
@@ -362,7 +405,7 @@ def handle_attack(game, mouse_pos):
                 # 4. Hit NPCs
                 if not hit_something:
                     for npc in getattr(game, 'npcs', []):
-                        if not npc.is_dead:
+                        if not npc.is_dead and not getattr(npc, 'is_friendly', False):
                             dist = math.hypot(game.player.rect.centerx - npc.rect.centerx, game.player.rect.centery - npc.rect.centery)
                             if dist <= attack_range:
                                 dx = npc.rect.centerx - game.player.rect.centerx
