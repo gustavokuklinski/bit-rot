@@ -3,7 +3,7 @@
     "debug": {
       "properties": {
         "name": "Debug",
-        "subtitle": "Fast and play",
+        "subtitle": "Test and Debug",
         "icon_path": "ui/infection.png",
         "accent": [
           220,
@@ -11,7 +11,7 @@
           60
         ],
         "tooltips": [
-          "Debug Game"
+          "Debug"
         ]
       },
       "world": {
@@ -96,7 +96,7 @@
         },
         "map": {
           "map_chunks": {
-            "value": 1,
+            "value": 5,
             "name": "Map size",
             "default": 4
           },
@@ -152,7 +152,7 @@
         },
         "zombie": {
           "zombie_spawn_per_chunk": {
-            "value": 4,
+            "value": 0,
             "name": "Max Zombie spawn on chunk",
             "default": 4
           },
@@ -162,7 +162,7 @@
             "default": true
           },
           "sight_check": {
-            "value": true,
+            "value": false,
             "name": "Sight player",
             "default": true
           },
@@ -179,17 +179,17 @@
         },
         "npc": {
           "npc_spawn_per_chunk": {
-            "value": 4,
+            "value": 14,
             "name": "Max NPC spawn on chunk",
             "default": 4
           },
           "static_percent": {
-            "value": 0.8,
+            "value": 1.0,
             "name": "Static NPC percentage",
             "default": 0.8
           },
           "hostile_percent": {
-            "value": 0.2,
+            "value": 0.0,
             "name": "Hostile NPC percentage",
             "default": 0.2
           },

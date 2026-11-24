@@ -484,25 +484,7 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
         RadioManager.load_radios()
         
     game.radio_frequencies = {}
-    used_freqs = set()
-    
-    for name, data in RadioManager.STATIONS.items():
-        freq_raw = data['frequency']
-        if freq_raw == 'random':
-            f = round(random.uniform(110.42, 123.58), 2)
-            while any(abs(f - uf) <= 0.10 for uf in used_freqs): 
-                f = round(random.uniform(110.42, 123.58), 2)
-            game.radio_frequencies[name] = f
-            used_freqs.add(f)
-        else:
-            try:
-                f = float(freq_raw)
-                game.radio_frequencies[name] = f
-                used_freqs.add(f)
-            except:
-                game.radio_frequencies[name] = 110.42
-                
-    game.current_radio_freq = 110.42
+    RadioManager.sync_game_frequencies(game)
 
     if hasattr(game, '_tile_cache_surface'):
         game._tile_cache_surface = None
@@ -659,6 +641,8 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
                                 occupied_tiles.add(free_pos)
                                 npc.rect.topleft = free_pos
                                 npc.x, npc.y = free_pos
+                                npc.is_at_lobby = True
+                                npc.saved = False
                                 game.npcs.add(npc)
                                 spawned_lobby_npcs += 1
 
@@ -676,6 +660,8 @@ def start_new_game(game, player_data, save_dir_name=None, spawn_entities=True):
                     occupied_tiles.add(free_pos)
                     npc.rect.topleft = free_pos
                     npc.x, npc.y = free_pos
+                    npc.is_at_lobby = True
+                    npc.saved = False
                     game.npcs.add(npc)
                     spawned_lobby_npcs += 1
                 else:
@@ -1060,6 +1046,7 @@ def load_game(game, save_folder_name):
         
         game.player.quests = list(player_data.get('quests', []))
         game.player.completed_quests = list(player_data.get('completed_quests', []))
+        game.player.quest_assignments = dict(player_data.get('quest_assignments', {}))
         game.player.dialog_history = list(player_data.get('dialog_history', []))
         game.player.special_dialogs = list(player_data.get('special_dialogs', []))
         game.player.completed_milestones = list(player_data.get('completed_milestones', []))
@@ -1154,24 +1141,8 @@ def load_game(game, save_folder_name):
             RadioManager.load_radios()
             
         game.radio_frequencies = world_data.get('radio_frequencies')
-        if not game.radio_frequencies:
-            game.radio_frequencies = {}
-            used_freqs = set()
-            for name, data in RadioManager.STATIONS.items():
-                freq_raw = data['frequency']
-                if freq_raw == 'random':
-                    f = round(random.uniform(110.42, 123.58), 2)
-                    while any(abs(f - uf) <= 0.10 for uf in used_freqs): 
-                        f = round(random.uniform(110.42, 123.58), 2)
-                    game.radio_frequencies[name] = f
-                    used_freqs.add(f)
-                else:
-                    try: 
-                        game.radio_frequencies[name] = float(freq_raw)
-                    except: 
-                        game.radio_frequencies[name] = 110.42
-                    
         game.current_radio_freq = world_data.get('current_radio_freq', 110.42)
+        RadioManager.sync_game_frequencies(game)
 
         for c_entry in world_data.get('farm_crops', []):
             m_name = c_entry['map']
@@ -1479,6 +1450,10 @@ def load_game(game, save_folder_name):
                 npc.max_health = n_data.get('max_health', 100)
                 npc.is_friendly = is_friendly
                 npc.is_static = is_static
+                npc.saved = bool(n_data.get('saved', False))
+                npc.is_at_lobby = bool(n_data.get('is_at_lobby', False))
+                npc.is_at_port = bool(n_data.get('is_at_port', False))
+                npc.assigned_quest = n_data.get('assigned_quest', None)
                 if 'id' in n_data and n_data['id']: npc.id = n_data['id']
                 if 'dialog_flags' in n_data: npc.dialog_flags = set(n_data['dialog_flags'])
                 

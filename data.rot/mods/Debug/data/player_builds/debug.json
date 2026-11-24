@@ -1,0 +1,25 @@
+{
+  "player_builds": {
+    "debug": {
+      "name": "Debug",
+      "subtitle": "Debug Player",
+      "description": "Testing and Debug",
+      "color": [255, 206, 149],
+      "profession": "Military",
+      "clothes": {
+        "head": "Beret",
+        "feet": "Military Boots",
+        "body": "Military Tshirt",
+        "legs": "Military Pants"
+      },
+      "items": [
+        "ID",
+        "Wallet",
+        "M4A1",
+        "Ammo Box 556",
+        "Island Map",
+        "Cartography Sector [MAP_POS]"
+      ]
+    }
+  }
+}

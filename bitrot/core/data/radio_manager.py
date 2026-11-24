@@ -31,31 +31,53 @@ class RadioManager:
         if not hasattr(game, 'radio_frequencies') or not isinstance(game.radio_frequencies, dict):
             game.radio_frequencies = {}
 
-        used_freqs = set(game.radio_frequencies.values())
+        MIN_FREQ = 110.42
+        MAX_FREQ = 120.42
+        used_freqs = []
+
+        # 1. Register fixed-frequency stations first so random stations never crowd them
+        for name, data in cls.STATIONS.items():
+            freq_raw = data.get('frequency', 'random')
+            if str(freq_raw).lower() != 'random':
+                try:
+                    f = round(max(MIN_FREQ, min(MAX_FREQ, float(freq_raw))), 2)
+                except (ValueError, TypeError):
+                    f = MIN_FREQ
+                game.radio_frequencies[name] = f
+                used_freqs.append(f)
+
+        # 2. Validate existing or assign new random frequencies with generous separation
+        def _pick_spaced_freq():
+            for min_gap in (1.00, 0.60, 0.30, 0.15):
+                for _ in range(120):
+                    cand = round(random.uniform(MIN_FREQ + 0.08, MAX_FREQ - 0.08), 2)
+                    if all(abs(cand - uf) >= min_gap for uf in used_freqs):
+                        return cand
+            return round(random.uniform(MIN_FREQ + 0.08, MAX_FREQ - 0.08), 2)
 
         for name, data in cls.STATIONS.items():
-            if name in game.radio_frequencies:
+            freq_raw = data.get('frequency', 'random')
+            if str(freq_raw).lower() != 'random':
                 continue
 
-            freq_raw = data.get('frequency', 'random')
-            if str(freq_raw).lower() == 'random':
-                f = round(random.uniform(110.42, 120.42), 2)
-                attempts = 0
-                while any(abs(f - uf) <= 0.10 for uf in used_freqs) and attempts < 100:
-                    f = round(random.uniform(110.42, 120.42), 2)
-                    attempts += 1
-                game.radio_frequencies[name] = f
-                used_freqs.add(f)
+            existing = game.radio_frequencies.get(name)
+            is_valid_existing = (
+                isinstance(existing, (int, float))
+                and MIN_FREQ <= float(existing) <= MAX_FREQ
+                and all(abs(float(existing) - uf) >= 0.50 for uf in used_freqs)
+            )
+            if is_valid_existing:
+                f = round(float(existing), 2)
             else:
-                try:
-                    f = round(float(freq_raw), 2)
-                    game.radio_frequencies[name] = f
-                    used_freqs.add(f)
-                except (ValueError, TypeError):
-                    game.radio_frequencies[name] = 110.42
+                f = _pick_spaced_freq()
+
+            game.radio_frequencies[name] = f
+            used_freqs.append(f)
 
         if not hasattr(game, 'current_radio_freq') or game.current_radio_freq is None:
-            game.current_radio_freq = 110.42
+            game.current_radio_freq = MIN_FREQ
+        else:
+            game.current_radio_freq = round(max(MIN_FREQ, min(MAX_FREQ, float(game.current_radio_freq))), 2)
             
 
     @staticmethod

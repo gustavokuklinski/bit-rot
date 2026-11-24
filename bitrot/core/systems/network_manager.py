@@ -36,7 +36,7 @@ class NetworkManager:
         self.peer_lock = threading.Lock()
         
         # Dedicated Frequency for this local player instance
-        self.my_frequency = round(random.uniform(111.00, 122.90), 2)
+        self.my_frequency = round(random.uniform(110.50, 120.30), 2)
         
         # Connection status message shown in Mobile UI
         self.status_message = ""

@@ -149,6 +149,11 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         self.dialog_flags = set()
         self.special_dialogs = []
 
+        self.saved = False
+        self.is_at_lobby = False
+        self.is_at_port = False
+        self.assigned_quest = None
+
         loaded_data = locals().get('data', locals().get('save_data', None))
 
         if loaded_data:

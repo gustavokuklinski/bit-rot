@@ -19,3 +19,6 @@ Bitrot-x86_64.AppImage
 /bitrot/data.rot/save/game/save_*
 /bitrot/data.rot/save/world/temp_world.json
 /bitrot/data.rot/lib/sfx/*/*-pygbag.ogg
+
+
+/bitrot/data.rot/lib/data/world_builds/debug.json

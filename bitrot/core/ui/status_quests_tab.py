@@ -29,10 +29,14 @@ def load_quests():
             with open(quests_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 
+            seen_ids = set()
             for q_root in data.get('quests', []):
                 for node in q_root.get('options', []):
                     node_id = node.get('id', '')
                     if node_id.lower().startswith('quest:'):
+                        if node_id in seen_ids:
+                            continue
+                        seen_ids.add(node_id)
                         quest_name = node_id[6:].strip() 
                         raw_item_str = None
                         tip = "No tip provided"
@@ -57,7 +61,9 @@ def load_quests():
                             'rqst_item_name': rqst_item,
                             'item_obj': item,
                             'tip': tip,
-                            'complete_flag': complete_flag
+                            'complete_flag': complete_flag,
+                            'saved': bool(node.get('saved', False)),
+                            'assign_npc': node.get('assign_npc')
                         })
         except Exception as e:
             print(f"Error loading quests from {quests_path}: {e}")
@@ -191,6 +197,14 @@ class QuestTooltipDummy:
             ""
         ]
 
+        assign_npc = q_data.get('assign_npc')
+        if assign_npc and str(assign_npc).strip() not in ("", "[NPC_NAME_HERE]"):
+            is_saved = bool(q_data.get('saved', False))
+            if is_saved:
+                self.tooltip_lines.append([(f"{tr('ui', 'NPC')}: ", WHITE), (str(assign_npc), YELLOW), (f" ({tr('ui', 'At Lobby')})", GREEN)])
+            else:
+                self.tooltip_lines.append([(f"{tr('ui', 'NPC')}: ", WHITE), (str(assign_npc), YELLOW)])
+
         tip_text = q_data.get('tip', '')
         if tip_text and tip_text != "No tip provided":
             header_label = tr('ui', 'In Progress') if is_open else (tr('ui', 'Task') if is_completed else tr('ui', 'Objective'))
@@ -263,6 +277,8 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
     np_total = len(quests)
     np_comp = 0
 
+    quest_assignments = getattr(player, 'quest_assignments', {})
+
     for q in quests:
         is_completed = (
             (q['complete_flag'] in completed_list) or 
@@ -283,6 +299,17 @@ def draw_quests_tab(surface, player, modal, assets, mouse_pos):
         q_entry = dict(q)
         q_entry['is_completed'] = is_completed
         q_entry['is_open'] = is_open
+
+        assigned_info = quest_assignments.get(q['node_id']) or quest_assignments.get(q['name'])
+        if assigned_info:
+            npc_name = assigned_info.get('npc_name')
+            is_saved = bool(assigned_info.get('saved', False))
+            if npc_name:
+                q_entry['assign_npc'] = npc_name
+                if q_entry.get('tip'):
+                    q_entry['tip'] = str(q_entry['tip']).replace('[NPC_NAME_HERE]', npc_name)
+            q_entry['saved'] = is_saved
+
         all_quests_display.append(q_entry)
 
     # Active (In Progress) and Completed quests display first, followed by locked quests

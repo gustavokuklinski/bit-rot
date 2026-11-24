@@ -130,7 +130,7 @@ def draw_npc_dialog_modal(surface, modal, game):
     # Properly scaled mouse coordinates
     mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
 
-    is_rescued_lobby = getattr(npc, 'is_at_lobby', False)
+    is_rescued_lobby = getattr(npc, 'is_at_lobby', False) or getattr(npc, 'saved', False)
     is_rescued_port = getattr(npc, 'is_at_port', False)
     is_static = getattr(npc, 'is_static', False)
 

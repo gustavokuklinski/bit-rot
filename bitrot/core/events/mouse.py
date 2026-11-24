@@ -1093,16 +1093,37 @@ def handle_mouse_down(game, event, mouse_pos):
                                             display_message(game, f"{tr('msg', 'Received:')} {tr('item', new_it.name)}")
 
                                 unlock = opt.get('unlock_flag')
+                                opt_node_id = opt.get('node_id', '')
+                                is_offer_quest = (opt.get('stage') == 'offer' and str(opt_node_id).startswith("Quest:"))
+                                quest_unlock_key = unlock if (unlock and str(unlock).startswith("Quest:")) else (opt_node_id if is_offer_quest else None)
+
                                 if unlock and npc:
                                     npc.unlock_node(unlock)
-                                    if str(unlock).startswith("Quest:"):
+                                elif is_offer_quest and npc:
+                                    npc.unlock_node(opt_node_id)
+
+                                if quest_unlock_key and npc:
+                                    if not hasattr(game.player, 'quest_assignments'):
+                                        game.player.quest_assignments = {}
+                                    is_new_assignment = quest_unlock_key not in game.player.quest_assignments
+                                    game.player.quest_assignments[quest_unlock_key] = {
+                                        'npc_id': getattr(npc, 'id', None),
+                                        'npc_name': npc.name,
+                                        'saved': bool(getattr(npc, 'saved', False) or getattr(npc, 'is_at_lobby', False))
+                                    }
+                                    if is_new_assignment or str(unlock).startswith("Quest:"):
                                         from core.ui.notifications import add_notification
-                                        display_quest_name = str(unlock)[6:].strip()
+                                        display_quest_name = str(quest_unlock_key)[6:].strip()
                                         add_notification(game, tr('ui', 'New Quest!'), display_quest_name, target_tab='Quests')
                                         display_message(game, f"{tr('msg', 'New Quest:')} {display_quest_name}")
 
                                 complete = opt.get('complete_flag')
                                 if complete:
+                                    if npc and hasattr(game.player, 'quest_assignments'):
+                                        for k_q in (complete, opt_node_id):
+                                            if k_q and k_q in game.player.quest_assignments:
+                                                game.player.quest_assignments[k_q]['saved'] = bool(getattr(npc, 'saved', False) or getattr(npc, 'is_at_lobby', False))
+                                                game.player.quest_assignments[k_q]['npc_name'] = npc.name
                                     if complete not in game.player.completed_quests:
                                         game.player.completed_quests.append(complete)
                                     clean_q = complete[6:].strip() if str(complete).startswith("Quest:") else complete

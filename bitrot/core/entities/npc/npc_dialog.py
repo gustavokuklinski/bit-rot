@@ -9,6 +9,8 @@ class NPCDialog:
     NPC_DIALOGS = None
     MILESTONES = None # Class variable for Milestones
 
+    QUEST_META = {}
+
     @staticmethod
     def load_dialogs(game=None):
         if NPCDialog.NPC_DIALOGS is not None and NPCDialog.MILESTONES is not None: 
@@ -18,6 +20,7 @@ class NPCDialog:
 
         NPCDialog.NPC_DIALOGS = {} 
         NPCDialog.MILESTONES = []
+        NPCDialog.QUEST_META = {}
         
         # 1. Load Milestones JSON
         milestones_path = mod_manager.get_override_path(os.path.join(DATA_PATH, 'player', 'milestones.json'))
@@ -79,6 +82,13 @@ class NPCDialog:
                             node_id = quest_node.get('id')
                             options = quest_node.get('options', [])
                             if node_id and options:
+                                if str(node_id).startswith("Quest:") and node_id in NPCDialog.NPC_DIALOGS:
+                                    continue
+                                if str(node_id).startswith("Quest:"):
+                                    NPCDialog.QUEST_META[node_id] = {
+                                        'saved': bool(quest_node.get('saved', False)),
+                                        'assign_npc': quest_node.get('assign_npc')
+                                    }
                                 process_options(node_id, options)
             except Exception as e:
                 print(f"NPC Error: Could not load quests.json: {e}")
@@ -112,21 +122,61 @@ class NPCDialog:
         
         options = []
         
-        mandatory_nodes = {"greeting", "tips", "lore_branch", "quest_branch"}
-        active_nodes = mandatory_nodes.union(self.dialog_flags)
+        def _is_lobby_npc():
+            if getattr(self, 'is_at_lobby', False) or getattr(self, 'saved', False):
+                return True
+            gen = getattr(self.game, 'generator', None)
+            lobby_chunk = getattr(gen, 'lobby_chunk', None) if gen else None
+            if lobby_chunk is not None and getattr(self, 'layer', 1) == 1 and getattr(self, 'is_friendly', False):
+                lobby_map = f"map_L1_{lobby_chunk[0]}_{lobby_chunk[1]}_map.csv"
+                cur_map = getattr(self.game.map_manager, 'current_map_filename', '')
+                npc_map = getattr(self, 'map_filename', '') or cur_map
+                if npc_map == lobby_map:
+                    return True
+            return False
 
-        if hasattr(self.game.player, 'quests') and self.game.player.quests:
-            active_nodes.update(self.game.player.quests)
-
+        is_lobby_npc = _is_lobby_npc()
         completed_quests = getattr(self.game.player, 'completed_quests', [])
         active_quests = getattr(self.game.player, 'quests', [])
+        quest_assignments = getattr(self.game.player, 'quest_assignments', {})
 
-        # Include uncompleted Quest nodes so their offer or turn-in stages can be evaluated
-        for n_id in NPCDialog.NPC_DIALOGS.keys():
-            if str(n_id).startswith("Quest:"):
-                quest_title = str(n_id)[6:].strip()
-                if n_id not in completed_quests and quest_title not in completed_quests:
-                    active_nodes.add(n_id)
+        def _quest_belongs_to_self(q_node_id):
+            q_title = str(q_node_id)[6:].strip() if str(q_node_id).startswith("Quest:") else str(q_node_id)
+            info = quest_assignments.get(q_node_id) or quest_assignments.get(q_title)
+            if info:
+                assigned_id = info.get('npc_id')
+                assigned_name = info.get('npc_name')
+                if assigned_id:
+                    return getattr(self, 'id', None) == assigned_id
+                if assigned_name and assigned_name != "[NPC_NAME_HERE]":
+                    return getattr(self, 'name', None) == assigned_name
+            meta = NPCDialog.QUEST_META.get(q_node_id, {})
+            static_npc = meta.get('assign_npc')
+            if static_npc and str(static_npc).strip() not in ("", "[NPC_NAME_HERE]"):
+                return getattr(self, 'name', None) == str(static_npc).strip()
+            return True
+
+        if is_lobby_npc:
+            mandatory_nodes = {"greeting", "tips", "lore_branch", "quest_branch"}
+            active_nodes = mandatory_nodes.union(self.dialog_flags)
+
+            if active_quests:
+                active_nodes.update(active_quests)
+
+            # Include uncompleted Quest nodes assigned to this NPC or unassigned
+            for n_id in NPCDialog.NPC_DIALOGS.keys():
+                if str(n_id).startswith("Quest:"):
+                    quest_title = str(n_id)[6:].strip()
+                    if n_id not in completed_quests and quest_title not in completed_quests:
+                        if _quest_belongs_to_self(n_id):
+                            active_nodes.add(n_id)
+        else:
+            # World NPCs are only allowed Tip and Gossip (plus Greeting)
+            mandatory_nodes = {"greeting", "tips", "lore_branch"}
+            active_nodes = mandatory_nodes.union(
+                f for f in self.dialog_flags
+                if not str(f).startswith("Quest:") and str(f) != "quest_branch"
+            )
         
         sorted_nodes = sorted(list(active_nodes))
         player_lucky = self.game.player.progression.get_lucky(self.game.player)
@@ -177,6 +227,9 @@ class NPCDialog:
             if is_quest_completed:
                 continue
                 
+            if is_quest_node and not _quest_belongs_to_self(node_id):
+                continue
+
             valid_options = []
             for opt in node_options:
                 stage = opt.get('stage')
@@ -238,7 +291,12 @@ class NPCDialog:
                     options.append(c_opt)
                     
             elif str(node_id) == "quest_branch":
-                story_starters = [o for o in valid_options if o.get('unlock_flag') not in completed_quests]
+                story_starters = [
+                    o for o in valid_options
+                    if o.get('unlock_flag') not in completed_quests
+                    and o.get('unlock_flag') not in active_quests
+                    and _quest_belongs_to_self(o.get('unlock_flag', ''))
+                ]
                 if story_starters:
                     weights = [int(o.get('priority', 100)) for o in story_starters]
                     chosen_story = random.choices(story_starters, weights=weights, k=1)[0].copy() 
@@ -267,9 +325,15 @@ class NPCDialog:
         cloth_str = ", ".join([i.name for i in self.clothes.values()]) if self.clothes else "ragged clothes"
         
         for opt in options:
+            npc_name_str = getattr(self, 'name', 'Survivor')
+            if opt.get('q'):
+                opt['q'] = opt['q'].replace('[NPC_NAME_HERE]', npc_name_str)
             if opt.get('a'):
                 opt['a'] = opt['a'].replace('[inventory_list]', inv_str)
                 opt['a'] = opt['a'].replace('[clothes_list]', cloth_str)
+                opt['a'] = opt['a'].replace('[NPC_NAME_HERE]', npc_name_str)
+            if opt.get('tip'):
+                opt['tip'] = opt['tip'].replace('[NPC_NAME_HERE]', npc_name_str)
                 
         options.sort(key=lambda x: int(x.get('priority', 100)), reverse=True)
         return options

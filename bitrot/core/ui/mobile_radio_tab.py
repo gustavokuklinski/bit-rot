@@ -211,7 +211,7 @@ def draw_radio_tab(surface, game, modal, assets):
     # Check match with 0.01 tolerance
     target_entries = []
     for f_val, entries in freq_info_map.items():
-        if abs(freq - f_val) <= 0.015:
+        if abs(freq - f_val) <= 0.05:
             target_entries = entries
             break
 

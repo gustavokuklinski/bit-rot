@@ -126,6 +126,7 @@ def _teleport_npc_to_lobby(game, npc):
         npc.is_friendly = True
         npc.is_at_port = False
         npc.is_at_lobby = True
+        npc.saved = True
         npc.render_opacity = 255.0
         npc.cached_los_draw_result = True
         npc.last_los_draw_check = pygame.time.get_ticks()
@@ -151,6 +152,7 @@ def _teleport_npc_to_lobby(game, npc):
         npc.is_friendly = True
         npc.is_at_port = False
         npc.is_at_lobby = True
+        npc.saved = True
         npc.render_opacity = 255.0
         npc.cached_los_draw_result = True
         npc.last_los_draw_check = pygame.time.get_ticks()
@@ -162,8 +164,80 @@ def _teleport_npc_to_lobby(game, npc):
         lobby_npcs.append(npc)
         game.map_states[lobby_map]['npcs'] = lobby_npcs
 
+    _award_and_assign_quest_on_npc_saved(game, npc)
+
     if hasattr(game, 'sound_manager'):
         game.sound_manager.play_sound("notification.ogg", subdir="ui", game=game, base_volume=0.8, is_critical=True)
+
+
+def _award_and_assign_quest_on_npc_saved(game, npc):
+    """Awards the player for saving an NPC to Lobby and places a new quest onto the saved NPC."""
+    player = getattr(game, 'player', None)
+    if not player:
+        return
+
+    # 1. Award XP & Currency to player
+    if hasattr(player, 'progression'):
+        player.progression.add_xp(player, 'lucky', 100)
+
+    reward_item = Item.create_from_name("Money WBRL")
+    if reward_item:
+        if hasattr(reward_item, 'load'):
+            reward_item.load = 50
+        if len(player.inventory) < player.get_total_inventory_slots():
+            player.inventory.append(reward_item)
+            if hasattr(player, 'stack_item_in_inventory'):
+                player.stack_item_in_inventory(reward_item)
+        else:
+            reward_item.rect.center = player.rect.center
+            reward_item.x, reward_item.y = reward_item.rect.topleft
+            reward_item.layer = getattr(game, 'current_layer_index', 1)
+            game.items_on_ground.append(reward_item)
+
+    display_message(game, f"{tr('msg', 'Survivor saved:')} {npc.name}! (+100 XP Lucky, +50 Money WBRL)")
+
+    # 2. Place a new unassigned quest on this saved NPC
+    from core.entities.npc.npc_dialog import NPCDialog
+    if NPCDialog.NPC_DIALOGS is None:
+        NPCDialog.load_dialogs(game)
+
+    completed_quests = set(getattr(player, 'completed_quests', []))
+    active_quests = set(getattr(player, 'quests', []))
+    if not hasattr(player, 'quest_assignments'):
+        player.quest_assignments = {}
+
+    candidate_quests = []
+    for q_id in NPCDialog.NPC_DIALOGS.keys():
+        if not str(q_id).startswith("Quest:"):
+            continue
+        q_short = str(q_id)[6:].strip()
+        if q_id in completed_quests or q_short in completed_quests:
+            continue
+        if q_id in active_quests or q_short in active_quests:
+            continue
+        if q_id in player.quest_assignments or q_short in player.quest_assignments:
+            continue
+
+        meta = NPCDialog.QUEST_META.get(q_id, {})
+        static_npc = meta.get('assign_npc')
+        if static_npc and str(static_npc).strip() not in ("", "[NPC_NAME_HERE]", npc.name):
+            continue
+        candidate_quests.append(q_id)
+
+    if candidate_quests:
+        chosen_q = random.choice(candidate_quests)
+        player.quest_assignments[chosen_q] = {
+            'npc_id': getattr(npc, 'id', None),
+            'npc_name': npc.name,
+            'saved': True
+        }
+        npc.assigned_quest = chosen_q
+        npc.dialog_flags.add(chosen_q)
+
+        from core.ui.notifications import add_notification
+        q_display = str(chosen_q)[6:].strip()
+        add_notification(game, tr('ui', 'New Quest Available!'), f"{npc.name}: {q_display}", target_tab='Quests', play_sound=False)
+        display_message(game, f"{npc.name} {tr('msg', 'has a new quest for you at the Lobby:')} {q_display}")
 
 def _teleport_npc_to_port(game, npc):
     h = len(game.map_data) if game.map_data else 0
@@ -261,6 +335,8 @@ def _get_or_create_lobby_npcs(game, lobby_gx, lobby_gy, lobby_map):
                         occupied.add((px, py))
                         npc = NPC(px, py, game, is_static=True, layer=1)
                         npc.is_friendly = True
+                        npc.is_at_lobby = True
+                        npc.saved = False
                         npc.map_filename = lobby_map
                         initial_npcs.append(npc)
 
@@ -419,7 +495,7 @@ def handle_npc_save(game, npc):
     lobby_map = f"map_L1_{lobby_chunk[0]}_{lobby_chunk[1]}_map.csv" if lobby_chunk else ""
     cur_map = getattr(game.map_manager, 'current_map_filename', '')
 
-    is_already_at_lobby = has_lobby and (getattr(npc, 'is_at_lobby', False) or (cur_map == lobby_map))
+    is_already_at_lobby = has_lobby and (getattr(npc, 'is_at_lobby', False) or getattr(npc, 'saved', False) or (cur_map == lobby_map))
     if is_already_at_lobby:
         display_message(tr('msg', f"{npc.name} is already safe in the Lobby!"))
         return

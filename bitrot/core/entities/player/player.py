@@ -79,6 +79,7 @@ class Player(PlayerStats, PlayerMovement, PlayerGraphics,
         self.quests = data.get('quests', [])
         core.data.config.apply_player_traits_config(self.traits)
         self.completed_quests = data.get('completed_quests', [])
+        self.quest_assignments = dict(data.get('quest_assignments', {}))
         self.known_recipes = data.get('known_recipes', [])
         self.dialog_history = data.get('dialog_history', [])
         self.special_dialogs = data.get('special_dialogs', [])
