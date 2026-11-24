@@ -468,6 +468,8 @@ def editor():
     dragging_cam = False
     drag_start = (0, 0)
 
+    last_b_tab_click = (-1, 0)
+
     running = True
     while running:
         cur_tab = building_tabs[active_b_idx] if 0 <= active_b_idx < len(building_tabs) else None
