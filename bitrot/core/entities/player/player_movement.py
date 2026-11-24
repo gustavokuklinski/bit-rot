@@ -497,7 +497,8 @@ class PlayerMovement:
             if hasattr(game, 'npcs'):
                 npcs_to_check = game.npcs.sprites() if hasattr(game.npcs, 'sprites') else game.npcs
                 for npc in list(npcs_to_check):
-                    if not npc.is_dead and not getattr(npc, 'is_friendly', False) and vehicle_rect.colliderect(npc.rect):
+                    is_lobby_npc = npc.is_in_lobby(game) if hasattr(npc, 'is_in_lobby') else (getattr(npc, 'is_at_lobby', False) or getattr(npc, 'saved', False))
+                    if not npc.is_dead and not is_lobby_npc and vehicle_rect.colliderect(npc.rect):
                         self.vehicle.damage_motor(1.5)
                         damage_to_npc = 2
                         is_dead = npc.take_damage(damage_to_npc, game, attacker=self)

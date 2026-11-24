@@ -140,8 +140,10 @@ def trigger_explosion(game, x, y, damage, radius, owner, explosion_sound=None):
     dead_npcs = []
     if hasattr(game, 'npcs'):
         for n in game.npcs:
-            # FNPCs are completely invulnerable to all explosions, including player explosions
-            if getattr(n, 'is_friendly', False):
+            is_lobby_npc = n.is_in_lobby(game) if hasattr(n, 'is_in_lobby') else (getattr(n, 'is_at_lobby', False) or getattr(n, 'saved', False))
+            if is_lobby_npc:
+                continue
+            if getattr(n, 'is_friendly', False) and (is_zombie_owner or is_animal_owner or is_hnpc_owner or (owner is not None and owner != getattr(game, 'player', None))):
                 continue
 
             # HNPCs ignore explosions caused by Zombies

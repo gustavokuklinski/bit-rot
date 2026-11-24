@@ -68,9 +68,17 @@ class NPCCombat:
         if self.is_dead: return True
 
         # FNPCs are ignored and immune to Zombies, Animals, and HNPCs
-        # FNPCs are completely invulnerable to all sources, including the player
-        if getattr(self, 'is_friendly', False):
+        # Lobby NPCs cannot be damaged or killed by anything, including the player
+        is_lobby = self.is_in_lobby(game) if hasattr(self, 'is_in_lobby') else (getattr(self, 'is_at_lobby', False) or getattr(self, 'saved', False))
+        if is_lobby:
             return False
+
+        # World FNPCs remain immune to Zombies, Animals, and other NPCs (but can be killed by the player)
+        if getattr(self, 'is_friendly', False) and attacker is not None:
+            if isinstance(attacker, Zombie):
+                return False
+            if type(attacker).__name__ == 'NPC':
+                return False
 
         # Zombies and Animals do not damage or kill HNPCs
         if not getattr(self, 'is_friendly', True) and attacker is not None:
@@ -150,7 +158,8 @@ class NPCCombat:
         return False
 
     def die(self, game):
-        if self.is_dead or getattr(self, 'is_friendly', False): return
+        is_lobby = self.is_in_lobby(game) if hasattr(self, 'is_in_lobby') else (getattr(self, 'is_at_lobby', False) or getattr(self, 'saved', False))
+        if self.is_dead or is_lobby: return
         self.is_dead = True 
 
         if hasattr(game, 'sound_manager') and hasattr(self, 'sound_dead') and self.sound_dead:

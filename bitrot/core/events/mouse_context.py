@@ -847,7 +847,22 @@ def handle_right_click(game, mouse_pos):
             if getattr(clicked_item, 'allow_use', False):
                 options.append('Use')
 
-            is_item_liq = getattr(clicked_item, 'liquid', False) or getattr(clicked_item, 'item_type', '') in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
+            c_itype = getattr(clicked_item, 'item_type', '')
+            is_openable_container = (
+                (
+                    c_itype in ('container', 'container_disposable', 'maptile_container')
+                    or (c_itype == 'cloth' and (getattr(clicked_item, 'capacity', 0) or 0) > 0 and not getattr(clicked_item, 'hotbar', False))
+                    or isinstance(clicked_item, Corpse)
+                )
+                and getattr(clicked_item, 'inventory', None) is not None
+            )
+            if is_openable_container:
+                options.append('Open')
+
+            if c_itype == 'weapon_ranged' and getattr(clicked_item, 'ammo_type', None) and (getattr(clicked_item, 'load', 0) or 0) > 0:
+                options.append('Get bullets')
+
+            is_item_liq = getattr(clicked_item, 'liquid', False) or c_itype in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
             if not isinstance(clicked_item, Corpse) and getattr(clicked_item, 'type', None) not in ('animal', 'zombie'):
                 if not is_item_liq:
                     if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
@@ -884,9 +899,11 @@ def handle_right_click(game, mouse_pos):
             is_container = isinstance(clicked_item, Corpse) or getattr(clicked_item, 'item_type', '') in ('container', 'container_disposable', 'maptile_container') or hasattr(clicked_item, 'inventory')
 
             if is_container:
-                # Containers on ground only allow Open
+                # Corpses on ground only allow Open (never Grab); other containers allow Open and Grab
                 options.append('Open')
-                options.append('Grab')
+                is_corpse = isinstance(clicked_item, Corpse) or getattr(clicked_item, 'is_corpse', False) or type(clicked_item).__name__ == 'Corpse'
+                if not is_corpse:
+                    options.append('Grab')
             else:
                 if getattr(clicked_item, 'allow_use', False):
                     options.append('Use')
@@ -924,7 +941,22 @@ def handle_right_click(game, mouse_pos):
             if getattr(clicked_item, 'allow_use', False):
                 options.append('Use')
 
-            is_item_liq = getattr(clicked_item, 'liquid', False) or getattr(clicked_item, 'item_type', '') in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
+            c_itype = getattr(clicked_item, 'item_type', '')
+            is_openable_container = (
+                (
+                    c_itype in ('container', 'container_disposable', 'maptile_container')
+                    or (c_itype == 'cloth' and (getattr(clicked_item, 'capacity', 0) or 0) > 0 and not getattr(clicked_item, 'hotbar', False))
+                    or isinstance(clicked_item, Corpse)
+                )
+                and getattr(clicked_item, 'inventory', None) is not None
+            )
+            if is_openable_container:
+                options.append('Open')
+
+            if c_itype == 'weapon_ranged' and getattr(clicked_item, 'ammo_type', None) and (getattr(clicked_item, 'load', 0) or 0) > 0:
+                options.append('Get bullets')
+
+            is_item_liq = getattr(clicked_item, 'liquid', False) or c_itype in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
             if not is_item_liq:
                 if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
                     options.extend(['Grab One', 'Grab Half', 'Grab All'])
@@ -971,19 +1003,19 @@ def handle_right_click(game, mouse_pos):
             # Containers in the world only show Open (Use belongs to items inside)
             options = ['Open']
 
-        elif click_source == 'container':
-            options = []
-            # Items inside the container show Use if allow_use is set
-            if getattr(clicked_item, 'allow_use', False):
-                options.append('Use')
+        #elif click_source == 'container':
+        #    options = []
+        #    # Items inside the container show Use if allow_use is set
+        #    if getattr(clicked_item, 'allow_use', False):
+        #        options.append('Use')
 
-            is_item_liq = getattr(clicked_item, 'liquid', False) or getattr(clicked_item, 'item_type', '') in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
-            if not is_item_liq:
-                if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
-                    options.extend(['Grab One', 'Grab Half', 'Grab All'])
-                else:
-                    options.append('Grab')
-            options.append('Send to')
+        #    is_item_liq = getattr(clicked_item, 'liquid', False) or getattr(clicked_item, 'item_type', '') in ('liquid', 'car_fuel') or getattr(clicked_item, 'name', '') == 'Fuel Unit'
+        #    if not is_item_liq:
+        #        if hasattr(clicked_item, 'is_stackable') and clicked_item.is_stackable() and getattr(clicked_item, 'load', 1) > 1:
+        #            options.extend(['Grab One', 'Grab Half', 'Grab All'])
+        #        else:
+        #            options.append('Grab')
+        #    options.append('Send to')
 
         else:
             options = game.player.get_item_context_options(clicked_item, click_source, click_container_item)

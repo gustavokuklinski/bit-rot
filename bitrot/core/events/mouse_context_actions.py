@@ -2566,7 +2566,7 @@ def handle_context_menu_click(game, mouse_pos):
                     clicked_on_menu = True
 
             elif source in ['ground', 'nearby', 'container'] and option in ['Grab', 'Grab One', 'Grab Half', 'Grab All']:
-                if getattr(item, 'type', None) in ('animal', 'zombie'):
+                if type(item).__name__ == 'Corpse' or getattr(item, 'is_corpse', False) or getattr(item, 'type', None) in ('animal', 'zombie'):
                     game.context_menu['active'] = False
                     return
 

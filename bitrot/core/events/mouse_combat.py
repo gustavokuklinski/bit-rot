@@ -405,7 +405,8 @@ def handle_attack(game, mouse_pos):
                 # 4. Hit NPCs
                 if not hit_something:
                     for npc in getattr(game, 'npcs', []):
-                        if not npc.is_dead and not getattr(npc, 'is_friendly', False):
+                        is_lobby_npc = npc.is_in_lobby(game) if hasattr(npc, 'is_in_lobby') else (getattr(npc, 'is_at_lobby', False) or getattr(npc, 'saved', False))
+                        if not npc.is_dead and not is_lobby_npc:
                             dist = math.hypot(game.player.rect.centerx - npc.rect.centerx, game.player.rect.centery - npc.rect.centery)
                             if dist <= attack_range:
                                 dx = npc.rect.centerx - game.player.rect.centerx

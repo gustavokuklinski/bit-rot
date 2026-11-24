@@ -714,8 +714,24 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         self.path = []      
         self.idle_timer = 500
     
+    def is_in_lobby(self, game=None):
+        if getattr(self, 'is_at_lobby', False) or getattr(self, 'saved', False):
+            return True
+        g = game or getattr(self, 'game', None)
+        if not g:
+            return False
+        gen = getattr(g, 'generator', None)
+        lobby_chunk = getattr(gen, 'lobby_chunk', None) if gen else None
+        if lobby_chunk is not None and getattr(self, 'layer', 1) == 1:
+            lobby_map = f"map_L1_{lobby_chunk[0]}_{lobby_chunk[1]}_map.csv"
+            cur_map = getattr(getattr(g, 'map_manager', None), 'current_map_filename', '')
+            npc_map = getattr(self, 'map_filename', '') or cur_map
+            if npc_map == lobby_map:
+                return True
+        return False
+
     def die(self, game):
-        if self.is_dead or getattr(self, 'is_friendly', False):
+        if self.is_dead or self.is_in_lobby(game):
             return
 
         if not hasattr(self, 'inventory') or self.inventory is None:

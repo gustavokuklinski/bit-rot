@@ -27,8 +27,10 @@ def update_vehicles(game, zombies_to_remove):
                     for entity in detected_entities:
                         if entity in roadkill_zombies or getattr(entity, 'is_dead', False): continue
 
-                        if type(entity).__name__ == 'NPC' and getattr(entity, 'is_friendly', False):
-                            continue
+                        if type(entity).__name__ == 'NPC':
+                            is_lobby_npc = entity.is_in_lobby(game) if hasattr(entity, 'is_in_lobby') else (getattr(entity, 'is_at_lobby', False) or getattr(entity, 'saved', False))
+                            if is_lobby_npc:
+                                continue
 
                         current_time = pygame.time.get_ticks()
                         if current_time - getattr(entity, 'last_vehicle_hit_time', 0) < 500: continue

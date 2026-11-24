@@ -177,7 +177,10 @@ def update_projectiles(game, GRID_SIZE, zombies_to_remove):
         
         hit_npc = None
         for n in getattr(game, 'active_npcs', getattr(game, 'npcs', [])):
-            if n.is_dead or n == p_owner or getattr(n, 'is_friendly', False):
+            is_lobby_npc = n.is_in_lobby(game) if hasattr(n, 'is_in_lobby') else (getattr(n, 'is_at_lobby', False) or getattr(n, 'saved', False))
+            if n.is_dead or n == p_owner or is_lobby_npc:
+                continue
+            if getattr(n, 'is_friendly', False) and p_owner is not None and p_owner != getattr(game, 'player', None):
                 continue
             if getattr(n, 'layer', 1) != curr_layer:
                 continue
