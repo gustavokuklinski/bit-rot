@@ -68,7 +68,7 @@
               "stage": "offer",
               "player_question": "Hey. You look like someone who knows a way off this rock. I'm... between contractors.",
               "npc_answer": "What! Look at you \u2013 rags and desperation. Perfect. Listen, kiddo. I need a mule. There's a suitcase \u2013 old leather, brass locks, smells like trouble. Find it, then hand it to anyone who knows the code 'the tide is rising.' They'll pay. I just want my ticket out before the rot finds me. Everything has a toll. You in?",
-              "req_item": "[Bag, Large Backpack, Small Backpack, Large Satchel, Medium Satchel, Small Satchel]",
+              "req_item": "[Suitcase]",
               "priority": 10,
               "gain_xp": "[lucky:100]",
               "dialog_type": "once",

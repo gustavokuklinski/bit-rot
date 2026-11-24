@@ -574,9 +574,12 @@ def handle_right_click(game, mouse_pos):
                 player_fuel = get_player_fuel_units(game.player)
                 fuel_icon = get_fuel_icon()
 
-                # ONLY show Lobby if generate_lobby_chunk is true, no_boat_to_lobby is false, and lobby_chunk exists
+                is_islet_boat = bool(gen and (cur_gx, cur_gy) in getattr(gen, 'islet_chunks', set()))
+
+                # Only Port tp_boat buildings (not islet tp_boat) allow traveling back to Lobby
                 can_travel_to_lobby = (
-                    getattr(core.data.config, 'SPAWN_LOBBY_CHUNK', True)
+                    not is_islet_boat
+                    and getattr(core.data.config, 'SPAWN_LOBBY_CHUNK', True)
                     and not getattr(core.data.config, 'NO_BOAT_TO_LOBBY', False)
                     and lobby_chunk is not None
                 )
@@ -629,8 +632,8 @@ def handle_right_click(game, mouse_pos):
                         'tooltip_map': tooltip_map
                     })
 
-                # Add Discover Island ONLY if disable_discover_island is false
-                if not getattr(core.data.config, 'DISABLE_DISCOVER_ISLAND', False):
+                # Islet tp_boat only travels to cartography-owned sectors (no Discover Island)
+                if not is_islet_boat and not getattr(core.data.config, 'DISABLE_DISCOVER_ISLAND', False):
                     options.append('Discover Island')
                     game.context_menu['tooltips']['Discover Island'] = (
                         f"{tr('ui', 'Discover a new isolated island.')}\n"

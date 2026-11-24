@@ -1101,6 +1101,8 @@ class ProceduralGenerator(
                     },
                     'forest_chunks': [list(c) for c in self.forest_chunks],
                     'urban_chunks': [list(c) for c in self.urban_chunks],
+                    'islet_chunks': [list(c) for c in getattr(self, 'islet_chunks', set())],
+                    'world_seed': getattr(self, '_world_seed_str', 'DEFAULT'),
                     'generated_chunks': [list(c) for c in self.generated_chunks],
                 },
                 f,

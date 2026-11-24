@@ -1161,6 +1161,56 @@ class ProceduralGeneratorChunk:
                 )
                 reachable = _bfs_reachable(list(reachable))
 
+        # 6.8 Spawn a random maptile_teleport (char="tp_boat") on top of Sand on the islet
+        boat_defs = getattr(getattr(self.game, 'tile_manager', None), 'definitions', {})
+        boat_char = 'tp_boat' if 'tp_boat' in boat_defs else self._resolve_boat_char()
+
+        def _count_walkable_neighbors(tx, ty):
+            cnt = 0
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = tx + dx, ty + dy
+                if 0 <= nx < w and 0 <= ny < h and _is_walkable_tile(nx, ny):
+                    cnt += 1
+            return cnt
+
+        def _has_adjacent_water(tx, ty):
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = tx + dx, ty + dy
+                if 0 <= nx < w and 0 <= ny < h:
+                    g = str(layers['ground'][ny][nx]).lower()
+                    if layers['ground'][ny][nx] == water_tile or 'water' in g:
+                        return True
+            return False
+
+        boat_tier1 = []  # Shoreline sand on islet (not sandbar), >=2 walkable exits
+        boat_tier2 = []  # Any sand on islet (not sandbar), >=2 walkable exits
+        boat_tier3 = []  # Fallback: any reachable sand tile
+
+        for (sx, sy) in reachable:
+            if not (4 <= sx < w - 4 and 4 <= sy < h - 4):
+                continue
+            if (sx, sy) in bridge_tiles or layers['protected_mask'][sy][sx] == 1:
+                continue
+            if self._is_in_connector_zone_internal(sx, sy, w, h, cx, cy):
+                continue
+            if layers['base'][sy][sx] != ' ' or layers['spawn'][sy][sx] != ' ':
+                continue
+            if 'sand' not in str(layers['ground'][sy][sx]).lower():
+                continue
+
+            boat_tier3.append((sx, sy))
+            if (sx, sy) not in sandbar_tiles and _count_walkable_neighbors(sx, sy) >= 2:
+                boat_tier2.append((sx, sy))
+                if _has_adjacent_water(sx, sy):
+                    boat_tier1.append((sx, sy))
+
+        chosen_boat_pool = boat_tier1 or boat_tier2 or boat_tier3
+        if chosen_boat_pool:
+            bx, by = random.choice(chosen_boat_pool)
+            layers['base'][by][bx] = boat_char
+            layers['spawn'][by][bx] = ' '
+            layers['protected_mask'][by][bx] = 1
+
         # 7. Set zombie spawns on walkable islet tiles (excluding edge connector portals)
         z_candidates = []
         for iy in range(6, h - 6):
