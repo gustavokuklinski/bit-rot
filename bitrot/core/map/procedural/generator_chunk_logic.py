@@ -782,10 +782,23 @@ class ProceduralGeneratorChunk:
         tmpl_l2 = self.templates.get(self._get_l2_counterpart(cave_name, is_forest=False)) if cave_name else None
         tmpl_l3 = self.templates.get(self._get_l3_counterpart(cave_name, is_forest=False)) if cave_name else None
 
-        forest_name = random.choice(self.forest_templates) if getattr(self, 'forest_templates', None) else None
+        forest_pool = list(getattr(self, 'forest_templates', []) or [])
+        target_forest_count = random.randint(2, 5) if forest_pool else 0
+        shuffled_forest_pool = list(forest_pool)
+        random.shuffle(shuffled_forest_pool)
+
+        def _next_forest_name():
+            if not forest_pool:
+                return None
+            if shuffled_forest_pool:
+                return shuffled_forest_pool.pop()
+            return random.choice(forest_pool)
+
+        forest_name = _next_forest_name()
         forest_tmpl = self.templates.get(forest_name) if forest_name else None
         forest_l2 = self.templates.get(self._get_l2_counterpart(forest_name, is_forest=True)) if forest_name else None
         forest_l3 = self.templates.get(self._get_l3_counterpart(forest_name, is_forest=True)) if forest_name else None
+        forest_boxes = []
 
         cw_t = cave_tmpl['width'] if cave_tmpl else 0
         ch_t = cave_tmpl['height'] if cave_tmpl else 0
@@ -969,8 +982,9 @@ class ProceduralGeneratorChunk:
         # 6. Scatter grass/sand decorations outside templates and bridges
         grass_decos = ['garden_tree_16', 'garden_stone', 'garden_grass_1', 'garden_grass_2', 'garden_grass_3', 'garden_tall_grass']
         sand_decos = ['garden_tree_16', 'garden_grass_1', 'garden_grass_2', 'garden_grass_3', 'garden_tall_grass']
-        # 5.5 Generate 4 to 7 extra mini-islets (5 to 8 islets total) connected by drunkard-walk sandbars
-        num_extra_islets = random.randint(4, 7)
+        # 5.5 Generate 4 to 7 extra mini-islets (5 to 8 islets total) and spawn remaining Forest_ buildings on them
+        remaining_forests = max(0, target_forest_count - len(forest_boxes))
+        num_extra_islets = max(random.randint(4, 7), remaining_forests)
         main_open_tiles = [
             (ix, iy) for (ix, iy) in islet_walkable_tiles
             if (ix, iy) not in bridge_tiles and layers['protected_mask'][iy][ix] == 0
@@ -978,44 +992,103 @@ class ProceduralGeneratorChunk:
         archipelago_islets = [{
             'cx': icx,
             'cy': icy,
+            'r': max(rx_sand, ry_sand),
             'tiles': main_open_tiles if main_open_tiles else [(int(icx), int(icy))]
         }]
         extra_islet_tiles = []
         sandbar_tiles = set()
         main_excl_dist = max(rx_sand, ry_sand) + 6.0
 
-        for _ in range(num_extra_islets):
+        smallest_forest_name = None
+        if forest_pool:
+            smallest_forest_name = min(
+                forest_pool,
+                key=lambda n: self.templates[n]['width'] * self.templates[n]['height']
+            )
+
+        mini_indices = list(range(num_extra_islets))
+        random.shuffle(mini_indices)
+        host_mini_indices = set(mini_indices[:remaining_forests])
+
+        for mini_idx in range(num_extra_islets):
+            wants_building = (mini_idx in host_mini_indices) or (
+                len(forest_boxes) < 2 and mini_idx == num_extra_islets - 1 and bool(forest_pool)
+            )
+            m_forest_name = _next_forest_name() if wants_building else None
+            m_forest_tmpl = self.templates.get(m_forest_name) if m_forest_name else None
+
             chosen_mini = None
-            mr_gx = random.uniform(3.5, 5.5)
-            mr_gy = random.uniform(3.5, 5.5)
-            mr_sx = mr_gx + 2.5
-            mr_sy = mr_gy + 2.5
+            candidate_pairs = [(m_forest_name, m_forest_tmpl)]
+            if m_forest_tmpl and smallest_forest_name and smallest_forest_name != m_forest_name:
+                candidate_pairs.append((smallest_forest_name, self.templates.get(smallest_forest_name)))
 
-            for attempt in range(180):
-                min_other_dist = 14.5 if attempt < 110 else 11.5
-                min_main_dist = main_excl_dist if attempt < 110 else max(rx_sand, ry_sand) + 4.0
-                cand_mx = random.randint(12, w - 13)
-                cand_my = random.randint(12, h - 13)
+            for cand_f_name, cand_f_tmpl in candidate_pairs:
+                if cand_f_tmpl:
+                    m_fw, m_fh = cand_f_tmpl['width'], cand_f_tmpl['height']
+                    mr_gx = max(random.uniform(4.5, 6.0), (m_fw / 2.0) + 2.0)
+                    mr_gy = max(random.uniform(4.5, 6.0), (m_fh / 2.0) + 2.0)
+                else:
+                    m_fw, m_fh = 0, 0
+                    mr_gx = random.uniform(3.5, 5.5)
+                    mr_gy = random.uniform(3.5, 5.5)
+                mr_sx = mr_gx + 2.5
+                mr_sy = mr_gy + 2.5
 
-                if math.hypot(cand_mx - icx, cand_my - icy) < min_main_dist:
-                    continue
+                x_min = max(10, int(math.ceil(mr_sx)) + 3)
+                x_max = min(w - 11, w - int(math.ceil(mr_sx)) - 4)
+                y_min = max(10, int(math.ceil(mr_sy)) + 3)
+                y_max = min(h - 11, h - int(math.ceil(mr_sy)) - 4)
+                if x_min >= x_max or y_min >= y_max:
+                    x_min, x_max = 12, w - 13
+                    y_min, y_max = 12, h - 13
 
-                mini_rect = pygame.Rect(
-                    int(cand_mx - mr_sx - 1), int(cand_my - mr_sy - 1),
-                    int((mr_sx + 1) * 2), int((mr_sy + 1) * 2)
-                )
-                if any(mini_rect.colliderect(br.inflate(3, 3)) for br in bridge_rects):
-                    continue
-                if any(math.hypot(cand_mx - isl['cx'], cand_my - isl['cy']) < min_other_dist for isl in archipelago_islets[1:]):
-                    continue
+                cur_r = max(mr_sx, mr_sy)
+                for attempt in range(180):
+                    gap_pad = 3.0 if attempt < 110 else 1.5
+                    min_main_dist = (max(rx_sand, ry_sand) + cur_r + 2.5) if attempt < 110 else (max(rx_sand, ry_sand) + cur_r + 0.5)
+                    cand_mx = random.randint(x_min, x_max)
+                    cand_my = random.randint(y_min, y_max)
 
-                chosen_mini = (cand_mx, cand_my, mr_gx, mr_gy, mr_sx, mr_sy)
-                break
+                    if math.hypot(cand_mx - icx, cand_my - icy) < min_main_dist:
+                        continue
+
+                    mini_rect = pygame.Rect(
+                        int(cand_mx - mr_sx - 1), int(cand_my - mr_sy - 1),
+                        int((mr_sx + 1) * 2), int((mr_sy + 1) * 2)
+                    )
+                    if any(mini_rect.colliderect(br.inflate(3, 3)) for br in bridge_rects):
+                        continue
+                    if any(
+                        math.hypot(cand_mx - isl['cx'], cand_my - isl['cy']) < (isl.get('r', 7.0) + cur_r + gap_pad)
+                        for isl in archipelago_islets[1:]
+                    ):
+                        continue
+
+                    if cand_f_tmpl:
+                        ftx_cand = int(cand_mx - m_fw // 2)
+                        fty_cand = int(cand_my - m_fh // 2)
+                        if ftx_cand < 6 or fty_cand < 6 or ftx_cand + m_fw > w - 6 or fty_cand + m_fh > h - 6:
+                            continue
+                        f_rect = pygame.Rect(ftx_cand, fty_cand, m_fw, m_fh)
+                        if any(f_rect.colliderect(br.inflate(2, 2)) for br in bridge_rects):
+                            continue
+                        if any(
+                            layers['protected_mask'][ry][rx] == 1
+                            for ry in range(fty_cand, fty_cand + m_fh)
+                            for rx in range(ftx_cand, ftx_cand + m_fw)
+                        ):
+                            continue
+
+                    chosen_mini = (cand_mx, cand_my, mr_gx, mr_gy, mr_sx, mr_sy, cand_f_name, cand_f_tmpl)
+                    break
+
+                if chosen_mini:
+                    break
 
             if not chosen_mini:
                 continue
 
-            mx, my, m_gx, m_gy, m_sx, m_sy = chosen_mini
+            mx, my, m_gx, m_gy, m_sx, m_sy, m_forest_name, m_forest_tmpl = chosen_mini
             m_phase = random.uniform(0, 2 * math.pi)
             mini_tiles = []
 
@@ -1037,6 +1110,59 @@ class ProceduralGeneratorChunk:
                         layers['ground'][iy][ix] = sand_tile
                         mini_tiles.append((ix, iy))
 
+            if m_forest_tmpl:
+                m_fw, m_fh = m_forest_tmpl['width'], m_forest_tmpl['height']
+                m_ftx = int(mx - m_fw // 2)
+                m_fty = int(my - m_fh // 2)
+                for iy in range(max(4, m_fty - 1), min(h - 4, m_fty + m_fh + 1)):
+                    for ix in range(max(4, m_ftx - 1), min(w - 4, m_ftx + m_fw + 1)):
+                        if (ix, iy) not in bridge_tiles and layers['protected_mask'][iy][ix] == 0:
+                            layers['ground'][iy][ix] = 'bg_grass'
+                            if (ix, iy) not in mini_tiles:
+                                mini_tiles.append((ix, iy))
+
+                self._blit_template(layers, m_forest_tmpl, m_ftx, m_fty, w, h, clear_base=True)
+                forest_boxes.append((m_ftx, m_fty, m_fw, m_fh))
+
+                m_f_l2_key = self._get_l2_counterpart(m_forest_name, is_forest=True)
+                m_f_l2 = self.templates.get(m_f_l2_key) if m_f_l2_key else None
+                if m_f_l2:
+                    l2_w, l2_h = m_f_l2['width'], m_f_l2['height']
+                    l2_coll = any(
+                        occupied_mask_L2[ly][lx] == 1
+                        for ly in range(max(0, m_fty - pad), min(h, m_fty + l2_h + pad))
+                        for lx in range(max(0, m_ftx - pad), min(w, m_ftx + l2_w + pad))
+                    )
+                    if not l2_coll:
+                        self._blit_template_mapped(layers, m_f_l2, m_ftx, m_fty, w, h, suffix='_L2')
+                        if hasattr(self, '_apply_l2_border'):
+                            self._apply_l2_border(layers, m_ftx, m_fty, l2_w, l2_h, w, h, suffix='_L2', margin=4)
+                        for ly in range(max(0, m_fty - pad), min(h, m_fty + l2_h + pad)):
+                            for lx in range(max(0, m_ftx - pad), min(w, m_ftx + l2_w + pad)):
+                                occupied_mask_L2[ly][lx] = 1
+
+                m_f_l3_key = self._get_l3_counterpart(m_forest_name, is_forest=True)
+                m_f_l3 = self.templates.get(m_f_l3_key) if m_f_l3_key else None
+                if m_f_l3:
+                    l3_w, l3_h = m_f_l3['width'], m_f_l3['height']
+                    l3_coll = any(
+                        occupied_mask_L3[ly][lx] == 1
+                        for ly in range(max(0, m_fty - pad), min(h, m_fty + l3_h + pad))
+                        for lx in range(max(0, m_ftx - pad), min(w, m_ftx + l3_w + pad))
+                    )
+                    if not l3_coll:
+                        self._blit_template_mapped(layers, m_f_l3, m_ftx, m_fty, w, h, suffix='_L3')
+                        if hasattr(self, '_apply_l2_border'):
+                            self._apply_l2_border(layers, m_ftx, m_fty, l3_w, l3_h, w, h, suffix='_L3', margin=4)
+                        for ly in range(max(0, m_fty - pad), min(h, m_fty + l3_h + pad)):
+                            for lx in range(max(0, m_ftx - pad), min(w, m_ftx + l3_w + pad)):
+                                occupied_mask_L3[ly][lx] = 1
+
+                mini_tiles = [
+                    (ix, iy) for (ix, iy) in mini_tiles
+                    if layers['protected_mask'][iy][ix] == 0 and layers['base'][iy][ix] == ' '
+                ]
+
             if not mini_tiles:
                 layers['ground'][my][mx] = 'bg_grass'
                 mini_tiles.append((mx, my))
@@ -1051,7 +1177,7 @@ class ProceduralGeneratorChunk:
             self._carve_sand_drunkard_path(
                 layers, start_pt, end_pt, bridge_tiles, sand_tile, water_tile, w, h, sandbar_tiles=sandbar_tiles
             )
-            archipelago_islets.append({'cx': mx, 'cy': my, 'tiles': mini_tiles})
+            archipelago_islets.append({'cx': mx, 'cy': my, 'r': max(m_sx, m_sy), 'tiles': mini_tiles})
 
         # Add 1-2 extra sandbar loops between nearby mini-islets for natural archipelago connectivity
         if len(archipelago_islets) >= 3:
@@ -1103,7 +1229,7 @@ class ProceduralGeneratorChunk:
                 continue
             if cave_pos and (cave_pos[0] - 1 <= ix < cave_pos[0] + cw_t + 1) and (cave_pos[1] - 1 <= iy < cave_pos[1] + ch_t + 1):
                 continue
-            if forest_pos and (forest_pos[0] - 1 <= ix < forest_pos[0] + fw_t + 1) and (forest_pos[1] - 1 <= iy < forest_pos[1] + fh_t + 1):
+            if any((fx - 1 <= ix < fx + fw + 1) and (fy - 1 <= iy < fy + fh + 1) for (fx, fy, fw, fh) in forest_boxes):
                 continue
             if (ix, iy) in sandbar_tiles:
                 if random.random() < 0.04:
