@@ -79,7 +79,8 @@ def handle_movement(game):
 
     for modal in game.modals:
         if (modal.get('type') == 'alias_prompt' and modal.get('input_active', True)) or \
-           (modal.get('type') == 'write_text' and modal.get('input_active', False)):
+           (modal.get('type') == 'write_text' and modal.get('input_active', False)) or \
+           (modal.get('type') == 'big_map' and modal.get('map_text_active', False)):
             game.player.vx = 0
             game.player.vy = 0
             game.player.is_running = False

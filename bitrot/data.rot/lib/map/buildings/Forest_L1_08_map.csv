@@ -1,10 +1,10 @@
 ,,garden_tree_6,,,,,,,
 ,wall_01_broke,,garden_tall_grass,garden_grass_3,garden_tree_9,garden_tree_9,garden_tree_6,garden_grass_1,
 ,garden_tree_6,garden_grass_1,garden_tree_9,@,window_02_broke,@,@,garden_grass_1,garden_tree_6
-,garden_dirty_1,,garden_tree_6,@,garden_dirty_1,garden_tall_grass,@,garden_grass_3,
-,garden_tall_grass,wall_01_part_right_top,@,@,garden_grass_3,stair_l2,@,garden_tree_9,
+,garden_dirty_1,wall_01_broke,garden_tree_6,window_01_broke,garden_dirty_1,garden_tall_grass,@,garden_grass_3,
+,garden_tall_grass,wall_01_part_right_top,@,@,garden_grass_3,stair_l2,window_01_broke,garden_tree_9,
 garden_grass_3,,garden_tall_grass,military_radio,lab_cupboard_01,,factory_industrial_pipe_left,@,garden_dirty_1,garden_dirty_2
-,wall_01_broke,,garden_tall_grass,wall_01_part_right,garden_grass_1,,@,garden_tall_grass,garden_tree_6
-,,garden_grass_1,garden_dirty_1,@,window_02_broke,door_02_broke,@,@,
+,wall_01_broke,@,garden_tall_grass,wall_01_part_right,garden_grass_1,,@,garden_tall_grass,garden_tree_6
+,,@,garden_dirty_1,@,window_02_broke,door_02_broke,@,@,
 garden_grass_3,garden_tree_9,garden_tree_6,,garden_tree_9,garden_tree_9,garden_grass_3,garden_tree_9,wall_01_part_right_top,garden_dirty_1
 ,,,garden_grass_1,,garden_dirty_1,,,garden_tree_6,

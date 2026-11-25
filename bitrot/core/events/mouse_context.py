@@ -1032,7 +1032,7 @@ def handle_right_click(game, mouse_pos):
                 options = [o for o in options if o != 'Equip']
 
             if is_player_item:
-                if getattr(clicked_item, 'item_type', '') == 'text' and getattr(clicked_item, 'can_write', False):
+                if (getattr(clicked_item, 'item_type', '') == 'text' and getattr(clicked_item, 'can_write', False)) or getattr(clicked_item, 'item_type', '') == 'map':
                     if 'Write' not in options:
                         options.append('Write')
                 if 'Place' not in options: options.append('Place')

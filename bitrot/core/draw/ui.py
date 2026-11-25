@@ -694,6 +694,16 @@ def draw_mini_gps_hud(surface, game, view_right, dynamic_h, mouse_pos):
     # Frame outline around the map display
     pygame.draw.rect(surface, (50, 50, 50), map_rect, 1)
 
+    # Show chunk coordinates at the top-right of mini GPS map in small font (font_14)
+    hud_coord = f"L{current_layer} {match.group(1)}_{match.group(2)}" if match else f"L{current_layer}"
+    hc_surf = font_14.render(hud_coord, False, YELLOW)
+    hc_pill = pygame.Surface((hc_surf.get_width() + 6, hc_surf.get_height() + 4), pygame.SRCALPHA)
+    hc_pill.fill((15, 15, 15, 195))
+    hc_x = map_rect.right - hc_pill.get_width() - 2
+    hc_y = map_rect.y + 2
+    surface.blit(hc_pill, (hc_x, hc_y))
+    surface.blit(hc_surf, (hc_x + 3, hc_y + 2))
+
     return (box_rect, f"{tr('ui', 'GPS Minimap')} ({tr('ui', 'Click to open')})")
 
 def draw_ui(game, offset_x, offset_y, zoom, dynamic_h, screen_rect, target_world_rect):

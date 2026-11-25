@@ -2288,10 +2288,16 @@ def handle_context_menu_click(game, mouse_pos):
                 clicked_on_menu = True
 
             elif option == 'Write':
-                if getattr(item, 'item_type', '') != 'text' or not getattr(item, 'can_write', False):
+                is_writable_text = (getattr(item, 'item_type', '') == 'text' and getattr(item, 'can_write', False))
+                is_writable_map = (getattr(item, 'item_type', '') == 'map')
+                if not (is_writable_text or is_writable_map):
                     display_message(tr('msg', "Cannot write on this item."))
                     game.context_menu['active'] = False
                     return
+                if is_writable_map:
+                    item.can_write = True
+                    if getattr(item, 'text_length', 0) <= 0:
+                        item.text_length = 256
 
                 from core.entities.item.item_helpers import player_has_any_item
                 if not player_has_any_item(game.player, ('Pen', 'Pencil')):

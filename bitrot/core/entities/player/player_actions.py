@@ -534,6 +534,7 @@ class PlayerActions:
                 options.append('Use')
             elif item_type == 'map':
                 options.append('Open')
+                options.append('Write')
             else:
                 options.append('Read')
                 if getattr(item, 'can_write', False):

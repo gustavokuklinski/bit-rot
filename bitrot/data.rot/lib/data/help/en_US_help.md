@@ -77,5 +77,12 @@ Special thanks for the players:
 * PhotoCraft
 * Python 3.11
 * VSCode
-* Gemma/Gemini
 
+**AI/LLM (Code)**
+* Gemma 3/4 (Local via llama.cpp/Ollama)
+* Gemini Pro/4 Hydrogen/3.8 Flash/3.1 Pro Preview/2.5 Pro
+* Deepseek R1
+* Qwen 3.5
+* Claude Sonnet
+* GLM 5.2
+* Llama 3.1/3.2 (Local via llama.cpp/Ollama)

@@ -350,7 +350,7 @@ def get_fogged_minimap_surface(game, base_cache_surf, current_layer, current_map
 
     return fog_surf
 
-def draw_map_tab(surface, game, modal, assets, full_map=False, target_chunk=None, target_layer=None, is_view_only=False):
+def draw_map_tab(surface, game, modal, assets, full_map=False, target_chunk=None, target_layer=None, is_view_only=False, bottom_pad=0):
     if 'map_zoom' not in modal:
         modal['map_zoom'] = 6
     if 'map_offset' not in modal:
@@ -395,7 +395,7 @@ def draw_map_tab(surface, game, modal, assets, full_map=False, target_chunk=None
         content_height = modal['rect'].bottom - content_y_start - 8
     else:
         content_y_start = modal['rect'].y + 50
-        content_height = modal['rect'].height - 60
+        content_height = modal['rect'].height - 60 - bottom_pad
 
     content_x_start = modal['rect'].x + 10
     content_width = modal['rect'].width - 20
@@ -598,6 +598,134 @@ def draw_map_tab(surface, game, modal, assets, full_map=False, target_chunk=None
                     if map_area_rect.collidepoint(sx, sy):
                         pygame.draw.circle(surface, (255, 50, 50), (int(sx), int(sy)), 3)
 
+    modal['_map_transform'] = (map_area_rect, src_x, src_y, map_zoom)
+
+    # Render saved / pending ink strokes & written notes on map items
+    map_item_ref = modal.get('item')
+    if is_mobile_modal and active_held_map_name:
+        held_obj = next((m for m in get_player_held_maps(game.player) if m.name == active_held_map_name), None)
+        if held_obj:
+            map_item_ref = held_obj
+
+    old_clip = surface.get_clip()
+    surface.set_clip(map_area_rect)
+
+    if map_item_ref:
+        strokes_to_draw = modal.get('pending_strokes') if modal.get('type') == 'big_map' else getattr(map_item_ref, 'map_strokes', [])
+        if strokes_to_draw:
+            pen_size_scales = (0.25, 0.60, 1.15)
+            for stroke in strokes_to_draw:
+                pts = stroke.get('points', [])
+                col = tuple(stroke.get('color', (220, 50, 50)))
+                s_idx = int(stroke.get('size', 0))
+                s_idx = max(0, min(2, s_idx))
+                stroke_w = max(1, int(round(map_zoom * pen_size_scales[s_idx])))
+                if len(pts) >= 2:
+                    screen_pts = [
+                        (int(map_area_rect.x + (px - src_x) * map_zoom), int(map_area_rect.y + (py - src_y) * map_zoom))
+                        for px, py in pts
+                    ]
+                    pygame.draw.lines(surface, col, False, screen_pts, stroke_w)
+                elif len(pts) == 1:
+                    px, py = pts[0]
+                    sx = int(map_area_rect.x + (px - src_x) * map_zoom)
+                    sy = int(map_area_rect.y + (py - src_y) * map_zoom)
+                    pygame.draw.circle(surface, col, (sx, sy), max(1, stroke_w // 2))
+
+            texts_to_draw = modal.get('pending_texts') if modal.get('type') == 'big_map' else getattr(map_item_ref, 'map_texts', [])
+            if texts_to_draw:
+                text_fonts = (font_14, font_12, font_16)
+                for t_entry in texts_to_draw:
+                    txt_val = str(t_entry.get('text', '')).strip()
+                    if not txt_val:
+                        continue
+                    tx, ty = t_entry.get('x', 0), t_entry.get('y', 0)
+                    sx = int(map_area_rect.x + (tx - src_x) * map_zoom)
+                    sy = int(map_area_rect.y + (ty - src_y) * map_zoom)
+                    col = tuple(t_entry.get('color', (245, 245, 245)))
+                    s_idx = max(0, min(2, int(t_entry.get('size', 1))))
+                    t_font = text_fonts[s_idx]
+                    outline_col = (220, 220, 220) if (col[0] + col[1] + col[2]) < 90 else (0, 0, 0)
+                    txt_surf = t_font.render(txt_val, False, col)
+                    sh_surf = t_font.render(txt_val, False, outline_col)
+                    draw_rect = txt_surf.get_rect(center=(sx, sy))
+                    t_entry['_screen_rect'] = draw_rect
+                    if map_area_rect.colliderect(draw_rect):
+                        surface.blit(sh_surf, (draw_rect.x + 1, draw_rect.y + 1))
+                        surface.blit(txt_surf, draw_rect.topleft)
+
+    # Per-chunk coordinate tags in top-right of each chunk on full maps
+    if full_map and (chunk_size * map_zoom) >= 26:
+        chunks_w_cnt = max(1, map_w // chunk_size)
+        chunks_h_cnt = max(1, map_h // chunk_size)
+        active_c = getattr(getattr(game, 'generator', None), 'active_chunks', None)
+        for cgx in range(chunks_w_cnt):
+            for cgy in range(chunks_h_cnt):
+                if active_c is not None and (cgx, cgy) not in active_c:
+                    continue
+                c_right_x = int(map_area_rect.x + ((cgx + 1) * chunk_size - src_x) * map_zoom)
+                c_top_y = int(map_area_rect.y + (cgy * chunk_size - src_y) * map_zoom)
+                if c_right_x < map_area_rect.left or c_top_y > map_area_rect.bottom:
+                    continue
+                c_lbl = f"{cgx}_{cgy}"
+                c_surf = font_14.render(c_lbl, False, WHITE)
+                c_sh = font_14.render(c_lbl, False, BLACK)
+                tx_p = c_right_x - c_surf.get_width() - 3
+                ty_p = c_top_y + 3
+                if map_area_rect.collidepoint(tx_p, ty_p):
+                    surface.blit(c_sh, (tx_p + 1, ty_p + 1))
+                    surface.blit(c_surf, (tx_p, ty_p))
+
+    # Display written text note overlay at bottom-left of big_map if present
+    if modal.get('type') == 'big_map' and map_item_ref and getattr(map_item_ref, 'text', None) and str(map_item_ref.text).strip():
+        note_lines = [ln for ln in str(map_item_ref.text).strip().split('\n') if ln.strip()][:3]
+        if note_lines:
+            line_h = font_14.get_height() + 3
+            max_nw = min(map_area_rect.width - 16, max(font_14.size(ln)[0] for ln in note_lines) + 12)
+            nh = len(note_lines) * line_h + 8
+            note_box = pygame.Rect(map_area_rect.x + 6, map_area_rect.bottom - nh - 6, max_nw, nh)
+            note_bg = pygame.Surface((note_box.width, note_box.height), pygame.SRCALPHA)
+            note_bg.fill((15, 15, 15, 200))
+            surface.blit(note_bg, note_box.topleft)
+            pygame.draw.rect(surface, (120, 120, 120), note_box, 1, border_radius=3)
+            ny = note_box.y + 4
+            for ln in note_lines:
+                ns = font_14.render(ln, False, (230, 230, 200))
+                surface.blit(ns, (note_box.x + 6, ny))
+                ny += line_h
+
+    # Top-Right Map Coordinates in small font (font_14)
+    coord_text = f"L{current_layer}"
+    if target_chunk:
+        coord_text = f"L{current_layer} {target_chunk[0]}_{target_chunk[1]}"
+    elif full_map:
+        if map_area_rect.collidepoint(mouse_pos) and map_zoom > 0:
+            h_tx = src_x + (mouse_pos[0] - map_area_rect.x) / map_zoom
+            h_ty = src_y + (mouse_pos[1] - map_area_rect.y) / map_zoom
+            h_gx = max(0, int(h_tx // chunk_size))
+            h_gy = max(0, int(h_ty // chunk_size))
+            coord_text = f"L{current_layer} {h_gx}_{h_gy}"
+        else:
+            cw_n = max(1, map_w // chunk_size)
+            ch_n = max(1, map_h // chunk_size)
+            coord_text = f"L{current_layer} ({cw_n}x{ch_n})"
+    else:
+        m_cur = re.search(r'map_L\d+_(\d+)_(\d+)_map\.csv', current_map_file)
+        if m_cur:
+            coord_text = f"L{current_layer} {m_cur.group(1)}_{m_cur.group(2)}"
+
+    c_txt_surf = font_14.render(coord_text, False, YELLOW)
+    pill_w = c_txt_surf.get_width() + 8
+    pill_h = c_txt_surf.get_height() + 6
+    pill_rect = pygame.Rect(map_area_rect.right - pill_w - 4, map_area_rect.y + 4, pill_w, pill_h)
+    pill_bg = pygame.Surface((pill_w, pill_h), pygame.SRCALPHA)
+    pill_bg.fill((15, 15, 15, 200))
+    surface.blit(pill_bg, pill_rect.topleft)
+    pygame.draw.rect(surface, (80, 80, 80), pill_rect, 1, border_radius=2)
+    surface.blit(c_txt_surf, (pill_rect.x + 4, pill_rect.y + 3))
+
+    surface.set_clip(old_clip)
+
     # --- RENDER DROPDOWN CONTROLS (MOBILE PHONE ONLY) ---
     if is_mobile_modal:
         dd_rect = modal.get('map_dropdown_rect')
@@ -745,6 +873,70 @@ def draw_map_tab(surface, game, modal, assets, full_map=False, target_chunk=None
             modal['map_dropdown_popup_rect'] = None
             modal['map_dd_dragging'] = False
 
+MAP_PEN_COLORS = [
+    ('Red', [220, 50, 50]),
+    ('White', [245, 245, 245]),
+    ('Black', [15, 15, 15]),
+    ('Marine Blue', [0, 55, 140]),
+]
+MAP_PEN_SIZE_SCALES = (0.25, 0.60, 1.15)
+MAP_ERASER_RADII = (0.8, 2.0, 4.0)
+
+
+def _erase_map_region(modal, ex, ey, r_tiles, screen_pos, map_zoom):
+    """Erases only the parts of strokes and placed textboxes touched by the eraser radius."""
+    r_sq = r_tiles * r_tiles
+    step_max = max(0.25, r_tiles * 0.35)
+    new_strokes = []
+
+    for stroke in modal.get('pending_strokes', []):
+        pts = stroke.get('points', [])
+        if not pts:
+            continue
+        col = stroke.get('color', [220, 50, 50])
+        sz = stroke.get('size', 0)
+
+        # Subdivide long segments so erasing cuts through straight lines cleanly
+        dense_pts = [pts[0]]
+        for i in range(len(pts) - 1):
+            ax, ay = pts[i]
+            bx, by = pts[i + 1]
+            seg_len = math.hypot(bx - ax, by - ay)
+            if seg_len > step_max:
+                n_sub = int(math.ceil(seg_len / step_max))
+                for s_i in range(1, n_sub + 1):
+                    t = s_i / float(n_sub)
+                    dense_pts.append([ax + (bx - ax) * t, ay + (by - ay) * t])
+            else:
+                dense_pts.append([bx, by])
+
+        cur_run = []
+        for pt in dense_pts:
+            if (pt[0] - ex) ** 2 + (pt[1] - ey) ** 2 > r_sq:
+                cur_run.append(pt)
+            else:
+                if cur_run:
+                    new_strokes.append({'color': list(col), 'size': sz, 'points': cur_run})
+                    cur_run = []
+        if cur_run:
+            new_strokes.append({'color': list(col), 'size': sz, 'points': cur_run})
+
+    modal['pending_strokes'] = new_strokes
+
+    # Erase any placed textbox overlapping the eraser circle
+    erase_px_r = max(4, int(r_tiles * map_zoom))
+    remaining_texts = []
+    for t_entry in modal.get('pending_texts', []):
+        s_rect = t_entry.get('_screen_rect')
+        if s_rect and s_rect.inflate(erase_px_r * 2, erase_px_r * 2).collidepoint(screen_pos):
+            continue
+        tx, ty = t_entry.get('x', 0), t_entry.get('y', 0)
+        if (tx - ex) ** 2 + (ty - ey) ** 2 <= r_sq:
+            continue
+        remaining_texts.append(t_entry)
+    modal['pending_texts'] = remaining_texts
+
+
 def draw_big_map_modal(surface, game, modal, assets):
     item = modal['item']
     base_modal = BaseModal(surface, modal, assets, f"{item.name}")
@@ -752,12 +944,336 @@ def draw_big_map_modal(surface, game, modal, assets):
     base_modal.draw_base()
     close_button = base_modal.get_buttons()
 
+    if 'pending_strokes' not in modal:
+        modal['pending_strokes'] = [
+            {'color': list(s.get('color', [220, 50, 50])), 'size': int(s.get('size', 0)), 'points': [list(p) for p in s.get('points', [])]}
+            for s in (getattr(item, 'map_strokes', []) or [])
+        ]
+    if 'pending_texts' not in modal:
+        modal['pending_texts'] = [
+            dict(t) for t in (getattr(item, 'map_texts', []) or [])
+        ]
+
+    modal.setdefault('map_tool', 'pan')
+    modal.setdefault('map_pen_color', [220, 50, 50])  # Default Red
+    modal.setdefault('map_pen_size', 1)               # 0=S, 1=M, 2=L
+    modal.setdefault('map_eraser_size', 1)            # 0=S, 1=M, 2=L
+    modal.setdefault('map_text_input', '')
+    modal.setdefault('map_text_active', False)
+
+    from core.entities.item.item_helpers import player_has_any_item
+    from core.messages import display_message
+
+    has_pen = player_has_any_item(game.player, ('Pen',)) if getattr(game, 'player', None) else False
+    has_pencil = player_has_any_item(game.player, ('Pencil',)) if getattr(game, 'player', None) else False
+    has_writer = has_pen or has_pencil
+    has_eraser = player_has_any_item(game.player, ('Eraser',)) if getattr(game, 'player', None) else False
+
+    if not has_writer and modal.get('map_tool') in ('draw', 'text'):
+        modal['map_tool'] = 'pan'
+        modal['map_text_active'] = False
+    if not has_eraser and modal.get('map_tool') == 'erase':
+        modal['map_tool'] = 'pan'
+
+    modal['map_draw_mode'] = (modal.get('map_tool') == 'draw')
+
     map_info = parse_map_item_info(item)
     draw_map_tab(
         surface, game, modal, assets,
         full_map=map_info['full_map'],
         target_chunk=map_info['target_chunk'],
         target_layer=map_info['layer'],
-        is_view_only=True
+        is_view_only=True,
+        bottom_pad=72
     )
+
+    mouse_pos = game._get_scaled_mouse_pos() if hasattr(game, '_get_scaled_mouse_pos') else pygame.mouse.get_pos()
+    mouse_pressed = pygame.mouse.get_pressed()[0]
+    prev_pressed = modal.get('_big_map_prev_click', False)
+    mouse_just_pressed = mouse_pressed and not prev_pressed
+    modal['_big_map_prev_click'] = mouse_pressed
+
+    active_tool = modal.get('map_tool', 'pan')
+    pen_color = list(modal.get('map_pen_color', [220, 50, 50]))
+    pen_size = int(modal.get('map_pen_size', 1))
+    eraser_size = int(modal.get('map_eraser_size', 1))
+
+    # --- Canvas Tool Interaction & Cursor Previews ---
+    transform = modal.get('_map_transform')
+    if transform:
+        map_area_rect, src_x, src_y, map_zoom = transform
+        in_map = map_area_rect.collidepoint(mouse_pos) and map_zoom > 0
+
+        if in_map:
+            tx = src_x + (mouse_pos[0] - map_area_rect.x) / map_zoom
+            ty = src_y + (mouse_pos[1] - map_area_rect.y) / map_zoom
+
+            if active_tool == 'draw' and has_writer:
+                prev_c = surface.get_clip()
+                surface.set_clip(map_area_rect)
+                brush_r = max(2, int(round(MAP_PEN_SIZE_SCALES[pen_size] * map_zoom * 0.5)))
+                pygame.draw.circle(surface, tuple(pen_color), (int(mouse_pos[0]), int(mouse_pos[1])), brush_r)
+                pygame.draw.circle(surface, WHITE, (int(mouse_pos[0]), int(mouse_pos[1])), brush_r + 1, 1)
+                surface.set_clip(prev_c)
+
+                if mouse_pressed:
+                    if mouse_just_pressed or not modal.get('_is_drawing_stroke', False):
+                        modal['pending_strokes'].append({'color': pen_color, 'size': pen_size, 'points': [[tx, ty]]})
+                        modal['_is_drawing_stroke'] = True
+                    else:
+                        cur_pts = modal['pending_strokes'][-1]['points']
+                        last_x, last_y = cur_pts[-1]
+                        if math.hypot(tx - last_x, ty - last_y) >= max(0.12, 1.5 / map_zoom):
+                            cur_pts.append([tx, ty])
+                else:
+                    modal['_is_drawing_stroke'] = False
+
+            elif active_tool == 'erase' and has_eraser:
+                r_tiles = MAP_ERASER_RADII[eraser_size]
+                erase_px_r = max(4, int(round(r_tiles * map_zoom)))
+                prev_c = surface.get_clip()
+                surface.set_clip(map_area_rect)
+                pygame.draw.circle(surface, (255, 80, 80), (int(mouse_pos[0]), int(mouse_pos[1])), erase_px_r, 1)
+                surface.set_clip(prev_c)
+
+                if mouse_pressed:
+                    prev_e = modal.get('_last_erase_tile')
+                    if mouse_just_pressed or not prev_e:
+                        _erase_map_region(modal, tx, ty, r_tiles, mouse_pos, map_zoom)
+                    else:
+                        px0, py0 = prev_e
+                        dist_e = math.hypot(tx - px0, ty - py0)
+                        steps = max(1, int(math.ceil(dist_e / max(0.25, r_tiles * 0.5))))
+                        for step_i in range(1, steps + 1):
+                            t = step_i / float(steps)
+                            ix = px0 + (tx - px0) * t
+                            iy = py0 + (ty - py0) * t
+                            _erase_map_region(modal, ix, iy, r_tiles, mouse_pos, map_zoom)
+                    modal['_last_erase_tile'] = (tx, ty)
+                    if mouse_just_pressed and hasattr(game, 'sound_manager'):
+                        game.sound_manager.play_sound('eraser.ogg', subdir='ui', game=game, source_pos=None, base_volume=0.35, is_critical=True)
+                else:
+                    modal['_last_erase_tile'] = None
+
+            elif active_tool == 'text' and has_writer:
+                pending_txt = modal.get('map_text_input', '').strip()
+                if pending_txt:
+                    text_fonts = (font_14, font_12, font_16)
+                    p_font = text_fonts[pen_size]
+                    p_surf = p_font.render(pending_txt, False, tuple(pen_color))
+                    prev_c = surface.get_clip()
+                    surface.set_clip(map_area_rect)
+                    surface.blit(p_surf, p_surf.get_rect(center=(int(mouse_pos[0]), int(mouse_pos[1]))))
+                    surface.set_clip(prev_c)
+
+                    if mouse_just_pressed:
+                        modal['pending_texts'].append({
+                            'x': tx,
+                            'y': ty,
+                            'text': pending_txt,
+                            'color': pen_color,
+                            'size': pen_size
+                        })
+                        modal['map_text_input'] = ''
+                        modal['map_text_active'] = False
+                        pygame.key.set_repeat()
+                        if hasattr(game, 'sound_manager'):
+                            game.sound_manager.play_sound('write.ogg', subdir='ui', game=game, source_pos=None, base_volume=0.4, is_critical=True)
+        else:
+            modal['_is_drawing_stroke'] = False
+            modal['_last_erase_tile'] = None
+    else:
+        modal['_is_drawing_stroke'] = False
+        modal['_last_erase_tile'] = None
+
+    # --- Two-Row Bottom Toolbar ---
+    tb_row1_y = modal['rect'].bottom - 68
+    tb_row2_y = modal['rect'].bottom - 34
+    tb_x = modal['rect'].x + 10
+    tb_h = 26
+
+    def _draw_tb_btn(rect, label, active=False, enabled=True, active_col=(40, 95, 140)):
+        hov = enabled and rect.collidepoint(mouse_pos)
+        if not enabled:
+            bg, bd, tc = (32, 32, 32), (55, 55, 55), (100, 100, 100)
+        elif active:
+            bg, bd, tc = active_col, YELLOW, YELLOW
+        elif hov:
+            bg, bd, tc = (65, 65, 65), WHITE, YELLOW
+        else:
+            bg, bd, tc = (42, 42, 42), GRAY_60, WHITE
+        pygame.draw.rect(surface, bg, rect, border_radius=4)
+        pygame.draw.rect(surface, bd, rect, 1, border_radius=4)
+        ts = font_12.render(label, False, tc)
+        surface.blit(ts, ts.get_rect(center=rect.center))
+        return hov
+
+    # Row 1: Modes, Colors, Sizes, Save
+    btn_pan = pygame.Rect(tb_x, tb_row1_y, 50, tb_h)
+    btn_draw = pygame.Rect(btn_pan.right + 4, tb_row1_y, 56, tb_h)
+    btn_text = pygame.Rect(btn_draw.right + 4, tb_row1_y, 54, tb_h)
+    btn_erase = pygame.Rect(btn_text.right + 4, tb_row1_y, 62, tb_h)
+
+    hov_pan = _draw_tb_btn(btn_pan, tr('ui', "Pan"), active=(active_tool == 'pan'))
+    hov_draw = _draw_tb_btn(btn_draw, tr('ui', "Draw"), active=(active_tool == 'draw'), enabled=has_writer)
+    hov_text = _draw_tb_btn(btn_text, tr('ui', "Text"), active=(active_tool == 'text'), enabled=has_writer)
+    hov_erase = _draw_tb_btn(btn_erase, tr('ui', "Erase"), active=(active_tool == 'erase'), enabled=has_eraser, active_col=(130, 45, 45))
+
+    # Color Swatches (Red, White, Black, Marine Blue)
+    cur_x = btn_erase.right + 12
+    col_lbl = font_12.render(f"{tr('ui', 'Color')}:", False, (190, 190, 190))
+    surface.blit(col_lbl, (cur_x, tb_row1_y + 6))
+    cur_x += col_lbl.get_width() + 6
+
+    swatch_rects = []
+    for c_name, c_rgb in MAP_PEN_COLORS:
+        s_rect = pygame.Rect(cur_x, tb_row1_y + 2, 22, 22)
+        is_sel = (list(pen_color) == list(c_rgb))
+        is_hov_s = has_writer and s_rect.collidepoint(mouse_pos)
+        pygame.draw.rect(surface, tuple(c_rgb), s_rect, border_radius=3)
+        pygame.draw.rect(surface, YELLOW if is_sel else (WHITE if is_hov_s else GRAY_60), s_rect, 2 if is_sel else 1, border_radius=3)
+        swatch_rects.append((s_rect, c_rgb, is_hov_s))
+        cur_x += 26
+
+    # Size Selector (controls Eraser size in erase mode, or Pen/Text size otherwise)
+    cur_x += 8
+    size_lbl = font_12.render(f"{tr('ui', 'Size')}:", False, (190, 190, 190))
+    surface.blit(size_lbl, (cur_x, tb_row1_y + 6))
+    cur_x += size_lbl.get_width() + 6
+
+    active_size_idx = eraser_size if active_tool == 'erase' else pen_size
+    size_enabled = has_eraser if active_tool == 'erase' else has_writer
+    size_rects = []
+    for idx_s, s_label in enumerate(('S', 'M', 'L')):
+        sz_r = pygame.Rect(cur_x, tb_row1_y + 1, 24, 24)
+        hov_sz = _draw_tb_btn(sz_r, s_label, active=(active_size_idx == idx_s), enabled=size_enabled)
+        size_rects.append((idx_s, hov_sz))
+        cur_x += 28
+
+    # Save Button
+    can_save = has_writer or has_eraser
+    btn_save = pygame.Rect(modal['rect'].right - 10 - 80, tb_row1_y, 80, tb_h)
+    hov_save = _draw_tb_btn(btn_save, tr('ui', "Save"), active=can_save, enabled=can_save, active_col=(35, 100, 45))
+
+    # Row 2: Text Input Box for writing textboxes directly onto the map
+    txt_lbl = font_12.render(f"{tr('ui', 'Text')}:", False, (190, 190, 190))
+    surface.blit(txt_lbl, (tb_x, tb_row2_y + 6))
+
+    input_x = tb_x + txt_lbl.get_width() + 8
+    input_w = max(180, modal['rect'].right - 10 - input_x - 165)
+    input_rect = pygame.Rect(input_x, tb_row2_y, input_w, tb_h)
+    modal['map_text_input_rect'] = input_rect
+
+    is_txt_active = bool(modal.get('map_text_active', False)) and has_writer
+    is_txt_hover = has_writer and input_rect.collidepoint(mouse_pos)
+    pygame.draw.rect(surface, (15, 15, 15) if is_txt_active else (26, 26, 26), input_rect, border_radius=3)
+    pygame.draw.rect(surface, YELLOW if is_txt_active else (WHITE if is_txt_hover else GRAY_60), input_rect, 1, border_radius=3)
+
+    cur_txt = modal.get('map_text_input', '')
+    old_c = surface.get_clip()
+    surface.set_clip(input_rect.inflate(-8, -4))
+    if not has_writer:
+        ph_s = font_12.render(tr('msg', "Must have a: Pen, Pencil"), False, (110, 110, 110))
+        surface.blit(ph_s, (input_rect.x + 6, input_rect.y + 6))
+    elif not cur_txt and not is_txt_active:
+        ph_s = font_12.render(tr('ui', "Type text to place on map..."), False, (110, 110, 110))
+        surface.blit(ph_s, (input_rect.x + 6, input_rect.y + 6))
+    else:
+        t_s = font_12.render(cur_txt, False, WHITE)
+        surface.blit(t_s, (input_rect.x + 6, input_rect.y + 6))
+        if is_txt_active and (pygame.time.get_ticks() // 500) % 2 == 0:
+            cx_cur = min(input_rect.right - 6, input_rect.x + 6 + t_s.get_width() + 1)
+            pygame.draw.line(surface, WHITE, (cx_cur, input_rect.y + 5), (cx_cur, input_rect.bottom - 5), 1)
+    surface.set_clip(old_c)
+
+    # Hint on right side of Row 2
+    if active_tool == 'text' and has_writer:
+        hint_msg = tr('ui', "Click map to place")
+        hint_col = YELLOW
+    elif active_tool == 'erase' and has_eraser:
+        hint_msg = tr('ui', "Drag to erase")
+        hint_col = (255, 130, 130)
+    elif active_tool == 'draw' and has_writer:
+        hint_msg = tr('ui', "Drag to draw")
+        hint_col = (130, 200, 255)
+    else:
+        hint_msg = tr('ui', "Drag to move map")
+        hint_col = (140, 140, 140)
+    hint_s = font_12.render(hint_msg, False, hint_col)
+    surface.blit(hint_s, (input_rect.right + 10, tb_row2_y + 6))
+
+    # --- Toolbar Click Handling ---
+    if mouse_just_pressed:
+        if is_txt_hover and has_writer:
+            modal['map_text_active'] = True
+            modal['map_tool'] = 'text'
+            pygame.key.set_repeat(400, 40)
+        elif not (transform and transform[0].collidepoint(mouse_pos)):
+            if modal.get('map_text_active', False):
+                modal['map_text_active'] = False
+                pygame.key.set_repeat()
+
+        if hov_pan:
+            modal['map_tool'] = 'pan'
+            modal['map_text_active'] = False
+            pygame.key.set_repeat()
+            if hasattr(game, 'sound_manager'):
+                game.sound_manager.play_ui_hover()
+        elif hov_draw:
+            modal['map_tool'] = 'pan' if active_tool == 'draw' else 'draw'
+            modal['map_text_active'] = False
+            pygame.key.set_repeat()
+            if hasattr(game, 'sound_manager'):
+                game.sound_manager.play_ui_hover()
+        elif hov_text:
+            modal['map_tool'] = 'text'
+            modal['map_text_active'] = True
+            pygame.key.set_repeat(400, 40)
+            if hasattr(game, 'sound_manager'):
+                game.sound_manager.play_ui_hover()
+        elif hov_erase:
+            modal['map_tool'] = 'pan' if active_tool == 'erase' else 'erase'
+            modal['map_text_active'] = False
+            pygame.key.set_repeat()
+            if hasattr(game, 'sound_manager'):
+                game.sound_manager.play_ui_hover()
+        elif hov_save:
+            item.map_strokes = [
+                {'color': list(s.get('color', [220, 50, 50])), 'size': int(s.get('size', 0)), 'points': [list(p) for p in s.get('points', [])]}
+                for s in modal.get('pending_strokes', [])
+            ]
+            item.map_texts = [
+                {
+                    'x': t.get('x', 0),
+                    'y': t.get('y', 0),
+                    'text': t.get('text', ''),
+                    'color': list(t.get('color', [245, 245, 245])),
+                    'size': int(t.get('size', 1))
+                }
+                for t in modal.get('pending_texts', [])
+            ]
+            item.is_written = bool(item.map_strokes or item.map_texts or (getattr(item, 'text', '') and str(item.text).strip()))
+            modal['map_tool'] = 'pan'
+            modal['map_text_active'] = False
+            pygame.key.set_repeat()
+            if hasattr(game, 'sound_manager'):
+                game.sound_manager.play_sound('write.ogg', subdir='ui', game=game, source_pos=None, base_volume=0.5, is_critical=True)
+            display_message(game, tr('msg', "Map saved."))
+        else:
+            for _, c_rgb, is_hov_s in swatch_rects:
+                if is_hov_s:
+                    modal['map_pen_color'] = list(c_rgb)
+                    if hasattr(game, 'sound_manager'):
+                        game.sound_manager.play_ui_hover()
+                    break
+            for idx_s, hov_sz in size_rects:
+                if hov_sz:
+                    if active_tool == 'erase':
+                        modal['map_eraser_size'] = idx_s
+                    else:
+                        modal['map_pen_size'] = idx_s
+                    if hasattr(game, 'sound_manager'):
+                        game.sound_manager.play_ui_hover()
+                    break
+
     return [close_button]

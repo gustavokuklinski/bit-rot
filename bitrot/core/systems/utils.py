@@ -203,6 +203,30 @@ def teleport_player_to_chunk(game, dest_gx, dest_gy, dest_layer=1):
             if spawn_pos:
                 break
 
+    # 6. Fallback on any walkable non-water, non-obstacle tile (e.g. military chunk or L2/L3)
+    if not spawn_pos and h > 0 and w > 0:
+        cx_tile, cy_tile = w // 2, h // 2
+        free_tile = find_free_tile(game.player.rect, game.obstacles, initial_pos=(cx_tile * TILE_SIZE, cy_tile * TILE_SIZE), max_radius=24)
+        if free_tile:
+            fgx, fgy = free_tile[0] // TILE_SIZE, free_tile[1] // TILE_SIZE
+            g_tile = str(game.ground_data[fgy][fgx]).lower() if (getattr(game, 'ground_data', None) and 0 <= fgy < len(game.ground_data) and 0 <= fgx < len(game.ground_data[fgy])) else ''
+            if 'water' not in g_tile:
+                spawn_pos = free_tile
+        if not spawn_pos:
+            for y in range(2, h - 2):
+                for x in range(2, w - 2):
+                    g_char = str(game.ground_data[y][x]).lower() if (getattr(game, 'ground_data', None) and y < len(game.ground_data) and x < len(game.ground_data[y])) else ''
+                    b_char = str(game.map_data[y][x]).strip()
+                    b_def = game.map_manager.get_tile_at(x, y)
+                    if b_char in ('', ' ') and not (b_def and b_def.get('is_obstacle', False)):
+                        if 'water' not in g_char and g_char not in ('', ' '):
+                            test_rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                            if not any(test_rect.colliderect(ob) for ob in game.obstacles):
+                                spawn_pos = (x * TILE_SIZE, y * TILE_SIZE)
+                                break
+                if spawn_pos:
+                    break
+
     # Apply spawn position directly
     if spawn_pos:
         game.player.x = float(spawn_pos[0])
@@ -230,7 +254,7 @@ def teleport_player_to_chunk(game, dest_gx, dest_gy, dest_layer=1):
         game._chunk_loading_bg_type = 'load'
     else:
         game._chunk_loading_title = tr('ui', 'Loading')
-        game._chunk_loading_bg_type = 'boat'
+        game._chunk_loading_bg_type = 'layer' if dest_layer in (2, 3) else 'boat'
         display_message(tr('msg', "Arrived at destination."))
     game._chunk_load_timer = None
     game.game_state = 'CHUNK_LOADING'

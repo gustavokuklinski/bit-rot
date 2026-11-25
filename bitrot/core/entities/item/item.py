@@ -59,6 +59,12 @@ class Item:
         self.can_write = bool(can_write)
         self.text_length = int(text_length) if text_length else 0
         self.is_written = bool(is_written)
+        if self.item_type == 'map':
+            self.can_write = True
+            if self.text_length <= 0:
+                self.text_length = 256
+        self.map_strokes = list(kwargs.get('map_strokes', []) or [])
+        self.map_texts = list(kwargs.get('map_texts', []) or [])
         self.attribute_modifiers = attribute_modifiers if attribute_modifiers is not None else {} 
         self.sounds = sounds if sounds is not None else {}
 
@@ -219,6 +225,12 @@ class Item:
         if getattr(self, 'is_written', False):
             data['is_written'] = True
 
+        if getattr(self, 'map_strokes', None):
+            data['map_strokes'] = self.map_strokes
+
+        if getattr(self, 'map_texts', None):
+            data['map_texts'] = self.map_texts
+
         if getattr(self, 'tip', None) is not None:
             data['tip'] = self.tip
 
@@ -302,6 +314,12 @@ class Item:
         elif item.can_write and item.text and str(item.text).strip():
             item.is_written = True
         
+        if 'map_strokes' in data and isinstance(data['map_strokes'], list):
+            item.map_strokes = data['map_strokes']
+
+        if 'map_texts' in data and isinstance(data['map_texts'], list):
+            item.map_texts = data['map_texts']
+
         if 'max_liquid' in data:
             item.max_liquid = data['max_liquid']
         

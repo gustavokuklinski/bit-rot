@@ -1203,6 +1203,11 @@ def handle_mouse_down(game, event, mouse_pos):
 
                     map_rect = topmost_modal.get('map_area_rect')
                     if map_rect and map_rect.collidepoint(mouse_pos):
+                        if topmost_modal.get('type') == 'big_map' and (
+                            topmost_modal.get('map_draw_mode', False)
+                            or topmost_modal.get('map_tool', 'pan') in ('draw', 'erase', 'text')
+                        ):
+                            return
                         topmost_modal['is_dragging_map'] = True
                         topmost_modal['last_drag_pos'] = mouse_pos
                         return

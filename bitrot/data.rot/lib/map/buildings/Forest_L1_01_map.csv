@@ -1,5 +1,5 @@
 ,garden_tree_6,,,garden_grass_1
-garden_tree_9,garden_grass_1,,,garden_tree_6
-dirty_top_right_01,dirty_top_left_01,garden_tree_6,,garden_tree_9
-dirty_bottom_right_01,dirty_01,dirty_top_left_01,garden_grass_1,
+garden_tree_9,garden_grass_1,outside_metal_fence_1,,garden_tree_6
+dirty_top_right_01,dirty_top_left_01,outside_metal_fence_1,outside_metal_fence_1,garden_tree_9
+dirty_bottom_right_01,dirty_01,dirty_top_left_01,garden_grass_1,misc_barrel
 garden_tree_6,dirty_bottom_right_01,dirty_bottom_left_01,garden_grass_1,

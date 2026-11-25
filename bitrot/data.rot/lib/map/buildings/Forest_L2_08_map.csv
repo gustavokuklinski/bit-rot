@@ -3,7 +3,7 @@ wooden_wall_01,garden_grass_1,,,,wooden_door_01_close,,garden_grass_1,
 wooden_wall_01,,wooden_wall_01,garden_grass_1,garden_tall_grass,wooden_wall_01,military_crate,@,
 wooden_wall_01,garden_tall_grass,wooden_wall_01,wooden_wall_01,wooden_wall_01,wooden_wall_01,wooden_wall_01,wooden_wall_01,
 wooden_wall_01,,wooden_wall_01,,,,stair_l1,wooden_wall_01,
-wooden_wall_01,,wooden_wall_01,,wooden_wall_01,,wooden_wall_01,wooden_wall_01,
-wooden_wall_01,,wooden_wall_01,,garden_tall_grass,wooden_wall_01,,,
-wooden_wall_01,garden_grass_1,,garden_grass_1,factory_industrial_pipe_left,wooden_wall_01,,,
-wooden_wall_01,wooden_wall_01,wooden_wall_01,wooden_wall_01,wooden_wall_01,wooden_wall_01,garden_grass_1,,
+wooden_wall_01,,wooden_wall_01,,wooden_wall_01,,wooden_wall_01,wooden_wall_01,wooden_wall_01
+wooden_wall_01,,wooden_wall_01,,garden_tall_grass,,bg,misc_barrel,wooden_wall_01
+wooden_wall_01,garden_grass_1,,garden_grass_1,factory_industrial_pipe_left,wooden_wall_01,factory_industrial_pipe_right,misc_barrel,wooden_wall_01
+wooden_wall_01,wooden_wall_01,wooden_wall_01,wooden_wall_01,wooden_wall_01,wooden_wall_01,wooden_wall_01,wooden_wall_01,wooden_wall_01

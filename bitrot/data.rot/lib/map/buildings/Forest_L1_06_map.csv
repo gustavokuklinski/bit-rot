@@ -1,9 +1,9 @@
 ,garden_tree_9,,,,garden_tree_6,,,,
 garden_dirty_2,garden_grass_3,garden_grass_3,garden_tree_9,garden_tree_9,garden_tree_6,,garden_grass_1,garden_tree_6,
 ,garden_grass_3,garden_tree_6,garden_dirty_1,garden_dirty_1,petrol_full_top_right_01,petrol_top_01,petrol_top_01,petrol_full_top_left_01,garden_grass_1
-garden_dirty_2,garden_tree_6,,,garden_tree_9,petrol_right_01,petrol_01,petrol_01,petrol_left_01,garden_dirty_1
-garden_grass_3,garden_stone,garden_dirty_1,garden_dirty_1,garden_grass_1,petrol_right_01,petrol_01,,petrol_left_01,garden_tree_9
-,garden_grass_1,garden_tree_6,garden_grass_3,,petrol_full_right_01,petrol_bottom_01,petrol_01,petrol_left_01,
+garden_dirty_2,garden_tree_6,,petrol_bottom_right_01,petrol_horizontal_01,petrol_right_01,petrol_01,petrol_01,petrol_left_01,garden_dirty_1
+garden_grass_3,garden_stone,garden_dirty_1,petrol_vertical_01,military_crate,petrol_right_01,petrol_01,,petrol_left_01,garden_tree_9
+,garden_grass_1,garden_tree_6,petrol_top_right_01,petrol_horizontal_middle_01,petrol_bottom_01,petrol_bottom_01,petrol_01,petrol_left_01,
 ,garden_tree_9,garden_dirty_1,garden_grass_1,garden_stone,garden_tree_6,garden_grass_3,petrol_full_right_01,petrol_full_bottom_left_01,garden_dirty_2
 ,,garden_tree_9,garden_tree_6,garden_dirty_1,garden_tree_6,garden_tree_9,,garden_grass_1,
 ,garden_tree_6,,garden_tree_6,garden_grass_3,garden_tree_6,garden_grass_3,garden_tree_6,,

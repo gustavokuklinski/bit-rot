@@ -30,6 +30,21 @@ def draw_tooltip(surface, item, pos, parent_rect=None):
     if getattr(item, 'safe_radius', 0) > 0:
         lines.append(f"{tr('tooltip', 'Safe radius:')} {item.safe_radius} {tr('tooltip', 'tiles')}")
 
+    if getattr(item, 'item_type', '') == 'map':
+        if getattr(item, 'text', None) and str(item.text).strip():
+            first_note = str(item.text).strip().split('\n')[0]
+            if len(first_note) > 28:
+                first_note = first_note[:26] + ".."
+            lines.append([(f"{tr('tooltip', 'Note')}: ", YELLOW), (first_note, WHITE)])
+        elif getattr(item, 'map_texts', None):
+            first_note = str(item.map_texts[0].get('text', '')).strip()
+            if len(first_note) > 28:
+                first_note = first_note[:26] + ".."
+            if first_note:
+                lines.append([(f"{tr('tooltip', 'Note')}: ", YELLOW), (first_note, WHITE)])
+        if getattr(item, 'map_strokes', None) or getattr(item, 'map_texts', None):
+            lines.append((f"({tr('ui', 'Annotated')})", (130, 200, 255)))
+
     # --- Farm Seed Harvest Time Display ---
     h_data = getattr(item, 'harvest', None)
     if not h_data and hasattr(item, 'name'):

@@ -212,6 +212,51 @@ def process_chat_command(game, text):
         display_message(game, f"[Debug] Debug tab {status_str} in Messages modal.")
         return True
 
+    # --- TELEPORT COMMAND: %rot teleport [MAP_COORD] ---
+    if command == "teleport" or command.startswith("teleport "):
+        arg = raw_command[len("teleport"):].strip()
+        if not arg:
+            display_message(game, "[Debug] Usage: %rot teleport [MAP_COORD] (e.g. 0_1 or L2 0_1)")
+            return True
+
+        dest_layer = getattr(game, 'current_layer_index', 1)
+        rest = arg
+
+        layer_match = re.match(r'^l(\d+)[\s_:,]+(.+)$', rest, re.IGNORECASE)
+        if layer_match:
+            dest_layer = int(layer_match.group(1))
+            rest = layer_match.group(2).strip()
+
+        coord_match = re.match(r'^\(?\s*(\d+)\s*[,_\s\-:]+\s*(\d+)\s*\)?$', rest)
+        if not coord_match:
+            display_message(game, f"[Debug] Invalid map coordinates '{arg}'. Example: %rot teleport 0_1")
+            return True
+
+        dest_gx = int(coord_match.group(1))
+        dest_gy = int(coord_match.group(2))
+
+        if dest_layer not in (1, 2, 3):
+            display_message(game, f"[Debug] Invalid layer {dest_layer}. Must be 1, 2, or 3.")
+            return True
+
+        target_map = f"map_L{dest_layer}_{dest_gx}_{dest_gy}_map.csv"
+        gen = getattr(game, 'generator', None)
+        chunk_exists = (
+            target_map in getattr(game.map_manager, 'map_files', {})
+            or (gen and (dest_gx, dest_gy) in getattr(gen, 'active_chunks', set()))
+        )
+        if not chunk_exists:
+            display_message(game, f"[Debug] Map sector ({dest_gx}_{dest_gy}) on L{dest_layer} does not exist.")
+            return True
+
+        if getattr(game, 'player', None) and getattr(game.player, 'vehicle', None):
+            game.player.exit_vehicle(game)
+
+        from core.systems.utils import teleport_player_to_chunk
+        teleport_player_to_chunk(game, dest_gx, dest_gy, dest_layer=dest_layer)
+        display_message(game, f"[Debug] Teleported to L{dest_layer} ({dest_gx}_{dest_gy}).")
+        return True
+
     # --- LAN COMMANDS ---
     # 1. %rot server (info report)
     if command == "server":
@@ -773,6 +818,17 @@ def handle_keyboard_events(game, event, action_triggered=None):
 
         # ---> FIX: Process active search input in Crafting modal FIRST before any shortcuts
         for modal in reversed(game.modals):
+            if modal.get('type') == 'big_map' and modal.get('map_text_active', False):
+                cur_text = modal.get('map_text_input', '')
+                if event.key == pygame.K_BACKSPACE:
+                    modal['map_text_input'] = cur_text[:-1]
+                elif event.key in (pygame.K_RETURN, pygame.K_ESCAPE):
+                    modal['map_text_active'] = False
+                    pygame.key.set_repeat()
+                elif len(cur_text) < 32 and getattr(event, 'unicode', '') and event.unicode.isprintable():
+                    modal['map_text_input'] = cur_text + event.unicode
+                return
+
             if modal.get('type') == 'write_text':
                 if event.key == pygame.K_ESCAPE:
                     if modal in game.modals:
