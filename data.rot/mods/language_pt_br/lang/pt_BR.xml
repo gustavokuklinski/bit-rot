@@ -16,6 +16,8 @@
         <modal name="Talking to:" translation_modal="Conversando com:" />
         <modal name="Help and Tutorial" translation_modal="Ajuda e Tutorial" />
         <modal name="Controls Configuration" translation_modal="Configuração de Controles" />
+        <modal name="Write" translation_modal="Escrever" />
+        <modal name="Add Alias" translation_modal="Adicionar Apelido" />
     </modal>
 
     <!-- Sub-tab Headers -->
@@ -26,6 +28,8 @@
         <tab name="Map" translation_tab="Mapa" />
         <tab name="Apps" translation_tab="Aplicativos" />
         <tab name="Radio" translation_tab="Rádio" />
+        <tab name="Lan" translation_tab="LAN" />
+        <tab name="LAN" translation_tab="LAN" />
         <tab name="VOIP" translation_tab="VOIP" />
         <tab name="MP3" translation_tab="MP3" />
         <tab name="Info" translation_tab="Informações" />
@@ -34,8 +38,10 @@
         <tab name="Seats" translation_tab="Assentos" />
         <tab name="Known Recipes" translation_tab="Receitas Conhecidas" />
         <tab name="Craft" translation_tab="Criar" />
+        <tab name="Cooking" translation_tab="Culinária" />
         <tab name="Repair" translation_tab="Consertar" />
         <tab name="Dismantle" translation_tab="Desmontar" />
+        <tab name="Build" translation_tab="Construir" />
         <tab name="Health" translation_tab="Saúde" />
         <tab name="Status" translation_tab="Status" />
         <tab name="Record" translation_tab="Habilidades" />
@@ -108,6 +114,9 @@
         <!-- Character Selection Screen -->
         <ui name="CHOOSE YOUR CHARACTER" translation_ui="ESCOLHA SEU PERSONAGEM" />
         <ui name="Select your origin or customize your survivor" translation_ui="Selecione sua origem ou personalize seu sobrevivente" />
+        <ui name="Select your origin to begin your journey" translation_ui="Selecione sua origem para começar sua jornada" />
+        <ui name="Profession" translation_ui="Profissão" />
+        <ui name="Profession:" translation_ui="Profissão:" />
         <ui name="Name:" translation_ui="Nome:" />
         <ui name="More info" translation_ui="Mais detalhes" />
         <ui name="Start Game" translation_ui="Iniciar Jogo" />
@@ -136,6 +145,7 @@
         <!-- HUD, Buttons & Tooltips -->
         <ui name="Pause" translation_ui="Pausar" />
         <ui name="Toggle UI Menus" translation_ui="Alternar Menus HUD" />
+        <ui name="Toggle UI" translation_ui="Alternar Interface" />
         <ui name="Toggle and Reset UI" translation_ui="Alternar e Redefinir Interface" />
         <ui name="Reset Modals" translation_ui="Redefinir Janelas" />
         <ui name="Player Status" translation_ui="Status do Jogador" />
@@ -179,6 +189,68 @@
         <ui name="Vehicle Trunk" translation_ui="Porta-malas do Veículo" />
         <ui name="Send to" translation_ui="Enviar para" />
         <ui name="UI Tip" translation_ui="Dica de Interface" />
+
+        <!-- Map Drawing, Textbox, Write & Alias Modals -->
+        <ui name="Pan" translation_ui="Mover" />
+        <ui name="Draw" translation_ui="Desenhar" />
+        <ui name="Text" translation_ui="Texto" />
+        <ui name="Erase" translation_ui="Apagar" />
+        <ui name="Color" translation_ui="Cor" />
+        <ui name="Size" translation_ui="Tamanho" />
+        <ui name="Type text to place on map..." translation_ui="Digite o texto para colocar no mapa..." />
+        <ui name="Click map to place" translation_ui="Clique no mapa para posicionar" />
+        <ui name="Drag to erase" translation_ui="Arraste para apagar" />
+        <ui name="Drag to draw" translation_ui="Arraste para desenhar" />
+        <ui name="Drag to move map" translation_ui="Arraste para mover o mapa" />
+        <ui name="Annotated" translation_ui="Anotado" />
+        <ui name="Write" translation_ui="Escrever" />
+        <ui name="Edit" translation_ui="Editar" />
+        <ui name="Cancel" translation_ui="Cancelar" />
+        <ui name="Type text..." translation_ui="Digite o texto..." />
+        <ui name="Type alias..." translation_ui="Digite o apelido..." />
+        <ui name="Item" translation_ui="Item" />
+        <ui name="Add Alias" translation_ui="Adicionar Apelido" />
+        <ui name="Read" translation_ui="Ler" />
+        <ui name="Use" translation_ui="Usar" />
+
+        <!-- Farming, Fishing, Destroy/Pickup & Actions -->
+        <ui name="Ready to Harvest [RMB]" translation_ui="Pronto para Colher [RMB]" />
+        <ui name="Growing" translation_ui="Crescendo" />
+        <ui name="Planted" translation_ui="Plantou" />
+        <ui name="Harvesting" translation_ui="Colhendo" />
+        <ui name="Harvested" translation_ui="Colheu" />
+        <ui name="Fertilizing" translation_ui="Fertilizando" />
+        <ui name="Fertilized with" translation_ui="Fertilizado com" />
+        <ui name="growth time" translation_ui="tempo de crescimento" />
+        <ui name="Fishing" translation_ui="Pesca" />
+        <ui name="Cooking" translation_ui="Culinária" />
+        <ui name="Mechanics" translation_ui="Mecânica" />
+        <ui name="Weld" translation_ui="Soldagem" />
+        <ui name="Builder" translation_ui="Construção" />
+        <ui name="Farming" translation_ui="Agricultura" />
+        <ui name="Destroy" translation_ui="Destruir" />
+        <ui name="Pickup" translation_ui="Pegar" />
+        <ui name="layer:" translation_ui="camada:" />
+        <ui name="Select tile to destroy on" translation_ui="Selecione o bloco para destruir em" />
+        <ui name="Select tile to pickup on" translation_ui="Selecione o bloco para pegar em" />
+        <ui name="Collecting" translation_ui="Coletando" />
+        <ui name="(No container in inventory)" translation_ui="(Sem recipiente no inventário)" />
+        <ui name="You need an empty or compatible liquid container." translation_ui="Você precisa de um recipiente de líquido vazio ou compatível." />
+
+        <!-- LAN, NPC Rescue & Quests -->
+        <ui name="Open LAN" translation_ui="Abrir LAN" />
+        <ui name="Close LAN" translation_ui="Fechar LAN" />
+        <ui name="Connect" translation_ui="Conectar" />
+        <ui name="Disconnect" translation_ui="Desconectar" />
+        <ui name="Safe in Lobby" translation_ui="A Salvo no Refúgio" />
+        <ui name="Rescue to Lobby" translation_ui="Resgatar ao Refúgio" />
+        <ui name="Cannot Rescue" translation_ui="Não Pode Resgatar" />
+        <ui name="NPC" translation_ui="NPC" />
+        <ui name="At Lobby" translation_ui="No Refúgio" />
+        <ui name="New Quest Available!" translation_ui="Nova Missão Disponível!" />
+        <ui name="Gamble" translation_ui="Apostar" />
+        <ui name="Default" translation_ui="Padrão" />
+        <ui name="Resources" translation_ui="Recursos" />
 
         <!-- Navigation & Sector Overlays -->
         <ui name="Lobby (Safe Haven)" translation_ui="Refúgio (Zona Segura)" />
@@ -318,6 +390,13 @@
         <ui name="CRAFT ITEM" translation_ui="CRIAR ITEM" />
         <ui name="REPAIR ITEM" translation_ui="CONSERTAR ITEM" />
         <ui name="DISMANTLE" translation_ui="DESMONTAR" />
+        <ui name="COOK DISH" translation_ui="COZINHAR PRATO" />
+        <ui name="LOCKED (COOKING)" translation_ui="BLOQUEADO (CULINÁRIA)" />
+        <ui name="BUILD" translation_ui="CONSTRUIR" />
+        <ui name="LOCKED (SKILL/MAG)" translation_ui="BLOQUEADO (HABILIDADE/REVISTA)" />
+        <ui name="Optional Seasonings &amp; Add-ins:" translation_ui="Temperos e Adicionais Opcionais:" />
+        <ui name="None (Simple recipe)" translation_ui="Nenhum (Receita simples)" />
+        <ui name="No seasonings found." translation_ui="Nenhum tempero encontrado." />
         <ui name="MISSING RESOURCES" translation_ui="RECURSOS INSUFICIENTES" />
         <ui name="Dismantling" translation_ui="Desmontando" />
         <ui name="Repairing" translation_ui="Reparando" />
@@ -332,6 +411,8 @@
         <ui name="CRT Filter" translation_ui="Filtro CRT" />
         <ui name="Windowed" translation_ui="Janela" />
         <ui name="Fullscreen" translation_ui="Tela Cheia" />
+        <ui name="Language" translation_ui="Idioma" />
+        <ui name="Preset Name:" translation_ui="Nome da Predefinição:" />
 
         <ui name="Items:" translation_ui="Itens:" />
         <ui name="starters" translation_ui="iniciais" />
@@ -434,6 +515,18 @@
         <context name="Use" translation_context="Usar" />
         <context name="Read" translation_context="Ler" />
         <context name="Inspect" translation_context="Inspecionar" />
+        <context name="Write" translation_context="Escrever" />
+        <context name="Add Alias" translation_context="Adicionar Apelido" />
+        <context name="Erase Alias" translation_context="Apagar Apelido" />
+        <context name="Plant" translation_context="Plantar" />
+        <context name="Harvest" translation_context="Colher" />
+        <context name="Fertilize" translation_context="Fertilizar" />
+        <context name="Destroy" translation_context="Destruir" />
+        <context name="Pickup" translation_context="Recolher" />
+        <context name="Roof (R)" translation_context="Telhado (R)" />
+        <context name="Map (M)" translation_context="Mapa (M)" />
+        <context name="Ground (G)" translation_context="Chão (G)" />
+        <context name="Fishing" translation_context="Pescar" />
         <context name="Open" translation_context="Abrir" />
         <context name="Close" translation_context="Fechar" />
         <context name="Rest" translation_context="Descansar" />
@@ -473,6 +566,12 @@
         <context name="Front Right" translation_context="Dianteiro Direito" />
         <context name="Back Left" translation_context="Traseiro Esquerdo" />
         <context name="Back Right" translation_context="Traseiro Direito" />
+
+        <context name="Key Slot" translation_context="Espaço da Chave" />
+        <context name="Fuel Tank" translation_context="Tanque de Combustível" />
+        <context name="Engine" translation_context="Motor" />
+        <context name="Battery" translation_context="Bateria" />
+        <context name="Belt" translation_context="Cinto" />
 
         <!-- World / Map Tiles -->
         <context name="Open door/window" translation_context="Abrir porta/janela" />
@@ -545,6 +644,10 @@
         <dialog name="Trade successful!" translation_dialog="Troca concluída com sucesso!" />
         <dialog name="Offer too low!" translation_dialog="Oferta muito baixa!" />
         <dialog name="Invalid trade combination!" translation_dialog="Combinação de troca inválida!" />
+        <dialog name="No items available in this category." translation_dialog="Nenhum item disponível nesta categoria." />
+        <dialog name="Gambled" translation_dialog="Apostou" />
+        <dialog name="Need" translation_dialog="Precisa de" />
+        <dialog name="to Gamble!" translation_dialog="para Apostar!" />
     </dialog>
 
     <!-- Tooltips -->
@@ -574,6 +677,20 @@
         <tooltip name="Liquid:" translation_tooltip="Líquido:" />
         <tooltip name="Belt slots:" translation_tooltip="Espaços no cinto:" />
         <tooltip name="tiles" translation_tooltip="quadrados" />
+
+        <tooltip name="Note" translation_tooltip="Nota" />
+        <tooltip name="Alias:" translation_tooltip="Apelido:" />
+        <tooltip name="Time to harvest:" translation_tooltip="Tempo de colheita:" />
+        <tooltip name="Harvest:" translation_tooltip="Colheita:" />
+        <tooltip name="Fertilizer:" translation_tooltip="Fertilizante:" />
+        <tooltip name="growth speed" translation_tooltip="velocidade de crescimento" />
+        <tooltip name="Destroy roof tile" translation_tooltip="Destruir telhado" />
+        <tooltip name="Destroy map / object tile" translation_tooltip="Destruir objeto / parede" />
+        <tooltip name="Destroy ground tile" translation_tooltip="Destruir piso" />
+        <tooltip name="Pickup roof tile" translation_tooltip="Recolher telhado" />
+        <tooltip name="Pickup map / object tile" translation_tooltip="Recolher objeto / parede" />
+        <tooltip name="Only can sleep between: 22:00 and 00:00" translation_tooltip="Só é possível dormir entre 22:00 e 00:00" />
+        <tooltip name="Drugs" translation_tooltip="Drogas / Álcool" />
 
         <tooltip name="Overview" translation_tooltip="Visão Geral" />
         <tooltip name="Player Status" translation_tooltip="Status do Jogador" />
@@ -893,6 +1010,64 @@
         <msg name="Could not find vehicle" translation_msg="Não foi possível encontrar o veículo" />
         <msg name="Not connected to any LAN radio network." translation_msg="Não conectado a nenhuma rede de rádio LAN." />
         <msg name="Press [{controls}] to open UI" translation_msg="Pressione [{controls}] para abrir o menu" />
+        
+        <!-- Map Writing, Alias, Farming, Destroy/Pickup, Fishing & Sleep -->
+        <msg name="Map saved." translation_msg="Mapa salvo." />
+        <msg name="Text saved." translation_msg="Texto salvo." />
+        <msg name="Must have a: Pen, Pencil" translation_msg="Precisa ter: Caneta ou Lápis" />
+        <msg name="Must have a: Eraser" translation_msg="Precisa ter: Borracha" />
+        <msg name="Cannot write on this item." translation_msg="Não é possível escrever neste item." />
+        <msg name="This item cannot be edited." translation_msg="Este item não pode ser editado." />
+        <msg name="Alias added:" translation_msg="Apelido adicionado:" />
+        <msg name="Alias erased." translation_msg="Apelido apagado." />
+        <msg name="Requires a Shovel to plant seeds!" translation_msg="Requer uma Pá para plantar sementes!" />
+        <msg name="Too far to plant seed!" translation_msg="Muito longe para plantar a semente!" />
+        <msg name="Seeds can only be planted on grass or dirt!" translation_msg="Sementes só podem ser plantadas na grama ou terra!" />
+        <msg name="Cannot plant here, blocked by obstacle!" translation_msg="Não é possível plantar aqui, bloqueado por um obstáculo!" />
+        <msg name="Select soil (grass/dirt) to plant the seed." translation_msg="Selecione o solo (grama/terra) para plantar a semente." />
+        <msg name="Not ready to harvest." translation_msg="Ainda não está pronto para colher." />
+        <msg name="Crop is already fully grown!" translation_msg="A plantação já cresceu completamente!" />
+        <msg name="No fertilizer found." translation_msg="Nenhum fertilizante encontrado." />
+        <msg name="Placed" translation_msg="Posicionou" />
+        <msg name="Picked up" translation_msg="Pegou" />
+        <msg name="Too far away to place tile!" translation_msg="Muito longe para posicionar o bloco!" />
+        <msg name="There is already a roof here!" translation_msg="Já existe um telhado aqui!" />
+        <msg name="Cannot place building tile on yourself!" translation_msg="Não é possível posicionar uma construção sobre você mesmo!" />
+        <msg name="Too far away to destroy tile!" translation_msg="Muito longe para destruir o bloco!" />
+        <msg name="No roof tile here to destroy." translation_msg="Nenhum telhado aqui para destruir." />
+        <msg name="Roof tile destroyed." translation_msg="Telhado destruído." />
+        <msg name="No ground tile here to destroy." translation_msg="Nenhum piso aqui para destruir." />
+        <msg name="Ground tile destroyed." translation_msg="Piso destruído." />
+        <msg name="No map tile here to destroy." translation_msg="Nenhum objeto aqui para destruir." />
+        <msg name="Cannot destroy: Container is not empty!" translation_msg="Não é possível destruir: O recipiente não está vazio!" />
+        <msg name="Map tile destroyed." translation_msg="Objeto destruído." />
+        <msg name="Too far away to pickup tile!" translation_msg="Muito longe para pegar o bloco!" />
+        <msg name="No roof tile here to pickup." translation_msg="Nenhum telhado aqui para pegar." />
+        <msg name="Cannot pickup stair tile!" translation_msg="Não é possível pegar escadas!" />
+        <msg name="No map tile here to pickup." translation_msg="Nenhum objeto aqui para pegar." />
+        <msg name="Open first to pickup" translation_msg="Abra primeiro para pegar" />
+        <msg name="Cannot pickup: Container is not empty!" translation_msg="Não é possível pegar: O recipiente não está vazio!" />
+        <msg name="Only can sleep between: 22:00 and 00:00" translation_msg="Só é possível dormir entre 22:00 e 00:00" />
+        <msg name="Too far away to sleep." translation_msg="Muito longe para dormir." />
+        <msg name="You fell asleep for 8 hours." translation_msg="Você dormiu por 8 horas." />
+        <msg name="You slept for 8 hours and feel refreshed." translation_msg="Você dormiu por 8 horas e se sente revigorado." />
+        <msg name="Exit the vehicle to use the stair" translation_msg="Saia do veículo para usar a escada" />
+        <msg name="Exit the vehicle to use the boat" translation_msg="Saia do veículo para usar o barco" />
+        <msg name="Exit the vehicle to discover island" translation_msg="Saia do veículo para descobrir uma ilha" />
+        <msg name="Exit the vehicle to interact." translation_msg="Saia do veículo para interagir." />
+        <msg name="You must equip a Fishing Rod to fish!" translation_msg="Você precisa equipar uma Vara de Pesca para pescar!" />
+        <msg name="Your Fishing Rod is broken!" translation_msg="Sua Vara de Pesca está quebrada!" />
+        <msg name="Nothing caught this time..." translation_msg="Nada fisgado desta vez..." />
+        <msg name="Nothing bit the hook..." translation_msg="Nada mordeu a isca..." />
+        <msg name="Caught:" translation_msg="Pescou:" />
+        <msg name="Caught" translation_msg="Pescou" />
+        <msg name="Inventory full: dropped at feet." translation_msg="Inventário cheio: caiu aos seus pés." />
+        <msg name="You need a container to collect liquid." translation_msg="Você precisa de um recipiente para coletar líquido." />
+        <msg name="No suitable container to collect" translation_msg="Nenhum recipiente adequado para coletar" />
+        <msg name="Too far away to collect water." translation_msg="Muito longe para coletar água." />
+        <msg name="Collected" translation_msg="Coletou" />
+        <msg name="Survivor saved:" translation_msg="Sobrevivente resgatado:" />
+        <msg name="has a new quest for you at the Lobby:" translation_msg="tem uma nova missão para você no Refúgio:" />
     </msg>
 
 </language>

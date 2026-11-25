@@ -12,7 +12,15 @@
         <trait name="Spy" translation_trait="Espião" />
         <trait name="Maintenance" translation_trait="Manutenção" />
         
+        <trait name="Civilian" translation_trait="Civil" />
+        <trait name="Military" translation_trait="Militar" />
+        <trait name="Doctor" translation_trait="Médico" />
+        
         <!-- Positive Traits -->
+        <trait name="Hobby Fisher" translation_trait="Pescador Amador" />
+        <trait name="Hobby Chef" translation_trait="Chef Amador" />
+        <trait name="Hobby Mechanic" translation_trait="Mecânico Amador" />
+        <trait name="Hobby Farmer" translation_trait="Fazendeiro Amador" />
         <trait name="Vaccine" translation_trait="Vacina" />
         <trait name="Athletic" translation_trait="Atlético" />
         <trait name="Runner" translation_trait="Corredor" />
@@ -33,12 +41,16 @@
         <trait name="Smoker" translation_trait="Fumante" />
         <trait name="Drunk" translation_trait="Bêbado" />
         <trait name="Illnes" translation_trait="Doente" />
+        <trait name="Illness" translation_trait="Doente" />
         <trait name="Sedentary" translation_trait="Sedentário" />
         <trait name="Myopia" translation_trait="Miopia" />
+        <trait name="Psycho" translation_trait="Psicopata" />
         <trait name="Frail" translation_trait="Frágil" />
         <trait name="Sleepy" translation_trait="Sonolento" />
         <trait name="High thirst" translation_trait="Muita Sede" />
+        <trait name="High Thirst" translation_trait="Muita Sede" />
         <trait name="Sweet tooth" translation_trait="Viciado em Doce" />
+        <trait name="Sweet Tooth" translation_trait="Viciado em Doce" />
         <trait name="Unfit" translation_trait="Inapto" />
         <trait name="Clumsy" translation_trait="Desajeitado" />
     </trait>
@@ -82,5 +94,16 @@
         <trait_tooltip name="-20% food recovery" translation_trait_tooltip="-20% na recuperação de comida" />
         <trait_tooltip name="-25% XP Fitness level" translation_trait_tooltip="-25% de XP no nível de Aptidão Física" />
         <trait_tooltip name="-25% XP Melee level, -5% Speed" translation_trait_tooltip="-25% de XP em Corpo a Corpo, -5% de velocidade" />
+        <trait_tooltip name="+2 Level Fishing, +15% Fishing" translation_trait_tooltip="+2 Níveis em Pesca, +15% de XP em Pesca" />
+        <trait_tooltip name="+2 Level Cooking, +15% Cooking" translation_trait_tooltip="+2 Níveis em Culinária, +15% de XP em Culinária" />
+        <trait_tooltip name="+2 Level Mechanic, +15% Mechanic, +1 Level Weld, +5% Weld" translation_trait_tooltip="+2 Níveis em Mecânica, +15% de XP em Mecânica, +1 Nível em Soldagem, +5% de XP em Soldagem" />
+        <trait_tooltip name="+2 Level Farming, +15% Farming" translation_trait_tooltip="+2 Níveis em Agricultura, +15% de XP em Agricultura" />
+        <trait_tooltip name="-25% XP Strength gain, -4 Level Strength" translation_trait_tooltip="-25% no ganho de XP em Força, -4 Níveis em Força" />
+        <trait_tooltip name="-15% slower recovery stamina, +15% faster anxiety, starts with nicotine" translation_trait_tooltip="-15% na recuperação de energia, +15% de ansiedade, começa com nicotina" />
+        <trait_tooltip name="-15% XP Agility penalty, +15% faster anxiety, starts heavily drunk" translation_trait_tooltip="-15% de XP em Agilidade, +15% de ansiedade, começa muito bêbado" />
+        <trait_tooltip name="-30% stamina recovery, -10% Speed" translation_trait_tooltip="-30% na recuperação de energia, -10% de velocidade" />
+        <trait_tooltip name="More Rotters per chunk" translation_trait_tooltip="Mais Rotters por área" />
+        <trait_tooltip name="25% faster water decay" translation_trait_tooltip="Consumo de água 25% mais rápido" />
+        <trait_tooltip name="20% faster food decay" translation_trait_tooltip="Consumo de comida 20% mais rápido" />
     </trait_tooltip>
 </language>

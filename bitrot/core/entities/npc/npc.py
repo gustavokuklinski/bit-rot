@@ -451,6 +451,8 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 self.melee_swing_timer -= game.dt_ms
             return
 
+        self._push_blocked = False
+
         if getattr(self, 'is_friendly', False):
             self._separate_overlapping_npcs(game)
 
@@ -602,6 +604,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
 
     def _process_npc_knockback(self, game):
         obstacles = getattr(game, 'obstacles', [])
+        resolve_stuck_in_obstacle(self, obstacles, game)
         my_layer = getattr(self, 'layer', 1)
         other_npcs = [
             n for n in getattr(game, 'npcs', [])
@@ -682,6 +685,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
         if moved_any and getattr(self, 'is_static', False):
             self.start_x = self.x
             self.start_y = self.y
+        self._push_blocked = (not moved_any) and (abs(kb_x) > 0.01 or abs(kb_y) > 0.01)
         self.walk_anim_angle = math.sin(time.time() * 15) * 2 if moved_any else 0
 
         self.knockback_timer -= getattr(game, 'dt_ms', 16)
@@ -692,6 +696,21 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
     def _separate_overlapping_npcs(self, game):
         obstacles = getattr(game, 'obstacles', [])
         my_layer = getattr(self, 'layer', 1)
+
+        def _cand_hits_obstacle(rect_check):
+            for idx in rect_check.collidelistall(obstacles):
+                obs = obstacles[idx]
+                gx = obs.x // TILE_SIZE
+                gy = obs.y // TILE_SIZE
+                tile_def = game.map_manager.get_tile_at(gx, gy) if hasattr(game, 'map_manager') else None
+                if tile_def and 'mask' in tile_def and getattr(self, 'mask', None):
+                    offset = (obs.x - rect_check.x, obs.y - rect_check.y)
+                    if self.mask.overlap(tile_def['mask'], offset):
+                        return True
+                else:
+                    return True
+            return False
+
         for other in getattr(game, 'npcs', []):
             if other is self or getattr(other, 'is_dead', False) or getattr(other, 'layer', 1) != my_layer:
                 continue
@@ -704,7 +723,7 @@ class NPC(NPCData, NPCGraphics, NPCDialog, NPCCombat, Zombie):
                 else:
                     nx, ny = (1.5 if id(self) > id(other) else -1.5), 0.0
                 cand = self.rect.move(round(nx), round(ny))
-                if not any(cand.colliderect(obs) for obs in obstacles):
+                if not _cand_hits_obstacle(cand):
                     self.x += nx
                     self.y += ny
                     self.rect.topleft = (round(self.x), round(self.y))

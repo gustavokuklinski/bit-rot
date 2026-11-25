@@ -534,12 +534,29 @@ class PlayerMovement:
                 id(e) for e in friendly_npcs if self.rect.colliderect(e.rect.inflate(-4, -4))
             }
 
+            if not hasattr(self, '_fnpc_push_frames'):
+                self._fnpc_push_frames = {}
+
+            nearby_fnpc_ids = {
+                id(e) for e in friendly_npcs if self.rect.inflate(8, 8).colliderect(e.rect)
+            }
+            for fid in list(self._fnpc_push_frames.keys()):
+                if fid not in nearby_fnpc_ids:
+                    del self._fnpc_push_frames[fid]
+
+            passable_fnpcs = set(initially_inside_fnpc)
             pushed_this_frame = set()
 
             def _apply_fnpc_push(fnpc):
-                if id(fnpc) in pushed_this_frame:
+                fid = id(fnpc)
+                if fid in pushed_this_frame:
                     return
-                pushed_this_frame.add(id(fnpc))
+                pushed_this_frame.add(fid)
+
+                self._fnpc_push_frames[fid] = self._fnpc_push_frames.get(fid, 0) + 1
+                if getattr(fnpc, '_push_blocked', False) or self._fnpc_push_frames[fid] >= 10:
+                    passable_fnpcs.add(fid)
+
                 dx = fnpc.rect.centerx - self.rect.centerx
                 dy = fnpc.rect.centery - self.rect.centery
                 dist = math.hypot(dx, dy)
@@ -578,11 +595,14 @@ class PlayerMovement:
                         return 'tile'
 
                 for fnpc in friendly_npcs:
-                    if id(fnpc) in initially_inside_fnpc:
+                    fid = id(fnpc)
+                    if fid in passable_fnpcs:
                         continue
                     if rect_check.colliderect(fnpc.rect.inflate(-4, -4)):
                         if self.vx != 0 or self.vy != 0:
                             _apply_fnpc_push(fnpc)
+                            if fid in passable_fnpcs:
+                                continue
                         return 'tile'
                 return None
 

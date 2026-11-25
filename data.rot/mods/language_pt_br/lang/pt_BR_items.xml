@@ -29,6 +29,12 @@
         <item_type name="car_fuel" translation_type="gasolina_veiculo_liquido" />
         <item_type name="car_key" translation_type="chave_veiculo" />
         <item_type name="car_motor" translation_type="motor_veiculo" />
+        <item_type name="tool" translation_type="ferramenta" />
+        <item_type name="cloth" translation_type="roupa" />
+        <item_type name="consumable" translation_type="consumivel" />
+        <item_type name="farm_seed" translation_type="semente" />
+        <item_type name="maptile" translation_type="construcao" />
+        <item_type name="maptile_container" translation_type="recipiente_mapa" />
     </item_type>
 
     <item>
@@ -148,6 +154,15 @@
         <item name="Lighter Fluid" translation_item="Fluido de Isqueiro" translation_tips="Use para recarregar o Isqueiro" />
         <item name="Powerbank" translation_item="Carregador Portátil" translation_tips="Use para recarregar o Celular" />
         <item name="Matches" translation_item="Fósforos" translation_tips="" />
+        <item name="Pen" translation_item="Caneta" translation_tips="Use para escrever ou adicionar apelidos em itens e mapas" />
+        <item name="Pencil" translation_item="Lápis" translation_tips="Use para escrever ou adicionar apelidos em itens e mapas" />
+        <item name="Eraser" translation_item="Borracha" translation_tips="Use para apagar textos e desenhos em itens e mapas" />
+        <item name="Fishing Rod" translation_item="Vara de Pesca" translation_tips="Equipe e clique com o botão direito na água para pescar" />
+        <item name="Shovel" translation_item="Pá" translation_tips="Necessária para plantar sementes" />
+        <item name="Sleeping Pills" translation_item="Pílulas para Dormir" translation_tips="" />
+        <item name="Crude Oil Unit" translation_item="Unidade de Petróleo Bruto" translation_tips="" />
+        <item name="Wood Barricade" translation_item="Barricada de Madeira" translation_tips="" />
+        <item name="Personal Data" translation_item="Dados Pessoais" translation_tips="Instale no Celular para desbloquear abas de Status, Habilidades e Missões" />
         <item name="Sleeping Bag" translation_item="Saco de Dormir" translation_tips="Coloque o item para criar um raio de zona segura" />
         <item name="Camp Tent" translation_item="Barraca de Acampamento" translation_tips="Coloque o item para criar um raio de zona segura" />
         <item name="Mobile on" translation_item="Celular Ligado" translation_tips="Use Carregador Portátil para Recarregar" />
