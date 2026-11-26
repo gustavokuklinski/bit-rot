@@ -30,7 +30,9 @@
         "right": "player_right.png"
       },
       "loot": [
-        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.1 }
+        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.1 },
+        { "item": "Money WBRL", "chance": 1.0 },
+        { "item": "Crowbar", "chance": 0.6 }
       ],
       "sound": {
         "hit": "npc_hit.ogg",

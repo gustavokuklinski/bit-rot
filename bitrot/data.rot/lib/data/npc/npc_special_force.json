@@ -32,12 +32,14 @@
       },
       "loot": [
         { "item": "Rot Meat", "chance": 1.0 },
+        { "item": "Money WBRL", "chance": 1.0 },
         { "item": "MPK5", "chance": 0.1 },
         { "item": "MAC10", "chance": 0.1 },
         { "item": "Large Backpack", "chance": 0.1 },
         { "item": "Knife", "chance": 0.6 },
         { "item": "Pistol 9mm", "chance": 0.5 },
-        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.1 }
+        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.1 },
+        { "item": "Fuel Canister", "chance": 0.1 }
       ],
       "sound": {
         "hit": "npc_hit.ogg",

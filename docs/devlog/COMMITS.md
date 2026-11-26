@@ -3,4 +3,6 @@
 - v0.0.6.1 - Commit: 845ea8f
 - v0.0.6.2 - Commit: 2b67a10 
 - v0.0.6.3 - Commit: 764b16f
-- v0.0.7.0 - Commit:
+- v0.0.6.3.1 - Commit: f8561e1
+- v0.0.6.3.2 - Commit: a785c0d
+- v0.0.7.0 - Commit: 

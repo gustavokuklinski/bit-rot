@@ -30,7 +30,10 @@
         "right": "player_right.png"
       },
       "loot": [
-        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.1 }
+        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.1 },
+        { "item": "Fuel Canister", "chance": 0.1 },
+        { "item": "Rot Meat", "chance": 1.0 },
+        { "item": "Money WBRL", "chance": 1.0 }
       ],
       "trade": {
         "limit": 15,

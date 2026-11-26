@@ -27,6 +27,31 @@
           "player_question": "The archipelogo is large!",
           "npc_answer": "Yes, they bought a lot of islets, some of then are part of a huge mid-ocean ridge.",
           "priority": 10
+        },
+        {
+          "player_question": "How can I travel around?",
+          "npc_answer": "Most islets have a sand shore. A free TIP: Try to find a vehicle to travel around!",
+          "priority": 10
+        },
+        {
+          "player_question": "I've seen some caves, are they safe?",
+          "npc_answer": "Mostly of radio chatters say to reach the closest bunker. The frequencies are only for high level, but you can try! If you can get me to the boat will be fine!",
+          "priority": 10
+        },
+        {
+          "player_question": "What about the Rotters with weapons?",
+          "npc_answer": "They are mostly infected trying to make their last dance! I mean, Kill everybody!",
+          "priority": 10
+        },
+        {
+          "player_question": "How do I back to Rio?",
+          "npc_answer": "Rio?! Are you crazy! We are quarentinezed! Probably you've heart on radio. We are lost in the middle of the atlantic!",
+          "priority": 10
+        },
+        {
+          "player_question": "The boat is stopped.",
+          "npc_answer": "Probably wont go anything further, the boats may help you reach some shore, but you'll need some Cartographies to know where you are ground.",
+          "priority": 10
         }
       ]
     }

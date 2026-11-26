@@ -486,7 +486,8 @@ def handle_mouse_down(game, event, mouse_pos):
                 if itype != 'maptile_container' and hasattr(game.player, 'stack_item_in_inventory'):
                     game.player.stack_item_in_inventory(picked_item)
 
-                if getattr(picked_item, 'load', 1) > 0:
+                load_val = getattr(picked_item, 'load', None)
+                if load_val is None or load_val > 0:
                     if len(game.player.inventory) < game.player.get_total_inventory_slots():
                         game.player.inventory.append(picked_item)
                     else:

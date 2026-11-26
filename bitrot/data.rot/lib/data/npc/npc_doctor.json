@@ -33,10 +33,13 @@
       "loot": [
         { "item": "Rot Meat", "chance": 1.0 },
         { "item": "Vaccine", "chance": 1.0 },
-        { "item": "Medicine Vol.1", "chance": 1.0 },
+        { "item": "Morphine", "chance": 0.5 },
+        { "item": "Medicine Kits", "chance": 1.0 },
         { "item": "Sewing Kit", "chance": 1.0 },
         { "item": "Medical Kit", "chance": 1.0 },
-        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.1 }
+        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.1 },
+        { "item": "Fuel Canister", "chance": 0.1 },
+        { "item": "Money WBRL", "chance": 1.0 }
       ],
       "trade": {
         "limit": 15,

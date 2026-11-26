@@ -46,26 +46,13 @@
         "right": "npc_zombie_right.png"
       },
       "loot": [
-        {
-          "item": "Rot Meat",
-          "chance": 1.0
-        },
-        {
-          "item": "Knife",
-          "chance": 1.0
-        },
-        {
-          "item": "M4A1",
-          "chance": 0.1
-        },
-        {
-          "item": "Pistol 9mm",
-          "chance": 0.2
-        },
-        {
-          "item": "Kukaroach (Bit Rot publisher)",
-          "chance": 0.1
-        }
+        { "item": "Rot Meat", "chance": 1.0 },
+        { "item": "Knife", "chance": 1.0 },
+        { "item": "M4A1", "chance": 0.1 },
+        { "item": "Pistol 9mm", "chance": 0.2 },
+        { "item": "Kukaroach (Bit Rot publisher)", "chance": 0.1 },
+        { "item": "Fuel Canister", "chance": 0.1 },
+        { "item": "Money WBRL", "chance": 1.0 }
       ],
       "sound": {
         "hit": "npc_hit.ogg",

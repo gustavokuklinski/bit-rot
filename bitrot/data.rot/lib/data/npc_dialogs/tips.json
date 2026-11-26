@@ -24,7 +24,7 @@
           "player_question": "The tool here looks like garbage!",
           "npc_answer": "The main engineer of the island built everything from blueprints. You can scavenge for them or use old books and zines. I have one, take it...",
           "priority": 10,
-          "gain_xp": "[lucky:5]",
+          "gain_xp": "[lucky:20]",
           "dialog_type": "once",
           "award_item": "[Blueprint]"
         },
@@ -32,14 +32,30 @@
           "player_question": "How can I craft something around here?",
           "npc_answer": "You can find some magazines around and make some works.",
           "priority": 10,
-          "gain_xp": "[lucky:5]",
+          "gain_xp": "[lucky:20]",
           "dialog_type": "once"
         },
         {
           "player_question": "Is there any way to communicate around?",
           "npc_answer": "Use your mobile and check the radio! I think some people are still alive.",
           "priority": 10,
-          "gain_xp": "[lucky:5]",
+          "gain_xp": "[lucky:20]",
+          "dialog_type": "once"
+        },
+        {
+          "player_question": "If the world end, how can we survive here?",
+          "npc_answer": "You can try scavange and build your own home... but it's all shit! Try to find the heli or boat to leave!",
+          "priority": 10,
+          "gain_xp": "[lucky:20]",
+          "dialog_type": "once"
+        },
+        {
+          "player_question": "I want to try to live in the small islands, they seen fine.",
+          "npc_answer": "Oh, sure. If you can get resources, build a shed. This may help you.",
+          "priority": 10,
+          "award_item": "[Carpentary Builder]",
+          "req_level": "[lucky:2]",
+          "gain_xp": "[lucky:30]",
           "dialog_type": "once"
         }
       ]
