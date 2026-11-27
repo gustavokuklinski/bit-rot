@@ -57,6 +57,12 @@
           "req_level": "[lucky:2]",
           "gain_xp": "[lucky:30]",
           "dialog_type": "once"
+        },
+        {
+          "player_question": "Heard there're people around.",
+          "npc_answer": "Yes, those who hide. I heard on radio they have a paralel economy, just walk with a charm and fuel.",
+          "priority": 10,
+          "dialog_type": "once"
         }
       ]
     }

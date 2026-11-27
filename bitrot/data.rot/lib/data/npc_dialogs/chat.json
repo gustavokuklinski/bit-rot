@@ -14,43 +14,503 @@
       "id": "lore_branch",
       "options": [
         {
-          "player_question": "What was it like when the Pox first hit?",
-          "npc_answer": "It was chaos. The news said it was a new flu. Then people started bleeding from their black dots. Rio was a warzone in three days.",
+          "player_question": "Where did the name Pox come from?",
+          "npc_answer": "Black dots first, then the bleeding. Some doc said 'the Pox' on live TV, and the name stuck better than the cure.",
           "priority": 10
         },
         {
-          "player_question": "Why did Brazil fall so fast?",
-          "npc_answer": "Carnival, my friend. Millions of people, sweaty and packed together. The perfect breeding ground for the Pox. The government tried to lockdown, but it was too late.",
+          "player_question": "Is the mainland really gone?",
+          "npc_answer": "Gone? No. It's still there. It's just not ours anymore.",
           "priority": 10
         },
         {
-          "player_question": "The archipelogo is large!",
-          "npc_answer": "Yes, they bought a lot of islets, some of then are part of a huge mid-ocean ridge.",
+          "player_question": "What's a TIP, exactly?",
+          "npc_answer": "Trade, Information, Passage. Or as we say here: Try, Improvise, Pray.",
           "priority": 10
         },
         {
-          "player_question": "How can I travel around?",
-          "npc_answer": "Most islets have a sand shore. A free TIP: Try to find a vehicle to travel around!",
+          "player_question": "Do the bunkers have food?",
+          "npc_answer": "The good bunkers have food. The rest have a door and a smell.",
           "priority": 10
         },
         {
-          "player_question": "I've seen some caves, are they safe?",
-          "npc_answer": "Mostly of radio chatters say to reach the closest bunker. The frequencies are only for high level, but you can try! If you can get me to the boat will be fine!",
+          "player_question": "Why would anyone buy islets?",
+          "npc_answer": "Cheap land, deep water, no neighbours. Rich people plan for taxes, not plagues.",
           "priority": 10
         },
         {
-          "player_question": "What about the Rotters with weapons?",
-          "npc_answer": "They are mostly infected trying to make their last dance! I mean, Kill everybody!",
+          "player_question": "Who are Rosskrild and Silva?",
+          "npc_answer": "Money with legs. They bought the rocks we're standing on, then bet them on a cure.",
           "priority": 10
         },
         {
-          "player_question": "How do I back to Rio?",
-          "npc_answer": "Rio?! Are you crazy! We are quarentinezed! Probably you've heart on radio. We are lost in the middle of the atlantic!",
+          "player_question": "And Exxoil and Gethulius?",
+          "npc_answer": "Two labs racing the same r-pox. Parallel research, they call it. Parallel panic, I call it.",
           "priority": 10
         },
         {
-          "player_question": "The boat is stopped.",
-          "npc_answer": "Probably wont go anything further, the boats may help you reach some shore, but you'll need some Cartographies to know where you are ground.",
+          "player_question": "Is r-pox the same as the Pox?",
+          "npc_answer": "The Pox, the r-pox, the rot. Same thing wearing different hats.",
+          "priority": 10
+        },
+        {
+          "player_question": "Can I trust the radio?",
+          "npc_answer": "Half the frequencies lie, the other half scream. Learn the difference and you'll live a week longer.",
+          "priority": 10
+        },
+        {
+          "player_question": "What about high level frequencies?",
+          "npc_answer": "You need rank, a code, or a very patient friend with a soldering iron.",
+          "priority": 10
+        },
+        {
+          "player_question": "How do I get cartographies?",
+          "npc_answer": "Boats, dead sailors, and one guy in a shack who draws maps from memory. Take your pick.",
+          "priority": 10
+        },
+        {
+          "player_question": "Why did the boats stop?",
+          "npc_answer": "Fuel, fear, and the horde on the dock. In that order.",
+          "priority": 10
+        },
+        {
+          "player_question": "Carnival really did it?",
+          "npc_answer": "Millions of sweating bodies, one virus. It was a party the Pox never left.",
+          "priority": 10
+        },
+        {
+          "player_question": "Was there a lockdown?",
+          "npc_answer": "On paper. Beautiful paper. Three days later Rio was smoke and sirens.",
+          "priority": 10
+        },
+        {
+          "player_question": "Bleeding from black dots?",
+          "npc_answer": "First the dots. Then the bleeding. Then the quiet. The quiet is the worst part.",
+          "priority": 10
+        },
+        {
+          "player_question": "What's the mid-ocean ridge?",
+          "npc_answer": "A mountain range under the water. The rich bought the peaks. Now the peaks are islands.",
+          "priority": 10
+        },
+        {
+          "player_question": "Any safe shore out there?",
+          "npc_answer": "Sand shores everywhere. Safe ones? That's a different question.",
+          "priority": 10
+        },
+        {
+          "player_question": "Any vehicle advice?",
+          "npc_answer": "Find wheels. Anything with wheels. A cart is a vehicle if you believe hard enough.",
+          "priority": 10
+        },
+        {
+          "player_question": "Are caves safe?",
+          "npc_answer": "Caves are dark, dry, and quiet. Two of those are good.",
+          "priority": 10
+        },
+        {
+          "player_question": "Where's the closest bunker?",
+          "npc_answer": "Follow the chatter. If the chatter stops, don't follow anymore.",
+          "priority": 10
+        },
+        {
+          "player_question": "Can you get me to the boat?",
+          "npc_answer": "If you get me to the boat, we both win. That's the whole deal.",
+          "priority": 10
+        },
+        {
+          "player_question": "Rotters with weapons?",
+          "npc_answer": "Infected, armed, and dancing their last dance. Stay out of the dance.",
+          "priority": 10
+        },
+        {
+          "player_question": "Why don't rotters attack the infected?",
+          "npc_answer": "They smell their own. That's why some people wear the smell. Camouflage, until it isn't.",
+          "priority": 10
+        },
+        {
+          "player_question": "Is camouflage smart?",
+          "npc_answer": "Smart until you die of it. Then it's just a coffin you walk around in.",
+          "priority": 10
+        },
+        {
+          "player_question": "Rio quarantine?",
+          "npc_answer": "Quarantined, sealed, and forgotten. We're a footnote in the middle of the Atlantic.",
+          "priority": 10
+        },
+        {
+          "player_question": "Are we lost?",
+          "npc_answer": "Lost implies someone's looking. We're misplaced.",
+          "priority": 10
+        },
+        {
+          "player_question": "How big is the archipelago really?",
+          "npc_answer": "Big enough that nobody agrees on the count. Small enough that everyone hears the same gunshots.",
+          "priority": 10
+        },
+        {
+          "player_question": "Heard about GTH-42?",
+          "npc_answer": "Blackout. Locked out. A heli, then gunshots. Then nothing but static.",
+          "priority": 10
+        },
+        {
+          "player_question": "EXL-36 still operating?",
+          "npc_answer": "We hear them. Faint, but alive. Faint is enough.",
+          "priority": 10
+        },
+        {
+          "player_question": "Rescue boat to GTH-42?",
+          "npc_answer": "They sent one. Port's the meeting point. The horde's the problem.",
+          "priority": 10
+        },
+        {
+          "player_question": "BNews says we're locked out.",
+          "npc_answer": "BNews says a lot. BNews also says stay calm, which tells you how bad it is.",
+          "priority": 10
+        },
+        {
+          "player_question": "Should I stay indoors?",
+          "npc_answer": "Stay indoors, stay quiet. The horde follows noise, and the noise follows you.",
+          "priority": 10
+        },
+        {
+          "player_question": "Ration food?",
+          "npc_answer": "Half rations today, full stomach tomorrow. Maybe.",
+          "priority": 10
+        },
+        {
+          "player_question": "What if the horde passes?",
+          "npc_answer": "Then you wait for the next horde. That's the job now.",
+          "priority": 10
+        },
+        {
+          "player_question": "Do you believe we'll rebuild?",
+          "npc_answer": "I believe in saying it out loud. Keeps the hands steady.",
+          "priority": 10
+        },
+        {
+          "player_question": "Any god out here?",
+          "npc_answer": "The static, maybe. It's the only thing that answers.",
+          "priority": 10
+        },
+        {
+          "player_question": "Water first or food first?",
+          "npc_answer": "Water. You die in days without it, weeks with an empty stomach.",
+          "priority": 10
+        },
+        {
+          "player_question": "Is the water safe?",
+          "npc_answer": "Boil it. If you can't boil it, pray over it. Same result, better mood.",
+          "priority": 10
+        },
+        {
+          "player_question": "What do the dots look like?",
+          "npc_answer": "Small, black, polite. They don't hurt at first. That's the trick.",
+          "priority": 10
+        },
+        {
+          "player_question": "How long until someone turns?",
+          "npc_answer": "Hours. Sometimes less. Don't share a room with a maybe.",
+          "priority": 10
+        },
+        {
+          "player_question": "Do you trust the news?",
+          "npc_answer": "I trust the static between the news. That's where the truth hides.",
+          "priority": 10
+        },
+        {
+          "player_question": "Any cure?",
+          "npc_answer": "Exxoil says maybe. Gethulius says maybe louder. Nobody says yes.",
+          "priority": 10
+        },
+        {
+          "player_question": "Are the vaccines working?",
+          "npc_answer": "They work until they don't. Long exposure and you're just a volunteer with a bandage.",
+          "priority": 10
+        },
+        {
+          "player_question": "Why is everyone so calm?",
+          "npc_answer": "Nobody's calm. We're just tired of screaming.",
+          "priority": 10
+        },
+        {
+          "player_question": "What's the worst sound out here?",
+          "npc_answer": "A radio that goes quiet mid-sentence.",
+          "priority": 10
+        },
+        {
+          "player_question": "And the best sound?",
+          "npc_answer": "A boat engine you didn't expect.",
+          "priority": 10
+        },
+        {
+          "player_question": "Can I swim between islets?",
+          "npc_answer": "You can. The question is what swims with you.",
+          "priority": 10
+        },
+        {
+          "player_question": "Sharks or rotters?",
+          "npc_answer": "Sharks are honest. Rotters lie about being dead.",
+          "priority": 10
+        },
+        {
+          "player_question": "Any traders around?",
+          "npc_answer": "Plenty. Half sell maps, half sell the same map twice.",
+          "priority": 10
+        },
+        {
+          "player_question": "What do I trade?",
+          "npc_answer": "Bullets, batteries, bandages, and gossip. Gossip is the cheapest and worth the most.",
+          "priority": 10
+        },
+        {
+          "player_question": "Where do I sleep?",
+          "npc_answer": "High, dry, one entrance. Three things. Get all three and sleep.",
+          "priority": 10
+        },
+        {
+          "player_question": "Why one entrance?",
+          "npc_answer": "Rotters can't open doors, but they can lean on them until you're stupid.",
+          "priority": 10
+        },
+        {
+          "player_question": "Fire or no fire?",
+          "npc_answer": "Cold and alive beats warm and surrounded.",
+          "priority": 10
+        },
+        {
+          "player_question": "Is the radio worth fixing?",
+          "npc_answer": "The radio is the only thing worth fixing.",
+          "priority": 10
+        },
+        {
+          "player_question": "How do I call for help?",
+          "npc_answer": "Say your location, say your name, say it three times. Then listen.",
+          "priority": 10
+        },
+        {
+          "player_question": "Nobody answers.",
+          "npc_answer": "Keep talking anyway. Somebody's always listening, even if they're scared.",
+          "priority": 10
+        },
+        {
+          "player_question": "Heard gunshots last night.",
+          "npc_answer": "Everybody heard them. The question is who was shooting.",
+          "priority": 10
+        },
+        {
+          "player_question": "What about the soldiers?",
+          "npc_answer": "Some are still soldiers. Some are just people with a uniform and a gun.",
+          "priority": 10
+        },
+        {
+          "player_question": "Where's the government in all this?",
+          "npc_answer": "There's a government somewhere. It sends memos. The memos are very brave.",
+          "priority": 10
+        },
+        {
+          "player_question": "Cost more than it saves?",
+          "npc_answer": "That's what the Council said about the whole archipelago. Then they charged us for the meeting.",
+          "priority": 10
+        },
+        {
+          "player_question": "Rosskrild and Silva betting again?",
+          "npc_answer": "Betting a lot on resources. The resources were not consulted.",
+          "priority": 10
+        },
+        {
+          "player_question": "Why parallel research?",
+          "npc_answer": "Because sharing means admitting the other lab might win.",
+          "priority": 10
+        },
+        {
+          "player_question": "Do the labs leak?",
+          "npc_answer": "Labs leak, fences get taller, reports get shorter.",
+          "priority": 10
+        },
+        {
+          "player_question": "Is the Pox airborne?",
+          "npc_answer": "Depends who you ask. The people who said no are quiet now.",
+          "priority": 10
+        },
+        {
+          "player_question": "Can animals carry it?",
+          "npc_answer": "Animals carry everything. That's what animals do.",
+          "priority": 10
+        },
+        {
+          "player_question": "Do the rotters remember anything?",
+          "npc_answer": "They remember doors. They remember the sound of a car.",
+          "priority": 10
+        },
+        {
+          "player_question": "Do they run?",
+          "npc_answer": "Some shuffle. Some sprint. The sprinters are new and I hate them.",
+          "priority": 10
+        },
+        {
+          "player_question": "Any children out here?",
+          "npc_answer": "Yes. They adapt faster than us. It's the adults who keep dying of hope.",
+          "priority": 10
+        },
+        {
+          "player_question": "What do you miss most?",
+          "npc_answer": "Noise. Real noise. Crowds, traffic, someone arguing about football.",
+          "priority": 10
+        },
+        {
+          "player_question": "Football still a thing?",
+          "npc_answer": "On the radio, sometimes. Then the scores get weird because half the teams are gone.",
+          "priority": 10
+        },
+        {
+          "player_question": "What's a last resource infected?",
+          "npc_answer": "Someone we used up. They're turning rogue now. Turns out people don't like being a resource.",
+          "priority": 10
+        },
+        {
+          "player_question": "Rogue infected?",
+          "npc_answer": "Infected who stopped taking orders. The worst kind of employee.",
+          "priority": 10
+        },
+        {
+          "player_question": "Should I trust strangers?",
+          "npc_answer": "Trust them with directions. Not with your boat.",
+          "priority": 10
+        },
+        {
+          "player_question": "Any rules out here?",
+          "npc_answer": "Three. Don't lie about bites. Don't waste water. Don't promise a rescue you can't make.",
+          "priority": 10
+        },
+        {
+          "player_question": "What if I get bitten?",
+          "npc_answer": "Tell someone. Then decide what kind of person you want to be at the end.",
+          "priority": 10
+        },
+        {
+          "player_question": "Is there a cure in the caves?",
+          "npc_answer": "There's a story about a cure in the caves. Stories are free and worth exactly that.",
+          "priority": 10
+        },
+        {
+          "player_question": "Why do people go to the bunkers?",
+          "npc_answer": "Because a locked door feels like a plan.",
+          "priority": 10
+        },
+        {
+          "player_question": "Do the bunkers answer?",
+          "npc_answer": "Sometimes. Sometimes they answer and you wish they hadn't.",
+          "priority": 10
+        },
+        {
+          "player_question": "How far is the mainland?",
+          "npc_answer": "Far enough that nobody swims home.",
+          "priority": 10
+        },
+        {
+          "player_question": "Is the quarantine line still up?",
+          "npc_answer": "The line is up. The people behind it aren't.",
+          "priority": 10
+        },
+        {
+          "player_question": "Any planes?",
+          "npc_answer": "One, once. It flew over and didn't turn around.",
+          "priority": 10
+        },
+        {
+          "player_question": "Helicopters?",
+          "npc_answer": "The heli at GTH-42 started this mess. I don't trust anything with rotors now.",
+          "priority": 10
+        },
+        {
+          "player_question": "What's the ridge good for?",
+          "npc_answer": "Fishing, hiding, and arguing about whose rock it is.",
+          "priority": 10
+        },
+        {
+          "player_question": "Is fishing safe?",
+          "npc_answer": "Fish don't care about the Pox. Cook them anyway.",
+          "priority": 10
+        },
+        {
+          "player_question": "Salt water everywhere, huh?",
+          "npc_answer": "All the water in the world and not a drop to drink.",
+          "priority": 10
+        },
+        {
+          "player_question": "How do you keep sane?",
+          "npc_answer": "Small jobs. Clean the radio, count the cans, patch the boat. Sanity is a chore list.",
+          "priority": 10
+        },
+        {
+          "player_question": "Do you sleep at night?",
+          "npc_answer": "I sleep at dawn. Nights belong to the horde now.",
+          "priority": 10
+        },
+        {
+          "player_question": "Worst mistake out here?",
+          "npc_answer": "Lighting a fire on a beach because you felt lonely.",
+          "priority": 10
+        },
+        {
+          "player_question": "Best decision out here?",
+          "npc_answer": "Learning to shut up.",
+          "priority": 10
+        },
+        {
+          "player_question": "Why does the static sound like voices?",
+          "npc_answer": "Because you want it to. That's how the Pox gets you — through your own ears.",
+          "priority": 10
+        },
+        {
+          "player_question": "Is the static dangerous?",
+          "npc_answer": "Only when it's the last thing you hear before the gunshots.",
+          "priority": 10
+        },
+        {
+          "player_question": "GTH-42 locked out, anyone hear?",
+          "npc_answer": "We all heard. The boat heard too. That's why it left early.",
+          "priority": 10
+        },
+        {
+          "player_question": "Rescue boat at the port?",
+          "npc_answer": "If you can hear this, go to the port. Quiet. Now.",
+          "priority": 10
+        },
+        {
+          "player_question": "Will they come back for us?",
+          "npc_answer": "They came once. That's more than most islands get.",
+          "priority": 10
+        },
+        {
+          "player_question": "What if the boat leaves?",
+          "npc_answer": "Wave. Then start walking. Then start planning.",
+          "priority": 10
+        },
+        {
+          "player_question": "Is it worth staying?",
+          "npc_answer": "Worth is a rich man's word. Ask if it's survivable.",
+          "priority": 10
+        },
+        {
+          "player_question": "Any hope?",
+          "npc_answer": "Hope is a ration. Spend it slow.",
+          "priority": 10
+        },
+        {
+          "player_question": "What's your name?",
+          "npc_answer": "Names get people killed out here. Call me the voice on the radio.",
+          "priority": 10
+        },
+        {
+          "player_question": "Will you remember me?",
+          "npc_answer": "I'll remember your call sign. That's the closest thing to a grave we have.",
+          "priority": 10
+        },
+        {
+          "player_question": "Anything else I should know?",
+          "npc_answer": "Keep strong, survivor. We will rebuild — after the horde passes, after the static clears, after the boat.",
           "priority": 10
         }
       ]
